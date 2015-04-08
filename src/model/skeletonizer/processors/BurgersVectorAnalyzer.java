@@ -41,7 +41,7 @@ public class BurgersVectorAnalyzer {
 		this.patterns = cs.getBurgersVectorClassificationPattern();
 	}
 	
-	public void analyse(Skeletonizer skel) {
+	public void analyse(final Skeletonizer skel) {
 		this.skel = skel;
 		calcAverages();
 		
@@ -51,13 +51,13 @@ public class BurgersVectorAnalyzer {
 			if (!d.getBurgersVectorInfo().isLineSenseKnown()) continue;
 			
 			BurgersVector bv;
-			if (!ImportStates.POLY_MATERIAL.isActive() || Configuration.getCrystalStructure().skeletonizeOverMultipleGrains()){
+			if (!skel.getAtomData().isPolyCrystalline() || skel.getAtomData().getCrystalStructure().skeletonizeOverMultipleGrains()){
 				//Single crystal or poly-phase material with same orientations 
-				 bv = Configuration.getCrystalRotationTools().rbvToBurgersVector(d.getBurgersVectorInfo().getAverageResultantBurgersVector());	
+				 bv = skel.getAtomData().getCrystalRotation().rbvToBurgersVector(d.getBurgersVectorInfo().getAverageResultantBurgersVector());	
 			} else {
 				//Poly-crystal, check orientation first
 				if (d.getGrain() == null) //for dislocations in default grain
-					bv = Configuration.getCrystalRotationTools().rbvToBurgersVector(d.getBurgersVectorInfo().getAverageResultantBurgersVector());
+					bv = skel.getAtomData().getCrystalRotation().rbvToBurgersVector(d.getBurgersVectorInfo().getAverageResultantBurgersVector());
 				else
 					bv = d.getGrain().getCystalRotationTools().rbvToBurgersVector(d.getBurgersVectorInfo().getAverageResultantBurgersVector());
 			}

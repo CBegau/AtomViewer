@@ -18,8 +18,6 @@
 
 package gui;
 
-import gui.ViewerGLJPanel.RenderOption;
-
 import java.awt.GridLayout;
 import java.awt.event.*;
 
@@ -27,18 +25,36 @@ import javax.swing.*;
 import javax.swing.border.EtchedBorder;
 import javax.swing.border.TitledBorder;
 
-import model.Configuration;
-import model.ImportStates;
+import model.RenderingConfiguration;
+import model.dataContainer.DataContainer;
+import model.dataContainer.JDataPanel;
 
 
-public class JDislocationMenuPanel extends JPanel{
+public class JDislocationMenuPanel extends JDataPanel{
 	private static final long serialVersionUID = 1L;
 	
 	private JCheckBox drawCoresButton = new JCheckBox("Dislocation");
 	private JCheckBox drawStackingFaultsButton = new JCheckBox("Stacking Faults");
 	private JCheckBox drawVectorsCheckBox = new JCheckBox("Burgers vectors");
 	
-	private ViewerGLJPanel viewer;
+	public enum Option {
+		BURGERS_VECTORS_ON_CORES(false), DISLOCATIONS(false), STACKING_FAULT(false);
+		
+		private boolean enabled;
+		
+		private Option(boolean enabled){
+			this.enabled = enabled;
+		}
+		
+		public void setEnabled(boolean enabled){
+			this.enabled = enabled;
+		}
+		
+		public boolean isEnabled(){
+			return enabled;
+		}
+	}
+	
 	
 	public JDislocationMenuPanel(){
 		this.setLayout(new GridLayout(3,1));
@@ -46,42 +62,49 @@ public class JDislocationMenuPanel extends JPanel{
 
 		RenderTypeButtonActionListener renderTypeButtonListener = new RenderTypeButtonActionListener();
 		
-		this.drawCoresButton.setSelected(RenderOption.DISLOCATIONS.isEnabled());
+		this.drawCoresButton.setSelected(Option.DISLOCATIONS.isEnabled());
 		this.add(drawCoresButton);
 		drawCoresButton.addActionListener(renderTypeButtonListener);
-		drawCoresButton.setActionCommand(RenderOption.DISLOCATIONS.toString());
+		drawCoresButton.setActionCommand(Option.DISLOCATIONS.toString());
 		
-		this.drawVectorsCheckBox.setSelected(RenderOption.BURGERS_VECTORS_ON_CORES.isEnabled());
+		this.drawVectorsCheckBox.setSelected(Option.BURGERS_VECTORS_ON_CORES.isEnabled());
 		this.add(drawVectorsCheckBox);
 		drawVectorsCheckBox.addActionListener(renderTypeButtonListener);
-		drawVectorsCheckBox.setActionCommand(RenderOption.BURGERS_VECTORS_ON_CORES.toString());
+		drawVectorsCheckBox.setActionCommand(Option.BURGERS_VECTORS_ON_CORES.toString());
 		
-		this.drawStackingFaultsButton.setSelected(RenderOption.BURGERS_VECTORS_ON_CORES.isEnabled());
+		this.drawStackingFaultsButton.setSelected(Option.STACKING_FAULT.isEnabled());
 		this.add(drawStackingFaultsButton);
 		drawStackingFaultsButton.addActionListener(renderTypeButtonListener);
-		drawStackingFaultsButton.setActionCommand(RenderOption.STACKING_FAULT.toString());
-	}
-	
-	public void setAtomData(ViewerGLJPanel viewer){
-		this.viewer = viewer;
-		drawStackingFaultsButton.setEnabled(Configuration.getCrystalStructure().hasStackingFaults());
-		drawVectorsCheckBox.setEnabled(ImportStates.BURGERS_VECTORS.isActive());
+		drawStackingFaultsButton.setActionCommand(Option.STACKING_FAULT.toString());
 	}
 	
 	private class RenderTypeButtonActionListener implements ActionListener{
 		@Override
 		public void actionPerformed(ActionEvent e) {
 			String action = e.getActionCommand();
-			if (viewer!=null){
+			if (RenderingConfiguration.getViewer()!=null){
 				JCheckBox checkbox = (JCheckBox)e.getSource();
 				if (action == null) return;
-				if (action == RenderOption.DISLOCATIONS.toString())
-					RenderOption.DISLOCATIONS.setEnabled(checkbox.isSelected());
-				else if (action == RenderOption.STACKING_FAULT.toString())
-					RenderOption.STACKING_FAULT.setEnabled(checkbox.isSelected());
-				else if (action == RenderOption.BURGERS_VECTORS_ON_CORES.toString())
-					RenderOption.BURGERS_VECTORS_ON_CORES.setEnabled(checkbox.isSelected());
+				if (action.equals(Option.DISLOCATIONS.toString()))
+					Option.DISLOCATIONS.setEnabled(checkbox.isSelected());
+				else if (action.equals(Option.STACKING_FAULT.toString()))
+					Option.STACKING_FAULT.setEnabled(checkbox.isSelected());
+				else if (action.equals(Option.BURGERS_VECTORS_ON_CORES.toString()))
+					Option.BURGERS_VECTORS_ON_CORES.setEnabled(checkbox.isSelected());
+					
+				RenderingConfiguration.getViewer().reDraw();
 			}
 		}
+	}
+	
+	@Override
+	public void update(DataContainer dc) {}
+
+	@Override
+	public void setViewer(ViewerGLJPanel viewer) {}
+
+	@Override
+	public boolean isDataVisible() {
+		return true;
 	}
 }

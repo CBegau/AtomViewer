@@ -16,11 +16,10 @@
 // You should have received a copy of the GNU General Public License along
 // with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
 
-package model.polygrain.mesh;
+package model.mesh;
 
 import java.util.ArrayList;
 
-import common.Tupel;
 import common.Vec3;
 
 /**
@@ -33,41 +32,36 @@ public class ClosestTriangleSearch extends ClosestTriangleSearchAlgorithm{
 		super(threshold);
 	}
 	
-	public void add(Triangle t){
+	public void add(FinalizedTriangle t){
 		tri.add(new TriangleDataStruct(t));
 	}
 	
 	@Override
-	public common.Tupel<Float,MeshElement> sqrDistToMeshElement(Vec3 p) {
+	public float sqrDistToMeshElement(Vec3 p) {
 		float closest = Float.MAX_VALUE;
-		MeshElement meshElement = null;
 		
 		for (int i=0; i<tri.size();i++){
 			TriangleDataStruct n = tri.get(i);
-			float distToPlane = p.dot(n.normal)-n.d;
+			float distToPlane = p.dot(n.element.normal)-n.d;
 			distToPlane *= distToPlane;
 			if (distToPlane < closest){
-				float d = n.element.getMinSqrDist(p, n.normal);
+				float d = n.element.getMinSqrDist(p);
 				if (d < closest){
 					if (d < threshold)
-						return new Tupel<Float, MeshElement>(Math.abs(d), n.element);
+						return d;
 					closest = d;
-					meshElement = n.element;
 				}
 			}
 		}
-		return new Tupel<Float, MeshElement>(Math.abs(closest), meshElement);
+		return closest;
 	}
 	
 	private class TriangleDataStruct{
-		public Vec3 normal;
 		public float d;
-		public Triangle element;	
+		public FinalizedTriangle element;	
 		
-		public TriangleDataStruct(Triangle t){
-			this.normal = t.getUnitNormalVector();
-			Vec3 p = t.getVertex();
-			d = normal.dot(p);
+		public TriangleDataStruct(FinalizedTriangle t){
+			d = t.normal.dot(t.a);
 			this.element = t;
 		}
 	}

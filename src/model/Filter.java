@@ -1,7 +1,7 @@
 // Part of AtomViewer: AtomViewer is a tool to display and analyse
 // atomistic simulations
 //
-// Copyright (C) 2013  ICAMS, Ruhr-Universität Bochum
+// Copyright (C) 2015  ICAMS, Ruhr-Universität Bochum
 //
 // AtomViewer is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,13 +15,10 @@
 //
 // You should have received a copy of the GNU General Public License along
 // with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
-
-package model.polygrain.mesh;
+package model;
 
 import common.Vec3;
 
-public interface MeshElement {
-	public Vec3 getUnitNormalVector();
-	public Vec3 getNormalVector();
-	public boolean isPointInMesh(Vec3 p);
+public interface Filter<T extends Vec3> {
+	public boolean accept(T a);
 }

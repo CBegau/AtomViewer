@@ -19,13 +19,12 @@
 package model.skeletonizer.processors;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.Callable;
 
-import common.FastDeletableVector;
 import common.ThreadPool;
 import common.Tupel;
-import model.ImportStates;
 import model.RBV;
 import model.skeletonizer.SkeletonNode;
 import model.skeletonizer.Skeletonizer;
@@ -44,7 +43,7 @@ public class RBVAngleFilterPreprocessor implements SkeletonPreprocessor {
 	
 	@Override
 	public void preProcess(final Skeletonizer skel) {
-		if (!ImportStates.BURGERS_VECTORS.isActive()) return;
+		if (!skel.getAtomData().isRbvAvailable()) return;
 		
 		final float PHI_MIN = (float) Math.cos((180f-maxAngle)*Math.PI/180.);
 		final float PHI_MAX = (float) Math.cos(maxAngle*Math.PI/180.);
@@ -96,7 +95,7 @@ public class RBVAngleFilterPreprocessor implements SkeletonPreprocessor {
 			t.o2.removeNeigh(t.o1);
 		}
 		
-		final FastDeletableVector<SkeletonNode> nodes = skel.getNodes();
+		final List<SkeletonNode> nodes = skel.getNodes();
 		for (int i=0; i<nodes.size(); i++){
 			if (nodes.get(i).getNeigh().size() == 0) {
 				nodes.remove(i);

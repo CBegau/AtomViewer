@@ -118,7 +118,7 @@ public class SimpleGeometriesRenderer {
 	}
 	
 	private static void createSphere(GL3 gl) {
-		Tupel<int[], float[]> s = SphereGenerator.getSphericalVBOData(3);
+		Tupel<int[], float[]> s = SphereTesselator.getSphericalVBOData(3);
 		
 		float[] v = s.o2;
 		sphere = new VertexDataStorageDirect(gl, v.length/3, 3, 3, 0, 0, 0, 0, 0, 0);

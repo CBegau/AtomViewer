@@ -22,7 +22,7 @@ public class Shader {
 	public final static int ATTRIB_CUSTOM1 = 5;
 	public final static int ATTRIB_CUSTOM2 = 6;
 	public final static int ATTRIB_CUSTOM3 = 7;	
-	public final static int ATTRIB_VERTEX_OFFSET = 7;
+	public final static int ATTRIB_VERTEX_OFFSET = 8;
 	
 	public final static int FRAG_COLOR = 0;
 	public final static int FRAG_NORMAL = 1;
@@ -312,9 +312,9 @@ public class Shader {
 		"in vec4 Color;"+
 		"in vec3 p;"+
 		"in vec2 tex;"+
-		"out vec2 vTexCoord;"+
-		"out vec4 FrontColor;"+
-		"out vec4 pos;"+
+		"noperspective out vec2 vTexCoord;"+
+		"flat out vec4 FrontColor;"+
+		"flat out vec4 pos;"+
 		
 		"uniform mat4 mvpm;"+
 
@@ -332,10 +332,11 @@ public class Shader {
 		"uniform vec4 Color;"+
 		"in vec3 p;"+
 		"in vec2 tex;"+
-		"out vec2 vTexCoord;"+
-		"out vec4 FrontColor;"+
+		"noperspective out vec2 vTexCoord;"+
+		"flat out vec4 FrontColor;"+
+		"flat out vec4 pos;"+
+		
 		"uniform mat4 mvpm;"+
-		"out vec4 pos;"+
 
 		"void main(void) {"+
 		"  FrontColor     = Color;"+
@@ -347,9 +348,9 @@ public class Shader {
 	
 	private static String[] billboardFragmentShaderDeferred = {
 		"#version 150\n"+
-		"in vec4 pos;"+
-		"in vec2 vTexCoord;"+
-		"in vec4 FrontColor;"+
+		"flat in vec4 pos;"+
+		"flat in vec4 FrontColor;"+
+		"noperspective in vec2 vTexCoord;"+
 		
 		"out vec4 vFragNormal;"+
 		"out vec4 vFragColor;"+
@@ -369,9 +370,9 @@ public class Shader {
 	};
 	
 	private static String [] billboardFragmentShaderDeferredPerfectSphereBase = {
-		"in vec4 pos;"+
-		"in vec2 vTexCoord;"+
-		"in vec4 FrontColor;"+
+		"flat in vec4 pos;"+
+		"flat in vec4 FrontColor;"+
+		"noperspective in vec2 vTexCoord;"+
 		
 		"out vec4 vFragNormal;"+
 		"out vec4 vFragColor;"+
@@ -468,21 +469,15 @@ public class Shader {
 		"}"
 	};
 	
-	private static String[] arrowVertexShaderDeferred = {
-		"#version 150\n"+
-		"uniform vec3 Direction;"+
-		"uniform vec3 Origin;"+
-		"uniform vec4 Color;"+
-		"uniform vec4 Dimensions;"+
-		"uniform mat3 nm;"+
-		"uniform mat4 mvpm;"+
-		
+	private static String[] arrowVertexShaderDeferredBasic = {
 		"in vec2 p;"+
 		"in vec3 norm;"+
 		"in vec4 scalings;"+
 		"out vec4 position;"+
 		"out vec3 normal;"+
 		"out vec4 FrontColor;"+
+		"uniform mat3 nm;"+
+		"uniform mat4 mvpm;"+
 		
 		"void main(void) {"+
 		
@@ -511,6 +506,26 @@ public class Shader {
 		"  position       = vec4(vp,1.);\n"+
 		"  gl_Position    = mvpm * position;\n"+
 		"}"
+	};
+	
+	private static String[] arrowVertexShaderDeferred = {
+		"#version 150\n"+
+		"uniform vec3 Direction;"+
+		"uniform vec3 Origin;"+
+		"uniform vec4 Color;"+
+		"uniform vec4 Dimensions;"+
+		
+		arrowVertexShaderDeferredBasic[0]
+	};
+	
+	private static String[] arrowVertexShaderInstancedDeferred = {
+		"#version 150\n"+
+		"in vec3 Direction;"+
+		"in vec3 Origin;"+
+		"in vec4 Color;"+
+		"in vec4 Dimensions;"+
+		
+		arrowVertexShaderDeferredBasic[0]
 	};
 	
 	
@@ -676,14 +691,24 @@ public class Shader {
 	
 	public void enable(GL3 gl){
 		if (lastUsedShader == this) return;
-		disableLastUsedShader(gl);
+		
+		//Figure out which VertexAttribArrays must be enabled and which disabled
+		ArrayList<Integer> toEnable = new ArrayList<Integer>();
+		ArrayList<Integer> toDisable = new ArrayList<Integer>();
+		if (lastUsedShader!=null) for (int i: lastUsedShader.indices) toDisable.add(i);
+		for (int i: this.indices) toEnable.add(i);
+
+		toDisable.removeAll(toEnable);
+		toEnable.removeAll(toDisable);
+
+		for (int i: toDisable)
+			gl.glDisableVertexAttribArray(i);
+		
+		for (int i: toEnable)
+			gl.glEnableVertexAttribArray(i);
 		
 		gl.glUseProgram(this.shaderProgram);
 		lastUsedShader = this;
-		
-		for (int i: indices){
-			gl.glEnableVertexAttribArray(i);
-		}
 	}
 	
 	public static Shader popShader(){
@@ -718,7 +743,7 @@ public class Shader {
 			allKnownShader.clear();
 		}
 		
-		for (BuiltInShader s : BuiltInShader.values()){ 
+		for (BuiltInShader s : BuiltInShader.values()){			
 			s.getShader().compile(gl);
 			if (s.getShader().isAvailable())
 				allKnownShader.add(s.getShader());
@@ -901,7 +926,11 @@ public class Shader {
 				new int[]{ATTRIB_VERTEX, ATTRIB_CUSTOM1, ATTRIB_CUSTOM0}, new String[]{"p", "norm", "scalings"}),
 		ARROW_DEFERRED(arrowVertexShaderDeferred, toGBufferFragmentShader,
 				new int[]{ATTRIB_VERTEX, ATTRIB_CUSTOM1, ATTRIB_CUSTOM0}, new String[]{"p", "norm", "scalings"}),
-		
+		ARROW_INSTANCED_DEFERRED(arrowVertexShaderInstancedDeferred, toGBufferFragmentShader,
+				new int[]{ATTRIB_VERTEX, ATTRIB_CUSTOM1, ATTRIB_CUSTOM0, 
+				ATTRIB_COLOR, ATTRIB_VERTEX_OFFSET, ATTRIB_CUSTOM2, ATTRIB_CUSTOM3}, 
+				new String[]{"p", "norm", "scalings", 
+				"Color", "Origin", "Direction", "Dimensions"}),
 		//Postprocessing shader
 		ANAGLYPH_TEXTURED(defaultVertexShader, anaglyphFragmentShader,
 				new int[]{ATTRIB_VERTEX, ATTRIB_TEX0}, new String[]{"v", "Tex"}),

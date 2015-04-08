@@ -4,16 +4,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 import model.Atom;
+import model.BoxParameter;
 import model.NearestNeighborBuilder;
 
 public class GrainDetector {
 	
-	public static List<List<Atom>> identifyGrains(List<Atom> atoms, final GrainDetectionCriteria gdc){
+	public static List<List<Atom>> identifyGrains(List<Atom> atoms, final GrainDetectionCriteria gdc, BoxParameter box){
 		final List<List<Atom>> allDetectedGrainSets = new ArrayList<List<Atom>>();
 		
 		GrainObject.init();
 		final NearestNeighborBuilder<AtomToGrainObject> nnb = new NearestNeighborBuilder<AtomToGrainObject>( 
-				gdc.getNeighborDistance());
+				box, gdc.getNeighborDistance());
 		ArrayList<AtomToGrainObject> allAtoms = new ArrayList<AtomToGrainObject>(atoms.size());
 		
 		for (int i=0; i<atoms.size();i++){

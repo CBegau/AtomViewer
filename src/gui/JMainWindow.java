@@ -27,6 +27,7 @@ import java.beans.PropertyChangeListener;
 import java.io.*;
 import java.text.DecimalFormat;
 import java.util.Locale;
+import java.util.List;
 
 import javax.imageio.ImageIO;
 import javax.media.opengl.GLCapabilities;
@@ -36,6 +37,11 @@ import javax.media.opengl.GLProfile;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
+import processingModules.AvailableProcessingModules;
+import processingModules.AvailableProcessingModules.JProcessingModuleDialog;
+import processingModules.ProcessingModule;
+import processingModules.ProcessingResult;
+
 import com.jogamp.opengl.JoglVersion;
 
 import common.ColorTable;
@@ -44,20 +50,22 @@ import crystalStructures.CrystalStructure;
 import model.*;
 import model.io.*;
 import model.io.MDFileLoader.InputFormat;
-import model.Configuration.Options;
+import model.skeletonizer.Skeletonizer;
+import model.Configuration.AtomDataChangedEvent;
+import model.Configuration.AtomDataChangedListener;
+import model.RenderingConfiguration.Options;
 import model.dataContainer.DataContainer;
 
-public class JMainWindow extends JFrame implements WindowListener {
+public class JMainWindow extends JFrame implements WindowListener, AtomDataChangedListener {
 
-	public static final String VERSION = "2.1"; 
-	public static final String SUBVERSION = "1944";
+	public static final String VERSION = "3.0 alpha"; 
+	public static String buildVersion = "06.April.2015";
 	
 	private static final long serialVersionUID = 1L;
-	private ViewerGLJPanel viewer;
 	
 	private KeyBoardAction keyAction = new KeyBoardAction();
 	
-	private final JAtomicMenuPanel atomicMenu = new JAtomicMenuPanel(keyAction, this);
+	private final JAtomicMenuPanel atomicMenu;;
 	private final JGraphicOptionCheckBoxMenuItem stereoCheckBoxMenu;
 	private final JGraphicOptionCheckBoxMenuItem perspectiveCheckBoxMenu;
 	private final JGraphicOptionCheckBoxMenuItem drawCoordinateSystemBoxMenu;
@@ -77,6 +85,7 @@ public class JMainWindow extends JFrame implements WindowListener {
 		} catch (IOException e2) {}
 		
 		this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+		Configuration.addAtomDataListener(this);
 		
 		//Disable that ToolTips disappear automatically after short time
 		ToolTipManager.sharedInstance().setDismissDelay(Integer.MAX_VALUE);
@@ -84,7 +93,7 @@ public class JMainWindow extends JFrame implements WindowListener {
 		GLProfile maxProfile = GLProfile.getMaxProgrammableCore(true);
 		GLCapabilities glCapabilities = new GLCapabilities(maxProfile);
 		
-		viewer = new ViewerGLJPanel(650, 650, glCapabilities);
+		ViewerGLJPanel viewer = new ViewerGLJPanel(650, 650, glCapabilities);
 		viewer.setFocusable(true);
 		viewer.requestFocus(); // the viewer now has focus, so receives key events
 		this.setTitle("AtomViewer");
@@ -115,6 +124,7 @@ public class JMainWindow extends JFrame implements WindowListener {
 			}
 		});
 		
+		this.atomicMenu = new JAtomicMenuPanel(keyAction, this);
 		this.add(atomicMenu, BorderLayout.WEST);
 		
 		this.add(splitPane, BorderLayout.CENTER);
@@ -132,6 +142,10 @@ public class JMainWindow extends JFrame implements WindowListener {
 		openLammpsMenuItem.setActionCommand(InputFormat.LAMMPS.name());
 		openLammpsMenuItem.addActionListener(CursorController.createListener(this, oml));
 		fileMenu.add(openLammpsMenuItem);
+		JMenuItem openXYZMenuItem = new JMenuItem("Open XYZ file");
+		openXYZMenuItem.setActionCommand(InputFormat.XYZ.name());
+		openXYZMenuItem.addActionListener(CursorController.createListener(this, oml));
+		fileMenu.add(openXYZMenuItem);
 		
 		JMenuItem exportScreenShotMenuItem = new JMenuItem("Save Screenshot");
 		exportScreenShotMenuItem.setActionCommand("Screenshot");
@@ -154,13 +168,17 @@ public class JMainWindow extends JFrame implements WindowListener {
 		exportSkeletonFileMenuItem.addActionListener(CursorController.createListener(this, new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				assert Configuration.getCurrentAtomData().getSkeletonizer() != null : "No Skeleton";
+				DataContainer dc = Configuration.getCurrentAtomData().getDataContainer(Skeletonizer.class);
+				Skeletonizer skel = null;
+				if (dc != null)
+					skel = (Skeletonizer)dc;
+				if (skel == null) return;
 				
 				JFileChooser chooser = new JFileChooser();
 				int result = chooser.showSaveDialog(JMainWindow.this);
 				if (result == JFileChooser.APPROVE_OPTION){
 					try {
-						Configuration.getCurrentAtomData().getSkeletonizer().writeDislocationSkeleton(chooser.getSelectedFile());
+						skel.writeDislocationSkeleton(chooser.getSelectedFile());
 					} catch (IOException e1) {
 						e1.printStackTrace();
 					}
@@ -192,9 +210,9 @@ public class JMainWindow extends JFrame implements WindowListener {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (Configuration.getCurrentAtomData() != null){
-					RenderRange rr = viewer.getRenderRange();
+					RenderRange rr = RenderingConfiguration.getViewer().getRenderRange();
 					new JRenderedIntervalEditorDialog(JMainWindow.this, rr);
-					viewer.updateAtoms();
+					RenderingConfiguration.getViewer().updateAtoms();
 				}
 			}
 		});
@@ -213,12 +231,13 @@ public class JMainWindow extends JFrame implements WindowListener {
 		changeSphereSizeMenuItem.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				String str = JOptionPane.showInputDialog(null, "Enter new sphere size (current "+Float.toString(viewer.getSphereSize()) +"): ", 
+				String str = JOptionPane.showInputDialog(null, "Enter new sphere size (current "+
+						Float.toString(RenderingConfiguration.getViewer().getSphereSize()) +"): ", 
 						"Enter sphere size", JOptionPane.QUESTION_MESSAGE);
 				try {
 					if (str!=null){
 						float f = Float.parseFloat(str);
-						viewer.setSphereSize(f);
+						RenderingConfiguration.getViewer().setSphereSize(f);
 					}
 				} catch (Exception ex) {
 					JOptionPane.showMessageDialog(null, "Please enter a valid number", "Warning", JOptionPane.WARNING_MESSAGE);
@@ -259,7 +278,7 @@ public class JMainWindow extends JFrame implements WindowListener {
 		viewMenu.add(drawTetraederCheckBoxMenu);
 		viewMenu.add(drawCoordinateSystemBoxMenu);
 		viewMenu.add(drawLengthScaleBoxMenu);
-		if (!Configuration.Options.SIMPLE.isEnabled()) viewMenu.add(drawIndentBoxMenu);
+		viewMenu.add(drawIndentBoxMenu);
 		viewMenu.add(drawLegendMenuItem);
 		
 		JMenu legendStyleMenu = new JMenu("Legend style");
@@ -269,8 +288,8 @@ public class JMainWindow extends JFrame implements WindowListener {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
 				ColorTable.setColorBarSwapped(swapLegend.isSelected());
-				viewer.updateAtoms();
-				Configuration.Options.saveProperties();
+				RenderingConfiguration.getViewer().updateAtoms();
+				RenderingConfiguration.Options.saveProperties();
 			}
 		});
 		legendStyleMenu.add(swapLegend);
@@ -286,8 +305,8 @@ public class JMainWindow extends JFrame implements WindowListener {
 					@Override
 					public void actionPerformed(ActionEvent arg0) {
 						ColorTable.setColorBarScheme(scheme);
-						Configuration.Options.saveProperties();
-						viewer.updateAtoms();
+						RenderingConfiguration.Options.saveProperties();
+						RenderingConfiguration.getViewer().updateAtoms();
 					}
 				});
 			}
@@ -318,11 +337,11 @@ public class JMainWindow extends JFrame implements WindowListener {
 		resetColorMenuItem.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
-				CrystalStructure c = Configuration.getCrystalStructure();
+				CrystalStructure c = Configuration.getCurrentAtomData().getCrystalStructure();
 				if (c!=null) {
 					c.resetColors();
 					atomicMenu.updateValues();
-					viewer.updateAtoms();
+					RenderingConfiguration.getViewer().updateAtoms();
 				}
 			}
 		});
@@ -341,7 +360,7 @@ public class JMainWindow extends JFrame implements WindowListener {
 						if(!f.getAbsolutePath().endsWith(".color")){
 						    f = new File(f.getAbsolutePath() + ".color");
 						}
-						CrystalStructure cs = Configuration.getCrystalStructure();
+						CrystalStructure cs = Configuration.getCurrentAtomData().getCrystalStructure();
 						int numCol = cs.getNumberOfTypes();
 						float[][] currentColors = new float[numCol][];
 						for (int i=0; i<numCol; i++)
@@ -365,13 +384,13 @@ public class JMainWindow extends JFrame implements WindowListener {
 					int result = chooser.showOpenDialog(JMainWindow.this);
 					if (result == JFileChooser.APPROVE_OPTION){
 						float[][] colors = ColorTable.loadColorsFromFile(chooser.getSelectedFile());
-						CrystalStructure cs = Configuration.getCrystalStructure();
+						CrystalStructure cs = Configuration.getCurrentAtomData().getCrystalStructure();
 						for (int i = 0; i<colors.length && i<cs.getNumberOfTypes(); i++){
 							cs.setGLColors(i, colors[i]);
 						}
 						
 						atomicMenu.updateValues();
-						viewer.updateAtoms();
+						RenderingConfiguration.getViewer().updateAtoms();
 					}
 				} catch (IOException e1) {
 					JOptionPane.showMessageDialog(JMainWindow.this, e1.getMessage());
@@ -384,25 +403,74 @@ public class JMainWindow extends JFrame implements WindowListener {
 		typeColorMenu.setEnabled(false);
 		menu.add(editMenu);
 		
-		final JMenuItem extrasMenu = new JMenu("Extras");
-		for (final DataContainer dc : DataContainer.getDataContainer()){
-			final JMenuItem extraMenuItem = new JMenuItem(dc.getName());
-			extraMenuItem.addActionListener(new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent arg0) {
-					if (Configuration.getCurrentAtomData() != null){
-						Configuration.getCurrentAtomData().addAdditionalData(dc);
-						atomicMenu.setAtomData(Configuration.getCurrentAtomData(), viewer, false);
-						viewer.reDraw();
+		final JMenu processingMenu = new JMenu("Analysis");
+		
+		JMenuItem atomicModulesMenu = new JMenuItem("Atom based analyis");
+		atomicModulesMenu.setActionCommand("atomic");
+		JMenuItem otherModulesMenu = new JMenuItem("Other analyis");
+		otherModulesMenu.setActionCommand("other");
+		
+		ActionListener processingActionListener = new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				AtomData data = Configuration.getCurrentAtomData();
+				if (data != null){
+					AvailableProcessingModules.JProcessingModuleDialog dialog 
+						= new AvailableProcessingModules.JProcessingModuleDialog(JMainWindow.this);
+					
+					List<ProcessingModule> modules = null;
+					if (e.getActionCommand().equals("atomic"))
+						modules = AvailableProcessingModules.getAtomicScaleProcessingModule();
+					else modules = AvailableProcessingModules.getOtherProcessingModule();
+					
+					JProcessingModuleDialog.SelectedState ok = dialog.showDialog(modules);
+					ProcessingModule pm = dialog.getSelectedProcessingModule();
+					if (ok != JProcessingModuleDialog.SelectedState.CANCEL && pm!=null){
+						boolean multipleFiles = (ok == JProcessingModuleDialog.SelectedState.ALL_FILES);
+						
+						boolean possible = pm.showConfigurationDialog(JMainWindow.this, data);
+						if (possible){
+							while (multipleFiles && data.getPrevious() != null)
+								data = data.getPrevious();
+							
+							do {
+								if (pm.isApplicable(data)){
+									final SwingWorker<Void,Void> sw = new ProcessModuleWorker(pm, data, !multipleFiles);
+									ProgressMonitor.createNewProgressMonitor(sw);
+									final JProgressDisplayDialog progressDisplay = 
+											new JProgressDisplayDialog(sw, JMainWindow.this, false);
+									progressDisplay.setTitle("Analysis");
+									
+									sw.addPropertyChangeListener(new PropertyChangeListener() {
+										@Override
+										public void propertyChange(PropertyChangeEvent arg0) {
+											if ( sw.isDone() || sw.isCancelled()){
+												progressDisplay.dispose();
+											}
+										}
+									});
+									
+									sw.execute();
+									progressDisplay.setVisible(true);
+								}
+								if (multipleFiles) data = data.getNext();
+							} while (multipleFiles && data != null);
+							
+							Configuration.setCurrentAtomData(Configuration.getCurrentAtomData(), true, false);
+						}
 					}
 				}
-			});
-			extrasMenu.add(extraMenuItem);
-		}
-		menu.add(extrasMenu);
+			}
+		};
+		atomicModulesMenu.addActionListener(processingActionListener);
+		otherModulesMenu.addActionListener(processingActionListener);
+		
+		processingMenu.add(atomicModulesMenu);
+		processingMenu.add(otherModulesMenu);
+		menu.add(processingMenu);
 		
 		final JMenuItem settingsMenu = new JMenu("Settings");
-		for (Options o : Configuration.Options.values()){
+		for (Options o : RenderingConfiguration.Options.values()){
 			settingsMenu.add(new JOptionCheckBoxMenuItem(o));
 		}
 		menu.add(settingsMenu);
@@ -429,7 +497,7 @@ public class JMainWindow extends JFrame implements WindowListener {
 				String message = "<html><body>" +
 						"AtomViewer  Copyright (C) 2014, ICAMS, Ruhr-Universtät Bochum <br>" +
 						"AtomViewer is a tool to display and analyse atomistic simulations<br><br>" +
-						"AtomViewer Version "+JMainWindow.VERSION+"-"+JMainWindow.SUBVERSION+"<br>"+
+						"AtomViewer Version "+JMainWindow.VERSION+"-"+JMainWindow.buildVersion+"<br>"+
 						"Available OpenGL version on this machine: "+ViewerGLJPanel.openGLVersion +"<br><br>" +
 						"Using Jogl Version "+JoglVersion.getInstance().getSpecificationVersion()+"<br>"+
 						"This program comes with ABSOLUTELY NO WARRANTY <br>" +
@@ -484,7 +552,7 @@ public class JMainWindow extends JFrame implements WindowListener {
 			private static final long serialVersionUID = 1L;
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
-				float[] m = viewer.getPov();
+				float[] m = RenderingConfiguration.getViewer().getPov();
 				String s = "";
 				for (int i=0; i<m.length; i++)
 					s += m[i]+";";
@@ -501,7 +569,7 @@ public class JMainWindow extends JFrame implements WindowListener {
 					float[] m = new float[split.length];
 					for (int i=0; i<split.length; i++)
 						m[i] = Float.parseFloat(split[i]);
-					viewer.setPOV(m);
+					RenderingConfiguration.getViewer().setPOV(m);
 				}
 			}
 		});
@@ -509,15 +577,15 @@ public class JMainWindow extends JFrame implements WindowListener {
 
 	//region WindowListener
 	public void windowActivated(WindowEvent e) {
-		viewer.repaint();
+		RenderingConfiguration.getViewer().repaint();
 	}
 
 	public void windowDeiconified(WindowEvent e) {
-		viewer.repaint();
+		RenderingConfiguration.getViewer().repaint();
 	}
 	
 	public void windowOpened(WindowEvent e) {
-		viewer.repaint();
+		RenderingConfiguration.getViewer().repaint();
 	}
 	
 	public void windowDeactivated(WindowEvent e) {}
@@ -562,6 +630,7 @@ public class JMainWindow extends JFrame implements WindowListener {
 			ActionListener al = new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent arg0) {
+					ViewerGLJPanel viewer = RenderingConfiguration.getViewer();
 					if (viewer != null) {
 						if (arg0.getSource() == topViewButton) {
 							if ((arg0.getModifiers() & ActionEvent.SHIFT_MASK) != 0) viewer.setPOV(180f, 0f, 0f);
@@ -599,8 +668,11 @@ public class JMainWindow extends JFrame implements WindowListener {
 			boolean binary = e.getActionCommand().equals("binary");
 			JFileChooser chooser = new JFileChooser();
 			JPanel optionPanel = new JPanel();
-			final JCheckBox exportAll = new JCheckBox("Export all");
+			optionPanel.setLayout(new BoxLayout(optionPanel, BoxLayout.Y_AXIS));
+			final JCheckBox exportAll = new JCheckBox("Export all files at once");
+			final JCheckBox exportVisible = new JCheckBox("Export visible atoms only");
 			optionPanel.add(exportAll);
+			optionPanel.add(exportVisible);
 			chooser.setAccessory(optionPanel);
 			
 			int result = chooser.showSaveDialog(JMainWindow.this);
@@ -626,7 +698,12 @@ public class JMainWindow extends JFrame implements WindowListener {
 							
 							newName = String.format("%s%s.ada", prefix, newName, num++);
 							if (binary) newName += ".gz";
-							current.printToFile(new File(path, newName), binary, binary);
+							//Check if only visible atoms are to be exported
+							Filter<Atom> atomFilter = null;
+							if (exportVisible.isSelected()) 
+								atomFilter = RenderingConfiguration.getViewer().getCurrentAtomFilter();
+							
+							current.printToFile(new File(path, newName), binary, binary, atomFilter);
 							current = current.getNext(); 
 						} while (current != null);
 					} catch (IOException e1) {
@@ -639,7 +716,10 @@ public class JMainWindow extends JFrame implements WindowListener {
 							if (filename.endsWith(".ada")) filename += ".gz";
 							if (!filename.endsWith(".ada.gz")) filename += ".ada.gz";
 						} else if (!filename.endsWith(".ada")) filename += ".ada";
-						Configuration.getCurrentAtomData().printToFile(new File(filename), binary, binary);
+						Filter<Atom> atomFilter = null;
+						if (exportVisible.isSelected()) 
+							atomFilter = RenderingConfiguration.getViewer().getCurrentAtomFilter();
+						Configuration.getCurrentAtomData().printToFile(new File(filename), binary, binary, atomFilter);
 					} catch (IOException e1) {
 						e1.printStackTrace();
 					}
@@ -683,11 +763,11 @@ public class JMainWindow extends JFrame implements WindowListener {
 				
 				gbc.fill = GridBagConstraints.HORIZONTAL;
 				JFormattedTextField widthTextField = new JFormattedTextField(new DecimalFormat("#"));
-				widthTextField.setValue(JMainWindow.this.viewer.getWidth());
+				widthTextField.setValue(RenderingConfiguration.getViewer().getWidth());
 				imageSizeDialogExtension.add(widthTextField, gbc); gbc.gridx++;
 				
 				JFormattedTextField heightTextField = new JFormattedTextField(new DecimalFormat("#"));
-				heightTextField.setValue(JMainWindow.this.viewer.getHeight());
+				heightTextField.setValue(RenderingConfiguration.getViewer().getHeight());
 				imageSizeDialogExtension.add(heightTextField, gbc); gbc.gridy++;
 				
 				gbc.weighty = 1;
@@ -711,7 +791,7 @@ public class JMainWindow extends JFrame implements WindowListener {
 						if (width<=0) width = 1;
 						if (height<=0) height = 1;
 							
-						JMainWindow.this.viewer.makeScreenshot(filename, fileEnding, sequence, width, height);
+						RenderingConfiguration.getViewer().makeScreenshot(filename, fileEnding, sequence, width, height);
 					} catch (Exception e1) {
 						JOptionPane.showMessageDialog(null, e1.getLocalizedMessage());
 					}
@@ -720,11 +800,19 @@ public class JMainWindow extends JFrame implements WindowListener {
 		}
 	}
 	
+	@Override
+	public void atomDataChanged(AtomDataChangedEvent e) {
+		if (e.getNewAtomData() == null)
+			JMainWindow.this.setTitle("AtomViewer");
+		else 
+			JMainWindow.this.setTitle("AtomViewer ("+e.getNewAtomData().getName()+")");
+	}
+	
 	public static void main(String[] args) {
 		Locale.setDefault(Locale.US);
 		//Headless processing
 		if (args.length != 0){
-			ImdFileLoader fileLoader = new ImdFileLoader(null);
+			ImdFileLoader fileLoader = new ImdFileLoader();
 			try {
 				if (args.length < 5 || !args[0].equals("-h")){
 					System.out.println("*************************************************");
@@ -757,16 +845,18 @@ public class JMainWindow extends JFrame implements WindowListener {
 					}
 				});
 				
-				Configuration.setHeadless(true);
+				RenderingConfiguration.setHeadless(true);
 				
-				ImportStates.loadProperties(new File(args[3]));
-				ImportStates.readConfigurationFile(new File(args[2]));
+				
+				ImportConfiguration ic = ImportConfiguration.getNewInstance();
+				ic.loadProperties(new File(args[3]));
+				ic.readConfigurationFile(new File(args[2]));
 				File inputFile = new File(args[1]);
 
 				Configuration.create();
 				
 				Configuration.setLastOpenedFolder(inputFile.getParentFile());
-				AtomData data = fileLoader.readInputData(inputFile);
+				AtomData data = fileLoader.readInputData(inputFile, null);
 				
 				boolean binaryFormat = true;
 				boolean exportDislocations = false;
@@ -806,11 +896,16 @@ public class JMainWindow extends JFrame implements WindowListener {
 					outfile+=".gz";
 				data.printToFile(new File(outfile), binaryFormat, binaryFormat);
 				
-				if (exportDislocations && data.getSkeletonizer() != null){
+				DataContainer dc = Configuration.getCurrentAtomData().getDataContainer(Skeletonizer.class);
+				Skeletonizer skel = null;
+				if (dc != null)
+					skel = (Skeletonizer)dc;
+				
+				if (exportDislocations && skel != null){
 					outfile = args[4]+"_dislocation.txt";
-					data.getSkeletonizer().writeDislocationSkeleton(new File(outfile));
+					skel.writeDislocationSkeleton(new File(outfile));
 				}
-			} catch (IOException e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 			
@@ -841,35 +936,23 @@ public class JMainWindow extends JFrame implements WindowListener {
 			} else if (e.getActionCommand().equals("x")){
 				if (Configuration.getCurrentAtomData().getNext()!=null){
 					AtomData next = Configuration.getCurrentAtomData().getNext();
-					Configuration.setCurrentAtomData(next);
-					viewer.setAtomData(next, false);
-					atomicMenu.setAtomData(next, viewer, false);
-					JMainWindow.this.setTitle("AtomViewer ("+next.getName()+")");
+					Configuration.setCurrentAtomData(next, true, false);
 				}
 			} else if (e.getActionCommand().equals("y") || e.getActionCommand().equals("z")){
 				if (Configuration.getCurrentAtomData().getPrevious() != null) {
 					AtomData previous = Configuration.getCurrentAtomData().getPrevious();
-					Configuration.setCurrentAtomData(previous);
-					viewer.setAtomData(previous, false);
-					atomicMenu.setAtomData(previous, viewer, false);
-					JMainWindow.this.setTitle("AtomViewer (" + previous.getName() + ")");
+					Configuration.setCurrentAtomData(previous, true, false);
 				}
 			} else if (e.getActionCommand().equals("f")){
-				AtomData current = Configuration.getCurrentAtomData();
-				while (current.getPrevious() != null)
-					current = current.getPrevious();
-				atomicMenu.setAtomData(current, viewer, false);
-				viewer.setAtomData(current, false);
-				Configuration.setCurrentAtomData(current);
-				JMainWindow.this.setTitle("AtomViewer (" + current.getName() + ")");
+				AtomData first = Configuration.getCurrentAtomData();
+				while (first.getPrevious() != null)
+					first = first.getPrevious();
+				Configuration.setCurrentAtomData(first, true, false);
 			} else if (e.getActionCommand().equals("l")){
-				AtomData current = Configuration.getCurrentAtomData();
-				while (current.getNext() != null)
-					current = current.getNext();
-				atomicMenu.setAtomData(current, viewer, false);
-				viewer.setAtomData(current, false);
-				Configuration.setCurrentAtomData(current);
-				JMainWindow.this.setTitle("AtomViewer (" + current.getName() + ")");
+				AtomData last = Configuration.getCurrentAtomData();
+				while (last.getNext() != null)
+					last = last.getNext();
+				Configuration.setCurrentAtomData(last, true, false);
 			} else if (e.getActionCommand().equals("r")){
 				editRangeMenuItem.doClick();
 			} else if (e.getActionCommand().equals("w")){
@@ -885,19 +968,17 @@ public class JMainWindow extends JFrame implements WindowListener {
 	private class OpenMenuListener implements ActionListener{
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			JMDFileChooser chooser;
+			
+			final MDFileLoader fileLoader;			
 			if (e.getActionCommand().equals(InputFormat.IMD.name()))
-				chooser = new JMDFileChooser(InputFormat.IMD);
+				fileLoader = new ImdFileLoader();
 			else if (e.getActionCommand().equals(InputFormat.LAMMPS.name()))
-				chooser = new JMDFileChooser(InputFormat.LAMMPS);
+				fileLoader = new LammpsFileLoader();
+			else if (e.getActionCommand().equals(InputFormat.XYZ.name()))
+				fileLoader = new XYZFileLoader();
 			else return;
 			
-			final MDFileLoader fileLoader;
-			if (e.getActionCommand().equals(InputFormat.IMD.name()))
-				fileLoader = new ImdFileLoader(chooser);
-			else if (e.getActionCommand().equals(InputFormat.LAMMPS.name()))
-				fileLoader = new LammpsFileLoader(chooser);
-			else return;
+			JMDFileChooser chooser = new JMDFileChooser(fileLoader);
 			
 			Configuration.currentFileLoader = fileLoader;
 			
@@ -908,49 +989,43 @@ public class JMainWindow extends JFrame implements WindowListener {
 			if (result == JFileChooser.APPROVE_OPTION){	
 				if (Configuration.getCurrentAtomData() != null) {
 					Configuration.getCurrentAtomData().clear();
-					viewer.getRenderRange().reset();
+					RenderingConfiguration.getViewer().getRenderRange().reset();
 				}
 				boolean successfulCreated = chooser.createConfiguration();
 				if (!successfulCreated) return;
 				Configuration.setLastOpenedFolder(chooser.getSelectedFile().getParentFile());
 				editCrystalConf.setEnabled(true);
 				typeColorMenu.setEnabled(true);
-				
-				exportSkeletonFileMenuItem.setEnabled(ImportStates.SKELETONIZE.isActive());
 
 				final JProgressDisplayDialog progressDisplay = new JProgressDisplayDialog(fileLoader, JMainWindow.this);
 				progressDisplay.setTitle("Opening files...");
 				
-				fileLoader.addPropertyChangeListener(new PropertyChangeListener() {
+				PropertyChangeListener pcl = new PropertyChangeListener() {
 					@Override
 					public void propertyChange(PropertyChangeEvent arg0) {
 						if ( fileLoader.isDone() || fileLoader.isCancelled()){
 							try {
 								//Retrieve the results from the background worker
 								if (!fileLoader.isCancelled())
-									Configuration.setCurrentAtomData(fileLoader.get());
+									Configuration.setCurrentAtomData(fileLoader.get(), true, true);
 							} catch (Exception e) {
 								progressDisplay.dispose();
-								e.printStackTrace();
-								fileLoader.removePropertyChangeListener(this);
 								JOptionPane.showMessageDialog(null, e.toString());
+								e.printStackTrace();
 							} finally {
+								fileLoader.removePropertyChangeListener(this);
 								progressDisplay.dispose();
 							}
 						}
 					}
-				});
+				};
+				fileLoader.addPropertyChangeListener(pcl);
 				
-				Configuration.setCurrentAtomData(null);
-				viewer.setAtomData(null, true);
+				Configuration.setCurrentAtomData(null, true, true);
+				fileLoader.setFilesToRead(chooser.getSelectedFiles());
 				fileLoader.execute();
 				
 				progressDisplay.setVisible(true);
-				if (Configuration.getCurrentAtomData() != null){
-					viewer.setAtomData(Configuration.getCurrentAtomData(), true);
-					atomicMenu.setAtomData(Configuration.getCurrentAtomData(), viewer, true);
-					JMainWindow.this.setTitle("AtomViewer ("+Configuration.getCurrentAtomData().getName()+")");
-				}
 			} 
 		}
 	}
@@ -974,6 +1049,47 @@ public class JMainWindow extends JFrame implements WindowListener {
 			};
 			return actionListener;
 		}
+	}
+	
+	private class ProcessModuleWorker extends SwingWorker<Void, Void>{
+		ProcessingModule pm;
+		AtomData data;
+		boolean updateViewer;
+		
+		ProcessModuleWorker(ProcessingModule pm, AtomData data, boolean updateViewer) {
+			this.pm = pm;
+			this.data = data;
+			this.updateViewer = updateViewer;
+		}
+		
+		@Override
+		protected Void doInBackground() throws Exception {
+			ProgressMonitor.getProgressMonitor().setCurrentFilename(data.getName());
+			ProgressMonitor.getProgressMonitor().setActivityName(pm.getShortName());
+	
+			try {
+				data.addDataColumnInfo(pm.getDataColumnsInfo());
+				ProcessingResult pr = pm.process(data);
+				if (pr != null && pr.getDataContainer() != null){
+					data.addAdditionalData(pr.getDataContainer());
+				}
+				if (pm.getDataColumnsInfo() != null){
+					for (DataColumnInfo dci : pm.getDataColumnsInfo())
+						if (!dci.isInitialized())
+							dci.findRange(data, false);
+				}
+				if (updateViewer){
+					RenderingConfiguration.getViewer().updateAtoms();
+				}
+			} catch (Exception e) {
+				ProgressMonitor.getProgressMonitor().destroy();
+				JOptionPane.showMessageDialog(JMainWindow.this, e.getMessage());
+				e.printStackTrace();
+			}
+			ProgressMonitor.getProgressMonitor().destroy();
+			return null;
+		}
+		
 	}
 	
 	private class JGraphicOptionCheckBoxMenuItem extends JCheckBoxMenuItem{

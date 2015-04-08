@@ -21,8 +21,6 @@ package model.skeletonizer;
 import java.awt.event.InputEvent;
 import java.util.*;
 
-import common.UniqueID;
-import common.UniqueIDCounter;
 import common.Vec3;
 import crystalStructures.CrystalStructure;
 import model.*;
@@ -34,13 +32,7 @@ import model.polygrain.Grain;
  * @author begauc9f
  *
  */
-public class Dislocation implements Pickable, UniqueID{
-	
-	/**
-	 * Each Dislocation instance needs an unique number to easily check for equality
-	 * and sorting in sets 
-	 */
-	private static UniqueIDCounter id_source = UniqueIDCounter.getNewUniqueIDCounter(true);
+public class Dislocation implements Pickable{
 	private int id;
 	
 	private SkeletonNode[] polyline;
@@ -48,22 +40,24 @@ public class Dislocation implements Pickable, UniqueID{
 	
 	private Grain grain;
 	private BurgersVectorInformation bvInfo;
+	private Skeletonizer skel;
 	
 	/**
 	 * Create a new dislocation from an array of SkeletonNodes
 	 * @param polyline
 	 */
-	public Dislocation(SkeletonNode[] polyline){
-		this.id = id_source.getUniqueID();
+	public Dislocation(SkeletonNode[] polyline, Skeletonizer skel){
+		this.skel = skel;
+		this.id = skel.getDislocationIDSource().getUniqueID();
 		this.polyline = polyline;
 		
-		if (ImportStates.POLY_MATERIAL.isActive() && !Configuration.getCrystalStructure().skeletonizeOverMultipleGrains()){
+		if (skel.getAtomData().isPolyCrystalline() && !skel.getAtomData().getCrystalStructure().skeletonizeOverMultipleGrains()){
 			//as only atoms within the same grain as skeletonized into a dislocation
 			//the first mapped atoms yields the correct grain
 			int grainNumber = polyline[0].getMappedAtoms().get(0).getGrain();
 			
 			if (grainNumber != Atom.DEFAULT_GRAIN && grainNumber != Atom.IGNORED_GRAIN)
-				grain = Configuration.getCurrentAtomData().getGrains(grainNumber);
+				grain = skel.getAtomData().getGrains(grainNumber);
 		}
 	}
 
@@ -197,7 +191,7 @@ public class Dislocation implements Pickable, UniqueID{
 				int grainNumber = polyline[0].getMappedAtoms().get(0).getGrain();
 				s += String.format(" Grain(%d)", grainNumber);
 				bv = grain.getCystalRotationTools().getInCrystalCoordinates(bvInfo.averageResultantBurgersVector);
-			} else bv = Configuration.getCrystalRotationTools().getInCrystalCoordinates(bvInfo.averageResultantBurgersVector);
+			} else bv = skel.getAtomData().getCrystalRotation().getInCrystalCoordinates(bvInfo.averageResultantBurgersVector);
 			s += String.format(" Avg. RBV ( %.3f | %.3f | %.3f )", bv.x, bv.y, bv.z);
 			s += " (Magnitude=" + bvInfo.averageResultantBurgersVector.getLength() +")";
 			if (bvInfo.burgersVector.isFullyDefined()) {
@@ -206,7 +200,7 @@ public class Dislocation implements Pickable, UniqueID{
 				BurgersVector tbv;
 				if (grain != null){
 					tbv = grain.getCystalRotationTools().rbvToBurgersVector(bvInfo.averageResultantBurgersVector);
-				} else tbv = Configuration.getCrystalRotationTools().rbvToBurgersVector(bvInfo.averageResultantBurgersVector);
+				} else tbv = skel.getAtomData().getCrystalRotation().rbvToBurgersVector(bvInfo.averageResultantBurgersVector);
 				s += " Approximate Burgers Vector: " + tbv.toString();
 			}
 			if (bvInfo.isComputed())
@@ -219,7 +213,7 @@ public class Dislocation implements Pickable, UniqueID{
 	public float getLength() {
 		double length = 0.;
 		for (int i = 0; i < polyline.length - 1; i++) {
-			length += Configuration.pbcCorrectedDirection(polyline[i], polyline[i + 1]).getLength();
+			length += skel.getAtomData().getBox().getPbcCorrectedDirection(polyline[i], polyline[i + 1]).getLength();
 		}
 		return (float)length;
 	}
@@ -290,7 +284,7 @@ public class Dislocation implements Pickable, UniqueID{
 	}
 	
 	@Override
-	public String printMessage(InputEvent ev) {
+	public String printMessage(InputEvent ev, AtomData data) {
 		return toString();
 	}
 }

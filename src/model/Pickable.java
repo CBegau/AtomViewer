@@ -30,7 +30,8 @@ public interface Pickable {
 	 * It is possible to adjust the text if certain keys are pressed
 	 * as indicated in the inputModifier.  
 	 * @param ev The input event when the message is requested. May be null
+	 * @param ev An instance of AtomData to which the object to print a message belongs to
 	 * @return
 	 */
-	public String printMessage(InputEvent ev);
+	public String printMessage(InputEvent ev, AtomData data);
 }

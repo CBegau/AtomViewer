@@ -28,7 +28,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
 
@@ -37,12 +36,15 @@ import javax.swing.*;
 import javax.swing.border.EtchedBorder;
 import javax.swing.border.TitledBorder;
 
+import processingModules.LatticeRotationModule;
 import common.ColorTable;
 import common.Vec3;
 import model.AtomData;
-import model.ImportStates;
+import model.BoxParameter;
+import model.DataColumnInfo;
 import model.dataContainer.DataContainer;
 import model.dataContainer.JDataPanel;
+import model.skeletonizer.Skeletonizer;
 
 public class DislocationDensityTensorData extends DataContainer {
 	private static JDislocationDensityTensorControls dataPanel = null;
@@ -50,11 +52,19 @@ public class DislocationDensityTensorData extends DataContainer {
 	private DislocationDensityTensor[][][] ddtFromLatt;
 	private DislocationDensityTensor[][][] ddtFromDis;
 	private int[] gridSize = new int[3];
+	private AtomData data;
 //	private DislocationDensityTensor plasticZone;
 	
 	public DislocationDensityTensorData() {};	
 	
 	public DislocationDensityTensor[][][] calcDislocationDensityTensors(AtomData data){
+		DataContainer dc = data.getDataContainer(Skeletonizer.class);
+		Skeletonizer skel = null;
+		if (dc != null)
+			skel = (Skeletonizer)dc;
+		else return null;
+		
+		this.data = data;
 		CuboidVolumeElement[][][] ve = new CuboidVolumeElement[gridSize[0]][gridSize[1]][gridSize[2]];
 		
 		if (!data.getBox().isOrtho())
@@ -80,10 +90,11 @@ public class DislocationDensityTensorData extends DataContainer {
 		}
 		
 		DislocationDensityTensor[][][] ddt = new DislocationDensityTensor[gridSize[0]][gridSize[1]][gridSize[2]];
+				
 		for (int i=0; i<gridSize[0]; i++){
 			for (int j=0;j<gridSize[1]; j++){
 				for (int k=0;k<gridSize[2]; k++){
-					DislocationDensityTensor d = new DislocationDensityTensor(data.getSkeletonizer(), ve[i][j][k]); 
+					DislocationDensityTensor d = new DislocationDensityTensor(skel, ve[i][j][k]); 
 					ddt[i][j][k] = d;
 				}
 			}
@@ -116,7 +127,7 @@ public class DislocationDensityTensorData extends DataContainer {
 		private int renderStartSlice, renderEndSlice;
 		private DislocationDensityTensorData ddtd;
 		
-		private JDislocationDensityTensorControls(DislocationDensityTensorData ddtd) {
+		private JDislocationDensityTensorControls(DislocationDensityTensorData ddtd, AtomData data) {
 			this.ddtd = ddtd;
 			this.setBorder(new TitledBorder(new EtchedBorder(1), "DDT"));
 			this.setLayout(new GridBagLayout());
@@ -261,12 +272,20 @@ public class DislocationDensityTensorData extends DataContainer {
 			});
 			
 			//Enable default value, hide buttons if no selection possible
-			if (!ImportStates.SKELETONIZE.isActive() || !ImportStates.LATTICE_ROTATION.isActive()){
+			DataColumnInfo[] dci = new LatticeRotationModule().getDataColumnsInfo();
+			boolean hasLatticeRotation = true;
+			for (DataColumnInfo d : dci)
+				if (data.getIndexForCustomColumn(d) == -1)
+					hasLatticeRotation = false;
+			
+			boolean hasSkeleton = (data.getDataContainer(Skeletonizer.class)!=null);
+			
+			if (!hasSkeleton || !hasLatticeRotation){
 				dislocationNetworkDDTComboBox.setVisible(false);
 				latticeDDTComboBox.setVisible(false);
-				if (ImportStates.SKELETONIZE.isActive()) lattOrDis = true;
+				if (hasSkeleton) lattOrDis = true;
 				else lattOrDis = false;
-			} else if (ImportStates.SKELETONIZE.isActive()) {
+			} else if (hasSkeleton) {
 				dislocationNetworkDDTComboBox.doClick();
 			} 
 			
@@ -295,12 +314,12 @@ public class DislocationDensityTensorData extends DataContainer {
 	}
 
 	@Override
-	public void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking) {
+	public void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
 		return;
 	}
 	
 	@Override
-	public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking) {
+	public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
 		if (!dataPanel.isDataVisible()) return;
 		
 		DislocationDensityTensor[][][] ddt;
@@ -394,13 +413,19 @@ public class DislocationDensityTensorData extends DataContainer {
 	};
 	
 	@Override
-	public boolean processData(File dataFile, AtomData atomData) throws IOException {
-		if (!ImportStates.SKELETONIZE.isActive() && !ImportStates.LATTICE_ROTATION.isActive())
+	public boolean processData(AtomData atomData) throws IOException {
+		DataColumnInfo[] dci = new LatticeRotationModule().getDataColumnsInfo();
+		boolean hasLatticeRotation = true;
+		for (DataColumnInfo d : dci)
+			if (atomData.getIndexForCustomColumn(d) == -1)
+				hasLatticeRotation = false;
+		
+		boolean hasSkeleton = (data.getDataContainer(Skeletonizer.class)!=null);
+		
+		if (!hasSkeleton && !hasLatticeRotation)
 			return false;
 		
-		
-		
-		if (ImportStates.SKELETONIZE.isActive()){
+		if (hasSkeleton){
 			ddtFromDis = calcDislocationDensityTensors(atomData);
 			
 //			if (data.getFileMetaData("extpot") != null && data.getFileMetaData("plasticzone") != null){
@@ -412,7 +437,7 @@ public class DislocationDensityTensorData extends DataContainer {
 //								indent[3], pz[4], new Vec3(pz[0],pz[1],pz[2])));
 //			}
 		}
-		if (ImportStates.LATTICE_ROTATION.isActive()){
+		if (hasLatticeRotation){
 			CuboidSectorDensityTensorBuilder csdtb = 
 					new CuboidSectorDensityTensorBuilder(atomData, gridSize[0], gridSize[1], gridSize[2]);
 			ddtFromLatt = csdtb.createCuboids();
@@ -424,19 +449,9 @@ public class DislocationDensityTensorData extends DataContainer {
 	@Override
 	public JDataPanel getDataControlPanel() {
 		if (dataPanel == null)
-			dataPanel = new JDislocationDensityTensorControls(this);
+			dataPanel = new JDislocationDensityTensorControls(this, data);
 		dataPanel.setDDTData(this);
 		return dataPanel;
-	}
-
-	@Override
-	public String[] getFileExtensions() {
-		return null;
-	}
-
-	@Override
-	public boolean isExternalFileRequired() {
-		return false;
 	}
 
 	@Override
@@ -448,9 +463,21 @@ public class DislocationDensityTensorData extends DataContainer {
 	public String getName() {
 		return "Local dislocation densities";
 	}
+	
+	@Override
+	public boolean isApplicable(AtomData data) {
+		return true;
+	}
+
+	@Override
+	public String getRequirementDescription() {
+		return "";
+	}
 
 	@Override
 	public DataContainer deriveNewInstance() {
-		return new DislocationDensityTensorData();
+		DislocationDensityTensorData clone = new DislocationDensityTensorData();
+		clone.gridSize = this.gridSize.clone();
+		return clone;
 	}
 }

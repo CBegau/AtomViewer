@@ -18,45 +18,46 @@
 
 package model.io;
 
-import gui.JMDFileChooser;
-
 import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
 
-import javax.swing.JOptionPane;
+import javax.swing.filechooser.FileFilter;
 
 import common.Vec3;
 import model.*;
+import model.DataColumnInfo.Component;
+import model.ImportConfiguration.ImportStates;
 
-public class LammpsFileLoader extends MDFileLoader {	
-	public LammpsFileLoader(JMDFileChooser chooser) {
-		super(chooser);
+public class LammpsFileLoader extends MDFileLoader {
+	
+	@Override
+	public AtomData readInputData(File f, AtomData previous) throws IOException{
+		return readFile(f, previous);
 	}
 	
 	@Override
-	protected AtomData readInputData() throws Exception{
-		AtomData toReturn = null;
-		try {
-			AtomData previous = null;
-			for (File f : chooser.getSelectedFiles()){
-				getProgressMonitor().setCurrentFilename(f.getName());
-				toReturn = readFile(f, previous);
-				previous = toReturn;
-				
+	public FileFilter getDefaultFileFilter() {
+		FileFilter lammpsFileFilterBasic = new FileFilter() {
+			@Override
+			public String getDescription() {
+				return "Lammps file (*.dump)";
 			}
-		} catch (IOException ex) {
-			JOptionPane.showMessageDialog(null, ex.toString());
-		}
-		return toReturn;
-	}
-	
-	@Override
-	public AtomData readInputData(File f) throws IOException{
-		getProgressMonitor().setCurrentFilename(f.getName());
-		return readFile(f, null);
+			
+			@Override
+			public boolean accept(File f) {
+				if (f.isDirectory()) return true;
+				String name = f.getName();
+				if (name.endsWith(".dump") || name.endsWith(".dump.gz")){
+					return true;
+				}
+				return false;
+			}
+		};
+		return lammpsFileFilterBasic;
 	}
 	
 	@Override
@@ -93,7 +94,7 @@ public class LammpsFileLoader extends MDFileLoader {
 		
 		ArrayList<String> filteredValues = new ArrayList<String>();
 		for (String s : values){
-			if (!s.equals("id") && !s.equals("type") && !s.equals("rbv_data")
+			if (!s.equals("id") && !s.equals("type")
 					&& !s.equals("x") && !s.equals("y") && !s.equals("z")
 					&& !s.equals("xu") && !s.equals("yu") && !s.equals("zu")
 					&& !s.equals("xs") && !s.equals("ys") && !s.equals("zs")
@@ -124,20 +125,14 @@ public class LammpsFileLoader extends MDFileLoader {
 		int atomTypeColumn = -1;
 		boolean scaledCoords = false;
 
-		int[] dataColumns = new int[Configuration.getSizeDataColumns()];
-		for (int i = 0; i<Configuration.getSizeDataColumns(); i++){
+		int[] dataColumns = new int[ImportConfiguration.getInstance().getDataColumns().size()];
+		for (int i = 0; i<dataColumns.length; i++)
 			dataColumns[i] = -1;
-		}
 
 		Pattern p = Pattern.compile("\\s+");
-		AtomFilter atomFilter = Configuration.getCrystalStructure().getIgnoreAtomsDuringImportFilter();
-
-		boolean importPerfect = false;
-		if (!ImportStates.DISPOSE_DEFAULT.isActive() || ImportStates.BURGERS_VECTORS.isActive()
-				|| ImportStates.POLY_MATERIAL.isActive())
-			importPerfect = true;
+		Filter<Atom> atomFilter = ImportConfiguration.getInstance().getCrystalStructure().getIgnoreAtomsDuringImportFilter();
 		
-		String atomTypeID = Configuration.getCrystalStructure().getAtomTypeKeyword();
+		String atomTypeID = ImportConfiguration.getInstance().getCrystalStructure().getAtomTypeKeyword();
 
 		ImportDataContainer idc = new ImportDataContainer();
 		try {
@@ -159,11 +154,9 @@ public class LammpsFileLoader extends MDFileLoader {
 					} else if (s.contains("ITEM: BOX BOUNDS")) {
 						String[] parts = p.split(s);
 						if (parts.length >= 6){
-							boolean[] pbc = new boolean[3];
-							pbc[0] = parts[3].equals("pp");
-							pbc[1] = parts[4].equals("pp");
-							pbc[2] = parts[5].equals("pp");
-							Configuration.setPBC(pbc);
+							idc.pbc[0] = parts[3].equals("pp");
+							idc.pbc[1] = parts[4].equals("pp");
+							idc.pbc[2] = parts[5].equals("pp");
 						}
 						
 						s = lnr.readLine();
@@ -200,10 +193,10 @@ public class LammpsFileLoader extends MDFileLoader {
 								scaledCoords = true;
 							}
 							if (parts[i].equals("type")) elementColumn = i - 2;
-							if (!ImportStates.OVERRIDE.isActive() && parts[i].equals(atomTypeID)) atomTypeColumn = i - 2;
+							if (ImportStates.IMPORT_ATOMTYPE.isActive() && parts[i].equals(atomTypeID)) atomTypeColumn = i - 2;
 							
-							for (int j = 0; j<Configuration.getSizeDataColumns(); j++){
-								if (parts[i].equals(Configuration.getDataColumnInfo(j).getId()))
+							for (int j = 0; j<ImportConfiguration.getInstance().getDataColumns().size(); j++){
+								if (parts[i].equals(ImportConfiguration.getInstance().getDataColumns().get(j).getId()))
 									dataColumns[j] = i - 2;
 							}
 						}
@@ -239,7 +232,6 @@ public class LammpsFileLoader extends MDFileLoader {
 				}
 				
 				if (atomTypeColumn != -1) idc.atomTypesAvailable = true;
-				importPerfect = true;
 				if (xColumn == -1) throw new IllegalArgumentException("Broken header, no coordinates x y z");
 
 				if (idc.boxSizeX.x <= 0f || idc.boxSizeY.y <= 0f || idc.boxSizeZ.z <= 0f) {
@@ -260,36 +252,35 @@ public class LammpsFileLoader extends MDFileLoader {
 						if (element + 1 > idc.maxElementNumber) idc.maxElementNumber = (byte)(element + 1);
 					}
 
-					if (importPerfect || type != Configuration.getCrystalStructure().getDefaultType()) {
-						if (numberColumn != -1)
-							number = Integer.parseInt(parts[numberColumn]);
-						if (idc.atomTypesAvailable) type = (byte)Integer.parseInt(parts[atomTypeColumn]);
+					if (numberColumn != -1)
+						number = Integer.parseInt(parts[numberColumn]);
+					if (idc.atomTypesAvailable) type = (byte)Integer.parseInt(parts[atomTypeColumn]);
 
-						if (scaledCoords){
-							pos.x = Float.parseFloat(parts[xColumn + 0])*idc.boxSizeX.x - idc.offset.x;
-							pos.y = Float.parseFloat(parts[xColumn + 1])*idc.boxSizeY.y - idc.offset.y;
-							pos.z = Float.parseFloat(parts[xColumn + 2])*idc.boxSizeZ.z - idc.offset.z;
-						} else {
-							pos.x = Float.parseFloat(parts[xColumn + 0]) - idc.offset.x;
-							pos.y = Float.parseFloat(parts[xColumn + 1]) - idc.offset.y;
-							pos.z = Float.parseFloat(parts[xColumn + 2]) - idc.offset.z;
-						}
-						
-						//Put atoms back into the simulation box, they might be slightly outside
-						idc.box.backInBox(pos);
-
-						Atom a = new Atom(pos, type, number, element);
-
-						//Custom columns
-						for (int j = 0; j<dataColumns.length; j++){
-							if (dataColumns[j] != -1)
-								a.setData(Float.parseFloat(parts[dataColumns[j]]), j);
-						}
-						
-						if (atomFilter == null || atomFilter.accept(a)){
-							idc.atoms.add(a);
-						}
+					if (scaledCoords){
+						pos.x = Float.parseFloat(parts[xColumn + 0])*idc.boxSizeX.x - idc.offset.x;
+						pos.y = Float.parseFloat(parts[xColumn + 1])*idc.boxSizeY.y - idc.offset.y;
+						pos.z = Float.parseFloat(parts[xColumn + 2])*idc.boxSizeZ.z - idc.offset.z;
+					} else {
+						pos.x = Float.parseFloat(parts[xColumn + 0]) - idc.offset.x;
+						pos.y = Float.parseFloat(parts[xColumn + 1]) - idc.offset.y;
+						pos.z = Float.parseFloat(parts[xColumn + 2]) - idc.offset.z;
 					}
+					
+					//Put atoms back into the simulation box, they might be slightly outside
+					idc.box.backInBox(pos);
+
+					Atom a = new Atom(pos, type, number, element);
+
+					//Custom columns
+					for (int j = 0; j<dataColumns.length; j++){
+						if (dataColumns[j] != -1)
+							a.setData(Float.parseFloat(parts[dataColumns[j]]), j);
+					}
+					
+					if (atomFilter == null || atomFilter.accept(a)){
+						idc.atoms.add(a);
+					}
+					
 					s = lnr.readLine();
 				}
 				previous = new AtomData(previous, idc);
@@ -301,6 +292,26 @@ public class LammpsFileLoader extends MDFileLoader {
 			lnr.close();
 		}
 		return previous;
+	}
+	
+	@Override
+	public Map<String, Component> getDefaultNamesForComponents() {
+		HashMap<String, Component> map = new HashMap<String, Component>();
+		map.put("vx", Component.VELOCITY_X);
+		map.put("vy", Component.VELOCITY_Y);
+		map.put("vz", Component.VELOCITY_Z);
+		map.put("mass", Component.MASS);
+		map.put("c_EPe", Component.E_POT);
+		
+		map.put("fx", Component.FORCE_X);
+		map.put("fy", Component.FORCE_Y);
+		map.put("fz", Component.FORCE_Z);
+		
+		map.put("v_s11", Component.STRESS_XX);
+		map.put("v_s22", Component.STRESS_YY);
+		map.put("v_s33", Component.STRESS_ZZ);
+		
+		return map;
 	}
 }
 	

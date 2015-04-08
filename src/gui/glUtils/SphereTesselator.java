@@ -26,7 +26,7 @@ import java.util.TreeMap;
 /**
  * Tessalator for a sphere
  */
-public class SphereGenerator {
+public class SphereTesselator {
 
 	private static Tupel<int[], float[]> sphereLOD0, sphereLOD1;
 	
@@ -67,7 +67,7 @@ public class SphereGenerator {
 				1,6,2, 2,6,7, 2,7,3, 3,8,4, 4,9,5, 5,10,1,
 				7,8,3, 8,9,4, 9,10,5, 10,6,1};
 		for (int i=0; i<lod; i++){
-			Tupel<int[], float[]> tessalation = SphereGenerator.tesselate(t, v);
+			Tupel<int[], float[]> tessalation = SphereTesselator.tesselate(t, v);
 			t = tessalation.o1;
 			v = tessalation.o2;
 		}

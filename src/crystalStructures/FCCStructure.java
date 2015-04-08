@@ -22,7 +22,6 @@ import java.util.*;
 
 import common.Vec3;
 import crystalStructures.CrystalStructureProperties.BooleanCrystalProperty;
-import crystalStructures.CrystalStructureProperties.FloatCrystalProperty;
 import model.*;
 import model.BurgersVector.BurgersVectorType;
 import model.polygrain.grainDetection.AtomToGrainObject;
@@ -84,15 +83,6 @@ public class FCCStructure extends CrystalStructure {
 		bvClassifcationPattern.add(new ClassificationPattern(111, 3, 3, 111, 3, 0, 4, BurgersVectorType.FRANK_PARTIAL));
 	}
 	
-	
-	private FloatCrystalProperty grainBoundaryFilterDistanceProperty = 
-			new FloatCrystalProperty("gbFilterDist", "Grain boundary filter distance",
-					"<html>If grain boundaries are to be detected,"
-					+ "atoms in their vicinity can be excluded from dislocation networks."
-					+ "This value defines the maximum distance at which atoms are excluded."
-					+ "<br>If set to zero, the feature is disabled completely."
-					+ "<br>IMPORTANT: This feature can be very time consuming."
-					+ "<br>Min: 0, Max: 25</html>", 0f, 0f, 25f);
 	protected BooleanCrystalProperty highTempProperty = 
 			new BooleanCrystalProperty("highTempADA", "optimize defect classification for >150K",
 					"<html>Modifies the thresholds to classify atoms.<br>"
@@ -101,7 +91,6 @@ public class FCCStructure extends CrystalStructure {
 	
 	public FCCStructure() {
 		super();
-		crystalProperties.add(grainBoundaryFilterDistanceProperty);
 		crystalProperties.add(highTempProperty);
 	}
 	
@@ -191,7 +180,7 @@ public class FCCStructure extends CrystalStructure {
 		ArrayList<Atom> sfAtoms = new ArrayList<Atom>();
 		for (int i=0; i<data.getAtoms().size(); i++){
 			Atom a = data.getAtoms().get(i);
-			if (a.getType() == HCP && (!ImportStates.POLY_MATERIAL.isActive() || a.getGrain() != Atom.IGNORED_GRAIN))
+			if (a.getType() == HCP && a.getGrain() != Atom.IGNORED_GRAIN)
 				sfAtoms.add(a);
 		}
 		return sfAtoms;
@@ -199,7 +188,7 @@ public class FCCStructure extends CrystalStructure {
 
 	@Override
 	public boolean isRBVToBeCalculated(Atom a) {
-		if (ImportStates.POLY_MATERIAL.isActive() && a.getGrain() == Atom.IGNORED_GRAIN) return false;
+		if (a.getGrain() == Atom.IGNORED_GRAIN) return false;
 		
 		int type = a.getType();
 		if (type != FCC && type != HCP && type != 6) return true;
@@ -264,12 +253,6 @@ public class FCCStructure extends CrystalStructure {
 	public int getSurfaceType() {
 		return 6;
 	}
-	
-	@Override
-	public float getGrainBoundaryFilterDistance() {
-		return grainBoundaryFilterDistanceProperty.getValue();
-	}
-	
 	
 	@Override
 	public GrainDetectionCriteria getGrainDetectionCriteria() {

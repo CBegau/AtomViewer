@@ -22,8 +22,6 @@ import java.util.*;
 
 import common.Vec3;
 import model.Atom;
-import model.Configuration;
-import model.ImportStates;
 import model.NearestNeighborBuilder;
 import model.skeletonizer.*;
 
@@ -40,6 +38,8 @@ public class DislocationFixingPostprocessor implements SkeletonDislocationPostpr
 	private final static float MAX_DISTANCE_SCALING = 3f;
 	private final float invThresholdDistance;
 	
+	private Skeletonizer skeleton;
+	
 	public DislocationFixingPostprocessor(float nearestNeighborDistance) {
 		this.nearestNeighborDistance = nearestNeighborDistance;
 		this.invThresholdDistance = 1f / (MAX_DISTANCE_SCALING * MAX_DISTANCE_SCALING * nearestNeighborDistance * nearestNeighborDistance);
@@ -50,9 +50,10 @@ public class DislocationFixingPostprocessor implements SkeletonDislocationPostpr
 	 */
 	@Override
 	public void postProcessDislocations(Skeletonizer skel) {
+		this.skeleton = skel;
 		TreeMap<SkeletonNode, Dislocation> freeEndings = new TreeMap<SkeletonNode, Dislocation>();
 
-		float minDistLength = Configuration.getCrystalStructure().getPerfectBurgersVectorLength() * MAX_DISTANCE_SCALING;
+		float minDistLength = skel.getAtomData().getCrystalStructure().getPerfectBurgersVectorLength() * MAX_DISTANCE_SCALING;
 		Iterator<Dislocation> iterDis = skel.getDislocations().iterator();
 		// Remove "dislocations" that are connected to nothing and are very short
 		while (iterDis.hasNext()) {
@@ -64,12 +65,14 @@ public class DislocationFixingPostprocessor implements SkeletonDislocationPostpr
 		// Create a nnb between all atoms tagged as surface and atoms at dislocation ends
 		// Can quite efficiently filter out the dislocations ending at a surface
 		NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(
-				Configuration.getCrystalStructure().getNearestNeighborSearchRadius());
+				skel.getAtomData().getBox(), skel.getAtomData().getCrystalStructure().getNearestNeighborSearchRadius());
 
-		int surfaceType = Configuration.getCrystalStructure().getSurfaceType();
-		for (Atom a : Configuration.getCurrentAtomData().getAtoms()){ //Adding the free surface atoms
+		int surfaceType = skel.getAtomData().getCrystalStructure().getSurfaceType();
+		
+		for (Atom a : skel.getAtomData().getAtoms()){ //Adding the free surface atoms
 			if (a.getType() == surfaceType) nnb.add(a);
 		}
+		
 		for (Dislocation d : skel.getDislocations()){ //Adding all atoms from dislocation ends
 			for (Atom a : d.getStartNode().getMappedAtoms())
 				nnb.add(a);
@@ -107,9 +110,8 @@ public class DislocationFixingPostprocessor implements SkeletonDislocationPostpr
 			}
 		}
 
-		NearestNeighborBuilder<SkeletonNode> skelNnb = new NearestNeighborBuilder<SkeletonNode>(Configuration
-				.getCurrentAtomData().getBox(), nearestNeighborDistance * MAX_DISTANCE_SCALING,
-				Configuration.getPbc());
+		NearestNeighborBuilder<SkeletonNode> skelNnb = new NearestNeighborBuilder<SkeletonNode>(skel.getAtomData().getBox(), 
+				nearestNeighborDistance * MAX_DISTANCE_SCALING);
 		for (SkeletonNode n : skel.getNodes()) {
 			skelNnb.add(n);
 		}
@@ -142,7 +144,7 @@ public class DislocationFixingPostprocessor implements SkeletonDislocationPostpr
 					freeEndings.remove(d2.getStartNode());
 					freeEndings.remove(d1.getEndNode());
 					freeEndings.remove(d2.getEndNode());
-					Dislocation comb = DislocationFixingPostprocessor.joinDislocations(d1, n1, d2, bestFit);
+					Dislocation comb = this.joinDislocations(d1, n1, d2, bestFit);
 					//Remove old dislocations
 					skel.getDislocations().remove(d1);
 					skel.getDislocations().remove(d2);
@@ -179,7 +181,7 @@ public class DislocationFixingPostprocessor implements SkeletonDislocationPostpr
 
 			if (bestDist < 1f){
 				//join dislocation into junction
-				DislocationFixingPostprocessor.joinDislocationIntoJunction(d1, n1, nearest);
+				this.joinDislocationIntoJunction(d1, n1, nearest);
 				freeEndings.remove(n1);
 			}
 			n1 = freeEndings.higherKey(n1);
@@ -213,7 +215,7 @@ public class DislocationFixingPostprocessor implements SkeletonDislocationPostpr
 
 			if (nearest != null){
 				//join dislocation into junction
-				Dislocation[] newDis = DislocationFixingPostprocessor.joinDislocationIntoNode(d1, n1, nearestDis, nearest);
+				Dislocation[] newDis = this.joinDislocationIntoNode(d1, n1, nearestDis, nearest);
 				freeEndings.remove(n1);
 				skel.getDislocations().remove(nearestDis);
 				skel.getDislocations().add(newDis[0]);
@@ -238,12 +240,13 @@ public class DislocationFixingPostprocessor implements SkeletonDislocationPostpr
 	 * any value >1 is unacceptable 
 	 */
 	private float nodeFixingQuality(SkeletonNode origin, Dislocation d, SkeletonNode testNode){
-		if (ImportStates.POLY_MATERIAL.isActive() && !Configuration.getCrystalStructure().skeletonizeOverMultipleGrains()){
+		if (skeleton.getAtomData().isPolyCrystalline() && 
+				!skeleton.getAtomData().getCrystalStructure().skeletonizeOverMultipleGrains()){
 			if (origin.getMappedAtoms().get(0).getGrain() != testNode.getMappedAtoms().get(0).getGrain()) return 2f;
 		}
 		
 		//Test if the testNode is not too far away
-		Vec3 o = Configuration.pbcCorrectedDirection(testNode, origin);
+		Vec3 o = skeleton.getAtomData().getBox().getPbcCorrectedDirection(testNode, origin);
 		float distanceRatio = o.getLengthSqr() * invThresholdDistance;
 		if (distanceRatio>1f) return distanceRatio;
 		
@@ -256,7 +259,7 @@ public class DislocationFixingPostprocessor implements SkeletonDislocationPostpr
 		
 		double angle = o.getAngle(direction);
 		
-		if (ImportStates.BURGERS_VECTORS.isActive()){
+		if (skeleton.getAtomData().isRbvAvailable()){
 			Vec3 rbv1 = new Vec3();
 			Vec3 rbv2 = new Vec3();
 			Vec3 ld1 = new Vec3();
@@ -290,7 +293,7 @@ public class DislocationFixingPostprocessor implements SkeletonDislocationPostpr
 		else return 2f;
 	}
 	
-	private static Dislocation joinDislocations(Dislocation d1, SkeletonNode sn1, Dislocation d2, SkeletonNode sn2){
+	private Dislocation joinDislocations(Dislocation d1, SkeletonNode sn1, Dislocation d2, SkeletonNode sn2){
 		//Combine both linestrips
 		SkeletonNode[] d1Line = d1.getLine();
 		if (sn1 == d1Line[0]) revertArray(d1Line);
@@ -312,11 +315,11 @@ public class DislocationFixingPostprocessor implements SkeletonDislocationPostpr
 		sn1.getNeigh().add(sn2);
 		sn2.getNeigh().add(sn1);
 		
-		Dislocation combDis = new Dislocation(combinedLine);
+		Dislocation combDis = new Dislocation(combinedLine, skeleton);
 		return combDis;
 	}
 	
-	private static void joinDislocationIntoJunction(Dislocation d1, SkeletonNode sn1, SkeletonNode junction){
+	private void joinDislocationIntoJunction(Dislocation d1, SkeletonNode sn1, SkeletonNode junction){
 		if (sn1.getNeigh().size() != 1 || junction.getNeigh().size() <= 2)
 			throw new IllegalArgumentException("joining not possible");
 		
@@ -334,7 +337,7 @@ public class DislocationFixingPostprocessor implements SkeletonDislocationPostpr
 		d1.replaceLine(nodes.toArray(new SkeletonNode[d1.getLine().length]));
 	}
 	
-	private static Dislocation[] joinDislocationIntoNode( Dislocation d1, SkeletonNode sn1, Dislocation d2, SkeletonNode newJunction){
+	private Dislocation[] joinDislocationIntoNode( Dislocation d1, SkeletonNode sn1, Dislocation d2, SkeletonNode newJunction){
 		if (sn1.getNeigh().size() != 1 || newJunction.getNeigh().size() != 2)
 			throw new IllegalArgumentException("joining not possible");
 		
@@ -358,8 +361,8 @@ public class DislocationFixingPostprocessor implements SkeletonDislocationPostpr
 		}
 		
 		//Create two new dislocations from both parts
-		Dislocation newD1 = new Dislocation(p1);
-		Dislocation newD2 = new Dislocation(p2);
+		Dislocation newD1 = new Dislocation(p1, skeleton);
+		Dislocation newD2 = new Dislocation(p2, skeleton);
 		
 		//Add existing dislocation into newJunction
 		newJunction.getNeigh().add(sn1);

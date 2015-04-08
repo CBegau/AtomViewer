@@ -16,33 +16,34 @@
 // You should have received a copy of the GNU General Public License along
 // with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
 
-package model.polygrain.mesh;
+package model.mesh;
 
+import java.awt.event.InputEvent;
 import java.util.*;
 import java.util.concurrent.*;
 
 import common.ThreadPool;
-import common.UniqueIDCounter;
 import common.Vec3;
 import model.*;
-import model.polygrain.kdTree.*;
-import crystalStructures.CrystalStructure;
 
-
-public class Mesh implements Callable<Void>{
+public class Mesh implements Callable<Void>, Pickable{
 	private Vec3 upperBounds = new Vec3(Float.MIN_VALUE, Float.MIN_VALUE, Float.MIN_VALUE);
 	private Vec3 lowerBounds = new Vec3(Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE);
 
 	//will be nulled as soon it is not needed anymore
 	private AbstractCollection<Triangle> triangles = new HashSet<Triangle>();
 	private ArrayList<Vertex> vertices = new ArrayList<Vertex>();
-	private KDTree<Atom> tree = new KDTree<Atom>();
-	private List<Atom> atomsInGrain;
+//	private KDTree<Vec3> tree = new KDTree<Vec3>();
+	
+	private NearestNeighborBuilder<Vec3> nearestVertex;
+	
+	private List<? extends Vec3> atomsInGrain;
+	private float defaultSimplyMeshRate;
 	
 	private final float CELL_SIZE;
 	private final float HALF_CELL_SIZE;
 
-	private UniqueIDCounter id_source = UniqueIDCounter.getNewUniqueIDCounter(false);
+	private int id_source = 0;
 	
 	private FinalMesh finalMesh;
 	
@@ -50,15 +51,21 @@ public class Mesh implements Callable<Void>{
 	 * Initializes the object, but does not create the mesh
 	 * Create the mesh either by createMesh() or by call() afterwards
 	 * @param atomsInGrain
+	 * @param cellSize
+	 * @param simplifyMeshRate
+	 * @param box
 	 * @throws IllegalArgumentException atomsInGrain is null or empty, mesh cannot be created
 	 */
-	public Mesh(List<Atom> atomsInGrain, CrystalStructure cs) throws IllegalArgumentException{
-		this.CELL_SIZE = cs.getMeshingCellSize();
+	public Mesh(List<? extends Vec3> atomsInGrain, float cellSize, float simplifyMeshRate, BoxParameter box) throws IllegalArgumentException{
+		this.CELL_SIZE = cellSize;
+		this.defaultSimplyMeshRate = simplifyMeshRate;
 		this.HALF_CELL_SIZE = CELL_SIZE * 0.5f;
 		if (atomsInGrain == null || atomsInGrain.size()==0){
 			throw new IllegalArgumentException("Cannot create a mesh from an empty set");
 		}
 		this.atomsInGrain = atomsInGrain;
+		
+		this.nearestVertex = new NearestNeighborBuilder<Vec3>(box, 2*cellSize);
 	}
 	
 	/**
@@ -78,7 +85,7 @@ public class Mesh implements Callable<Void>{
 		int gridX, gridY, gridZ;
 		
 		for (int i=0; i<atomsInGrain.size(); i++){
-			Atom a = atomsInGrain.get(i);
+			Vec3 a = atomsInGrain.get(i);
 			
 			if (a.x>upperBounds.x) upperBounds.x = a.x;
 			if (a.y>upperBounds.y) upperBounds.y = a.y;
@@ -108,7 +115,7 @@ public class Mesh implements Callable<Void>{
 					int end = (int)(((long)atomsInGrain.size() * (j+1))/ThreadPool.availProcessors());
 
 					for (int i=start; i<end; i++){
-						Atom a = atomsInGrain.get(i);
+						Vec3 a = atomsInGrain.get(i);
 						
 						int x = (int)((a.x-lowerBounds.x)*invCellSize)+1;
 						int y = (int)((a.y-lowerBounds.y)*invCellSize)+1;
@@ -141,26 +148,17 @@ public class Mesh implements Callable<Void>{
 			}
 		}
 		
-		ArrayList<Atom> insertInKDTree = new ArrayList<Atom>();
-		
 		//Include all atoms in boundary cells in a kd-tree
 		for (int i=0; i<atomsInGrain.size(); i++){
-			Atom a = atomsInGrain.get(i);
+			Vec3 a = atomsInGrain.get(i);
 			
 			int x = (int)((a.x-lowerBounds.x)*invCellSize)+1;
 			int y = (int)((a.y-lowerBounds.y)*invCellSize)+1;
 			int z = (int)((a.z-lowerBounds.z)*invCellSize)+1;
 			
 			if (grid[x][y][z] == (byte) 1)
-				insertInKDTree.add(atomsInGrain.get(i));
+				nearestVertex.add(a);
 		}
-		
-		//Insertion in randomized order results in an in average much
-		//faster nearest neighbor search than an ordered insertion
-		Collections.shuffle(insertInKDTree);
-		for (Atom a : insertInKDTree)
-			tree.insert(a);
-		
 		
 		TreeMap<int[],Vertex> vertexMap = new TreeMap<int[],Vertex>(new Comparator<int[]>() {
 			@Override
@@ -222,8 +220,15 @@ public class Mesh implements Callable<Void>{
 	public synchronized Void call() throws Exception {
 		if (isFinalized()) return null;
 		createMesh();
-		standardSimplification();
+		standardSimplification(defaultSimplyMeshRate);
+		
+		finalizeMesh();
 		return null;
+	}
+	
+	public List<FinalizedTriangle> getTriangles(){
+		if (finalMesh != null) return finalMesh.getTriangles();
+		else throw new RuntimeException("Mesh is not finalized");
 	}
 	
 	private void polyTetra(int[] c0, int[] c1, int[] c2, int[] c3, byte[][][] grid, 
@@ -378,7 +383,7 @@ public class Mesh implements Callable<Void>{
 						lowerBounds.x+(d[0]-1)*HALF_CELL_SIZE,
 						lowerBounds.y+(d[1]-1)*HALF_CELL_SIZE,
 						lowerBounds.z+(d[2]-1)*HALF_CELL_SIZE), 
-					id_source.getUniqueID());
+					id_source++);
 			vertices.add(v);
 			map.put(d,v);
 		}
@@ -488,7 +493,7 @@ public class Mesh implements Callable<Void>{
 		v2.neighborEdge = null;
 	}
 	
-	private void shrink(){
+	public void shrink(final float offset){
 		if (finalMesh != null) return;
 
 		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
@@ -501,7 +506,7 @@ public class Mesh implements Callable<Void>{
 					int end = (int)((long)(vertices.size() * (j+1))/ThreadPool.availProcessors());
 
 					for (int i=start; i<end; i++)
-						vertices.get(i).shrink(tree);
+						vertices.get(i).shrink(nearestVertex, offset);
 					
 					return null;
 				}
@@ -510,7 +515,34 @@ public class Mesh implements Callable<Void>{
 		ThreadPool.executeParallelSecondLevel(parallelTasks);
 	}
 	
-	private void smooth(){
+	public void cornerPreservingSmooth(){
+		if (finalMesh != null) return;
+		
+		final Vec3[] smooth = new Vec3[vertices.size()];
+		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
+		for (int i=0; i<ThreadPool.availProcessors(); i++){
+			final int j = i;
+			parallelTasks.add(new Callable<Void>() {
+				@Override
+				public Void call() throws Exception {
+					int start = (int)((long)(vertices.size() * j)/ThreadPool.availProcessors());
+					int end = (int)((long)(vertices.size() * (j+1))/ThreadPool.availProcessors());
+
+					for (int i=start; i<end; i++){
+						smooth[i] = vertices.get(i).getCurvatureDependentLaplacianSmoother();
+						smooth[i].multiply(0.5f);
+					}
+					return null;
+				}
+			});
+		}
+		ThreadPool.executeParallelSecondLevel(parallelTasks);
+		
+		for (int i=0; i<vertices.size(); i++)
+			vertices.get(i).add(smooth[i]); 
+	}
+	
+	public void smooth(){
 		if (finalMesh != null) return;
 		
 		final Vec3[] smooth = new Vec3[vertices.size()];
@@ -537,7 +569,8 @@ public class Mesh implements Callable<Void>{
 			vertices.get(i).add(smooth[i]); 
 	}
 	
-	private void simplifyMesh(float maxCosts){
+	public void simplifyMesh(float maxCosts){
+		if (maxCosts <= 0f) return;
 		if (finalMesh != null) return;
 		
 		final SortedMap<Vertex,float[]> vertexQs = Collections.synchronizedSortedMap(new TreeMap<Vertex, float[]>());
@@ -588,7 +621,7 @@ public class Mesh implements Callable<Void>{
 			n = n.next;
 			if (n.isContractable()) sortedCosts.add(new HalfEdgePair(n, vertexQs));
 		}
-		float[] m = new float[16];
+//		float[] m = new float[16];
 		
 		HalfEdgePair collapse = sortedCosts.pollFirst();
 		while (collapse != null && collapse.cost<maxCosts) {
@@ -607,16 +640,19 @@ public class Mesh implements Callable<Void>{
 				q_sum[6] = v1_q[6] + v2_q[6]; q_sum[7] = v1_q[7] + v2_q[7];
 				q_sum[8] = v1_q[8] + v2_q[8]; q_sum[9] = v1_q[9] + v2_q[9];
 				
-				//Calculate optimal contraction point
-				m[0] = q_sum[0]; m[1] = q_sum[1]; m[2] = q_sum[2]; m[3] = q_sum[3];
-				m[4] = q_sum[1]; m[5] = q_sum[4]; m[6] = q_sum[5]; m[7] = q_sum[6];
-				m[8] = q_sum[2]; m[9] = q_sum[5]; m[10] = q_sum[7]; m[11] = q_sum[8];
-//				m[12] = 0f; m[13] = 0f; m[14] = 0f; 
-				m[15] = 1f;
+				//Something is wrong in this calculation, use center of the two points to contract instead
+//				//Calculate optimal contraction point
+//				m[0] = q_sum[0]; m[1] = q_sum[1]; m[2] = q_sum[2]; m[3] = q_sum[3];
+//				m[4] = q_sum[1]; m[5] = q_sum[4]; m[6] = q_sum[5]; m[7] = q_sum[6];
+//				m[8] = q_sum[2]; m[9] = q_sum[5]; m[10] = q_sum[7]; m[11] = q_sum[8];
+////				m[12] = 0f; m[13] = 0f; m[14] = 0f; 
+//				m[15] = 1f;
+//				
+//				Vec3 contractionPoint = calculateContractionPoint(m);
+//				if (contractionPoint == null) //Matrix is not invertable
+//					contractionPoint = a.addClone(b).multiply(0.5f);
 				
-				Vec3 contractionPoint = calculateContractionPoint(m);
-				if (contractionPoint == null) //Matrix is not invertable
-					contractionPoint = a.addClone(b).multiply(0.5f);
+				Vec3 contractionPoint = a.addClone(b).multiply(0.5f);
 				
 				if (n.isContractableForGivenPoint(contractionPoint)){
 					//remove all affected edges from costs
@@ -658,9 +694,9 @@ public class Mesh implements Callable<Void>{
 	
 	private float calculateVertexCost(Vec3 v, float[] q){
 		float c = (q[0]*v.x + q[1]*v.y + q[2]*v.z + q[3])*v.x;
-		c += (q[1]*v.x + q[4]*v.y + q[5]*v.z + q[6])*v.y;
-		c += (q[2]*v.x + q[5]*v.y + q[7]*v.z + q[8])*v.z;
-		c +=  q[3]*v.x + q[6]*v.y + q[8]*v.z + q[9];
+			 c += (q[1]*v.x + q[4]*v.y + q[5]*v.z + q[6])*v.y;
+			 c += (q[2]*v.x + q[5]*v.y + q[7]*v.z + q[8])*v.z;
+			 c +=  q[3]*v.x + q[6]*v.y + q[8]*v.z + q[9];
 		return c;
 	}
 	
@@ -678,23 +714,18 @@ public class Mesh implements Callable<Void>{
 		q_sum[8] = v1_q[8] + v2_q[8]; q_sum[9] = v1_q[9] + v2_q[9];
 		float cost = calculateVertexCost(v_average, q_sum);
 		return cost;
-	}
+	}	
 	
-	public synchronized AbstractCollection<Triangle> getTriangleSet() {
-		if (finalMesh != null) throw new RuntimeException("Mesh has already been finalized");
-		return triangles;
-	}
-	
-	public synchronized void standardSimplification(){
-		shrink();
+	public synchronized void standardSimplification(float nearestNeighborSearchRadius){
+		shrink(nearestNeighborSearchRadius);
+		cornerPreservingSmooth();
+		shrink(nearestNeighborSearchRadius);
+		cornerPreservingSmooth();		
+		shrink(nearestNeighborSearchRadius);
 		smooth();
-		shrink();
-		smooth();
-		shrink();
 		smooth();
 		
-		simplifyMesh(6f*(float)Math.pow(Configuration.getCrystalStructure().getNearestNeighborSearchRadius(),3.));
-//		smooth();
+		simplifyMesh(6f*(float)Math.pow(nearestNeighborSearchRadius,3.));
 	}
 	
 	public synchronized double getVolume(){
@@ -727,9 +758,10 @@ public class Mesh implements Callable<Void>{
 		if (this.finalMesh != null) return;
 		this.finalMesh = new FinalMesh(vertices, triangles);
 		
-		this.tree = null;
+		this.nearestVertex = null;
 		this.vertices = null;
 		this.triangles = null;
+		this.atomsInGrain = null;
 	}
 	
 	public boolean isFinalized() {
@@ -771,6 +803,7 @@ public class Mesh implements Callable<Void>{
 		}
 	}
 	
+	@SuppressWarnings("unused")
 	private Vec3 calculateContractionPoint(float[] mat) {
 		//this is a 4x4 matrix inverter, but only the entries 3,7 and 11
 		//are needed for the contraction point, so not the full
@@ -800,7 +833,7 @@ public class Mesh implements Callable<Void>{
 		dst.z = -tmp3 * mat[3] + tmp5 * mat[7] - tmp6 * mat[11];
 		/* calculate determinant */
 		float det = mat[0] * detPart0 + mat[4] * detPart1 + mat[8] * detPart2 + mat[12] * dst.x;
-		if (Math.abs(det)<0.000001f) return null;
+		if (Math.abs(det)<0.0001f) return null;
 		
 		/* calculate matrix inverse */
 		det = 1f / det;
@@ -828,5 +861,20 @@ public class Mesh implements Callable<Void>{
 			if (this.b.compareTo(o.b) > 0) return -1;
 			return 0;
 		}
+	}
+
+	@Override
+	public Collection<?> getHighlightedObjects() {
+		return null;
+	}
+
+	@Override
+	public boolean isHighlightable() {
+		return false;
+	}
+
+	@Override
+	public String printMessage(InputEvent ev, AtomData data) {
+		return String.format("Mesh volume=%g Surface Area=%g", getVolume(), getArea());
 	}
 }

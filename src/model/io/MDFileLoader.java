@@ -19,77 +19,64 @@
 package model.io;
 
 import java.io.File;
+
+import javax.swing.filechooser.FileFilter;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-import gui.JMDFileChooser;
 import gui.ProgressMonitor;
 
 import javax.swing.SwingWorker;
 
 import common.Vec3;
 import model.*;
-import model.polygrain.Grain;
 
 public abstract class MDFileLoader extends SwingWorker<AtomData, String> {
-	public enum InputFormat {IMD, LAMMPS};
+	public enum InputFormat {IMD, LAMMPS, XYZ};
 	
-	protected JMDFileChooser chooser;
-	
-	private ProgressMonitor progressMonitor;
-	
-	public MDFileLoader(JMDFileChooser chooser) {
-		this.chooser = chooser;
-	}
+	protected File[] filesToRead;
 	
 	@Override
 	protected final AtomData doInBackground() throws Exception{
-		progressMonitor = new ProgressMonitor(this);
-		progressMonitor.setActivityName("Reading file");
-		AtomData d = readInputData(); 
+		ProgressMonitor progressMonitor = ProgressMonitor.createNewProgressMonitor(this);
 		
-		//Set ranges for customColums
-		for (int i=0; i<Configuration.getSizeDataColumns(); i++){
-			DataColumnInfo cci = Configuration.getDataColumnInfo(i);
-				if (!cci.isInitialRangeGiven()) cci.findRange(true);
+		progressMonitor.setActivityName("Reading file");
+		
+		AtomData toReturn = null;
+		
+		AtomData previous = null;
+		for (File f : filesToRead){
+			ProgressMonitor.getProgressMonitor().setCurrentFilename(f.getName());
+			toReturn = readInputData(f, previous);
+			previous = toReturn;
 		}
+				
+		//Set ranges for customColums
+		for (DataColumnInfo cci : toReturn.getDataColumnInfos())
+			if (!cci.isInitialRangeGiven()) cci.findRange(toReturn, true);
 		
 		progressMonitor.destroy();
-		return d;
+		filesToRead = null;
+		return toReturn;
 	}
 	
-	public ProgressMonitor getProgressMonitor() {
-		if (progressMonitor == null)
-			progressMonitor = new ProgressMonitor(null);
-		return progressMonitor;
+	public void setFilesToRead(File[] files){
+		this.filesToRead = files;
 	}
 	
 	/**
-	 * Reading of MD input must be implemented here
-	 * The recommend way to create is first buffering the data read in an
-	 * instance of ImportDataContainer and passing this container into the 
-	 * AtomData constructor.
-	 * Generating a set of AtomData instances should be supported as well
-	 * if this option is selected in the JMDFileChooser instance.
-	 * In this case the set of data are connected as a double linked list
-	 * by passing the previous created instance of AtomData as an argument in
-	 * the constructor. 
-	 * @return An instance of AtomData read from file, possibly linking to additional data sets 
-	 * @throws Exception May be any kind of error during reading and processing
-	 */
-	protected abstract AtomData readInputData() throws Exception;
-	
-	/**
-	 * Creates a single instance of AtomData from {@code f}.
-	 * For importing a sequence of files or more functionality use the 
-	 * @param f the file to read
-	 * @return an instance of AtomData
+	 * Creates a single instance of AtomData from {@code f}. 
+	 * @param f the file containing the atomic data
+	 * @param previous an instance of AtomData that is the previous data in a linked list
+	 * @return An instance of AtomData read from file, possibly linking to a previous data sets
 	 * @throws IOException
 	 */
-	public abstract AtomData readInputData(File f) throws IOException;
+	public abstract AtomData readInputData(File f, AtomData previous) throws Exception;
 	
+	public abstract FileFilter getDefaultFileFilter();
 	
 	/**
 	 * Reads the header from a file and returns an array containing the
@@ -100,6 +87,8 @@ public abstract class MDFileLoader extends SwingWorker<AtomData, String> {
 	 */
 	public abstract String[] getColumnsNamesFromHeader(File f) throws IOException;
 	
+	public abstract Map<String, DataColumnInfo.Component> getDefaultNamesForComponents();
+	
 	/**
 	 * Data from MD input must be stored in this container and then passed into 
 	 */
@@ -109,25 +98,27 @@ public abstract class MDFileLoader extends SwingWorker<AtomData, String> {
 		public Vec3 boxSizeZ = new Vec3();
 		
 		public Vec3 offset = new Vec3();
+		public boolean[] pbc = ImportConfiguration.getInstance().getPeriodicBoundaryConditions().clone();
 		/**
 		 * All atoms are stored in this list 
 		 */
 		public ArrayList<Atom> atoms = new ArrayList<Atom>();
-		/**
-		 * Only used in polycrystalline / polyphase material:
-		 * Each subgrain is assigned a number, each atom is assigned a number of the grain its belongs to
-		 */
-		public HashMap<Integer, Grain> grains = new HashMap<Integer, Grain>();
+		
 		/**
 		 * The largest (virtual) elements number found in all imported files
 		 */
 		public byte maxElementNumber = 1;
+		
+		/**
+		 * A map for the element names
+		 */
+		public Map<Integer, String> elementNames = new HashMap<Integer, String>();
+		
 		//Some flags for imported or calculated values
 		//Set to true if values are imported from files
 		public boolean rbvAvailable = false;
 		public boolean atomTypesAvailable = false;
 		public boolean grainsImported = false;
-		public boolean meshImported = false;
 		
 		/**
 		 * Meta data found in the file header
@@ -146,7 +137,7 @@ public abstract class MDFileLoader extends SwingWorker<AtomData, String> {
 		public BoxParameter box;
 		
 		public void makeBox(){
-			box = new BoxParameter(boxSizeX, boxSizeY, boxSizeZ);
+			box = new BoxParameter(boxSizeX, boxSizeY, boxSizeZ, pbc[0], pbc[1], pbc[2]);
 			box.setOffset(offset);
 		}
 		

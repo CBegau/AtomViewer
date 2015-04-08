@@ -65,7 +65,15 @@ public class ThreadPool {
 	 */
 	public static <V> List<Future<V>> executeParallel(List<? extends Callable<V>> c){
 		try {
-			return threadPool.invokeAll(c);
+			List<Future<V>> futures = threadPool.invokeAll(c);
+			for (Future<V> f : futures){
+				try {
+					f.get();
+				} catch (ExecutionException e) {
+					e.printStackTrace();
+				}
+			}
+			return futures;
 		} catch (InterruptedException e) {
 			return null;
 		}
@@ -92,7 +100,15 @@ public class ThreadPool {
 	 */
 	public static <V> List<Future<V>> executeParallelSecondLevel(List<? extends Callable<V>> c){
 		try {
-			return secondLevelThreadPool.invokeAll(c);
+			List<Future<V>> futures = secondLevelThreadPool.invokeAll(c);
+			for (Future<V> f : futures){
+				try {
+					f.get();
+				} catch (ExecutionException e) {
+					e.printStackTrace();
+				}
+			}
+			return futures;
 		} catch (InterruptedException e) {
 			return null;
 		}

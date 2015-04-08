@@ -18,6 +18,7 @@
 
 package model.skeletonizer.processors;
 
+import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.Callable;
 
@@ -25,8 +26,6 @@ import Jama.Matrix;
 import common.ThreadPool;
 import common.Vec3;
 import model.Atom;
-import model.Configuration;
-import model.ImportStates;
 import model.skeletonizer.*;
 
 /**
@@ -39,11 +38,11 @@ public class MeshLineSenseCenteringPreprocessor implements SkeletonPreprocessor 
 
 	@Override
 	public void preProcess(Skeletonizer skel) {		
-		if (!ImportStates.BURGERS_VECTORS.isActive()) return;
+		if (!skel.getAtomData().isRbvAvailable()) return;
 		if (skel.getNodes().size() == 0) return;
 		
 		Vec3[] moveTo = new Vec3[skel.getNodes().size()];
-		Vector<SkeletonNode> nodes = skel.getNodes();
+		List<SkeletonNode> nodes = skel.getNodes();
 		
 		Vector<MeshLineSenseCenteringCallable> tasks = new Vector<MeshLineSenseCenteringCallable>();
 
@@ -51,7 +50,7 @@ public class MeshLineSenseCenteringPreprocessor implements SkeletonPreprocessor 
 		for (int i=0; i<ThreadPool.availProcessors(); i++){
 			int start = (int)(((long)nodes.size() * i)/ThreadPool.availProcessors());
 			int end = (int)(((long)nodes.size() * (i+1))/ThreadPool.availProcessors());
-			tasks.add(this.new MeshLineSenseCenteringCallable(start, end, nodes, moveTo));
+			tasks.add(this.new MeshLineSenseCenteringCallable(start, end, nodes, moveTo, skel));
 		}
 		ThreadPool.executeParallel(tasks);
 		
@@ -64,20 +63,22 @@ public class MeshLineSenseCenteringPreprocessor implements SkeletonPreprocessor 
 	
 	private class MeshLineSenseCenteringCallable implements Callable<Void> {
 		private int start, end;
-		private Vector<SkeletonNode> nodes;
+		private List<SkeletonNode> nodes;
 		private Vec3[] moveTo;
+		private Skeletonizer skel;
 		
 		
-		public MeshLineSenseCenteringCallable(int start, int end, Vector<SkeletonNode> nodes, Vec3[] moveTo) {
+		public MeshLineSenseCenteringCallable(int start, int end, List<SkeletonNode> nodes, Vec3[] moveTo, Skeletonizer skel) {
 			this.start = start;
 			this.end = end;
 			this.nodes = nodes;
 			this.moveTo = moveTo;
+			this.skel = skel;
 		}
 
 		@Override
 		public Void call() throws Exception {
-			double defaultLength = 1./Configuration.getCrystalStructure().getPerfectBurgersVectorLength();
+			double defaultLength = 1./skel.getAtomData().getCrystalStructure().getPerfectBurgersVectorLength();
 			
 			for (int j=start; j<end;j++){
 				if (Thread.interrupted()) return null;
@@ -109,7 +110,7 @@ public class MeshLineSenseCenteringPreprocessor implements SkeletonPreprocessor 
 					x[i*3+1][0] = normalA.y * w; x[i*3+1][1] = normalB.y * w;
 					x[i*3+2][0] = normalA.z * w; x[i*3+2][1] = normalB.z * w;
 					
-					Vec3 dir = Configuration.pbcCorrectedDirection(n.getNeigh().get(i), n);
+					Vec3 dir = skel.getAtomData().getBox().getPbcCorrectedDirection(n.getNeigh().get(i), n);
 					y[i*3+0][0] = dir.x;
 					y[i*3+1][0] = dir.y;
 					y[i*3+2][0] = dir.z;

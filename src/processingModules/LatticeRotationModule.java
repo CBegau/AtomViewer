@@ -18,12 +18,15 @@
 
 package processingModules;
 
+import gui.ProgressMonitor;
+
 import java.util.*;
 import java.util.concurrent.Callable;
 
+import javax.swing.JFrame;
+
 import model.Atom;
 import model.AtomData;
-import model.Configuration;
 import model.DataColumnInfo;
 import model.NearestNeighborBuilder;
 import model.polygrain.Grain;
@@ -36,17 +39,30 @@ import crystalStructures.CrystalStructure;
 
 public class LatticeRotationModule implements ProcessingModule {
 	
+	private static DataColumnInfo[] cci = new DataColumnInfo[]{
+		new DataColumnInfo("Rotation_X-Axis", "rotX", "", -8f, +8f, false),
+		new DataColumnInfo("Rotation_Y-Axis", "rotY", "", -8f, +8f, false),
+		new DataColumnInfo("Rotation_Z-Axis", "rotZ", "", -8f, +8f, false),
+		new DataColumnInfo("Lattice_tilt", "tilt", "", 0f, +10f, false)
+	};
+	
+	
 	@Override
-	public void process(final AtomData data) throws Exception {
-		final int latticeRotationColumn = Configuration.getIndexForDataColumnID("rotX");
+	public boolean showConfigurationDialog(JFrame frame, AtomData data) {
+		return true;
+	}
+	
+	@Override
+	public ProcessingResult process(final AtomData data) throws Exception {
+		final int latticeRotationColumn = data.getIndexForCustomColumn(cci[0]);
 		
 //		final double PHI_MAX = Math.cos(30*Math.PI/180.);
 		
 		final HashMap<Integer, Vec3[]> p = new HashMap<Integer, Vec3[]>();
 		final HashMap<Integer, float[]> p_l = new HashMap<Integer, float[]>();
 		
-		CrystalStructure cs = Configuration.getCrystalStructure();
-		float[][] rot = Configuration.getCrystalRotationTools().getDefaultRotationMatrix();
+		CrystalStructure cs = data.getCrystalStructure();
+		float[][] rot = data.getCrystalRotation().getDefaultRotationMatrix();
 		Vec3[] perf_0 = cs.getPerfectNearestNeighborsUnrotated();
 		
 		//Adding the default grain orientation
@@ -56,7 +72,7 @@ public class LatticeRotationModule implements ProcessingModule {
 				(perf_0[i].x*rot[0][0] + perf_0[i].y*rot[1][0] + perf_0[i].z*rot[2][0]),
 				(perf_0[i].x*rot[0][1] + perf_0[i].y*rot[1][1] + perf_0[i].z*rot[2][1]),
 				(perf_0[i].x*rot[0][2] + perf_0[i].y*rot[1][2] + perf_0[i].z*rot[2][2]));
-			p_0[i].multiply(Configuration.getCrystalStructure().getLatticeConstant());
+			p_0[i].multiply(data.getCrystalStructure().getLatticeConstant());
 		}
 		float[] p_l_0 = new float[p_0.length];
 		for (int i=0; i<p_0.length; i++) p_l_0[i] = p_0[i].getLength();
@@ -75,7 +91,7 @@ public class LatticeRotationModule implements ProcessingModule {
 						(perf_0[i].x*rot[0][0] + perf_0[i].y*rot[1][0] + perf_0[i].z*rot[2][0]),
 						(perf_0[i].x*rot[0][1] + perf_0[i].y*rot[1][1] + perf_0[i].z*rot[2][1]),
 						(perf_0[i].x*rot[0][2] + perf_0[i].y*rot[1][2] + perf_0[i].z*rot[2][2]));
-					p_0[i].multiply(Configuration.getCrystalStructure().getLatticeConstant());
+					p_0[i].multiply(data.getCrystalStructure().getLatticeConstant());
 				}
 				p_l_0 = new float[p_0.length];
 				for (int i=0; i<p_0.length; i++) p_l_0[i] = p_0[i].getLength();
@@ -84,10 +100,11 @@ public class LatticeRotationModule implements ProcessingModule {
 			}
 		}
 		
-		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(cs.getNearestNeighborSearchRadius());
-		for (int i=0; i<data.getAtoms().size(); i++){
-			nnb.add(data.getAtoms().get(i));
-		}
+		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
+		
+		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), 
+				cs.getNearestNeighborSearchRadius(), true);
+		nnb.addAll(data.getAtoms());
 		
 		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
 		for (int k=0; k<ThreadPool.availProcessors(); k++){
@@ -105,6 +122,9 @@ public class LatticeRotationModule implements ProcessingModule {
 					Matrix lcmMatrix = new Matrix(lcm);
 					
 					for (int k=start; k<end; k++){
+						if ((k-start)%1000 == 0)
+							ProgressMonitor.getProgressMonitor().addToCounter(1000);
+						
 						if (Thread.interrupted()) return null;
 						
 						for (int i=0;i<9;i++){
@@ -176,11 +196,16 @@ public class LatticeRotationModule implements ProcessingModule {
 							atom.setData(angles[3], index+3);
 						}
 					}
+					
+					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
 					return null;
 				}
 			});
 		}
 		ThreadPool.executeParallel(parallelTasks);
+		
+		ProgressMonitor.getProgressMonitor().stop();
+		return null;
 	}
 	
 	/**
@@ -263,18 +288,17 @@ public class LatticeRotationModule implements ProcessingModule {
 	}
 
 	@Override
-	public boolean isApplicable() {
+	public boolean canBeAppliedToMultipleFilesAtOnce() {
+		return true;
+	}
+	
+	@Override
+	public boolean isApplicable(AtomData data) {
 		return true;
 	}
 
 	@Override
 	public DataColumnInfo[] getDataColumnsInfo() {
-		DataColumnInfo[] cci = new DataColumnInfo[4];
-    	cci[0] = new DataColumnInfo("Rotation_X-Axis", "rotX", "", -8f, +8f, false, 1f);
-    	cci[1] = new DataColumnInfo("Rotation_Y-Axis", "rotY", "", -8f, +8f, false, 1f);
-    	cci[2] = new DataColumnInfo("Rotation_Z-Axis", "rotZ", "", -8f, +8f, false, 1f);
-    	cci[3] = new DataColumnInfo("Lattice_tilt", "tilt", "", 0f, +10f, false, 1f);
-
 		return cci;
 	}
 	

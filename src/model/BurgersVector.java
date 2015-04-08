@@ -83,11 +83,11 @@ public class BurgersVector {
 			this.direction[1] = bv.direction[1];
 			this.direction[2] = bv.direction[2];
 		} else {
-			int scm = CommonUtils.scm(this.fraction, bv.fraction);
+			int scm = CommonUtils.smallestCommonMultiple(this.fraction, bv.fraction);
 			direction[0] = this.direction[0] * (scm / this.fraction) + bv.direction[0] * (scm / bv.fraction);
 			direction[1] = this.direction[1] * (scm / this.fraction) + bv.direction[1] * (scm / bv.fraction);
 			direction[2] = this.direction[2] * (scm / this.fraction) + bv.direction[2] * (scm / bv.fraction);
-			int gcd = CommonUtils.gcd(direction);
+			int gcd = CommonUtils.greatestCommonDivider(direction);
 			if (gcd == 0){
 				//undefined
 				this.fraction = 1;

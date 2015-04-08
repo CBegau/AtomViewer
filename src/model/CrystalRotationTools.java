@@ -26,16 +26,21 @@ import common.Vec3;
 import crystalStructures.CrystalStructure;
 
 public class CrystalRotationTools {
-	private final Vec3[] thompsonTetraeder = new Vec3[4];
+	
 	private final float[][] xyzToCrystal = new float[3][3];
 	private final float[][] crystalToXyz = new float[3][3];
 	private final float[][] rotationMatrix = new float[3][3];
-	
+	private final Vec3[] crystalOrientation;
 	private final CrystalStructure cs;
 	
 	public CrystalRotationTools(CrystalStructure cs, Vec3[] crystalOrientation) {
 		this.cs = cs;
 		float lc = cs.getLatticeConstant();
+		
+		this.crystalOrientation = new Vec3[3];
+		this.crystalOrientation[0] = crystalOrientation[0].clone();
+		this.crystalOrientation[1] = crystalOrientation[1].clone();
+		this.crystalOrientation[2] = crystalOrientation[2].clone();
 		
 		xyzToCrystal[0][0] = crystalOrientation[0].x/crystalOrientation[0].getLength() / lc;
 		xyzToCrystal[0][1] = crystalOrientation[0].y/crystalOrientation[0].getLength() / lc;
@@ -61,11 +66,6 @@ public class CrystalRotationTools {
 		crystalToXyz[2][1] = xyzToCrystal[1][2] * lc * lc;
 		crystalToXyz[2][2] = xyzToCrystal[2][2] * lc * lc;
 		
-		thompsonTetraeder[2] = getInXYZ(new Vec3(1f,0f,1f)).normalize();
-		thompsonTetraeder[1] = getInXYZ(new Vec3(0f,1f,1f)).normalize();
-		thompsonTetraeder[0] = getInXYZ(new Vec3(1f,1f,0f)).normalize();
-		thompsonTetraeder[3] = new Vec3(0f,0f,0f);
-		
 		rotationMatrix[0][0] = xyzToCrystal[0][0] * lc;
 		rotationMatrix[0][1] = xyzToCrystal[1][0] * lc;
 		rotationMatrix[0][2] = xyzToCrystal[2][0] * lc;
@@ -86,6 +86,14 @@ public class CrystalRotationTools {
 	 */
 	public float[][] getDefaultRotationMatrix(){
 		return rotationMatrix;
+	}
+	
+	/**
+	 * The orientation of the crystal lattice in Cartesian xyz-directions
+	 * @return
+	 */
+	public Vec3[] getCrystalOrientation() {
+		return crystalOrientation;
 	}
 	
 	/**
@@ -115,6 +123,11 @@ public class CrystalRotationTools {
 	} 
 	
 	public Vec3[] getThompsonTetraeder() {
+		final Vec3[] thompsonTetraeder = new Vec3[4];
+		thompsonTetraeder[3] = new Vec3(0f,0f,0f);
+		thompsonTetraeder[2] = getInXYZ(new Vec3(1f,0f,1f)).normalize();
+		thompsonTetraeder[1] = getInXYZ(new Vec3(0f,1f,1f)).normalize();
+		thompsonTetraeder[0] = getInXYZ(new Vec3(1f,1f,0f)).normalize();
 		return thompsonTetraeder;
 	}
 	
@@ -272,7 +285,7 @@ public class CrystalRotationTools {
 			else bv[i] = 0;
 		}
 		
-		int gcd = CommonUtils.gcd(bv);
+		int gcd = CommonUtils.greatestCommonDivider(bv);
 		
 		bv[0] /= gcd;
 		bv[1] /= gcd;

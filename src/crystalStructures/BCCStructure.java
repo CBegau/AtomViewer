@@ -21,8 +21,6 @@ package crystalStructures;
 import java.util.*;
 
 import common.Vec3;
-
-import crystalStructures.CrystalStructureProperties.FloatCrystalProperty;
 import model.*;
 import model.BurgersVector.BurgersVectorType;
 import model.skeletonizer.processors.*;
@@ -56,15 +54,6 @@ public class BCCStructure extends CrystalStructure {
 			new Vec3( 0f, 0f,-1f),
 	};
 	
-	protected FloatCrystalProperty grainBoundaryFilterDistanceProperty = 
-			new FloatCrystalProperty("gbFilterDist", "Grain boundary filter distance (0 -> disabled)", 6f, 0f, 25f);
-	
-	public BCCStructure() {
-		super();
-		crystalProperties.add(grainBoundaryFilterDistanceProperty);
-		this.minRBVLength.defaultValue = 0.25f;
-	}
-	
 	@Override
 	protected CrystalStructure deriveNewInstance() {
 		return new BCCStructure();
@@ -77,6 +66,10 @@ public class BCCStructure extends CrystalStructure {
 	
 	public float getDefaultNearestNeighborSearchScaleFactor(){
 		return 1.2f;
+	}
+	
+	public float getDefaultSkeletonizerRBVThreshold(){
+		return 0.25f;
 	}
 	
 	public float getPerfectBurgersVectorLength(){
@@ -138,7 +131,7 @@ public class BCCStructure extends CrystalStructure {
 	
 	@Override
 	public boolean isRBVToBeCalculated(Atom a) {
-		if ( (ImportStates.POLY_MATERIAL.isActive() && a.getGrain() == Atom.IGNORED_GRAIN)) return false;
+		if (a.getGrain() == Atom.IGNORED_GRAIN) return false;
 		int type = a.getType();		
 		if (type != 0 && type != 6) {			
 			return true;
@@ -200,10 +193,5 @@ public class BCCStructure extends CrystalStructure {
 		list.add(new RBVAngleFilterPreprocessor(38));
 		list.add(new MeshLineSenseCenteringPreprocessor());
 		return list;
-	}
-	
-	@Override
-	public float getGrainBoundaryFilterDistance() {
-		return grainBoundaryFilterDistanceProperty.getValue();
 	}
 }

@@ -22,9 +22,8 @@ import java.awt.event.InputEvent;
 import java.util.Collection;
 
 import common.Vec3;
+import model.AtomData;
 import model.BurgersVector;
-import model.Configuration;
-import model.ImportStates;
 import model.Pickable;
 import model.skeletonizer.Skeletonizer;
 import model.skeletonizer.Dislocation;
@@ -39,17 +38,17 @@ public class DislocationDensityTensor implements Pickable{
 	
 	public DislocationDensityTensor(Skeletonizer skel, VolumeElement ve) {
 		this.volumeElement = ve;
-		if (!ImportStates.BURGERS_VECTORS.isActive()) return;
+		if (!skel.getAtomData().isRbvAvailable()) return;
 		
 		for (Dislocation d: skel.getDislocations()){
 			BurgersVector bv;
 			Vec3 bvLocal;
 			if (d.getBurgersVectorInfo()!=null && d.getBurgersVectorInfo().getBurgersVector().isFullyDefined()){
 				bv = d.getBurgersVectorInfo().getBurgersVector();
-				bvLocal = bv.getInXYZ(Configuration.getCrystalRotationTools());
+				bvLocal = bv.getInXYZ(skel.getAtomData().getCrystalRotation());
 			} else {
-				bv = Configuration.getCrystalRotationTools().rbvToBurgersVector(d.getBurgersVectorInfo().getAverageResultantBurgersVector());
-				bvLocal = bv.getInXYZ(Configuration.getCrystalRotationTools());
+				bv = skel.getAtomData().getCrystalRotation().rbvToBurgersVector(d.getBurgersVectorInfo().getAverageResultantBurgersVector());
+				bvLocal = bv.getInXYZ(skel.getAtomData().getCrystalRotation());
 				//Consider the pure values are always too small
 				bvLocal.multiply(1.5f);
 			}
@@ -58,7 +57,7 @@ public class DislocationDensityTensor implements Pickable{
 			
 			for (int i=0; i<d.getLine().length-1; i++){
 				if (ve.isInVolume(d.getLine()[i])){
-					Vec3 dir = Configuration.pbcCorrectedDirection(d.getLine()[i], d.getLine()[i+1]);
+					Vec3 dir = skel.getAtomData().getBox().getPbcCorrectedDirection(d.getLine()[i], d.getLine()[i+1]);
 					
 					densityTensor[0][0] += dir.x*bvLocal.x;
 					densityTensor[0][1] += dir.x*bvLocal.y;
@@ -89,14 +88,14 @@ public class DislocationDensityTensor implements Pickable{
 		for (int i=0; i<3;i++){
 			for (int j=0; j<3;j++){
 				density += Math.abs(densityTensor[i][j]);
-				densityTensor[i][j] /= Configuration.getCrystalStructure().getPerfectBurgersVectorLength();
+				densityTensor[i][j] /= skel.getAtomData().getCrystalStructure().getPerfectBurgersVectorLength();
 			}	
 		}
-		this.density /= Configuration.getCrystalStructure().getPerfectBurgersVectorLength();
+		this.density /= skel.getAtomData().getCrystalStructure().getPerfectBurgersVectorLength();
 		this.scalarDensity /= volume;
 	}
 	
-	public DislocationDensityTensor(double[][] densityTensor, CuboidVolumeElement ve) {
+	public DislocationDensityTensor(float burgersVectorLength, double[][] densityTensor, CuboidVolumeElement ve) {
 		this.volumeElement = ve;		
 		double scale = -1e-20; //From 1/A² to 1/m² + invert the sign (to get same signs as in the dislocation analysis)
 		
@@ -111,7 +110,7 @@ public class DislocationDensityTensor implements Pickable{
 		}
 		
 		this.densityTensor = densityTensor;
-		this.density /= Configuration.getCrystalStructure().getPerfectBurgersVectorLength();
+		this.density /= burgersVectorLength;
 	}
 	
 	public double[][] getDensityTensor() {
@@ -182,7 +181,7 @@ public class DislocationDensityTensor implements Pickable{
 	}
 	
 	@Override
-	public String printMessage(InputEvent ev) {
+	public String printMessage(InputEvent ev, AtomData data) {
 		return toString();
 	}
 }

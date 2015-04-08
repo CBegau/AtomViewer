@@ -18,38 +18,40 @@
 
 package model;
 
+import gui.ProgressMonitor;
+
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CyclicBarrier;
 
 import common.ThreadPool;
+import crystalStructures.CrystalStructure;
 
 public class StructuralAnalysisBuilder {
 	private StructuralAnalysisBuilder(){}
 	
 	public static void performStructureAnalysis(AtomData atomData){
-		NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>( 
-				Configuration.getCrystalStructure().getStructuralAnalysisSearchRadius());
+		NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(atomData.getBox(), 
+				atomData.getCrystalStructure().getStructuralAnalysisSearchRadius(), true);
 		List<Atom> atoms = atomData.getAtoms();
-		for (int i=0; i<atoms.size(); i++){
-			nnb.add(atoms.get(i));
-		}
+		
+		nnb.addAll(atoms);
 		
 		Vector<AnalyseCallable> tasks = new Vector<AnalyseCallable>();
 		StructuralAnalysisBuilder sab = new StructuralAnalysisBuilder();
 		CyclicBarrier barrier = new CyclicBarrier(ThreadPool.availProcessors());
 		
-		Configuration.currentFileLoader.getProgressMonitor().start(atoms.size());
+		ProgressMonitor.getProgressMonitor().start(atoms.size());
 		
 		for (int i=0; i<ThreadPool.availProcessors(); i++){
 			int start = (int)(((long)atoms.size() * i)/ThreadPool.availProcessors());
 			int end = (int)(((long)atoms.size() * (i+1))/ThreadPool.availProcessors());
-			tasks.add(sab.new AnalyseCallable(start, end, atoms, nnb, barrier));
+			tasks.add(sab.new AnalyseCallable(start, end, atoms, nnb, barrier, atomData.getCrystalStructure()));
 		}
 		
 		ThreadPool.executeParallel(tasks);
 		
-		Configuration.currentFileLoader.getProgressMonitor().stop();
+		ProgressMonitor.getProgressMonitor().stop();
 	}
 	
 	private class AnalyseCallable implements Callable<Void> {
@@ -57,19 +59,21 @@ public class StructuralAnalysisBuilder {
 		private List<Atom> atoms;
 		private NearestNeighborBuilder<Atom> nnb;
 		private CyclicBarrier barrier;
+		private CrystalStructure cs;
 		
 		public AnalyseCallable(int start, int end, List<Atom> atoms, 
-				NearestNeighborBuilder<Atom> nnb, CyclicBarrier barrier) {
+				NearestNeighborBuilder<Atom> nnb, CyclicBarrier barrier, CrystalStructure cs) {
 			this.start = start;
 			this.end = end;
 			this.atoms = atoms;
 			this.nnb = nnb;
 			this.barrier = barrier;
+			this.cs = cs;
 		}
 
 		@Override
 		public Void call() throws Exception {
-			Configuration.getCrystalStructure().identifyDefectAtoms(atoms, nnb, start, end, barrier);
+			cs.identifyDefectAtoms(atoms, nnb, start, end, barrier);
 			return null;
 		}
 	}

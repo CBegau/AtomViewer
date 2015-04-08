@@ -18,7 +18,7 @@
 
 package model.skeletonizer.processors;
 
-import common.FastDeletableVector;
+import java.util.List;
 
 import model.skeletonizer.SkeletonNode;
 import model.skeletonizer.Skeletonizer;
@@ -42,7 +42,7 @@ public class PruneProcessor implements SkeletonMeshPostprocessor, SkeletonPrepro
 	}
 	
 	private void prune(Skeletonizer skel){
-		FastDeletableVector<SkeletonNode> nodes = skel.getNodes();
+		List<SkeletonNode> nodes = skel.getNodes();
 		
 		for (int i=0; i<nodes.size(); i++){
 			SkeletonNode a = nodes.get(i);

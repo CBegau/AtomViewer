@@ -21,8 +21,6 @@ package model.skeletonizer;
 import java.util.*;
 
 import model.*;
-import common.UniqueID;
-import common.UniqueIDCounter;
 import common.Vec3;
 
 /**
@@ -32,15 +30,10 @@ import common.Vec3;
  * @author begauc9f
  *
  */
-public class SkeletonNode extends Vec3 implements Comparable<SkeletonNode>, UniqueID{
+public class SkeletonNode extends Vec3 implements Comparable<SkeletonNode>{
 	
 	public static final int MAX_MERGED_ATOMS = 150;
 	
-	/**
-	 * Each SkeletonNode instance needs an unique number to easily check for equality
-	 * and sorting in sets 
-	 */
-	private static UniqueIDCounter id_source = UniqueIDCounter.getNewUniqueIDCounter(true);
 	private final int id;
 	
 	private ArrayList<Atom> mappedAtoms = new ArrayList<Atom>(5);
@@ -57,27 +50,12 @@ public class SkeletonNode extends Vec3 implements Comparable<SkeletonNode>, Uniq
 	 * Create a SkeletonNode as a representation of an atom 
 	 * @param atom
 	 */
-	public SkeletonNode(Atom atom){
+	public SkeletonNode(Atom atom, int id){
 		this.x = atom.x;
 		this.y = atom.y;
 		this.z = atom.z;
 		this.mappedAtoms.add(atom);
-		this.id = id_source.getUniqueID();
-	}
-	
-	/**
-	 * Constructor to be used if the SkeletonNode is read from a file
-	 * If a list of mapped atoms is available, it has to be added after construction 
-	 * @param x x-coordinate
-	 * @param y y-coordinate
-	 * @param z z-coordinate
-	 * @param number a unique number for this node
-	 */
-	public SkeletonNode(float x, float y, float z, int number){
-		this.x = x;
-		this.y = y;
-		this.z = z;
-		this.id = number;
+		this.id = id;
 	}
 	
 	/**
@@ -129,9 +107,9 @@ public class SkeletonNode extends Vec3 implements Comparable<SkeletonNode>, Uniq
 		return id;
 	}
 	
-	public void buildNeigh(NearestNeighborBuilder<SkeletonNode> root){
+	public void buildNeigh(NearestNeighborBuilder<SkeletonNode> root, boolean sameGrainsOnly){
 		this.neigh = root.getNeigh(this);
-		if (ImportStates.POLY_MATERIAL.isActive() && !Configuration.getCrystalStructure().skeletonizeOverMultipleGrains()){
+		if (sameGrainsOnly){
 			ArrayList<SkeletonNode> sameGrainNeigh = new ArrayList<SkeletonNode>();
 			for (int i=0; i<neigh.size(); i++){
 				if (this.getMappedAtoms().get(0).getGrain() == neigh.get(i).getMappedAtoms().get(0).getGrain()){
@@ -148,10 +126,11 @@ public class SkeletonNode extends Vec3 implements Comparable<SkeletonNode>, Uniq
 	 * @param pbc
 	 * @param size
 	 */
-	protected void centerToMappedAtoms(boolean[] pbc, BoxParameter box){
+	protected void centerToMappedAtoms(BoxParameter box){
 		Vec3 shift = new Vec3();
 		Vec3 ref = mappedAtoms.get(0);
 		Vec3 size = box.getHeight().multiplyClone(0.5f);
+		boolean[] pbc = box.getPbc();
 		
 		for (int i=0; i<mappedAtoms.size(); i++){
 			Atom c = mappedAtoms.get(i);

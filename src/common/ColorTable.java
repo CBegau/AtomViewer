@@ -396,7 +396,7 @@ public class ColorTable {
 	 * @param numElements number of elements that required coloring
 	 * @return an array of rgb values as float. The array is at least the size of numElements
 	 */
-	public static float[][] getColorTableForElements(byte numElements){
+	public static float[][] getColorTableForElements(int numElements){
 		if (elementColors == null){
 			elementColors = loadDefaultColorScheme(ELEMENT_COLORS_ID);
 			//File does not exist, create defaults

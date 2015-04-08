@@ -58,6 +58,11 @@ public class FeCStructure extends BCCStructure {
 	}
 	
 	@Override
+	public String[] getNamesOfElements(){
+		return new String[]{"Fe", "C"};
+	}
+	
+	@Override
 	public float[] getSphereSizeScalings(){
 		float[] size = new float[getNumberOfElements()];
 		size[0] = 1f;

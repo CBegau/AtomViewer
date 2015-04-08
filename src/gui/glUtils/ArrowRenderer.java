@@ -18,23 +18,35 @@
 
 package gui.glUtils;
 
+import gui.ViewerGLJPanel;
+import gui.glUtils.CellRenderBufferRing.CellRenderBuffer;
+import gui.glUtils.Shader.BuiltInShader;
+
+import java.nio.FloatBuffer;
+import java.util.List;
+
+import common.RingBuffer;
 import common.Vec3;
+
 import javax.media.opengl.GL;
 import javax.media.opengl.GL3;
 
+import model.Atom;
+
 /**
  * Rendering arrows in a Gl context.
- * The class is not thread safe!
  */
 public class ArrowRenderer {
 	private final static float H_SQRT2 = 0.7071067811865475727f;
+	private final static int FLOATS_PER_VECTOR = 14;
 	
 	private static int dimensionsUniform;
 	private static int colorUniform;
 	private static int directionUniform;
 	private static int originUniform;
 	
-	private static VertexDataStorage vds = null;
+	private static VertexDataStorageDirect vds = null;
+	private static Shader lastUsedShader = null;
 	
 	private static float[] vertices = new float[]{
 		//Bottom fan
@@ -112,7 +124,188 @@ public class ArrowRenderer {
 		33,34,42, 42,34,35,
 		34,27,35, 35,27,36,
 	};
+	
+	private ViewerGLJPanel viewer;
+	
+	public ArrowRenderer(ViewerGLJPanel viewer, GL3 gl){
+		this.viewer = viewer;
+	}
+	
+	/**
+	 * Draws data as vectors
+	 * Only functional for deferred rendering
+	 * @param gl
+	 * @param ord
+	 * @param picking
+	 * @param v1
+	 * @param v2
+	 * @param v3
+	 * @param scalingFactor
+	 * @param normalize
+	 */
+	public void drawVectors(GL3 gl, ObjectRenderData<Atom> ord, boolean picking, int v1,
+			int v2, int v3, float scalingFactor, float thickness, boolean normalize){
 		
+		if (ViewerGLJPanel.openGLVersion>=3.3 && ord.isSubdivided()){
+			drawVectorsInstanced(gl, ord, picking, v1, v2, v3, scalingFactor, normalize, thickness, 2f);
+			return;
+		}
+		
+		gl.glDisable(GL.GL_BLEND);
+		
+		for (int i=0; i<ord.getRenderableCells().size(); ++i){
+			ObjectRenderData<Atom>.Cell c = ord.getRenderableCells().get(i);
+			
+			if (c.getNumVisibleObjects() == 0) continue;
+			float[] colors = c.getColorArray();
+			List<Atom> objects = c.getObjects();
+			boolean[] visible = c.getVisibiltyArray();
+			
+			for (int j=0; j<c.getNumObjects(); j++){
+				if (visible[j]){
+					Atom a = objects.get(j);
+					Vec3 dir = new Vec3(a.getData(v1), a.getData(v2), a.getData(v3));
+					if (normalize && dir.getLengthSqr()>1e-10) dir.normalize();
+					dir.multiply(scalingFactor);
+					
+					float[] col; 
+					if (picking) col = viewer.getNextPickingColor(a);
+					else col = new float[]{colors[3*j], colors[3*j+1], colors[3*j+2], 1f};
+					
+					ArrowRenderer.renderArrow(gl, a, dir, thickness, 2f, col, true);
+				}
+			}
+		}
+
+		if (!picking) gl.glEnable(GL.GL_BLEND);
+	}
+	
+	private void drawVectorsInstanced(GL3 gl, ObjectRenderData<Atom> ard, boolean picking, int v1,
+			int v2, int v3, float scalingFactor, boolean normalize, float thickness, float headThickScale){
+		VertexDataStorage.unbindAll(gl);
+		gl.glDisable(GL.GL_BLEND); //Transparency can cause troubles and should be avoided, disabling blending might be faster then
+		
+		//Select the rendering shader
+		Shader shader = BuiltInShader.ARROW_INSTANCED_DEFERRED.getShader();
+		
+		if (vds == null) ArrowRenderer.initVDS(gl, shader);
+		
+		shader.enable(gl);
+		
+		RingBuffer<CellRenderBuffer> cellRenderRingBuffer = CellRenderBufferRing.getCellBufferRing(gl, FLOATS_PER_VECTOR);
+		//Initialize all vertex attrib arrays
+		CellRenderBuffer cbr = cellRenderRingBuffer.getCurrent();
+		for (int i=0; i<cellRenderRingBuffer.size(); i++){
+			cbr.resetVAO(gl);
+			gl.glBindVertexArray(cbr.vertexArrayObject);
+			
+			Shader.disableLastUsedShader(gl);
+			shader.enable(gl);
+			//Bind fixed arrow geometry
+			vds.bind(gl);
+			
+			gl.glBindBuffer(cbr.bufferType, cbr.buffer);
+			gl.glVertexAttribPointer(Shader.ATTRIB_COLOR, 4, GL.GL_FLOAT, false, FLOATS_PER_VECTOR*Float.SIZE/8, 0);
+			gl.glVertexAttribDivisor(Shader.ATTRIB_COLOR, 1);
+			gl.glVertexAttribPointer(Shader.ATTRIB_VERTEX_OFFSET, 3, GL.GL_FLOAT, false, FLOATS_PER_VECTOR*Float.SIZE/8, 4*Float.SIZE/8);
+			gl.glVertexAttribDivisor(Shader.ATTRIB_VERTEX_OFFSET, 1);
+			gl.glVertexAttribPointer(Shader.ATTRIB_CUSTOM2, 3, GL.GL_FLOAT, false, FLOATS_PER_VECTOR*Float.SIZE/8, 7*Float.SIZE/8);
+			gl.glVertexAttribDivisor(Shader.ATTRIB_CUSTOM2, 1);
+			gl.glVertexAttribPointer(Shader.ATTRIB_CUSTOM3, 4, GL.GL_FLOAT, false, FLOATS_PER_VECTOR*Float.SIZE/8, 10*Float.SIZE/8);
+			gl.glVertexAttribDivisor(Shader.ATTRIB_CUSTOM3, 1);
+			
+			gl.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, vds.getElementArrayBufferIndex());
+			
+			cbr = cellRenderRingBuffer.getNext();
+		}
+		gl.glBindVertexArray(viewer.defaultVAO);
+		
+		viewer.updateModelViewInShader(gl, shader, viewer.getModelViewMatrix(), viewer.getProjectionMatrix());
+		
+		ard.sortCells(viewer.getModelViewMatrix());
+
+		for (int j=0; j<ard.getRenderableCells().size(); j++){
+			ObjectRenderData<Atom>.Cell c = ard.getRenderableCells().get(j);
+
+			//Cells are order by visibility, with empty cells at the end of the list
+			//Stop at the first empty block
+			if (c.getNumVisibleObjects() == 0) break; 
+									
+			gl.glBindVertexArray(cbr.vertexArrayObject);
+			gl.glBindBuffer(cbr.bufferType, cbr.buffer);
+			
+			FloatBuffer buf = gl.glMapBufferRange(cbr.bufferType,0, cbr.bufferSize, 
+					 GL3.GL_MAP_WRITE_BIT | GL3.GL_MAP_INVALIDATE_BUFFER_BIT).asFloatBuffer();
+			
+			float[] colors = c.getColorArray();
+			List<Atom> objects = c.getObjects();
+			boolean[] visible = c.getVisibiltyArray();
+			int renderElements = 0;
+			//Fill render buffer, color values is either the given value or a picking color
+			try{
+			
+			for (int i=0; i<c.getNumObjects(); i++){
+				if (visible[i]){
+					Atom ra = objects.get(i);
+					Vec3 dir = new Vec3(ra.getData(v1), ra.getData(v2), ra.getData(v3));
+					
+					if (normalize && dir.getLengthSqr()>1e-10) dir.normalize();
+					dir.multiply(scalingFactor);
+					
+					float length = dir.getLength();
+					float t = thickness;
+					if (t > length * 2) t = length * .1f;
+					float headThickness = headThickScale*t;
+					
+					//Color
+					if (picking){
+						float[] col = viewer.getNextPickingColor(ra);
+						buf.put(col[0]); buf.put(col[1]); buf.put(col[2]); buf.put(col[3]);
+					} else {
+						buf.put(colors[3*i]); buf.put(colors[3*i+1]); buf.put(colors[3*i+2]); buf.put(1f);
+					}
+					//Origin
+					buf.put(ra.x); buf.put(ra.y); buf.put(ra.z);
+					//Direction
+					buf.put(dir.x); buf.put(dir.y); buf.put(dir.z);
+					//Scalings
+					buf.put(thickness); buf.put(headThickness); buf.put(length-2f*headThickness);  buf.put(length);
+					renderElements++;
+				}
+			}
+			
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+			
+			gl.glUnmapBuffer(cbr.bufferType);
+			gl.glDrawElementsInstanced(GL.GL_TRIANGLES, indices.length, GL.GL_UNSIGNED_INT, 0, renderElements);
+
+			cbr = cellRenderRingBuffer.getNext();
+		}
+		
+		gl.glBindVertexArray(viewer.defaultVAO);
+		VertexDataStorage.unbindAll(gl);
+		gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
+		gl.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, 0);
+		
+		Shader.disableLastUsedShader(gl);
+
+		if (!picking) gl.glEnable(GL.GL_BLEND);
+	}
+	
+	private static void initVDS(GL3 gl,Shader s){
+		vds = new VertexDataStorageDirect(gl, vertices.length/2, 2, 0, 0, 0, 4, 3, 0, 0);
+		vds.beginFillBuffer(gl);
+		for (int i = 0; i < vertices.length/2; i++){
+			vds.setCustom1(new float[]{normal[i*3+0], normal[i*3+1], normal[i*3+2]});
+			vds.setCustom0(new float[]{multipliers[i*4+0], multipliers[i*4+1], multipliers[i*4+2], multipliers[i*4+3]});
+			vds.setVertex(new float[]{vertices[i*2+0], vertices[i*2+1]});
+		}
+		vds.endFillBuffer(gl);
+		vds.setIndices(gl, indices);
+	}
+	
 	/**
 	 * Renders an arrow with a standard head size of 3 
 	 * For very short arrows, the thickness is automatically adjusted if too large
@@ -145,21 +338,14 @@ public class ArrowRenderer {
 		else 
 			s= Shader.BuiltInShader.ARROW.getShader();
 		s.enable(gl);
-		if (vds == null){
-			vds = new VertexDataStorageDirect(gl, vertices.length/2, 2, 0, 0, 0, 4, 3, 0, 0);
-			vds.beginFillBuffer(gl);
-			for (int i = 0; i < vertices.length/2; i++){
-				vds.setCustom1(new float[]{normal[i*3+0], normal[i*3+1], normal[i*3+2]});
-				vds.setCustom0(new float[]{multipliers[i*4+0], multipliers[i*4+1], multipliers[i*4+2], multipliers[i*4+3]});
-				vds.setVertex(new float[]{vertices[i*2+0], vertices[i*2+1]});
-			}
-			vds.endFillBuffer(gl);
-			vds.setIndices(gl, indices);
-			
+		
+		if (vds == null) ArrowRenderer.initVDS(gl, s);
+		if (lastUsedShader != s){ // Get shader uniforms
 			dimensionsUniform = gl.glGetUniformLocation(s.getProgram(), "Dimensions");
 			colorUniform = gl.glGetUniformLocation(s.getProgram(), "Color");
 			originUniform = gl.glGetUniformLocation(s.getProgram(), "Origin");
 			directionUniform = gl.glGetUniformLocation(s.getProgram(), "Direction");
+			lastUsedShader = s;
 		}
 		
 		float lenght = direction.getLength();
@@ -176,8 +362,10 @@ public class ArrowRenderer {
 		vds.draw(gl, GL.GL_TRIANGLES);
 	}
 	
-	public static void dispose(GL3 gl){
+	public void dispose(GL3 gl){
 		if (vds != null) vds.dispose(gl);
 		vds = null;
+		CellRenderBufferRing.dispose(gl);
+		lastUsedShader = null;
 	}
 }

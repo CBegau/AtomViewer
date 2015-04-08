@@ -26,7 +26,7 @@ import common.Vec3;
 import crystalStructures.CrystalStructureProperties.BooleanCrystalProperty;
 import model.Atom;
 import model.AtomData;
-import model.AtomFilter;
+import model.Filter;
 import model.NearestNeighborBuilder;
 
 public class YSZStructure extends CrystalStructure {
@@ -76,12 +76,19 @@ public class YSZStructure extends CrystalStructure {
 	
 	@Override
 	public int getNumberOfTypes() {
-		return 7;
+		return 8;
 	}
 	
 	@Override
 	public int getNumberOfElements() {
 		return hasArtificialPlaceHolderAtoms.value ? 4 : 3;
+	}
+	
+	@Override
+	public String[] getNamesOfElements(){
+		if (hasArtificialPlaceHolderAtoms.value)
+			return new String[]{"Zr", "O", "Y", "-"};
+		return new String[]{"Zr", "O", "Y"};
 	}
 	
 	@Override
@@ -100,7 +107,24 @@ public class YSZStructure extends CrystalStructure {
 			if (e == 0 || e == 2)
 				neigh.add(neighAtoms.get(i).o2);
 		}
-		if (neigh.size()<10) return 6;
+		if (neigh.size()<10){
+			if (neigh.size()<6) return 7;
+			//Test if all atoms are located almost in a half-space of the center atom
+			//Compute the sum of all neighbor vectors and negate 
+			Vec3 con = new Vec3();
+			for (Vec3 n : neigh)
+				con.sub(n);
+			//Normalize this vector --> this normal splits the volume into two half-spaces 
+			con.normalize();
+			boolean surface = true;
+			//Test if all neighbors either on one side of the halfplane (dot product < 0) or only 
+			//slightly off
+			for (Vec3 n : neigh){
+				if (con.dot(n.normalizeClone())>0.35f)
+					surface = false;
+			}
+			if (surface) return 6;
+		}
 		if (neigh.size()<12) return 4;
 		if (neigh.size()>12) return 5;
 		
@@ -145,11 +169,12 @@ public class YSZStructure extends CrystalStructure {
 		case 3 : return "12 neigbors";
 		case 4 : return "<12 neighbors";
 		case 5 : return ">12 neighbors";
-		case 6 : return "<10 neighbors";
+		case 6 : return "surface";
+		case 7 : return "<6 neighbors";
 		default: return "unknown";
 		}
 	}
-
+	
 	@Override
 	public float[] getSphereSizeScalings() {
 		if (hasArtificialPlaceHolderAtoms.value)
@@ -193,16 +218,16 @@ public class YSZStructure extends CrystalStructure {
 	}
 	
 	@Override
-	public AtomFilter getIgnoreAtomsDuringImportFilter() {
+	public Filter<Atom> getIgnoreAtomsDuringImportFilter() {
 		if (dontImportOxygen.value == true){
-			return new AtomFilter() {
+			return new Filter<Atom>() {
 				@Override
 				public boolean accept(Atom a) {
 					int e = a.getElement() % getNumberOfElements();
 					return (e == 0 || e == 2);
 				}
 			};
-		} else return new AtomFilter() {
+		} else return new Filter<Atom>() {
 			@Override
 			public boolean accept(Atom a) {
 				int e = a.getElement() % getNumberOfElements();

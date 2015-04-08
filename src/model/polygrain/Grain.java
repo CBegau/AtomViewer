@@ -27,7 +27,7 @@ import common.Tupel;
 import common.Vec3;
 import crystalStructures.CrystalStructure;
 import model.*;
-import model.polygrain.mesh.*;
+import model.mesh.*;
 
 public class Grain implements Pickable{
 
@@ -38,13 +38,22 @@ public class Grain implements Pickable{
 	private int grainNumber, numAtoms;
 	private Future<Void> f;
 	
-	public Grain(Mesh mesh, List<Atom> atomsInGrain, int grainNumber, CrystalStructure cs) {
+	public Grain(Mesh mesh, List<Atom> atomsInGrain, int grainNumber, CrystalStructure cs, BoxParameter box) {
 		this.cs = cs;
 		this.atomsInGrain = atomsInGrain;
 		this.mesh = mesh;
 		this.grainNumber = grainNumber;
 		this.numAtoms = atomsInGrain.size();
-		this.rotTools = new CrystalRotationTools(cs, identifyGrainRotation(atomsInGrain));
+		
+		Vec3[] rotation = identifyGrainRotation(atomsInGrain, box);
+		if (rotation == null){
+			rotation = new Vec3[3];
+			rotation[0] = new Vec3(1f, 0f, 0f);
+			rotation[1] = new Vec3(0f, 1f, 0f);
+			rotation[2] = new Vec3(0f, 0f, 1f);
+		}
+		
+		this.rotTools = new CrystalRotationTools(cs, rotation);
 		
 		for (Atom a : atomsInGrain)
 			a.setGrain(grainNumber);
@@ -67,38 +76,31 @@ public class Grain implements Pickable{
 	}
 	
 	
-	public static void processGrains(final AtomData data){
-		if (Configuration.getCrystalStructure().getGrainBoundaryFilterDistance()==0f || 
-				data.isMeshImported()) return; 
+	public static void processGrains(final AtomData data, float filterDistance){
+		if (filterDistance==0f || data.isGrainsImported()) return; 
 		
 		//The BSPTree implementation is often slower
-		final float threshold = Configuration.getCrystalStructure().getGrainBoundaryFilterDistance();
+		final float threshold = filterDistance;
 		final ClosestTriangleSearchAlgorithm ctsa = new ClosestTriangleSearch(threshold);
 //		final ClosestTriangleSearchAlgorithm ctsa = new BSPTree(threshold);
 		
-		ArrayList<Triangle> trias = new ArrayList<Triangle>();
+		ArrayList<FinalizedTriangle> trias = new ArrayList<FinalizedTriangle>();
 		for (Grain g : data.getGrains()){
-//			if (g.getGrainNumber() !=0)
-			
-			for (Triangle t: g.getMesh().getTriangleSet()){
-				trias.add(t);
-			}
-			g.getMesh().finalizeMesh();
+			trias.addAll(g.getMesh().getTriangles());
 		}
 		
 		Collections.shuffle(trias);
-		for (Triangle t : trias){
+		for (FinalizedTriangle t : trias)
 			ctsa.add(t);
-		}
 		
 //		final int defaultType = Configuration.getCrystalStructure().getDefaultType();
 //		final int surfaceType = Configuration.getCrystalStructure().getSurfaceType();
-		final float nnbDist = Configuration.getCrystalStructure().getNearestNeighborSearchRadius();
+		final float nnbDist = data.getCrystalStructure().getNearestNeighborSearchRadius();
 		
 		final ArrayList<AtomMeshDistanceHelper> atomsToTest = new ArrayList<AtomMeshDistanceHelper>();
 		
 		final NearestNeighborBuilder<AtomMeshDistanceHelper> nnb =
-				new NearestNeighborBuilder<Grain.AtomMeshDistanceHelper>(nnbDist);
+				new NearestNeighborBuilder<Grain.AtomMeshDistanceHelper>(data.getBox(), nnbDist);
 		
 		for (Atom a : data.getAtoms()){
 //			if (a.getType() != defaultType && a.getType() != surfaceType && a.getGrain() != Atom.DEFAULT_GRAIN){
@@ -137,7 +139,7 @@ public class Grain implements Pickable{
 							data.getGrains(a.atom.getGrain()).decreaseAtomCount();
 							a.atom.setGrain(Atom.IGNORED_GRAIN);
 						} else {
-							float distanceToMesh = ctsa.sqrDistToMeshElement(a).o1;
+							float distanceToMesh = ctsa.sqrDistToMeshElement(a);
 							
 							distanceToMesh=(float)Math.sqrt(distanceToMesh);
 							if (distanceToMesh < threshold){
@@ -204,7 +206,7 @@ public class Grain implements Pickable{
 	}
 	
 	/**
-	 * Elements in this list are to be deleted once it is not needed anymore
+	 * Returns atoms in the grains
 	 * @return
 	 */
 	public List<Atom> getAtomsInGrain() {
@@ -229,13 +231,12 @@ public class Grain implements Pickable{
 	}
 	
 	/**
-	 * Assign a new grain number, only effective is CrystalStructure.orderBySize() is true
+	 * Assign a new grain number
 	 * @param i
 	 * @return
 	 */
 	public void renumberGrain(int i){
-		if (Configuration.getCrystalStructure().orderGrainsBySize())
-			grainNumber = i;
+		grainNumber = i;
 	}
 
 	/**
@@ -258,16 +259,16 @@ public class Grain implements Pickable{
 		return sb.toString();
 	}
 	
-	private Vec3[] identifyGrainRotation(List<Atom> atoms){
+	private Vec3[] identifyGrainRotation(List<Atom> atoms, BoxParameter box){
 		//find an perfect lattice site atom surrounded by only perfect lattice site atoms
 		//This will be the reference orientation for the whole grain.
 		int defaultType = cs.getDefaultType();
 		
 		if (atoms == null || atoms.size()<cs.getNumberOfNearestNeighbors())
-			return Configuration.getCrystalOrientation();
+			return null;
 		
-		NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>( 
-				cs.getNearestNeighborSearchRadius());
+		NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(
+				box, cs.getNearestNeighborSearchRadius());
 		for (Atom a : atoms) {
 			if (a.getType() == defaultType) nnb.add(a);
 		}
@@ -281,17 +282,11 @@ public class Grain implements Pickable{
 			if (rot != null) break;
 		}
 		
-		//if rot is null, then the grain is extremely small or so distorted that no orientation can be identified
-		//The default orientation is used in this case
-		if (rot == null){
-			rot = Configuration.getCrystalOrientation();	
-		} 
-		
 		return rot;
 	}
 	
 	@Override
-	public String printMessage(InputEvent ev) {
+	public String printMessage(InputEvent ev, AtomData data) {
 		return toString();
 	}
 	

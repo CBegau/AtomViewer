@@ -21,7 +21,6 @@ import java.util.*;
 
 import model.Atom;
 import model.AtomData;
-import model.ImportStates;
 import model.NearestNeighborBuilder;
 import model.polygrain.grainDetection.DefaultGrainDetectionCriteria;
 import model.polygrain.grainDetection.GrainDetectionCriteria;
@@ -187,7 +186,7 @@ public class L10_Structure extends FCCStructure{
 		List<Atom> sfAtoms = new ArrayList<Atom>();
 		for (int i=0; i<data.getAtoms().size(); i++){
 			Atom a = data.getAtoms().get(i);
-			if (a.getType() >= 1 && a.getType() <= 3 && (!ImportStates.POLY_MATERIAL.isActive() || a.getGrain() != Atom.IGNORED_GRAIN))
+			if (a.getType() >= 1 && a.getType() <= 3 && a.getGrain() != Atom.IGNORED_GRAIN)
 				sfAtoms.add(a);
 		}
 		return sfAtoms;

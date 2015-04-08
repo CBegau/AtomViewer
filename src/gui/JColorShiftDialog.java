@@ -26,6 +26,7 @@ import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import model.Configuration;
 import common.ColorUtils;
 import common.Tupel;
 import common.Vec3;
@@ -204,7 +205,8 @@ public class JColorShiftDialog extends JDialog {
 		JLabel[][] labels = null;
 		
 		JColorPreviewPanel() {
-			Tupel<float[][], Integer> colors = ColorUtils.getColorShift(shiftForVTypes, cs, shift);
+			int numELements = Configuration.getCurrentAtomData().getNumberOfElements();
+			Tupel<float[][], Integer> colors = ColorUtils.getColorShift(numELements, shiftForVTypes, cs, shift);
 			cols = colors.o2;
 			this.vTypes = shiftForVTypes;
 			this.setLayout(new BorderLayout());
@@ -215,7 +217,8 @@ public class JColorShiftDialog extends JDialog {
 		}
 		
 		void updateLabelContainer() {
-			Tupel<float[][], Integer> a = ColorUtils.getColorShift(shiftForVTypes, cs, shift);
+			int numELements = Configuration.getCurrentAtomData().getNumberOfElements();
+			Tupel<float[][], Integer> a = ColorUtils.getColorShift(numELements, shiftForVTypes, cs, shift);
 			float[][] colors = a.o1;
 			cols = a.o2;
 			

@@ -18,43 +18,21 @@
 
 package common;
 
-import java.util.ArrayList;
-
 /**
  * A simple counter that serves as a source for unique IDs.
  * The methods are thread safe.
  */
 public class UniqueIDCounter {
 	
-	private static ArrayList<UniqueIDCounter> allCounter = new ArrayList<UniqueIDCounter>();
-	
 	private int uniqueNumber = 0;
 	
 	/**
 	 * Creates a new instance of UniqueIDCounter
-	 * @param createAsStatic if true, the counter is reinitialized if resetStaticCounters() is called
 	 * @return a new instance of a counter
 	 */
-	public static UniqueIDCounter getNewUniqueIDCounter(boolean createAsStatic){
+	public static UniqueIDCounter getNewUniqueIDCounter(){
 		UniqueIDCounter counter = new UniqueIDCounter();
-		counter.reinit();
-		if (createAsStatic) allCounter.add(counter);
 		return counter;
-	}
-	
-	/**
-	 * Reinitializes all counter that have been in a static content 
-	 */
-	public static void resetStaticCounters(){
-		for (UniqueIDCounter c : allCounter)
-			c.reinit();
-	}
-	
-	/**
-	 * Removes all static counter
-	 */
-	public static void removeStaticCounter(){
-		allCounter.clear();
 	}
 	
 	private UniqueIDCounter(){}

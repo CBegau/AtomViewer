@@ -1,7 +1,7 @@
 // Part of AtomViewer: AtomViewer is a tool to display and analyse
 // atomistic simulations
 //
-// Copyright (C) 2013  ICAMS, Ruhr-Universität Bochum
+// Copyright (C) 2015  ICAMS, Ruhr-Universität Bochum
 //
 // AtomViewer is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,20 +18,20 @@
 
 package model;
 
+import gui.JLogPanel;
+import gui.ProgressMonitor;
+
 import java.io.*;
 import java.util.*;
 import java.util.zip.GZIPOutputStream;
 
-import javax.swing.JOptionPane;
-import gui.JLogPanel;
-
 import processingModules.*;
+import model.ImportConfiguration.ImportStates;
 import model.dataContainer.*;
 import model.io.MDFileLoader;
 import model.polygrain.*;
-import model.polygrain.mesh.Mesh;
-import model.skeletonizer.*;
 import common.*;
+import crystalStructures.CrystalStructure;
 
 public class AtomData {
 	/**
@@ -55,11 +55,14 @@ public class AtomData {
 	 * The largest (virtual) elements number
 	 */
 	private int maxNumElements = 1;
+	
+	private String[] elementNames;
+	
+	private List<DataColumnInfo> dataColumns = new ArrayList<DataColumnInfo>();
+	
 	//Some flags for imported or calculated values
-	private boolean rbvAvailable = false;
-	private boolean atomTypesAvailable = false;
+	boolean rbvAvailable = false;
 	private boolean grainsImported = false;
-	private boolean meshImported = false;
 	
 	/**
 	 * Meta data found in the file header
@@ -81,32 +84,47 @@ public class AtomData {
 	 */
 	private ArrayList<DataContainer> additionalData = new ArrayList<DataContainer>();
 	
-	/**
-	 * Skeletonizer: stores the dislocation network
-	 */
-	private Skeletonizer skeletonizer = null;
-	
 	private int[] atomsPerElement = new int[0];
 	private int[] atomsPerType;
 	private AtomData next, previous;
 	
+	private CrystalStructure defaultCrystalStructure;
+	private CrystalRotationTools crystalRotation;
+	
 	public AtomData(AtomData previous, MDFileLoader.ImportDataContainer idc){
-		this.atomsPerType = new int[Configuration.getCrystalStructure().getNumberOfTypes()];
+		this.defaultCrystalStructure = ImportConfiguration.getInstance().getCrystalStructure();
+		
+		this.crystalRotation = new CrystalRotationTools(defaultCrystalStructure, 
+				ImportConfiguration.getInstance().getCrystalOrientation());
+		
+		this.atomsPerType = new int[defaultCrystalStructure.getNumberOfTypes()];
 		this.box = idc.box;
 		this.atoms = idc.atoms;
-		this.grains = idc.grains;
-		this.meshImported = idc.meshImported;
+		
 		this.maxNumElements = idc.maxElementNumber;
+		
+		//Assign the names of elements if provided in the input file
+		this.elementNames = new String[maxNumElements];
+		for (int i=0; i<maxNumElements;i++){
+			if (idc.elementNames.containsKey(i))
+				this.elementNames[i] = idc.elementNames.get(i);
+		}
+		//Alternatively use names provided by the crystal structure
+		if (this.defaultCrystalStructure.getNamesOfElements() != null){
+			String[] names = this.defaultCrystalStructure.getNamesOfElements();
+			int elements = this.defaultCrystalStructure.getNumberOfElements();
+			for (int i=0; i<maxNumElements;i++){
+				this.elementNames[i] = names[i%elements];
+			}
+		}
+		
 		this.rbvAvailable = idc.rbvAvailable;
-		this.atomTypesAvailable = idc.atomTypesAvailable;
 		this.grainsImported = idc.grainsImported;
 		this.fileMetaData = idc.fileMetaData;
 		this.name = idc.name;
 		this.fullPathAndFilename = idc.fullPathAndFilename;
-		Configuration.setCurrentAtomData(this);
 		
-		if (Configuration.getNumElements()<idc.maxElementNumber)
-			Configuration.setNumElements(idc.maxElementNumber);
+		this.dataColumns.addAll(ImportConfiguration.getInstance().getDataColumns());
 		
 		if (previous!=null){
 			previous.next = this;
@@ -114,167 +132,108 @@ public class AtomData {
 		}
 		
 		try {
-			processInputData();
+			processInputData(idc);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+
 	}
 
 	public ArrayList<DataContainer> getAdditionalData() {
 		return additionalData;
 	}
 	
-	private void processInputData() throws Exception{
+	/**
+	 * Adds a set of DataColumnInfos to the data. Adds only non-existing columns.
+	 * @param dci
+	 */
+	public void addDataColumnInfo(DataColumnInfo ... dci){
+		if (dci == null) return;
+		int added = 0;
+		for (DataColumnInfo d : dci)
+			if (!dataColumns.contains(d)) {
+				dataColumns.add(d);
+				added++;
+			}
+		
+		if (added > 0)
+			for (Atom a : atoms)
+				a.extendDataValuesFields(added);
+	}
+	
+	/**
+	 * Removes a DataColumnInfo
+	 * @param dci
+	 */
+	public void removeDataColumnInfo(DataColumnInfo dci){
+		if (dci.isVectorComponent()){
+			//Delete a complete vector component
+			for (DataColumnInfo d : dci.getVectorComponents()){
+				int index = dataColumns.indexOf(d);
+				dataColumns.remove(index);
+				for (Atom a : atoms)
+					a.deleteDataValueField(index);
+			}
+		} else { 
+			//Delete a scalar value
+			if (dataColumns.contains(dci)){
+				int index = dataColumns.indexOf(dci);
+				dataColumns.remove(index);
+				for (Atom a : atoms)
+					a.deleteDataValueField(index);
+			}
+		}
+	}
+	
+	private void processInputData(MDFileLoader.ImportDataContainer idc) throws Exception{
 		//Short circuit for empty files
 		if (this.atoms.size() == 0) return;
 		
 		{
-			List<DataContainer> data = Configuration.getCrystalStructure().getDataContainerToApplyAtBeginningOfAnalysis();
+			List<DataContainer> data = defaultCrystalStructure.getDataContainerToApplyAtBeginningOfAnalysis();
 			if (data != null){
 				for (DataContainer dc : data){
-					Configuration.currentFileLoader.getProgressMonitor().setActivityName("Process: "+dc.getName());
-					this.addAdditionalData(dc);
+					ProcessingResult pr = new DataContainerAsProcessingModuleWrapper(dc.deriveNewInstance(), true).process(this);
+					this.addAdditionalData(pr.getDataContainer());
 				}
 			}
 		}
 		
 		//Bond Angle Analysis
-		if (!atomTypesAvailable){
-			Configuration.currentFileLoader.getProgressMonitor().setActivityName("Classifying atoms");
+		if (!idc.atomTypesAvailable){
+			ProgressMonitor.getProgressMonitor().setActivityName("Classifying atoms");
 			StructuralAnalysisBuilder.performStructureAnalysis(this);
 		}
 		
-		if (ImportStates.FILTER_SURFACE.isActive()){
-			Configuration.currentFileLoader.getProgressMonitor().setActivityName("Filtering surface");
-			new FilterSurfaceModule(3,3).process(this);
-		}
-		
-		if (ImportStates.POLY_MATERIAL.isActive()){
-			if (ImportStates.BURGERS_VECTORS.isActive() && 
-					Configuration.getCrystalStructure().createRBVbeforeGrains() && !rbvAvailable){
-				Configuration.currentFileLoader.getProgressMonitor().setActivityName("Computing burgers vectors");
-				RbvBuilder.createRBV(this);
-				rbvAvailable = true;
-			}
-			Configuration.currentFileLoader.getProgressMonitor().setActivityName("Identifying grains");
-			final List<Grain> gr = Configuration.getCrystalStructure().identifyGrains(this);
+		if (ImportStates.IMPORT_GRAINS.isActive() && isGrainsImported()){
+			ProgressMonitor.getProgressMonitor().setActivityName("Processing grains");
+			final List<Grain> gr = defaultCrystalStructure.identifyGrains(this, 0f);
 			for (Grain g : gr){
-				this.grains.put(g.getGrainNumber(), g);
+				this.addGrain(g);
+				g.getMesh(); //ensure the mesh is created in the worker thread
 			}
-		
-			if (ImportStates.BURGERS_VECTORS.isActive() && !rbvAvailable) {
-				Configuration.currentFileLoader.getProgressMonitor().setActivityName("Computing burgers vectors");
-				// RBV poly-crystal
-				for (Grain g : gr)
-					RbvBuilder.createRBV(g, getBox());
-				rbvAvailable = true;
-			}
-			Configuration.currentFileLoader.getProgressMonitor().setActivityName("Processing grains");
-			
-			if (!Configuration.getCrystalStructure().orderGrainsBySize()){
-				for (Grain g : gr) {
-					Configuration.addGrainIndex(g.getGrainNumber());
-				}
-			} else {
-				ArrayList<Grain> sortedGrains = new ArrayList<Grain>(this.getGrains());
-				for (Grain g : sortedGrains)
-					g.getMesh();
-				
-				Collections.sort(sortedGrains, new Comparator<Grain>() {
-					@Override
-					public int compare(Grain o1, Grain o2) {
-						double diff = o1.getMesh().getVolume() - o2.getMesh().getVolume();
-						if (diff<0.) return 1;
-						if (diff>0.) return -1;
-						return 0;
-					}
-				});
-				
-				for (int i=0; i<sortedGrains.size(); i++){
-					sortedGrains.get(i).renumberGrain(i);
-					Configuration.addGrainIndex(i);
-					for (Atom a : sortedGrains.get(i).getAtomsInGrain()){
-						a.setGrain(i);
-					}
-					sortedGrains.get(i).getAtomsInGrain().clear();	//Atoms in the grain are not needed anymore
-				}
-				
-				grains.clear();
-				for (Grain g : sortedGrains)
-					grains.put(g.getGrainNumber(), g);
-			}
-			
-			Grain.processGrains(this);
-			
-			for (Grain g : gr) {
-				// Make sure all meshes are calculated if grains are imported
-				Mesh m = g.getMesh();
-				if (m != null){	//Can only happen in case of CancellationException 
-					m.finalizeMesh();
-					if (!Configuration.getCrystalStructure().orderGrainsBySize())
-						g.getAtomsInGrain().clear();	//Atoms are not needed anymore if there is no need for reordering
-				}
-			}
-			
-		} else if (ImportStates.BURGERS_VECTORS.isActive() && !rbvAvailable){
-			//RBV single-crystal
-			Configuration.currentFileLoader.getProgressMonitor().setActivityName("Computing burgers vectors");
-			RbvBuilder.createRBV(this);
-			rbvAvailable = true;
 		}
-		
-		if (ImportStates.SKELETONIZE.isActive()){
-			Configuration.currentFileLoader.getProgressMonitor().setActivityName("Creating dislocation networks");
-			this.getSkeletonizer().transform(this);
-		}
-		
-		//Post-Processors
-		for (ProcessingModule pm : Configuration.getProcessingModules()){
-			Configuration.currentFileLoader.getProgressMonitor().setActivityName(pm.getShortName());
-			pm.process(this);
-		}
-		
-		{
-			List<DataContainer> data = Configuration.getCrystalStructure().getDataContainerToApplyAtEndOfAnalysis();
-			if (data != null){
-				for (DataContainer dc : data){
-					Configuration.currentFileLoader.getProgressMonitor().setActivityName("Process: "+dc.getName());
-					this.addAdditionalData(dc);
-				}
+			
+		for (DataColumnInfo dci : dataColumns){
+			if (dci.isFirstVectorComponent()){
+				ProgressMonitor.getProgressMonitor().setActivityName("Compute norm of vectors");
+				new VectorNormModule(dci).process(this);
 			}
 		}
 		
-		Configuration.currentFileLoader.getProgressMonitor().setActivityName("Finalizing file");
+		ProgressMonitor.getProgressMonitor().setActivityName("Finalizing file");
 		
-		if (ImportStates.KILL_ALL_ATOMS.isActive()) 			//Dispose all atoms
-			atoms.clear();
-		else if (ImportStates.DISPOSE_DEFAULT.isActive()){ //Dispose perfect atoms
-			final int defaultType = Configuration.getCrystalStructure().getDefaultType();
-			new FilteringModule(new AtomFilter() {
+		if (ImportStates.DISPOSE_DEFAULT.isActive()){ //Dispose perfect atoms
+			final int defaultType = defaultCrystalStructure.getDefaultType();
+			new FilteringModule(new Filter<Atom>() {
 				@Override
 				public boolean accept(Atom a) {
 					return a.getType() != defaultType;
 				}
 			}).process(this);
 		}
-
-		int maxType = Configuration.getCrystalStructure().getNumberOfTypes();
-		int warnings = 0;
-		for (int i=0; i<atoms.size();i++){
-			if (atoms.get(i).getType()>=maxType){
-				atoms.get(i).setType(0);
-				warnings++;
-			}
-		}
-		if (warnings > 0)
-			JLogPanel.getJLogPanel().addLog(String.format("%d Atoms with a type ID exceeding the total number of types defined"
-					+ "for this structure are detected. These atoms were reassigned to type 0.", warnings));
 		
-		//Count all atoms types
-		for (int i=0; i<atoms.size();i++){
-			if (atoms.get(i).getType() >= 0 && atoms.get(i).getType() < atomsPerType.length)
-				atomsPerType[atoms.get(i).getType()]++;			
-		}
+		countAtomTypes();
 		
 		//Count atoms of different (virtual) elements
 		atomsPerElement = new int[maxNumElements];
@@ -287,15 +246,31 @@ public class AtomData {
 		this.atoms.trimToSize();		
 		
 		//Scale the data columns values of the remaining atoms
-		for (int i=0; i<Configuration.getSizeDataColumns(); i++){
-			DataColumnInfo cci = Configuration.getDataColumnInfo(i);
-			int c = cci.getColumn();
-			float scale = cci.getScalingFactor();
-			if (!cci.isSpecialColoumn())
-				for (Atom a : this.atoms)
-					a.setData(a.getData(c)*scale, c); 
+		for (int i=0; i < dataColumns.size(); i++){
+			float scale = dataColumns.get(i).getScalingFactor();
+			for (Atom a : this.atoms)
+				a.setData(a.getData(i)*scale, i); 
+		}
+	}
+
+	public void countAtomTypes() {
+		int maxType = defaultCrystalStructure.getNumberOfTypes();
+		int warnings = 0;
+		for (int i=0; i<atoms.size();i++){
+			if (atoms.get(i).getType()>=maxType || atoms.get(i).getType()<0){
+				atoms.get(i).setType(0);
+				warnings++;
+			}
+		}
+		if (warnings > 0){
+			JLogPanel.getJLogPanel().addLog(String.format("%d Atoms with a type-ID exceeding the total number of types defined"
+					+ " for this structure are detected. These atoms were reassigned to type 0.", warnings));
 		}
 		
+		for (int i=0; i<atoms.size();i++){
+			if (atoms.get(i).getType() >= 0 && atoms.get(i).getType() < atomsPerType.length)
+				atomsPerType[atoms.get(i).getType()]++;			
+		}
 	}
 	
 	/**
@@ -305,11 +280,10 @@ public class AtomData {
 	 */
 	public StringBuilder plotNeighborsGraph(Atom... atomsToPlot){
 		StringBuilder sb = new StringBuilder();
-		final float d = Configuration.getCrystalStructure().getNearestNeighborSearchRadius();
-		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(d);
+		final float d = defaultCrystalStructure.getNearestNeighborSearchRadius();
+		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(box, d, true);
 		
-		for (int i=0; i<atoms.size();i++)
-			nnb.add(atoms.get(i));
+		nnb.addAll(atoms);
 		
 		for (Atom a : atomsToPlot){
 			ArrayList<Tupel<Atom, Vec3>> t =nnb.getNeighAndNeighVec(a);
@@ -389,18 +363,57 @@ public class AtomData {
 		return previous;
 	}
 	
+	public CrystalStructure getCrystalStructure() {
+		return defaultCrystalStructure;
+	}
+	
+	public CrystalRotationTools getCrystalRotation() {
+		return crystalRotation;
+	}
+	
+	/**
+	 * Return the index at which the values for DataColumnInfo are stored
+	 * or -1 if not present
+	 * @param dci
+	 * @return
+	 */
+	public int getIndexForCustomColumn(DataColumnInfo dci){
+		for (int i=0; i < dataColumns.size(); i++)
+			if (dci == dataColumns.get(i)) 
+				return i;
+		return -1;
+	}
+	
+	public List<DataColumnInfo> getDataColumnInfos(){
+		return dataColumns;
+	}
+	
 	public int getNumberOfAtomsWithType(int i){
 		if (i>atomsPerType.length) return 0;
 		return atomsPerType[i];
 	}
 	
-	public int getNumberOfAtomsWithElement(int i){
+	public int getNumberOfElements() {
+		return maxNumElements;
+	}
+	
+	public int getNumberOfAtomsOfElement(int i){
 		if (i>=atomsPerElement.length) return 0;
 		return atomsPerElement[i];
 	}
 	
+	public String getNameOfElement(int i){
+		if (i>=elementNames.length) return "";
+		return elementNames[i] == null ? "" : elementNames[i];
+	}
+	
 	public Collection<Grain> getGrains() {
 		return grains.values();
+	}
+	
+	public void addGrain(Grain g) {
+		grains.put(g.getGrainNumber(), g);
+		Configuration.addGrainIndex(g.getGrainNumber());
 	}
 	
 	public Grain getGrains(int grain) {
@@ -411,14 +424,15 @@ public class AtomData {
 		return grainsImported;
 	}
 	
-	public boolean isMeshImported() {
-		return meshImported;
+	public boolean isPolyCrystalline(){
+		return grains.size() != 0;
 	}
 	
-	public Skeletonizer getSkeletonizer(){
-		if (skeletonizer == null)
-			skeletonizer = new Skeletonizer(this);
-		return skeletonizer;
+	public DataContainer getDataContainer(Class<? extends DataContainer> clazz){
+		for (DataContainer dc : additionalData)
+			if (dc.getClass().isAssignableFrom(clazz))
+				return dc;
+		return null;
 	}
 	
 	public Object getFileMetaData(String s) {
@@ -427,15 +441,15 @@ public class AtomData {
 	}
 
 	/**
-	 * Frees the atom list to make more memory available and removes references to the skeletonizer
-	 * and next and previous AtomDatas
+	 * Frees the atom list to make more memory available by removing all references to other 
+	 * instances of AtomData
 	 * Helps if you want to load another large file, without memory shortcomings 
 	 */
 	public void clear(){
 		maxNumElements = 1;
 		this.atoms.clear();
 		this.atoms.trimToSize();
-		this.skeletonizer = null;
+		this.additionalData.clear();
 		this.next = null;
 		this.previous = null;
 	}
@@ -445,55 +459,44 @@ public class AtomData {
 	}
 	
 	public void addAdditionalData(DataContainer dc){
-		dc = dc.deriveNewInstance();
-		
-		boolean success = false;
-		try {
-			File f = null;
-			if (dc.isExternalFileRequired()) {
-				f = dc.selectFile(Configuration.getLastOpenedFolder());
-				if (f == null) return;
+		boolean replaced = false;
+		for (int i=0; i<this.additionalData.size(); i++){
+			if (this.additionalData.get(i).getClass() == dc.getClass()){
+				this.additionalData.set(i,dc);
+				replaced = true;
+				break;
 			}
-			if (dc.showOptionsDialog()) 
-				success = dc.processData(f, this);
-		} catch (IOException e) {
-			e.printStackTrace();
 		}
-		if (success) {
-			AtomData a = this;
-			boolean replaced = false;
-			for (int i=0; i<a.additionalData.size(); i++){
-				if (a.additionalData.get(i).getClass() == dc.getClass()){
-					a.additionalData.set(i,dc);
-					replaced = true;
-					break;
-				}
-			}
-			if (!replaced) a.additionalData.add(dc);
-		}
-		else JOptionPane.showMessageDialog(null, "Creating additional data failed");
+		if (!replaced) this.additionalData.add(dc);
 	}
 	
 	public void printToFile(File out, boolean binary, boolean compressed) throws IOException{
+		printToFile(out, binary, compressed, null);
+	}
+	
+	public void printToFile(File out, boolean binary, boolean compressed, Filter<Atom> filter) throws IOException{
 		DataOutputStream dos;
-		if (compressed)
-			dos = new DataOutputStream(new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(out), 4096*16),4096*64));
-		else dos = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(out), 4096*64));
 		
-		int numData = 1+Configuration.getSizeDataColumns()+(ImportStates.POLY_MATERIAL.isActive()?1:0);
+		if (compressed){
+			dos = new DataOutputStream(new BufferedOutputStream(
+					new GZIPOutputStream(new FileOutputStream(out), 1024*1024), 4096*1024));
+		}
+		else dos = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(out), 4096*1024));
+		
+		int numData = 1 + dataColumns.size() + (isPolyCrystalline() ? 1 : 0);
 		
 		if (binary){
 			dos.writeBytes(String.format("#F b 1 1 0 3 0 %d\n", numData));
 		} else dos.writeBytes(String.format("#F A 1 1 0 3 0 %d\n", numData));
 		dos.writeBytes("#C number type x y z ada_type");
 		
-		if (Configuration.getSizeDataColumns()!=0){
-			for (int i=0; i<Configuration.getSizeDataColumns(); i++){
-				String id = " "+Configuration.getDataColumnInfo(i).getId();
+		if (dataColumns.size() != 0){
+			for (int i=0; i<dataColumns.size(); i++){
+				String id = " "+dataColumns.get(i).getId();
 				dos.writeBytes(id);
 			}
 		}
-		if (ImportStates.POLY_MATERIAL.isActive())
+		if (isPolyCrystalline())
 			dos.writeBytes(" grain");
 		
 		//rbv always at the end
@@ -507,7 +510,7 @@ public class AtomData {
 		dos.writeBytes(String.format("#Z %.8f %.8f %.8f\n", b[2].x, b[2].y, b[2].z));
 		
 		dos.writeBytes("##META\n");
-		if (ImportStates.POLY_MATERIAL.isActive()){
+		if (isPolyCrystalline()){
 			for (Grain g: getGrains()){
 				float[][] rot = g.getCystalRotationTools().getDefaultRotationMatrix();
 				dos.writeBytes(String.format("##grain %d %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f %.4f\n",
@@ -537,17 +540,16 @@ public class AtomData {
 		
 		if (binary){
 			for (Atom a : atoms){
-				//enable highest filtering
-//				if ( (a.getRBV() == null || a.getRBV().getSquaredRBVLengh()<0.36) && a.getType()!=6) continue;
-//				if (a.getRBV() == null && a.getType()!=6) continue;
+				//Test and apply filtering
+				if (filter!=null && !filter.accept(a)) continue;
 				
 				dos.writeInt(a.getNumber()); dos.writeInt(a.getElement());
 				dos.writeFloat(a.x); dos.writeFloat(a.y); dos.writeFloat(a.z);
 				dos.writeInt(a.getType());
 				
-				for (int i=0; i<Configuration.getSizeDataColumns();i++)
+				for (int i = 0; i < dataColumns.size(); i++)
 					dos.writeFloat(a.getData(i));
-				if (ImportStates.POLY_MATERIAL.isActive())
+				if (isPolyCrystalline())
 					dos.writeInt(a.getGrain());
 				
 				if (rbvAvailable){
@@ -564,14 +566,17 @@ public class AtomData {
 			}
 		} else {
 			for (Atom a : atoms){
+				//Test and apply filtering
+				if (filter!=null && !filter.accept(a)) continue;
+				
 				dos.writeBytes(String.format("%d %d %.8f %.8f %.8f %d", a.getNumber(), a.getElement(), 
 						a.x, a.y, a.z, a.getType()));
 				
-				if (Configuration.getSizeDataColumns()!=0)
-					for (int i=0; i<Configuration.getSizeDataColumns();i++)
+				if (dataColumns.size()!=0)
+					for (int i = 0; i < dataColumns.size(); i++)
 						dos.writeBytes(String.format(" %.8f",a.getData(i)));
 				
-				if (ImportStates.POLY_MATERIAL.isActive())
+				if (isPolyCrystalline())
 					dos.writeBytes(" "+Integer.toString(a.getGrain()));
 				
 				if (rbvAvailable){
@@ -588,5 +593,10 @@ public class AtomData {
 			}
 		}
 		dos.close();
-	}	
+	}
+	
+	@Override
+	public String toString() {
+		return getName();
+	}
 }

@@ -3,7 +3,7 @@ package model.dataContainer;
 import gui.JColorSelectPanel;
 import gui.RenderRange;
 import gui.ViewerGLJPanel;
-import gui.glUtils.SphereRenderData;
+import gui.glUtils.ObjectRenderData;
 
 import java.awt.Color;
 import java.awt.GridBagConstraints;
@@ -24,23 +24,26 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import common.Vec3;
+import model.BoxParameter;
+import model.DataColumnInfo;
 import model.Pickable;
 
 public abstract class ParticleDataContainer<T extends Vec3 & Pickable> extends DataContainer{
 	protected ArrayList<T> particles = new ArrayList<T>();
-	protected SphereRenderData<T> srd;
+	protected List<DataColumnInfo> particleDataColumns = new ArrayList<DataColumnInfo>();
+	protected ObjectRenderData<T> ord;
 	
 	@Override
 	public boolean isTransparenceRenderingRequired() {
 		return false;
 	}
 	
-	protected void updateRenderData(){
-		srd = new SphereRenderData<T>(particles, true);
+	protected void updateRenderData(BoxParameter box){
+		ord = new ObjectRenderData<T>(particles, true, box);
 		float size = getParticleDataControlPanel().getParticleSize();
 		float[] col = getParticleDataControlPanel().getColor();
 		
-		for (SphereRenderData<T>.Cell c: srd.getRenderableCells()){
+		for (ObjectRenderData<T>.Cell c: ord.getRenderableCells()){
 			for (int i = 0; i < c.getNumObjects(); i++) {
 				c.getColorArray()[3*i+0] = col[0];
 				c.getColorArray()[3*i+1] = col[1];
@@ -52,13 +55,13 @@ public abstract class ParticleDataContainer<T extends Vec3 & Pickable> extends D
 	}
 	
 	@Override
-	public void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking) {
+	public void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
 		if (!getDataControlPanel().isDataVisible()) return;
 		
 		float[] col = getParticleDataControlPanel().getColor();
 		if (viewer.isUpdateRenderContent()){
 			float size = getParticleDataControlPanel().getParticleSize();
-			for (SphereRenderData<T>.Cell c: srd.getRenderableCells()){
+			for (ObjectRenderData<T>.Cell c: ord.getRenderableCells()){
 				for (int i = 0; i < c.getNumObjects(); i++) {
 					T v = c.getObjects().get(i);
 					if (renderRange.isInInterval(v)){
@@ -72,27 +75,17 @@ public abstract class ParticleDataContainer<T extends Vec3 & Pickable> extends D
 				}	
 			}
 			
-			srd.reinitUpdatedCells();
+			ord.reinitUpdatedCells();
 		}
-		viewer.drawSpheres(gl, srd, picking);
+		viewer.drawSpheres(gl, ord, picking);
 	}
 	
 	@Override
-	public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking) {
+	public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
 		return;
 	}
 
 	protected abstract JParticleDataControlPanel<?> getParticleDataControlPanel();
-
-	@Override
-	public String[] getFileExtensions() {
-		return null;
-	}
-
-	@Override
-	public boolean isExternalFileRequired() {
-		return false;
-	}
 	
 	public List<T> getParticles(){
 		return particles;
@@ -173,7 +166,6 @@ public abstract class ParticleDataContainer<T extends Vec3 & Pickable> extends D
 		@Override
 		public void setViewer(ViewerGLJPanel viewer) {
 			this.viewer = viewer;
-			this.colorSelectPanel.setViewer(viewer);
 		}
 		
 		public boolean isDataVisible(){

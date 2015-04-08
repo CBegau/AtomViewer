@@ -27,25 +27,30 @@ import java.util.concurrent.Callable;
 
 import common.ThreadPool;
 import common.Vec3;
-import model.Configuration;
+import model.BoxParameter;
 import model.Pickable;
 
-public class SphereRenderData<T extends Vec3 & Pickable> {
+/**
+ * Creates a domain decomposition of a list of objects in three dimensional space
+ * The objects are decomposed into cuboidal cells that can be sorted front to back
+ * @param <T>
+ */
+public class ObjectRenderData<T extends Vec3 & Pickable> {
 	public final static int MAX_ELEMENTS_PER_CELL = 6000;
 	public final static int APPROXIMATE_ELEMENTS_PER_INITIAL_CELL = 8*MAX_ELEMENTS_PER_CELL;
 	private int runningTasks = 0;	//Counting the number of cells waiting or running in the ThreadPool
 	
 	private final CellComparator cellComparator = new CellComparator();
-	Vector<Cell> allCells = new Vector<SphereRenderData<T>.Cell>();
+	Vector<Cell> allCells = new Vector<ObjectRenderData<T>.Cell>();
 	private boolean subdivided = false;
 	
 	
-	public SphereRenderData(List<T> objects, boolean subdivide) {
+	public ObjectRenderData(List<T> objects, boolean subdivide, BoxParameter box) {
 //		long time = System.nanoTime();
 		
 		this.subdivided = subdivide;
 		
-		Vec3 size = Configuration.getCurrentAtomData().getBox().getHeight();
+		Vec3 size = box.getHeight();
 		final Cell rootCell = new Cell(size.multiplyClone(0.5f), size);
 		
 		if (objects instanceof ArrayList<?>)
@@ -98,6 +103,14 @@ public class SphereRenderData<T extends Vec3 & Pickable> {
 		runningTasks--;
 	}
 	
+	/**
+	 * Sorts cells from front to back based on the coordinate 
+	 * the cells' corner in front depending on the current
+	 * modelview matrix.
+	 * Sorted cells can be rendered from front to back
+	 * and rendering performance is improve using occlusion culling 
+	 * @param modelViewMatrix the current modelview matrix
+	 */
 	public void sortCells(final GLMatrix modelViewMatrix){
 		//Extract the column to compute z-coordinate 
 		float mvmMatrix1 = modelViewMatrix.getMatrix().get(2);
@@ -105,36 +118,38 @@ public class SphereRenderData<T extends Vec3 & Pickable> {
 		float mvmMatrix3 = modelViewMatrix.getMatrix().get(10);
 		
 		if (allCells.size() == 0) return;
-		//Test which of the eight corners is in front in one cell
+		
+		//Test which of the eight corners is in front in an arbitrary cell
 		//This corner will be in front in any other cell as well
 		Cell c = allCells.get(0);
 		c.visibleZ = Float.POSITIVE_INFINITY;
-		if (c.getNumVisibleObjects() > 0){
-			int cornerInFront = 0;
-			Vec3 v = new Vec3();
-			for (int i=0; i<8; i++){
-				v.x = i%2 == 1 ? -0.5f : 0.5f;
-				v.y = (i>>1)%2 == 1 ? -0.5f : 0.5f;
-				v.z = (i>>2)%2 == 1 ? -0.5f : 0.5f;
-				
-				float z1 = mvmMatrix1 * (c.x + v.x*c.size.x) 
-						 + mvmMatrix2 * (c.y + v.y*c.size.y) 
-						 + mvmMatrix3 * (c.z + v.z*c.size.z);
-				if (z1 < c.visibleZ) cornerInFront = i;
-			}
+		
+		int cornerInFront = 0;
+		Vec3 v = new Vec3();
+		for (int i=0; i<8; i++){
+			v.x = i%2 == 1 ? -0.5f : 0.5f;
+			v.y = (i>>1)%2 == 1 ? -0.5f : 0.5f;
+			v.z = (i>>2)%2 == 1 ? -0.5f : 0.5f;
 			
-			v.x = cornerInFront%2 == 1 ? -0.5f : 0.5f;
-			v.y = (cornerInFront>>1)%2 == 1 ? -0.5f : 0.5f;
-			v.z = (cornerInFront>>2)%2 == 1 ? -0.5f : 0.5f;
-			
-			//Update all cell coordinates
-			for (int j=0; j<allCells.size(); j++){
-				c = allCells.get(j);
-				c.visibleZ = mvmMatrix1 * (c.x + v.x*c.size.x) 
-						   + mvmMatrix2 * (c.y + v.y*c.size.y) 
-						   + mvmMatrix3 * (c.z + v.z*c.size.z);
-			}
-		} else c.visibleZ = Float.NEGATIVE_INFINITY;
+			float z1 = mvmMatrix1 * (c.x + v.x*c.size.x) 
+					 + mvmMatrix2 * (c.y + v.y*c.size.y) 
+					 + mvmMatrix3 * (c.z + v.z*c.size.z);
+			if (z1 < c.visibleZ) cornerInFront = i;
+		}
+		
+		//The corner in the front is known
+		//Compute the z-coordinate of this corner in
+		//all cells to sort them
+		v.x = cornerInFront%2 == 1 ? -0.5f : 0.5f;
+		v.y = (cornerInFront>>1)%2 == 1 ? -0.5f : 0.5f;
+		v.z = (cornerInFront>>2)%2 == 1 ? -0.5f : 0.5f;
+		
+		for (int j=0; j<allCells.size(); j++){
+			c = allCells.get(j);
+			c.visibleZ = mvmMatrix1 * (c.x + v.x*c.size.x) 
+					   + mvmMatrix2 * (c.y + v.y*c.size.y) 
+					   + mvmMatrix3 * (c.z + v.z*c.size.z);
+		}
 		
 		Collections.sort(allCells, cellComparator);
 	}
@@ -152,14 +167,13 @@ public class SphereRenderData<T extends Vec3 & Pickable> {
 	}
 		
 	public class Cell extends Vec3 implements Callable<Void>{
-		private ArrayList<T> objects;
+		//Cell parameters
 		private Vec3 size = new Vec3();
-		
 		private float visibleZ;
-		
 		private float overlap = 0f;
 		
 		private int visibleObjects = 0;
+		private ArrayList<T> objects;
 		private float[] color;
 		private float[] sizes;
 		private boolean[] isObjectVisible;
@@ -196,10 +210,6 @@ public class SphereRenderData<T extends Vec3 & Pickable> {
 		
 		public boolean[] getVisibiltyArray() {
 			return isObjectVisible;
-		}
-		
-		public Vec3 getSizeForVisibilyTest(){
-			return size.addClone(1.95f*overlap);
 		}
 		
 		public Vec3 getSize(){
@@ -272,7 +282,7 @@ public class SphereRenderData<T extends Vec3 & Pickable> {
 		}
 
 		private void subdivideOctree() {
-			final ArrayList<Cell> cells = new ArrayList<SphereRenderData<T>.Cell>(); 
+			final ArrayList<Cell> cells = new ArrayList<ObjectRenderData<T>.Cell>(); 
 	
 			for (int i=0; i<8; i++){
 				Vec3 s = this.size.multiplyClone(0.5f);
@@ -326,7 +336,7 @@ public class SphereRenderData<T extends Vec3 & Pickable> {
 			Vec3 subBlockSize = new Vec3(size.x/blocks[0], size.y/blocks[1], size.z/blocks[2]);
 			
 			
-			final ArrayList<Cell> cells = new ArrayList<SphereRenderData<T>.Cell>();			
+			final ArrayList<Cell> cells = new ArrayList<ObjectRenderData<T>.Cell>();			
 			
 			for (int i=0; i<blocks[0]; i++){
 				for (int j=0; j<blocks[1]; j++){
@@ -455,11 +465,16 @@ public class SphereRenderData<T extends Vec3 & Pickable> {
 	
 	/**
 	 * Comparator to sort the cells with decreasing z-coordinates 
-	 * with respect to the current modelViewMatrix 
+	 * with respect to the current modelViewMatrix
+	 * Cells that do not hold visible objects are sorted to the end
 	 */
 	private class CellComparator implements Comparator<Cell>{
 		@Override
 		public int compare(Cell c1, Cell c2) {
+			if (c1.visibleObjects == 0 && c2.visibleObjects == 0) return 0;
+			if (c1.visibleObjects == 0 && c2.visibleObjects > 0) return 1;
+			if (c1.visibleObjects > 0 && c2.visibleObjects == 0) return -1;
+			
 			if (c1.visibleZ<c2.visibleZ) return 1;
 			if (c1.visibleZ>c2.visibleZ) return -1;
 			return 0;

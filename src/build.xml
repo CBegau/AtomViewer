@@ -31,7 +31,10 @@
 
 	<target name="makeViewer" depends="compile">
 		<delete file="${jarDir}/AtomViewer.jar" />
-
+		<tstamp>
+		    <format property="TODAY" pattern="dd.MM.yyyy" />
+		</tstamp>
+		
 		<jar destfile="${jarDir}/AtomViewer.jar">
 			<fileset dir="${binDir}">
 				<include name="**/*.class" />
@@ -42,8 +45,9 @@
 				<include name="**/resources/*.*"/>
 			</fileset>
 			<manifest>
-				<attribute name="Main-Class" value="gui.JMainWindow" />
+				<attribute name="Main-Class" value="AtomViewer" />
 				<attribute name="Class-Path" value="jogamp/jar/gluegen-rt.jar jogamp/jar/jogl-all.jar libs/Jama/Jama.jar libs/Quickhull3d/quickhull3d.jar" />
+				<attribute name="Build-Date" value="${TODAY}"/>
 			</manifest>
 		</jar>
 		

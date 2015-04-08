@@ -1,7 +1,7 @@
 // Part of AtomViewer: AtomViewer is a tool to display and analyse
 // atomistic simulations
 //
-// Copyright (C) 2014  ICAMS, Ruhr-Universität Bochum
+// Copyright (C) 2015  ICAMS, Ruhr-Universität Bochum
 //
 // AtomViewer is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,6 +17,8 @@
 // with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
 
 package model.dataContainer;
+
+import gui.ProgressMonitor;
 
 import java.awt.event.InputEvent;
 import java.io.*;
@@ -53,18 +55,18 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 	}
 	
 	public void findVacancies(final AtomData data, final float nnd_tolerance){
-		CrystalStructure cs = Configuration.getCrystalStructure();
+		CrystalStructure cs = data.getCrystalStructure();
 		final float nnd = cs.getDistanceToNearestNeighbor();
 		final float nndSearch = cs.getNearestNeighborSearchRadius();
 		
-		//Data structure to get all first nearest neighbors
-		final NearestNeighborBuilder<Vec3> firstNearestNeighbors = new NearestNeighborBuilder<Vec3>(nndSearch);
-		
 		//Data structure to get all neighbors up to twice the distance
-		final NearestNeighborBuilder<Vec3> secondNearestNeighbors = new NearestNeighborBuilder<Vec3>(1.4f*nndSearch);
+		final NearestNeighborBuilder<Vec3> secondNearestNeighbors = 
+				new NearestNeighborBuilder<Vec3>(data.getBox(),1.5f*nndSearch, true);
+		final NearestNeighborBuilder<Vec3> firstNearestNeighbors = 
+				new NearestNeighborBuilder<Vec3>(data.getBox(), 1.5f*nndSearch, true);
 		
 		//Data structure to get all vacancies in small neighborhood
-		final NearestNeighborBuilder<Vacancy> realVacancies = new NearestNeighborBuilder<Vacancy>(0.707f*nnd);
+		final NearestNeighborBuilder<Vacancy> realVacancies = new NearestNeighborBuilder<Vacancy>(data.getBox(), 0.707f*nnd);
 		
 		final List<Vec3> possibleVacancyList = Collections.synchronizedList(new ArrayList<Vec3>());
 		
@@ -74,20 +76,23 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 		
 		final ArrayList<Atom> defectAtoms = new ArrayList<Atom>();
 		
+		final float minDistanceToAtom = nnd_tolerance*nnd;
+		
 		//Prepare nearest neighbor builders
 		for (Atom a : data.getAtoms()){
-			if (a.getType() != defaultType) {
-				
-				if (a.getType() != surfaceType)
-					defectAtoms.add(a);
-				
-				secondNearestNeighbors.add(a); //adding only defected atoms to second nearest neighbor builder
+			if (a.getType() != defaultType && a.getType() != surfaceType){
+				defectAtoms.add(a);
 			}
-			firstNearestNeighbors.add(a);  //adding all atoms to first nearest neighbor builder
+			if (a.getType() != defaultType)
+				secondNearestNeighbors.add(a);
 		}
-	
+		
+		firstNearestNeighbors.addAll(data.getAtoms());
+		
 		
 		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
+		
+		ProgressMonitor.getProgressMonitor().start(defectAtoms.size());
 		
 		for (int i = 0; i < ThreadPool.availProcessors(); i++){
 		
@@ -107,6 +112,8 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 					 * is done in a later step
 					 */
 					for(int k = start; k < end; k++) {
+						if ((k-start)%1000 == 0)
+							ProgressMonitor.getProgressMonitor().addToCounter(1000);
 				
 						Atom a = defectAtoms.get(k);
 						
@@ -116,51 +123,56 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 						if (nnb.size() < 4) continue;
 						
 						//Get Voronoi vertices for an atom a
-						ArrayList<Vec3> allVoronoiVertices = getVoronoiVertices(nnb);
+						List<Vec3> allVoronoiVertices = VoronoiVolume.getVoronoiVertices(nnb);
 						
 						if(allVoronoiVertices.size() == 0) continue;
+												
+						ArrayList<Vec3> acceptedVoronoiVertices = new ArrayList<Vec3>();
+						ArrayList<Vec3> first = firstNearestNeighbors.getNeighVec(a);
+						ArrayList<Tupel<Vec3,Vec3>> convHullPlanes = null;
 						
-						//Build a convex hull for the set of the second neighbours of atom a 
-						ArrayList<Tupel<Vec3,Vec3>> convHullPlanes = getConvexHullBoundaryPlanes(nnb);
-						if (convHullPlanes.size() == 0) continue;
-						
-						ArrayList<Vec3> voronoiVertices = new ArrayList<Vec3>();
+						nnb.add(new Vec3(0f, 0f, 0f)); //Add the central atom for the next steps
 						
 						for(Vec3 point : allVoronoiVertices) {
-						//	if (point.getLength()<1.4f*nndSearch)
-							//Check if Voronoi vertex is inside the convex hull
-							if(isInConvexHull(point,convHullPlanes) == true)
-								voronoiVertices.add(point);	 //add Voronoi vertex to a list if its inside created convex hull
+							boolean aboveMinDist = true;
+							boolean belowMaxDist = true;
+							for (Vec3 n : first){
+								float d = n.getDistTo(point);
+								if (d < minDistanceToAtom) {
+									//Too close to an atom to be a vacancy
+									aboveMinDist = false;
+									break;
+								}
+								if (d > 2*firstNearestNeighbors.getCutoff()) {
+									//Too far away, won't be in convex hull
+									belowMaxDist = false;
+									break;
+								}
+							}
+							
+							if (aboveMinDist && belowMaxDist){
+								//Test more precisely if the site detected is inside the convex hull of points
+								if (convHullPlanes == null) convHullPlanes = getConvexHullBoundaryPlanes(nnb);
+								
+							    if (isInConvexHull(point, convHullPlanes) == true) {
+							    	acceptedVoronoiVertices.add(point);
+							    }
+							}
 						}
-
-						if(voronoiVertices.size() == 0) continue; 
-							
+						if (acceptedVoronoiVertices.size() == 0) continue;
 						
-						for(int i = 0; i < voronoiVertices.size(); i++) {
-							Vec3 point = voronoiVertices.get(i);
-							Vec3 marker = point.addClone(a);
-							
+						ArrayList<Vec3> clusterCenter = clusteringAnalysis(acceptedVoronoiVertices, minDistanceToAtom*0.5f);
+						
+						for (Vec3 point : clusterCenter){
+							point.add(a);
 							//Fix periodicity
-							data.getBox().backInBox(marker);
-							
-							//Check size gap to closest atoms
-							ArrayList<Vec3> nnbDists = firstNearestNeighbors.getNeighVec(marker);
-							
-							boolean isVacancy = true;
-							
-							if (nnbDists.isEmpty() == true) isVacancy = false;
-							else { 
-								for (Vec3 v : nnbDists)
-									if ((v.getLength() <= nnd_tolerance*nnd))
-										isVacancy = false; 
-							}
-							
-							if (isVacancy) {
-								//Add found Voronoi vertex to the list
-								possibleVacancyList.add(marker);
-							}
+							data.getBox().backInBox(point);
+								
+							//Add found Voronoi vertex to the list
+							possibleVacancyList.add(point);
 						}
 					}
+					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
 					return null;
 				}
 			});
@@ -188,12 +200,9 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 			}
 		});
 		
-
 		//Data structure to get all possible vacancies in small neighborhood
-		final NearestNeighborBuilder<Vec3> possibleVacancies = new NearestNeighborBuilder<Vec3>(0.6f*nnd);
-		
-		for (Vec3 v : possibleVacancyList)
-			possibleVacancies.add(v);
+		final NearestNeighborBuilder<Vec3> possibleVacancies = new NearestNeighborBuilder<Vec3>(data.getBox(), nnd_tolerance*nnd, true);
+		possibleVacancies.addAll(possibleVacancyList);
 		
 		/**
 		 * Find the unique vacancy sites by selecting a vacancy site, average it with its duplicates
@@ -216,12 +225,14 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 				this.particles.add(v);
 			}
 		}
+		
+		ProgressMonitor.getProgressMonitor().stop();
 	}
 	
 	@Override
-	public boolean processData(File dataFile, final AtomData data) throws IOException {
+	public boolean processData(final AtomData data) throws IOException {
 		this.findVacancies(data, this.nnd_tolerance);
-		this.updateRenderData();
+		this.updateRenderData(data.getBox());
 		return true;
 	}
 
@@ -237,16 +248,6 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 	public JDataPanel getDataControlPanel() {
 		return getParticleDataControlPanel();
 	}
-	
-	@Override
-	public String[] getFileExtensions() {
-		return null;
-	}
-
-	@Override
-	public boolean isExternalFileRequired() {
-		return false;
-	}
 
 	@Override
 	public String getDescription() {
@@ -257,15 +258,28 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 	public String getName() {
 		return "Vacancy detector";
 	}
+	
+	@Override
+	public boolean isApplicable(AtomData data) {
+		return true;
+	}
+
+	@Override
+	public String getRequirementDescription() {
+		return "";
+	}
 
 	@Override
 	public DataContainer deriveNewInstance() {
-		return new VacancyDataContainer();
+		VacancyDataContainer clone = new VacancyDataContainer();
+		clone.nnd_tolerance = this.nnd_tolerance;
+		return clone;
 	}
 	
 	@Override
 	public boolean showOptionsDialog(){
-		String value = JOptionPane.showInputDialog(null, "Enter fraction of lattice constant of a gap to be considered as vacancy", nnd_tolerance);
+		String value = JOptionPane.showInputDialog(null, "Enter fraction of distance to nearest neghbor "
+				+ "of a gap to be considered as vacancy", nnd_tolerance);
 		try {
 			nnd_tolerance = Float.parseFloat(value);
 		} catch (RuntimeException e){
@@ -285,7 +299,40 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 		centerOfMass.divide(list.size());
 		
 		return centerOfMass;
-
+	}
+	
+	
+	private ArrayList<Vec3> clusteringAnalysis(ArrayList<Vec3> inputSites, float clusterRadius){
+		ArrayList<Vec3> clusterCenter = new ArrayList<Vec3>();
+		
+		int[] cluster = new int[inputSites.size()];
+		for (int i=0; i<cluster.length; i++)
+			cluster[i] = -1;
+		
+		int numCluster = 0;
+		
+		for (int i=0; i<cluster.length; i++){
+			if (cluster[i] == -1)
+				cluster[i] = numCluster++;
+			
+			for (int j=i+1; j<cluster.length; j++){
+				if (inputSites.get(i).getDistTo(inputSites.get(j))<clusterRadius){
+					cluster[j] = cluster[i];
+					break;
+				}
+			}
+		}
+		
+		for (int i = 0; i<numCluster; i++){
+			ArrayList<Vec3> c = new ArrayList<Vec3>();
+			for (int j=0; j<cluster.length; j++)
+				if (cluster[j] == 0)
+					c.add(inputSites.get(j));
+			
+			clusterCenter.add(getCenterOfMass(c));
+		}
+		
+		return clusterCenter;
 	}
 	
 	/**
@@ -334,245 +381,6 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 	}
 	
 	/**
-	 * Computes the voronoi volume of a particle located at (0,0,0)
-	 * @param points a list of points that should surround the origin at (0,0,0) 
-	 * @return the volume of the voronoi cell
-	 */
-	@SuppressWarnings("unused")
-	private float getVoronoiVolume(ArrayList<Vec3> points) {
-		final float TOL = 1.0e-6f;
-		final float TOL_DIST2 = 2.0e-11f;
-
-		float atomic_volume;
-		
-		int vertexnum, facesnum, edgesnum;
-		int[] vertexnumi = new int[points.size()];
-		int[] ord = new int[points.size()];
-		Vec3[] coord = new Vec3[points.size()];
-
-		/* Allocate memory for vertices */
-		Vec3[][] vertexloc = new Vec3[points.size()][points.size()];
-
-		atomic_volume = 0.0f;
-
-		
-		//Get vertices first
-		ArrayList<Vec3> vertex = getVoronoiVertices(points);
-		vertexnum = vertex.size();
-
-		// Number of vertices of Voronoi cell must be greater than 3
-		if (vertexnum > 3) {
-			int[] surfind = new int[vertexnum];
-			/* Check whether faces exist */
-			facesnum = 0;
-
-			/*
-			 * Each neighbour atom i corresponds to at most one surface * Sum
-			 * over all surfaces
-			 */
-			for (int i = 0; i < points.size(); ++i) {
-				/* Coordinates of center of surface i */
-				coord[i] = points.get(i).multiplyClone(0.5f);
-
-				/* Look for vertices that belong to surface i */
-				vertexnumi[i] = 0;
-				for (int j = 0; j < vertexnum; ++j) {
-					surfind[j] = 0;
-					vertexloc[i][j] = vertex.get(j).subClone(coord[i]);
-					float tmp = coord[i].dot(vertexloc[i][j]);
-
-					if (tmp * tmp < TOL_DIST2) {
-						/* vertex j belongs to surface i */
-						surfind[j] = 1;
-						++vertexnumi[i];
-					}
-				}
-
-				/* Surface i exists */
-				if (vertexnumi[i] > 2) {
-					++facesnum;
-
-					/* Compute coordinates of vertices belonging to surface i */
-					int k = 0;
-					for (int j = 0; j < vertexnum; ++j)
-						if (surfind[j] == 1) {
-							vertexloc[i][k].setTo(vertexloc[i][j]);
-							++k;
-						}
-				}
-				/* Transform into center of mass system */
-				if (vertexnumi[i] > 2) {
-					Vec3 center = new Vec3();
-					for (int j = 0; j < vertexnumi[i]; ++j)
-						center.add(vertexloc[i][j]);
-					
-					center.multiply(1.0f / vertexnumi[i]);
-					
-					for (int j = 0; j < vertexnumi[i]; ++j)
-						vertexloc[i][j].sub(center);
-				}
-
-			} /* i */
-
-			/* Number of edges of Voronoi cell */
-			edgesnum = 0;
-
-			for (int n = 0; n < points.size(); ++n)
-				if (vertexnumi[n] > 2) edgesnum += vertexnumi[n];
-
-			edgesnum /= 2;
-
-			/* Check whether Euler relation holds */
-			if ((vertexnum - edgesnum + facesnum) == 2) {
-				/* Compute volume of Voronoi cell */
-				int mink = 0;
-				/* For all potential faces */
-				for (int i = 0; i < points.size(); ++i)
-					/* Surface i exists */
-					if (vertexnumi[i] > 2) {
-						/* Sort vertices of face i */
-						ord[0] = 0;
-						for (int j = 0; j < vertexnumi[i] - 1; ++j) {
-							float maxcos = -1.0f;
-							for (int k = 0; k < vertexnumi[i]; ++k) {
-								Vec3 tmpvek = vertexloc[i][k].cross(vertexloc[i][ord[j]]);
-								float sin = tmpvek.dot(coord[i]);
-
-								if (sin > TOL) {
-									float cos = vertexloc[i][k].dot(vertexloc[i][ord[j]])
-											/ (float) (Math.sqrt(vertexloc[i][k].dot(vertexloc[i][k])) * Math
-													.sqrt(vertexloc[i][ord[j]].dot(vertexloc[i][ord[j]])));
-									if (cos > maxcos) {
-										maxcos = cos;
-										mink = k;
-									}
-								}
-							}
-
-							ord[j + 1] = mink;
-
-						}
-
-						/* Compute area of surface i */
-						float area_i = 0.0f;
-						float height = (float) Math.sqrt(coord[i].dot(coord[i]));
-						float tmp = 1.0f / height;
-
-						for (int j = 0; j < vertexnumi[i] - 1; ++j) {
-							Vec3 tmpvek = vertexloc[i][ord[j + 1]].cross(vertexloc[i][ord[j]]);
-							area_i += 0.5f * tmpvek.dot(coord[i]) * tmp;
-
-						}
-
-						Vec3 tmpvek = vertexloc[i][ord[0]].cross(vertexloc[i][ord[vertexnumi[i] - 1]]);
-						area_i += 0.5f * tmpvek.dot(coord[i]) * tmp;
-
-						/* Volume of Voronoi cell */
-						atomic_volume += area_i * height / 3.0;
-
-					} /* vertexnum[i] > 2 */
-
-			} /* Euler relation holds */
-
-		} /* Number of vertices > 3 */
-
-		return atomic_volume;
-	}
-	
-	/**
-	 * Identifies the vertices of an voronoi cell around a fixed point at (0, 0, 0) 
-	 * @param points a set of points around the center (0,0,0)
-	 * @return the subset of the input points that are part of the voronoi cell
-	 */
-	private ArrayList<Vec3> getVoronoiVertices(ArrayList<Vec3> points) {
-	    final float TOL2 = 1.0e-10f;
-	    final float TOL_VERT2 = 1.0e-6f;
-
-		ArrayList<Vec3> vertex = new ArrayList<Vec3>();
-		
-		/* Each possible vertex defined by the intersection of 3 planes is examined */
-		for (int i = 0; i < points.size() - 2; ++i) {
-		
-			Vec3 icoord = points.get(i);
-			float idist2 = -points.get(i).getLengthSqr();
-
-			for (int j = i + 1; j < points.size() - 1; ++j) {
-			
-				Vec3 jcoord = points.get(j);
-				float jdist2 = -points.get(j).getLengthSqr();
-
-				float ab = icoord.x * jcoord.y - jcoord.x * icoord.y;
-				float bc = icoord.y * jcoord.z - jcoord.y * icoord.z;
-				float ca = icoord.z * jcoord.x - jcoord.z * icoord.x;
-				float da = idist2   * jcoord.x - jdist2 * icoord.x;
-				float db = idist2   * jcoord.y - jdist2 * icoord.y;
-				float dc = idist2   * jcoord.z - jdist2 * icoord.z;
-
-				for (int k = j + 1; k < points.size(); ++k) {
-				
-					Vec3 kcoord = points.get(k);
-					float kdist2 = -points.get(k).getLengthSqr();
-					
-					float det = kcoord.x * bc + kcoord.y * ca + kcoord.z * ab;
-
-					/* Check whether planes intersect */
-					if (det*det > TOL2) {
-						float detinv = 1.0f / det;
-						Vec3 tmpvertex = new Vec3();
-						tmpvertex.x = (-kdist2 * bc + kcoord.y * dc - kcoord.z * db) * detinv;
-						tmpvertex.y = (-kcoord.x * dc - kdist2 * ca + kcoord.z * da) * detinv;
-						tmpvertex.z = (kcoord.x * db - kcoord.y * da - kdist2 * ab)  * detinv;
-
-						/* Check whether vertex belongs to the Voronoi cell */
-						int l = 0;
-						boolean ok = true;
-
-						do {
-							if (l != i && l != j && l != k)
-								ok = ( points.get(l).dot(tmpvertex) <= points.get(l).getLengthSqr() + TOL_VERT2);
-							l++;
-						} while (ok && (l < points.size()));
-
-						if (ok)
-							vertex.add(tmpvertex.multiply(0.5f));
-					} /* Planes intersect */
-
-				} /* k */
-			} /* j */
-		} /* i */
-
-		int vertexnum = vertex.size();
-
-		int[] index = new int[vertexnum];
-		/* Check whether some vertices coincide */
-		for (int i = 0; i < vertexnum; ++i) {
-			index[i] = 1;
-			for (int j = i + 1; j < vertexnum; ++j) {
-				if (vertex.get(i).getSqrDistTo(vertex.get(j)) < TOL2)
-					index[i] = 0;
-			}
-		}
-
-		/* Remove coincident vertices */
-		int j = 0;
-		for (int i = 0; i < vertexnum; ++i){
-			if (index[i] != 0) {
-				vertex.get(j).setTo(vertex.get(i));
-				++j;
-			}
-		}
-		vertexnum = j;
-
-		ArrayList<Vec3> finalVertices = new ArrayList<Vec3>(vertexnum);
-		
-		for (int i = 0; i < vertexnum; i++)
-			finalVertices.add(vertex.get(i));
-
-		return finalVertices;
-	}
-	
-	
-	/**
 	 * Checks whenever the given point is inside a convex hull
 	 * @param point a given point
 	 * @param convexHull the boundary planes of a convex hull
@@ -605,7 +413,7 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 		}
 
 		@Override
-		public String printMessage(InputEvent ev) {
+		public String printMessage(InputEvent ev, AtomData data) {
 			return String.format("Vacancy position  ( %.6f, %.6f, %.6f )", x, y, z);
 		}
 		

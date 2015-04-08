@@ -2,16 +2,18 @@ package processingModules;
 
 import java.util.List;
 
+import javax.swing.JFrame;
+
 import model.Atom;
 import model.AtomData;
-import model.AtomFilter;
+import model.Filter;
 import model.DataColumnInfo;
 
 public class FilteringModule implements ProcessingModule {
 
-	private AtomFilter filter;
+	private Filter<Atom> filter;
 	
-	public FilteringModule(AtomFilter filter) {
+	public FilteringModule(Filter<Atom> filter) {
 		this.filter = filter;
 	}
 	
@@ -24,6 +26,11 @@ public class FilteringModule implements ProcessingModule {
 	public String getFunctionDescription() {
 		return "Filter atoms";
 	}
+	
+	@Override
+	public boolean canBeAppliedToMultipleFilesAtOnce() {
+		return true;
+	}
 
 	@Override
 	public String getRequirementDescription() {
@@ -31,7 +38,7 @@ public class FilteringModule implements ProcessingModule {
 	}
 
 	@Override
-	public boolean isApplicable() {
+	public boolean isApplicable(AtomData data) {
 		return true;
 	}
 
@@ -41,7 +48,12 @@ public class FilteringModule implements ProcessingModule {
 	}
 
 	@Override
-	public void process(AtomData data) throws Exception {
+	public boolean showConfigurationDialog(JFrame frame, AtomData data) {
+		return true;
+	}
+	
+	@Override
+	public ProcessingResult process(AtomData data) throws Exception {
 		List<Atom> atoms = data.getAtoms();
 		int origSize = atoms.size();
 		int size = origSize;
@@ -59,6 +71,6 @@ public class FilteringModule implements ProcessingModule {
 		for (i = origSize-1; i>=size; i--){
 			atoms.remove(i);
 		}
-
+		return null;
 	}
 }

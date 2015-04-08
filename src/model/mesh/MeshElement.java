@@ -16,29 +16,12 @@
 // You should have received a copy of the GNU General Public License along
 // with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
 
-package model.polygrain.mesh;
+package model.mesh;
 
-import common.Tupel;
 import common.Vec3;
 
-public abstract class ClosestTriangleSearchAlgorithm {
-	
-	float threshold;
-	
-	protected ClosestTriangleSearchAlgorithm(float threshold){
-		this.threshold = threshold*threshold;
-	}
-	
-	public abstract void add(Triangle t);
-	
-	/**
-	 * Provides a mesh element and the squared distance to it from the point p
-	 * If no mesh element is closer to the than the threshold it will return the
-	 * exact distance. Otherwise, the first mesh element found within the threshold
-	 * distance is returned  
-	 * @param p a point in space
-	 * @return a pair of a mesh element and a distance that is either the true distance
-	 * to the point p or the first found element thta is closer than the threshold
-	 */
-	public abstract Tupel<Float, MeshElement> sqrDistToMeshElement(Vec3 p);
+public interface MeshElement {
+	public Vec3 getUnitNormalVector();
+	public Vec3 getNormalVector();
+	public boolean isPointInMesh(Vec3 p);
 }

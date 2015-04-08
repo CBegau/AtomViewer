@@ -18,11 +18,17 @@
 
 package model;
 
+import gui.ProgressMonitor;
+
 import java.util.*;
 import java.util.concurrent.*;
 
-//import model.dataContainer.VacancyDataContainer;
-//import model.dataContainer.VacancyDataContainer.Vacancy;
+import javax.swing.JFrame;
+
+import processingModules.ProcessingModule;
+import processingModules.ProcessingResult;
+import model.dataContainer.DataContainer;
+import model.dataContainer.VacancyDataContainer;
 import model.polygrain.Grain;
 import common.*;
 import crystalStructures.CrystalStructure;
@@ -44,7 +50,7 @@ import crystalStructures.CrystalStructure;
  * @author Christoph Begau
  *
  */
-public class RbvBuilder {
+public class RbvBuilder implements ProcessingModule{
 	
 	/**
 	 * Maximum deviation allowed to detect matching bonds (=20°)
@@ -82,20 +88,25 @@ public class RbvBuilder {
 	 * @param nearestneighborDistance nearestNeighborDistance used in simulation
 	 */
 	public static void createRBV(final AtomData data){
-		new RbvBuilder(data.getAtoms(), data.getBox(), Configuration.getCrystalStructure(), null);
+		new RbvBuilder(data, data.getAtoms(), data.getCrystalStructure(), null);
 	}
 	
-	public static void createRBV(final Grain grain, BoxParameter box){
-		new RbvBuilder(grain.getAtomsInGrain(), box, grain.getCrystalStructure(), grain);
+	public static void createRBV(final AtomData data, final Grain grain){
+		new RbvBuilder(data, grain.getAtomsInGrain(), grain.getCrystalStructure(), grain);
 	}
 	
-	private RbvBuilder(List<Atom> atoms, BoxParameter box, CrystalStructure s, Grain g) {
-		this.nnb = new NearestNeighborBuilder<Vec3>(
-				s.getNearestNeighborSearchRadius());
+	public RbvBuilder(){
+		icoNormals = null;
+		neighPerf = null;
+		icoVertices = null;
+	}
+	
+	private RbvBuilder(AtomData data, List<Atom> atoms, CrystalStructure s, Grain g) {
+		this.nnb = new NearestNeighborBuilder<Vec3>(data.getBox(), s.getNearestNeighborSearchRadius());
 		
 		Vec3[] perfNeighbors;
 		if (g == null)
-			perfNeighbors = s.getPerfectNearestNeighbors();
+			perfNeighbors = s.getPerfectNearestNeighbors(data.getCrystalRotation());
 		else 
 			perfNeighbors = s.getPerfectNearestNeighbors(g);
 		
@@ -104,14 +115,12 @@ public class RbvBuilder {
 		this.rbvCorrectionFactor = 1f/(this.integrationRadius/this.perfectBurgersVectorLength);
 		this.nnbDist = s.getNearestNeighborSearchRadius();
 		
-
-//		VacancyDataContainer vcd = new VacancyDataContainer();
-//		vcd.findVacancies(Configuration.getCurrentAtomData(), 0.85f);
-//		
-//		Configuration.getCurrentAtomData().getAdditionalData().add(vcd);
-//		for (Vacancy v : vcd.getParticles()){
-//			nnb.add(v);
-//		}
+		//Add vacancy markers as pseudo-particles if existing
+		DataContainer dc = data.getDataContainer(VacancyDataContainer.class);
+		if (dc != null){
+			VacancyDataContainer vcd = (VacancyDataContainer)dc;
+			nnb.addAll(vcd.getParticles());
+		}
 		
 		for (int i=0; i<atoms.size(); i++){
 			Atom a = atoms.get(i);
@@ -146,7 +155,7 @@ public class RbvBuilder {
 		
 				
 		List<RbvInfo<Atom>> infosList = new ArrayList<RbvInfo<Atom>>();
-		CrystalStructure cs = Configuration.getCrystalStructure();
+		CrystalStructure cs = data.getCrystalStructure();
 		
 		for (int i=0; i<atoms.size(); i++){
 			Atom a = atoms.get(i);
@@ -159,7 +168,7 @@ public class RbvBuilder {
 			}
 		}
 
-		Configuration.currentFileLoader.getProgressMonitor().start(infosList.size());
+		ProgressMonitor.getProgressMonitor().start(infosList.size());
 		
 		Vector<AnalyseCallable> tasks = new Vector<AnalyseCallable>();
 		
@@ -171,7 +180,8 @@ public class RbvBuilder {
 		
 		ThreadPool.executeParallel(tasks);
 		
-		Configuration.currentFileLoader.getProgressMonitor().stop();
+		ProgressMonitor.getProgressMonitor().stop();
+		data.rbvAvailable = true;
 	}
 
 	/**
@@ -602,7 +612,7 @@ public class RbvBuilder {
 			for (int i = start; i < end; i++) {
 				if (Thread.interrupted()) return null;
 				if ((i-start)%1000 == 0)
-					Configuration.currentFileLoader.getProgressMonitor().addToCounter(1000);
+					ProgressMonitor.getProgressMonitor().addToCounter(1000);
 			
 				RbvInfo<Atom> info = infos.get(i); 
 				Tupel<Vec3,Vec3> rbv = info.calculateBurgersVector();
@@ -610,9 +620,55 @@ public class RbvBuilder {
 					info.atom.setRBV(rbv.o1, rbv.o2);
 			}
 			
-			Configuration.currentFileLoader.getProgressMonitor().addToCounter(end-start%1000);
+			ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
 			return null;
 		}
+	}
+
+	@Override
+	public String getShortName() {
+		return "Resultant Burgers vectors";
+	}
+
+	@Override
+	public String getFunctionDescription() {
+		return "";
+	}
+
+	@Override
+	public String getRequirementDescription() {
+		return "";
+	}
+
+	@Override
+	public boolean isApplicable(AtomData data) {
+		return true;
+	}
+
+	@Override
+	public boolean showConfigurationDialog(JFrame frame, AtomData data) {
+		return true;
+	}
+
+	@Override
+	public DataColumnInfo[] getDataColumnsInfo() {
+		return new DataColumnInfo[0];
+	}
+
+	@Override
+	public ProcessingResult process(AtomData data) throws Exception {
+		if (data.getGrains() == null || data.getGrains().size() == 0 || data.getCrystalStructure().createRBVbeforeGrains())
+			RbvBuilder.createRBV(data);
+		else {
+			for (Grain g : data.getGrains())
+				RbvBuilder.createRBV(data, g);
+		}
+		return null;
+	}
+
+	@Override
+	public boolean canBeAppliedToMultipleFilesAtOnce() {
+		return true;
 	}
 	
 }

@@ -1,7 +1,7 @@
 // Part of AtomViewer: AtomViewer is a tool to display and analyse
 // atomistic simulations
 //
-// Copyright (C) 2013  ICAMS, Ruhr-Universität Bochum
+// Copyright (C) 2015  ICAMS, Ruhr-Universität Bochum
 //
 // AtomViewer is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -28,15 +28,8 @@ public class CommonUtils {
 	 * @param b another integer value
 	 * @return the SCM of the two values
 	 */
-	public static int scm(int a, int b) {
+	public static int smallestCommonMultiple(int a, int b) {
 		return Math.abs(a * b) / euclid(a, b);
-	}
-
-	private static int euclid(int a, int b) {
-		a = Math.abs(a);
-		b = Math.abs(b);
-		if (b == 0) return a;
-		else return euclid(b, a % b);
 	}
 
 	/**
@@ -44,7 +37,7 @@ public class CommonUtils {
 	 * @param v Array of integers to compute GCD
 	 * @return the GCD of the given values
 	 */
-	public static int gcd(int[] v) {
+	public static int greatestCommonDivider(int[] v) {
 		if (v.length == 0) return 1;
 		if (v.length == 1) return Math.abs(v[0]);
 		int gcd = euclid(v[0], v[1]);
@@ -53,5 +46,35 @@ public class CommonUtils {
 		return gcd;
 	}
 	
+	private static int euclid(int a, int b) {
+		a = Math.abs(a);
+		b = Math.abs(b);
+		if (b == 0) return a;
+		else return euclid(b, a % b);
+	}
+	
 	public final static DecimalFormat outputDecimalFormatter = new DecimalFormat("#.####");
+	
+	/**
+	 * An implementation of the Kahan summation to compute the sum
+	 * of a large number of floats/doubles with limited rounding errors
+	 */
+	public final static class KahanSum {
+		double sum = 0.0;
+		double c = 0.0;
+		
+		public void add(double v){
+			 double y = v - c;
+			 double t = sum + y;
+			 // (t - sum) recovers the high-order part of y; subtracting y recovers -(low part of y)
+			 c = (t - sum) - y;
+			 sum = t; //Next time around, the lost low part c will be added to y
+		}
+		
+		public double getSum() {
+			return sum;
+		}
+		
+		 
+	}
 }

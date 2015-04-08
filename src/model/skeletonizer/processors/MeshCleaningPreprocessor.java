@@ -19,7 +19,7 @@
 package model.skeletonizer.processors;
 
 
-import common.FastDeletableVector;
+import java.util.List;
 import model.skeletonizer.*;
 
 /**
@@ -31,7 +31,7 @@ public class MeshCleaningPreprocessor implements SkeletonPreprocessor{
 
 	@Override
 	public void preProcess(Skeletonizer skel) {
-		FastDeletableVector<SkeletonNode> nodes = skel.getNodes();
+		List<SkeletonNode> nodes = skel.getNodes();
 
 		for (int i=0; i<nodes.size(); i++){
 			SkeletonNode a = nodes.get(i);

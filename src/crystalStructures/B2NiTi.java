@@ -43,17 +43,6 @@ public class B2NiTi extends BCCStructure{
 	
 	public B2NiTi() {
 		super();
-		crystalProperties.remove(grainBoundaryFilterDistanceProperty);
-		
-		this.minRBVLength.setDefaultValue(0.35f);
-		this.dislocationMeshRadius.setDefaultValue(1.28f);
-		this.grainBoundaryMeshSize.setDefaultValue(2f);
-		this.orderGrainsBySize.defaultValue = true;
-	}
-	
-	@Override
-	public float getGrainBoundaryFilterDistance() {
-		return 0f;
 	}
 	
 	@Override
@@ -162,6 +151,11 @@ public class B2NiTi extends BCCStructure{
 	}
 	
 	@Override
+	public String[] getNamesOfElements(){
+		return new String[]{"Ni", "Ti"};
+	}
+	
+	@Override
 	public List<SkeletonPreprocessor> getSkeletonizerPreProcessors(){
 		Vector<SkeletonPreprocessor>  list = new Vector<SkeletonPreprocessor>();
 		
@@ -184,6 +178,14 @@ public class B2NiTi extends BCCStructure{
 	@Override
 	public boolean createRBVbeforeGrains(){
 		return true;
+	}
+	
+	public float getDefaultSkeletonizerMeshingThreshold(){
+		return 1.28f;
+	}
+	
+	public float getDefaultSkeletonizerRBVThreshold(){
+		return 0.35f;
 	}
 	
 	private class MartensiteGrainDetectionCriteria implements GrainDetectionCriteria {
@@ -223,9 +225,7 @@ public class B2NiTi extends BCCStructure{
 		public boolean includeAtom(AtomToGrainObject atom, List<AtomToGrainObject> neighbors) {		
 			return neighbors.size()>9;
 		}
-
 	}
-	
 	
 	public GrainDetectionCriteria getGrainDetectionCriteria(){
 		return new MartensiteGrainDetectionCriteria(this);

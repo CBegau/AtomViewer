@@ -18,6 +18,8 @@
 
 package crystalStructures;
 
+import gui.ProgressMonitor;
+
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CyclicBarrier;
@@ -28,7 +30,7 @@ import model.polygrain.Grain;
 import model.polygrain.grainDetection.AtomToGrainObject;
 import model.polygrain.grainDetection.GrainDetectionCriteria;
 import model.polygrain.grainDetection.GrainDetector;
-import model.polygrain.mesh.Mesh;
+import model.mesh.Mesh;
 
 public class FCCTwinnedStructure extends FCCStructure {
 
@@ -92,7 +94,7 @@ public class FCCTwinnedStructure extends FCCStructure {
 			if (Thread.interrupted()) return;
 			
 			if ((i-start)%10000 == 0)
-				Configuration.currentFileLoader.getProgressMonitor().addToCounter(10000);
+				ProgressMonitor.getProgressMonitor().addToCounter(10000);
 			
 			Atom a = atoms.get(i);
 			int type = identifyAtomType(a, nnb); 
@@ -101,7 +103,7 @@ public class FCCTwinnedStructure extends FCCStructure {
 			a.setType(type);
 		}
 		
-		Configuration.currentFileLoader.getProgressMonitor().addToCounter((end-start)%10000);
+		ProgressMonitor.getProgressMonitor().addToCounter((end-start)%10000);
 		try {
 			barrier.await();
 		} catch (Exception e) {
@@ -146,14 +148,12 @@ public class FCCTwinnedStructure extends FCCStructure {
 	}
 	
 	@Override
-	public List<Grain> identifyGrains(final AtomData data) {
-		
-		
+	public List<Grain> identifyGrains(final AtomData data, float meshSize) {
 		if (!data.isGrainsImported()){
 			List<Grain> grains = new Vector<Grain>();
 			
 			final List<List<Atom>> grainSets = GrainDetector.identifyGrains(data.getAtoms(), 
-					this.getGrainDetectionCriteria());
+					this.getGrainDetectionCriteria(), data.getBox());
 
 			int id=0;
 			for (List<Atom> g: grainSets){
@@ -164,7 +164,7 @@ public class FCCTwinnedStructure extends FCCStructure {
 			}
 			
 			final NearestNeighborBuilder<Atom> nnb = 
-					new NearestNeighborBuilder<Atom>(getNearestNeighborSearchRadius());
+					new NearestNeighborBuilder<Atom>(data.getBox(),getNearestNeighborSearchRadius());
 			
 			for (int i=0; i<data.getAtoms().size();i++){
 				if (data.getAtoms().get(i).getType() != 6){
@@ -236,43 +236,21 @@ public class FCCTwinnedStructure extends FCCStructure {
 			CrystalStructure cs = this.getCrystalStructureOfDetectedGrains();
 			int grainIndex = 0;
 			for (List<Atom> s : grainSets){
-				Mesh mesh = new Mesh(s, cs);
-				Grain g = new Grain(mesh, s, grainIndex++, cs);
+				Mesh mesh = new Mesh(s, meshSize, cs.nearestNeighborSearchRadius, data.getBox());
+				Grain g = new Grain(mesh, s, grainIndex++, cs, data.getBox());
 				grains.add(g);
 			}
 			
 			return grains;
 		} else {
-			return super.identifyGrains(data);
+			return super.identifyGrains(data, meshSize);
 		}
 		
 	}
 	
 	@Override
-	public List<Atom> getDislocationDefectAtoms(AtomData data){
-		ArrayList<Atom> defectAtoms = new ArrayList<Atom>();
-		if (!data.isRbvAvailable()) return defectAtoms;
-		
-		float minRBVLength = getPerfectBurgersVectorLength()*this.minRBVLength.getValue();
-		minRBVLength *= minRBVLength;
-		float maxRBVLength = getPerfectBurgersVectorLength()*2.5f;
-		maxRBVLength *= maxRBVLength;
-		
-		for (Atom a : data.getAtoms()) {
-			if (a.getRBV()!=null && (a.getType() == 4 || a.getType() == 5)){
-				float l = a.getRBV().bv.getLengthSqr();
-				if (l>minRBVLength && l<maxRBVLength)
-					defectAtoms.add(a);
-			}
-		}
-		
-		return defectAtoms;
-	};
-	
-	
-	@Override
 	public boolean isRBVToBeCalculated(Atom a) {
-		if (ImportStates.POLY_MATERIAL.isActive() && a.getGrain() == Atom.IGNORED_GRAIN) return false;
+		if (a.getGrain() == Atom.IGNORED_GRAIN) return false;
 		
 		int type = a.getType();
 		if (type == 4 || type == 5) return true;
@@ -284,7 +262,7 @@ public class FCCTwinnedStructure extends FCCStructure {
 		List<Atom> sfAtoms = new ArrayList<Atom>();
 		for (int i=0; i<data.getAtoms().size(); i++){
 			Atom a = data.getAtoms().get(i);
-			if ((a.getType() == 2 || a.getType() == 3) && (!ImportStates.POLY_MATERIAL.isActive() || a.getGrain() != Atom.IGNORED_GRAIN))
+			if ((a.getType() == 2 || a.getType() == 3) && a.getGrain() != Atom.IGNORED_GRAIN)
 				sfAtoms.add(a);
 		}
 		return sfAtoms;

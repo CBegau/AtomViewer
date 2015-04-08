@@ -20,7 +20,7 @@ package model.dataContainer;
 
 import gui.*;
 import gui.glUtils.ArrowRenderer;
-import gui.glUtils.SphereRenderData;
+import gui.glUtils.ObjectRenderData;
 
 import java.awt.GridLayout;
 import java.awt.event.*;
@@ -34,8 +34,11 @@ import javax.media.opengl.GL3;
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.event.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import model.AtomData;
+import model.BoxParameter;
+import model.Configuration;
 import model.Pickable;
 import Jama.EigenvalueDecomposition;
 import Jama.Matrix;
@@ -57,6 +60,7 @@ public class StressData extends DataContainer {
 	private float[] minStress = new float[7];
 	private float[] maxStress = new float[7];
 	
+	private File stressFile = null;
 
 	static void setLowerLimit(float lowerLimit) {
 		if (lowerLimit<0f) StressData.lowerLimit = 0f;
@@ -72,7 +76,7 @@ public class StressData extends DataContainer {
 	
 	
 	@Override
-	public void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking) {
+	public void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
 		if (!dataPanel.isDataVisible()) return;
 		
 		float min = globalMinStress[showStressValue];
@@ -93,8 +97,8 @@ public class StressData extends DataContainer {
 			}
 		}
 		
-		SphereRenderData<StressValue> ard = new SphereRenderData<StressValue>(objects, false);
-		SphereRenderData<?>.Cell c = ard.getRenderableCells().get(0);
+		ObjectRenderData<StressValue> ord = new ObjectRenderData<StressValue>(objects, false, box);
+		ObjectRenderData<?>.Cell c = ord.getRenderableCells().get(0);
 		for(int i=0; i<objects.size(); i++){
 			float[] col = ColorTable.getIntensityGLColor(min, max, objects.get(i).getStress(showStressValue));
 			c.getColorArray()[3*i+0] = col[0];
@@ -103,13 +107,13 @@ public class StressData extends DataContainer {
 			c.getSizeArray()[i] = 1f;
 			c.getVisibiltyArray()[i] = true;
 		}
-		ard.reinitUpdatedCells();
+		ord.reinitUpdatedCells();
 		
-		viewer.drawSpheres(gl, ard, picking);
+		viewer.drawSpheres(gl, ord, picking);
 	}
 	
 	@Override
-	public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking) {
+	public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
 		return;
 	}
 		
@@ -326,13 +330,13 @@ public class StressData extends DataContainer {
 		}
 		
 		@Override
-		public String printMessage(InputEvent ev) {
+		public String printMessage(InputEvent ev, AtomData data) {
 			return toString();
 		}
 	}
 
 	@Override
-	public boolean processData(File stressFile, AtomData data) throws IOException {
+	public boolean processData(AtomData data) throws IOException {
 		LineNumberReader lnr;
 		DataInputStreamWrapper dis = null;
 		FileInputStream fis = null;
@@ -519,15 +523,17 @@ public class StressData extends DataContainer {
 	}
 	
 	@Override
-	public String[] getFileExtensions() {
-		return new String[]{"stress", "stress.gz"};
-	}
-	
-	@Override
-	public boolean isExternalFileRequired() {
-		return true;
-	}
-	
+	public boolean showOptionsDialog() {
+		File folder = Configuration.getLastOpenedFolder();
+		JFileChooser chooser = new JFileChooser(folder);
+		chooser.setFileFilter(new FileNameExtensionFilter("Stress Data", "stress", "stress.gz"));
+		
+		int result = chooser.showOpenDialog(null);
+		if (result == JFileChooser.APPROVE_OPTION)
+			stressFile = chooser.getSelectedFile();
+		return result == JFileChooser.APPROVE_OPTION;
+	};
+
 	@Override
 	public String getDescription() {
 		return "Stress data";
@@ -541,5 +547,15 @@ public class StressData extends DataContainer {
 	@Override
 	public DataContainer deriveNewInstance() {
 		return new StressData();
+	}
+	
+	@Override
+	public boolean isApplicable(AtomData data) {
+		return true;
+	}
+
+	@Override
+	public String getRequirementDescription() {
+		return "";
 	}
 }

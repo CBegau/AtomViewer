@@ -19,6 +19,7 @@
 package crystalStructures;
 
 import gui.JLogPanel;
+import gui.ProgressMonitor;
 
 import java.awt.Color;
 import java.io.*;
@@ -37,11 +38,12 @@ import common.Vec3;
 import crystalStructures.CrystalStructureProperties.*;
 import model.*;
 import model.BurgersVector.BurgersVectorType;
+import model.ImportConfiguration.ImportStates;
 import model.dataContainer.DataContainer;
 import model.io.MDFileLoader.ImportDataContainer;
 import model.polygrain.Grain;
 import model.polygrain.grainDetection.*;
-import model.polygrain.mesh.Mesh;
+import model.mesh.Mesh;
 import model.skeletonizer.Skeletonizer;
 import model.skeletonizer.processors.BurgersVectorAnalyzer;
 import model.skeletonizer.processors.BurgersVectorAnalyzer.ClassificationPattern;
@@ -69,38 +71,6 @@ public abstract class CrystalStructure{
 	float nearestNeighborSearchRadius;
 	ArrayList<CrystalProperty> crystalProperties = new ArrayList<CrystalStructureProperties.CrystalProperty>();
 	float[][] currentColors;
-	
-	protected FloatCrystalProperty minRBVLength = 
-			new FloatCrystalProperty("minRBVLength", "Minimum RBV factor for dislocation networks",
-					"<html>During creation fo dislocation networks, only atoms with a minimum length of the RBV are included.<br>"
-					+ "This value defines a factor which atoms are to be considered as dislocations."
-					+ "<br> The factor is relative to the length of a perfect burgers vector in the crystal."
-					+ "<br> Larger values filter more noise, but small details may be lost."
-					+ "<br> Min: 0.05, Max: 1.0</html>",
-					0.1f, 0.05f, 1f);
-	protected FloatCrystalProperty dislocationMeshRadius = 
-			new FloatCrystalProperty("dislocationMeshRadius", "Meshing distance factor for dislocation networks",
-					"<html>During creation fo dislocation networks, a mesh between defect atoms is created.<br>"
-					+ "This value defines a factor in which distance atoms are treated as nearest neighbors"
-					+ "<br> A factor of one usually is equal to the nearest neighbor distance."
-					+ "<br> Larger values create smoother dislcoations curves, but can suppress fine details like stair-rods or"
-					+ "only slightly seperated partial dislocation cores"
-					+ "<br> Min: 1.0, Max: 2.0</html>",
-					1.1f, 1.0f, 2.0f);
-	protected FloatCrystalProperty grainBoundaryMeshSize = 
-			new FloatCrystalProperty("grainBoundaryMeshSize", "Initial grain boundary mesh size",
-					"<html>Grains are wrapped with an initial mesh that are iteratively optimized.<br>"
-					+ "This value defines how accurate the initial approximation is."
-					+ "<br> Smaller values provide more detailed meshes, but increase time to be created."
-					+ "<br> Min: 1.0, Max: 10.0</html>",
-					3.0f, 1.0f, 10.0f);
-	
-	protected BooleanCrystalProperty orderGrainsBySize = new BooleanCrystalProperty("orderGrainsBySize", 
-			"Order color of grains by volume",
-			"<html>If enabled the grains are reordered in their numbering by their volume.<br>"
-					+ "If not enabled, the ordering as given in the file are used or a random order is created. </html>",
-					false);
-	
 	
 	private static final ArrayList<CrystalStructure> structures = new ArrayList<CrystalStructure>();
 	/**
@@ -187,11 +157,6 @@ public abstract class CrystalStructure{
 		//if no default file exists, use default values
 		if (this.currentColors == null || this.currentColors.length<this.getNumberOfTypes())
 			this.currentColors = getDefaultColors();
-		
-		crystalProperties.add(minRBVLength);
-		crystalProperties.add(dislocationMeshRadius);
-		crystalProperties.add(grainBoundaryMeshSize);
-		crystalProperties.add(orderGrainsBySize);
 	}
 	
 	public static List<CrystalStructure> getCrystalStructures(){
@@ -283,7 +248,7 @@ public abstract class CrystalStructure{
 	 * This value is primarily needed to dispose atoms during loading files, that are not associated with defects
 	 * @return Indicator for atoms in (near) perfect lattice sites
 	 */
-	//TODO change to return type byte
+	//TODO change to a more abstract scheme what does not only depends on atomic type
 	public abstract int getDefaultType();
 	
 	/**
@@ -291,7 +256,7 @@ public abstract class CrystalStructure{
 	 * This indicator is required to filter defect structures on free surfaces.
 	 * @return Indicator for atoms associated with a free surface
 	 */
-	//TODO change to return type byte
+	//TODO change to a more abstract scheme what does not only depends on atomic type
 	public abstract int getSurfaceType();
 	
 	
@@ -329,15 +294,6 @@ public abstract class CrystalStructure{
 	 */
 	public boolean considerAtomAsNeighborDuringRBVCalculation(Atom a){
 		return true;
-	}
-	
-	/**
-	 * A set of data container operations to be applied at the beginning of the analysis process
-	 * TODO: Will be replaced by a more advanced toolchain mechanism one day 
-	 * @return
-	 */
-	public List<DataContainer> getDataContainerToApplyAtEndOfAnalysis(){
-		return null;
 	}
 	
 	/**
@@ -380,13 +336,13 @@ public abstract class CrystalStructure{
 		for (int i=start; i<end; i++){
 			if (Thread.interrupted()) return;
 			if ((i-start)%10000 == 0)
-				Configuration.currentFileLoader.getProgressMonitor().addToCounter(10000);
+				ProgressMonitor.getProgressMonitor().addToCounter(10000);
 			
 			Atom a = atoms.get(i);
 			a.setType(identifyAtomType(a, nnb));
 		}
 		
-		Configuration.currentFileLoader.getProgressMonitor().addToCounter((end-start)%10000);
+		ProgressMonitor.getProgressMonitor().addToCounter((end-start)%10000);
 	}
 	
 	public final float getLatticeConstant() {
@@ -416,14 +372,6 @@ public abstract class CrystalStructure{
 	 */
 	public final Vec3[] getPerfectNearestNeighbors(Grain g) {
 		return getPerfectNearestNeighbors(g.getCystalRotationTools());
-	}
-	
-	/**
-	 * The perfect nearest neighbors rotated into the default orientation 
-	 * @return
-	 */
-	public final Vec3[] getPerfectNearestNeighbors(){
-		return getPerfectNearestNeighbors(Configuration.getCrystalRotationTools());
 	}
 	
 	/**
@@ -465,6 +413,14 @@ public abstract class CrystalStructure{
 		return BurgersVectorType.OTHER;
 	}
 	
+	public float getDefaultSkeletonizerMeshingThreshold(){
+		return 1.1f;
+	}
+	
+	public float getDefaultSkeletonizerRBVThreshold(){
+		return 0.1f;
+	}
+	
 	/**
 	 * Distance in which nearest neighbors are to be searched.
 	 * Usually slightly larger than the nearest neighbor distance in a perfect crystals
@@ -482,11 +438,11 @@ public abstract class CrystalStructure{
 	 * @return
 	 */
 	public float getDistanceToNearestNeighbor() {
-		Vec3[] n = this.getPerfectNearestNeighbors();
+		Vec3[] n = this.getPerfectNearestNeighborsUnrotated();
 		float min = Float.POSITIVE_INFINITY;
 		for (int i=0; i<n.length; i++)
 			if (n[i].getLength()<min) min = n[i].getLength();
-		return min;
+		return min * this.latticeConstant;
 	}
 	
 	/**
@@ -598,6 +554,14 @@ public abstract class CrystalStructure{
 	}
 	
 	/**
+	 * Specifies the names of different elements
+	 * @return an array equal with size equal to getNumberOfElements() or null if no names are specified
+	 */
+	public String[] getNamesOfElements(){
+		return null;
+	}
+	
+	/**
 	 * Scaling factor to display atoms of different elements with different sizes 
 	 * @return scaling factors, array has the same size as the value returned by getNumberOfElements()
 	 */
@@ -630,12 +594,12 @@ public abstract class CrystalStructure{
 	 */
 	public boolean processMetadataLine(String s, Map<String, Object> metaContainer,
 			LineNumberReader lnr, ImportDataContainer idc) throws IOException{
-		if (ImportStates.POLY_MATERIAL.isActive())
+		if (ImportStates.IMPORT_GRAINS.isActive())
 			return PolygrainMetadata.processMetadataLine(s, metaContainer, lnr, idc);
 		return false;
 	}
 	
-	public AtomFilter getIgnoreAtomsDuringImportFilter(){
+	public Filter<Atom> getIgnoreAtomsDuringImportFilter(){
 		return null;
 	}
 	
@@ -647,7 +611,7 @@ public abstract class CrystalStructure{
 	 * @param skel
 	 */
 	public void analyse(Skeletonizer skel) {
-		if (ImportStates.BURGERS_VECTORS.isActive())
+		if (skel.getAtomData().isRbvAvailable())
 			new BurgersVectorAnalyzer(this).analyse(skel);
 	}
 	
@@ -660,25 +624,15 @@ public abstract class CrystalStructure{
 	}
 	
 	/**
-	 * Initial threshold to connect nodes in the skeleton.
-	 * Larger values lead to smoother curves but may destroy details
-	 * and increase time to compute networks 
-	 * @return
-	 */
-	public final float getSkeletonizationMeshingThreshold(){
-		return getNearestNeighborSearchRadius() * dislocationMeshRadius.getValue();
-	}
-	
-	/**
 	 * Creates a subset of atoms belonging to dislocations that are considered during skeletonization
 	 * @param data
 	 * @return
 	 */
-	public List<Atom> getDislocationDefectAtoms(AtomData data){
+	public final List<Atom> getDislocationDefectAtoms(AtomData data, float minRBV){
 		ArrayList<Atom> defectAtoms = new ArrayList<Atom>();
 		if (!data.isRbvAvailable()) return defectAtoms;
 		
-		float minRBVLength = getPerfectBurgersVectorLength()*this.minRBVLength.getValue();
+		float minRBVLength = getPerfectBurgersVectorLength()*minRBV;
 		minRBVLength *= minRBVLength;
 		float maxRBVLength = getPerfectBurgersVectorLength()*2.5f;
 		maxRBVLength *= maxRBVLength;
@@ -754,19 +708,19 @@ public abstract class CrystalStructure{
 	 * @param data
 	 * @return
 	 */
-	public List<Grain> identifyGrains(AtomData data) {
+	public List<Grain> identifyGrains(AtomData data, float meshSize) {
 		List<Grain> grains = new Vector<Grain>();
 		
 		if (!data.isGrainsImported()){
 			//Identify grains from scratch 
 			
 			List<List<Atom>> grainSets = GrainDetector.identifyGrains(data.getAtoms(), 
-							this.getGrainDetectionCriteria());
+							this.getGrainDetectionCriteria(), data.getBox());
 			
 			CrystalStructure cs = this.getCrystalStructureOfDetectedGrains();
 			for (List<Atom> s : grainSets){
-				Mesh mesh = new Mesh(s, cs);
-				Grain g = new Grain(mesh, s, grains.size(), cs);
+				Mesh mesh = new Mesh(s, meshSize, nearestNeighborSearchRadius, data.getBox());
+				Grain g = new Grain(mesh, s, grains.size(), cs, data.getBox());
 				grains.add(g);
 			}
 		} else {
@@ -778,15 +732,23 @@ public abstract class CrystalStructure{
 			}
 			
 			if (meta != null && meta.meshes.size() == meta.grainOrientation.size()){
+				HashMap<Integer, ArrayList<Atom>> grainIndexToList = new HashMap<Integer, ArrayList<Atom>>(); 
 				for (int i : meta.meshes.keySet()){
 					Mesh mesh = new Mesh(meta.meshes.get(i).triangles, meta.meshes.get(i).vertices);
 					Grain g;
+					ArrayList<Atom> list = new ArrayList<Atom>();
 					if (meta!=null && meta.grainOrientation.containsKey(i))
-						g = new Grain(mesh, new ArrayList<Atom>(), i, this, meta.grainOrientation.get(i));
-					else g = new Grain(mesh, new ArrayList<Atom>(), i, this);
+						g = new Grain(mesh, list, i, this, meta.grainOrientation.get(i));
+					else g = new Grain(mesh, list, i, this, data.getBox());
 					grains.add(g);
+					grainIndexToList.put(g.getGrainNumber(), list);
 					if (meta.numAtoms.get(i)!=null)
 						g.setNumberOfAtoms(meta.numAtoms.get(i));
+				}
+				for (Atom a : data.getAtoms()){
+					int grainID = a.getGrain();
+					if (grainID != Atom.DEFAULT_GRAIN && grainID != Atom.IGNORED_GRAIN)
+						grainIndexToList.get(grainID).add(a);
 				}
 			} else {
 				//Grains are given in input, just process the sets
@@ -805,11 +767,11 @@ public abstract class CrystalStructure{
 				for (Integer i : grainsAtomLists.keySet()){
 					ArrayList<Atom> grain = grainsAtomLists.get(i);
 					if (grain!= null &&!grain.isEmpty()){
-						Mesh mesh = new Mesh(grain, this);
+						Mesh mesh = new Mesh(grain, meshSize, nearestNeighborSearchRadius, data.getBox());
 						Grain g;
 						if (meta!=null && meta.grainOrientation.containsKey(i))
 							g = new Grain(mesh, grain, i, this, meta.grainOrientation.get(i));
-						else g = new Grain(mesh, grain, i, this);
+						else g = new Grain(mesh, grain, i, this, data.getBox());
 						
 						grains.add(g);
 					}
@@ -856,31 +818,5 @@ public abstract class CrystalStructure{
 	 */
 	public boolean skeletonizeOverMultipleGrains(){
 		return false;
-	}
-	
-	/**
-	 * Grains are colored by size, enables a consistent coloring scheme
-	 * @return
-	 */
-	public final boolean orderGrainsBySize(){
-		return orderGrainsBySize.value;
-	}
-	
-	/**
-	 * If an atom is closer to a grain boundary than this threshold it 
-	 * will be assigned as IGNORED_GRAIN
-	 * @return the filter threshold, filtering is disabled by setting to zero
-	 */
-	public float getGrainBoundaryFilterDistance(){
-		return 0f;
-	}
-	
-	/**
-	 * Initial size to approximate a grain with a mesh
-	 * Larger values result in coarser meshes and faster execution  
-	 * @return
-	 */
-	public final float getMeshingCellSize(){
-		return grainBoundaryMeshSize.getValue()*nearestNeighborSearchRadius;
 	}
 }

@@ -16,14 +16,16 @@
 // You should have received a copy of the GNU General Public License along
 // with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
 
-package model.polygrain.mesh;
+package model.mesh;
 
 import gui.glUtils.VertexDataStorageLocalArrays;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 
 import javax.media.opengl.GL;
 import javax.media.opengl.GL3;
@@ -113,6 +115,24 @@ public class FinalMesh {
 		vdsa.setIndices(gl, renderIndices);
 		vdsa.draw(gl, GL.GL_TRIANGLES);
 		vdsa.dispose(gl);
+	}
+	
+	public List<FinalizedTriangle> getTriangles(){
+		ArrayList<FinalizedTriangle> triangles = new ArrayList<FinalizedTriangle>(getTriangleCount());
+		for (int i=0; i<getTriangleCount();i++){
+			int index1 = renderIndices[3*i];
+			int index2 = renderIndices[3*i+1];
+			int index3 = renderIndices[3*i+2];
+			
+			Vec3 a = new Vec3(vertices[index1*3], vertices[index1*3+1], vertices[index1*3+2]);
+			Vec3 b = new Vec3(vertices[index2*3], vertices[index2*3+1], vertices[index2*3+2]);
+			Vec3 c = new Vec3(vertices[index3*3], vertices[index3*3+1], vertices[index3*3+2]);
+			
+			FinalizedTriangle t = new FinalizedTriangle(a, b, c);
+			triangles.add(t);
+		}
+		
+		return triangles;
 	}
 	
 	private Vec3 getTriangleUnitNormal(int index){

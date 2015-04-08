@@ -23,7 +23,7 @@ import java.util.concurrent.Callable;
 
 import common.ThreadPool;
 import common.Vec3;
-import model.Configuration;
+import model.BoxParameter;
 import model.skeletonizer.Dislocation;
 import model.skeletonizer.SkeletonNode;
 import model.skeletonizer.Skeletonizer;
@@ -33,8 +33,9 @@ import model.skeletonizer.Skeletonizer;
  */
 public class DislocationSmootherPostprocessor implements SkeletonDislocationPostprocessor {
 	@Override
-	public void postProcessDislocations(Skeletonizer skel) {
+	public void postProcessDislocations(final Skeletonizer skel) {
 		final ArrayList<Dislocation> dis = skel.getDislocations();
+		final BoxParameter box = skel.getAtomData().getBox();
 		
 		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
 		for (int i=0; i<ThreadPool.availProcessors(); i++){
@@ -52,8 +53,8 @@ public class DislocationSmootherPostprocessor implements SkeletonDislocationPost
 							//Ignore first and last node. Junctions are not moved 
 							for (int i=1; i<d.getLine().length-1; i++){
 								SkeletonNode n = d.getLine()[i];
-								Vec3 n1 = Configuration.pbcCorrectedDirection(n, d.getLine()[i-1]);
-								Vec3 n2 = Configuration.pbcCorrectedDirection(n, d.getLine()[i+1]);
+								Vec3 n1 = box.getPbcCorrectedDirection(n, d.getLine()[i-1]);
+								Vec3 n2 = box.getPbcCorrectedDirection(n, d.getLine()[i+1]);
 								
 								//Computing new position, depending on the current location and the vectors
 								//to neighboring nodes

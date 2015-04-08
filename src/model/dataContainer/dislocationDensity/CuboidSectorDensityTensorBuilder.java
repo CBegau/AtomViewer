@@ -34,19 +34,11 @@ public class CuboidSectorDensityTensorBuilder {
 	private final Vec3Double[] neighPerf;
 	private final double[] pnl;
 	
-	private final boolean pbc_x, pbc_y, pbc_z;
-	private Vec3 bounds, halfBounds;
-	
 	private AtomData data;
 	private int rasterX, rasterY, rasterZ;
 	
-	
 	public CuboidSectorDensityTensorBuilder(AtomData data, int rasterX, int rasterY, int rasterZ) {
 		this.data = data;
-		
-		this.pbc_x = Configuration.getPbc()[0];
-		this.pbc_y = Configuration.getPbc()[1];
-		this.pbc_z = Configuration.getPbc()[2];
 		
 		this.rasterX = rasterX;
 		this.rasterY = rasterY;
@@ -55,15 +47,8 @@ public class CuboidSectorDensityTensorBuilder {
 		if (!data.getBox().isOrtho())
 			JLogPanel.getJLogPanel().addLog("Box is non-orthogonal, dislocation densities are inaccurate");
 		
-		this.bounds = data.getBox().getHeight();
-		this.halfBounds = new Vec3();
-		this.halfBounds.x = bounds.x*0.5f;
-		this.halfBounds.y = bounds.y*0.5f;
-		this.halfBounds.z = bounds.z*0.5f;
-
-		
-		CrystalStructure cs = Configuration.getCrystalStructure();
-		float[][] rot = Configuration.getCrystalRotationTools().getDefaultRotationMatrix();
+		CrystalStructure cs = data.getCrystalStructure();
+		float[][] rot = data.getCrystalRotation().getDefaultRotationMatrix();
 		Vec3[] perf = cs.getPerfectNearestNeighborsUnrotated();
 		neighPerf = new Vec3Double[perf.length];
 		for (int i=0; i<neighPerf.length; i++){
@@ -72,9 +57,9 @@ public class CuboidSectorDensityTensorBuilder {
 			d[1] = (perf[i].x*rot[0][1] + perf[i].y*rot[1][1] + perf[i].z*rot[2][1]);
 			d[2] = (perf[i].x*rot[0][2] + perf[i].y*rot[1][2] + perf[i].z*rot[2][2]);
 			neighPerf[i] = new Vec3Double();
-			neighPerf[i].x = d[0] * Configuration.getCrystalStructure().getLatticeConstant();
-			neighPerf[i].y = d[1] * Configuration.getCrystalStructure().getLatticeConstant();
-			neighPerf[i].z = d[2] * Configuration.getCrystalStructure().getLatticeConstant();
+			neighPerf[i].x = d[0] * cs.getLatticeConstant();
+			neighPerf[i].y = d[1] * cs.getLatticeConstant();
+			neighPerf[i].z = d[2] * cs.getLatticeConstant();
 		}
 
 		this.pnl = new double[neighPerf.length];
@@ -83,18 +68,18 @@ public class CuboidSectorDensityTensorBuilder {
 		}
 	}
 	
-	
-	
-	@SuppressWarnings("unchecked")
 	public DislocationDensityTensor[][][] createCuboids() {
-		NearestNeighborBuilder<Vec3> nnb = new NearestNeighborBuilder<Vec3>(
-				Configuration.getCrystalStructure().getNearestNeighborSearchRadius());
+		NearestNeighborBuilder<Vec3> nnb = new NearestNeighborBuilder<Vec3>(data.getBox(),
+				data.getCrystalStructure().getNearestNeighborSearchRadius());
+		
+		Vec3 bounds = data.getBox().getHeight();
+		
 		for (int i=0; i<data.getAtoms().size(); i++){
 			nnb.add(data.getAtoms().get(i));
 		}
 		ArrayList<Tupel<Vec3, double[][]>> points = new ArrayList<Tupel<Vec3,double[][]>>();
 		
-		
+		@SuppressWarnings("unchecked")
 		Tupel<Vec3,double[][]>[][][] raster = new Tupel[rasterX+1][rasterY+1][rasterZ+1];
 		
 		for (int i=0; i<=rasterX; ++i){
@@ -127,6 +112,7 @@ public class CuboidSectorDensityTensorBuilder {
 					p.z = (zFrac) * (k+0.5f);
 					Tupel<Vec3, double[][]> tupel = new Tupel<Vec3, double[][]>(p, null); 
 					points.add(tupel);
+					@SuppressWarnings("unchecked")
 					Tupel<Vec3, double[][]>[] corners = new Tupel[8];
 					corners[0] = raster[i+0][j+0][k+0];
 					corners[1] = raster[i+0][j+0][k+1];
@@ -153,6 +139,7 @@ public class CuboidSectorDensityTensorBuilder {
 			for (int j = 0; j < rasterY; ++j) {
 				for (int k = 0; k < rasterZ; ++k) {
 					Cuboid c = cuboids[i][j][k];
+					@SuppressWarnings("unchecked")
 					Tupel<Vec3, double[][]>[] cornersExt = new Tupel[14];
 					for (int l = 0; l < 8; l++)
 						cornersExt[l] = c.corners[l];
@@ -175,7 +162,8 @@ public class CuboidSectorDensityTensorBuilder {
 					double[][] nye = calculateNye(c.center, cornersExt);
 					// double[][] nye = calculateNye(c.center, c.corners);
 					CuboidVolumeElement cs = new CuboidVolumeElement(c.corners[7].o1, c.corners[0].o1);
-					cuboidsDens[i][j][k] = new DislocationDensityTensor(nye, cs);
+					cuboidsDens[i][j][k] = 
+							new DislocationDensityTensor(data.getCrystalStructure().getPerfectBurgersVectorLength(), nye, cs);
 				}
 			}
 		}
@@ -267,29 +255,13 @@ public class CuboidSectorDensityTensorBuilder {
 	private double[][] calculateNye(Tupel<Vec3, double[][]> central, Tupel<Vec3, double[][]>[] inter ){
 		double[][] neigh = new double[inter.length][3];
 		
+		
 		for (int i=0; i<inter.length; i++){
-			neigh[i][0] = inter[i].o1.x - central.o1.x; 
-			neigh[i][1] = inter[i].o1.y - central.o1.y;
-			neigh[i][2] = inter[i].o1.z - central.o1.z;
+			Vec3 dir = data.getBox().getPbcCorrectedDirection(inter[i].o1, central.o1);
 			
-			if (pbc_x){
-				if (neigh[i][0] < -halfBounds.x)
-					neigh[i][0] += bounds.x;
-				else if (neigh[i][0] > halfBounds.x)
-					neigh[i][0] -= bounds.x;
-			}
-			if (pbc_y){
-				if (neigh[i][1] < -halfBounds.y)
-					neigh[i][1] += bounds.y;
-				else if (neigh[i][1] > halfBounds.y)
-					neigh[i][1] -= bounds.y;
-			}
-			if (pbc_z){
-				if (neigh[i][2] < -halfBounds.z)
-					neigh[i][2] += bounds.z;
-				else if (neigh[i][2] > halfBounds.z)
-					neigh[i][2] -= bounds.z;
-			}
+			neigh[i][0] = dir.x; 
+			neigh[i][1] = dir.y;
+			neigh[i][2] = dir.z;
 		}
 		
 		double[][][] neighT = new double[inter.length][3][3];

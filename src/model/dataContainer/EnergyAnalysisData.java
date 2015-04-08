@@ -33,33 +33,33 @@ public class EnergyAnalysisData extends DataContainer {
 
 	
 	@Override
-	public void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking) {
+	public void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
 		return;
 	}
 	
 	@Override
-	public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking) {
+	public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
 		return;
 	}
 	
 	@Override
-	public boolean processData(File dataFile, AtomData atomData) throws IOException {
+	public boolean processData(AtomData atomData) throws IOException {
 		this.data = atomData;
 		
 		File f5 = new File(Configuration.getLastOpenedFolder(), atomData.getName()+"_5nm.txt");
-		writeData(f5, 0, atomData.getBox().getHeight().z, 50);
+		writeData(atomData, f5, 0, atomData.getBox().getHeight().z, 50);
 		
 		File f625 = new File(Configuration.getLastOpenedFolder(),atomData.getName()+"_6,25nm.txt");
-		writeData(f625, 0, atomData.getBox().getHeight().z, 62.5f);
+		writeData(atomData, f625, 0, atomData.getBox().getHeight().z, 62.5f);
 		
 		File f125 = new File(Configuration.getLastOpenedFolder(),atomData.getName()+"_12,5nm.txt");
-		writeData(f125, 0, atomData.getBox().getHeight().z, 125);
+		writeData(atomData, f125, 0, atomData.getBox().getHeight().z, 125);
 		
 		File f25 = new File(Configuration.getLastOpenedFolder(),atomData.getName()+"_25nm.txt");
-		writeData(f25, 0, atomData.getBox().getHeight().z, 250);
+		writeData(atomData, f25, 0, atomData.getBox().getHeight().z, 250);
 		
 		File fmax = new File(Configuration.getLastOpenedFolder(),atomData.getName()+"_max.txt");
-		writeData(fmax, 0, atomData.getBox().getHeight().z, atomData.getBox().getHeight().minComponent());
+		writeData(atomData, fmax, 0, atomData.getBox().getHeight().z, atomData.getBox().getHeight().minComponent());
 		
 		return true;
 	}
@@ -70,16 +70,6 @@ public class EnergyAnalysisData extends DataContainer {
 			dataPanel = new JEnergyAnalysisDataControlPanel();
 		}
 		return dataPanel;
-	}
-
-	@Override
-	public String[] getFileExtensions() {
-		return null;
-	}
-
-	@Override
-	public boolean isExternalFileRequired() {
-		return false;
 	}
 
 	@Override
@@ -97,7 +87,7 @@ public class EnergyAnalysisData extends DataContainer {
 		return new EnergyAnalysisData();
 	}
 	
-	private void writeData(File f, float minZ, float maxZ, float blocksize){
+	private void writeData(AtomData atomData, File f, float minZ, float maxZ, float blocksize){
 		int bx, by, bz;
 		
 		
@@ -124,10 +114,15 @@ public class EnergyAnalysisData extends DataContainer {
 		hy = 1f/hy;
 		hz = 1f/hz;
 		
-		int ec = Configuration.getIndexForDataColumnName("Epot");
+		int ec = -1;
+		for (int i=0; i<atomData.getDataColumnInfos().size(); i++){
+			if (atomData.getDataColumnInfos().get(i).getName().equals("Epot"))
+				ec = i;
+		}
+		
 		//Mark atoms in dislocations
 		HashSet<Atom> dislocationAtoms = new HashSet<Atom>();
-		Skeletonizer skel = data.getSkeletonizer();
+		Skeletonizer skel = (Skeletonizer)data.getDataContainer(Skeletonizer.class);
 		for (Dislocation d : skel.getDislocations()){
 			if ( d.getBurgersVectorInfo().getAverageResultantBurgersVector().getLength()>0.2f && 
 					d.getBurgersVectorInfo().getBurgersVector().getType() != BurgersVectorType.ZERO){
@@ -186,10 +181,10 @@ public class EnergyAnalysisData extends DataContainer {
 				Vec3 bvLocal;
 				if (d.getBurgersVectorInfo()!=null && d.getBurgersVectorInfo().getBurgersVector().isFullyDefined()){
 					bv = d.getBurgersVectorInfo().getBurgersVector();
-					bvLocal = bv.getInXYZ(Configuration.getCrystalRotationTools());
+					bvLocal = bv.getInXYZ(data.getCrystalRotation());
 				} else {
-					bv = Configuration.getCrystalRotationTools().rbvToBurgersVector(d.getBurgersVectorInfo().getAverageResultantBurgersVector());
-					bvLocal = bv.getInXYZ(Configuration.getCrystalRotationTools());
+					bv = data.getCrystalRotation().rbvToBurgersVector(d.getBurgersVectorInfo().getAverageResultantBurgersVector());
+					bvLocal = bv.getInXYZ(data.getCrystalRotation());
 					//Consider the pure values are always too small
 					bvLocal.multiply(1.5f);
 				}
@@ -197,7 +192,7 @@ public class EnergyAnalysisData extends DataContainer {
 				//if (bv.getFraction() == 0) continue;
 				
 				for (int i=0; i<d.getLine().length-1; i++){
-					Vec3 dir = Configuration.pbcCorrectedDirection(d.getLine()[i], d.getLine()[i+1]);
+					Vec3 dir = data.getBox().getPbcCorrectedDirection(d.getLine()[i], d.getLine()[i+1]);
 					float segmentLength = dir.getLength();
 					float lTimesBurgerSquared = segmentLength * bvLocal.getLengthSqr();
 					
@@ -205,8 +200,8 @@ public class EnergyAnalysisData extends DataContainer {
 					
 					double weight = 1./atomToDistributeDisTo;
 
-					bvLocal = Configuration.getCrystalRotationTools().getInCrystalCoordinates(bvLocal);
-					dir = Configuration.getCrystalRotationTools().getInCrystalCoordinates(dir);
+					bvLocal = data.getCrystalRotation().getInCrystalCoordinates(bvLocal);
+					dir = data.getCrystalRotation().getInCrystalCoordinates(dir);
 					
 					for (Atom a : d.getLine()[i].getMappedAtoms()){
 						int x1 = (int) (hx * a.x);
@@ -274,7 +269,7 @@ public class EnergyAnalysisData extends DataContainer {
 		PrintWriter pw = null;
 		try{
 			pw = new PrintWriter(f);
-			pw.println(EngData.getDataHeader());
+			pw.println(eng[0][0][0].getDataHeader());
 
 			pw.println(String.format("#Blocks;%d;%d;%d", bx, by,by));
 			pw.println(String.format("#Blocksize;%.8f;%.8f;%.8f", (bp.getHeight().x/bx), (bp.getHeight().y/by), (maxZ-minZ)/bz));
@@ -295,6 +290,11 @@ public class EnergyAnalysisData extends DataContainer {
 		}
 		
 	}
+	
+	@Override
+	public boolean showOptionsDialog() {
+		return true;
+	};
  
 
 	public static class JEnergyAnalysisDataControlPanel extends JDataPanel{
@@ -316,7 +316,7 @@ public class EnergyAnalysisData extends DataContainer {
 		
 	}
 	
-	private static class EngData{
+	private class EngData{
 		final Vec3 center = new Vec3();
 		final Vec3 size = new Vec3();
 //		final float volume;
@@ -352,7 +352,7 @@ public class EnergyAnalysisData extends DataContainer {
 			this.z = pz;
 		}
 		
-		public static String getDataHeader(){
+		public String getDataHeader(){
 			StringBuilder sb = new StringBuilder();
 			sb.append("x"); sb.append(';');
 			sb.append("y"); sb.append(';');
@@ -434,7 +434,7 @@ public class EnergyAnalysisData extends DataContainer {
 			sb.append(String.format("%.8f", lengthDisloactions )); sb.append(';');
 			sb.append(String.format("%.8f", lengthTimesBsquared)); sb.append(';');
 			
-			double a = Configuration.getCrystalStructure().getPerfectBurgersVectorLength();
+			double a = data.getCrystalStructure().getPerfectBurgersVectorLength();
 			
 			sb.append(String.format("%.8f", gnd[0][0]/a)); sb.append(';');
 			sb.append(String.format("%.8f", gnd[0][1]/a)); sb.append(';');
@@ -450,6 +450,17 @@ public class EnergyAnalysisData extends DataContainer {
 			
 			return sb.toString();
 		}
+	}
+
+	@Override
+	public boolean isApplicable(AtomData data) {
+		return true;
+	}
+
+
+	@Override
+	public String getRequirementDescription() {
+		return "";
 	}
 	
 }

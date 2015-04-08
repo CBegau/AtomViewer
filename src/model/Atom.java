@@ -58,8 +58,8 @@ public class Atom extends Vec3 implements Pickable {
 		this.atomNumber = num;
 		this.element = element;
 		
-		if (Configuration.getSizeDataColumns() != 0)
-			dataValues = new float[Configuration.getSizeDataColumns()];
+		if (ImportConfiguration.getInstance().getDataColumns().size() != 0)
+			dataValues = new float[ImportConfiguration.getInstance().getDataColumns().size()];
 	}
 	
 	/**
@@ -69,6 +69,39 @@ public class Atom extends Vec3 implements Pickable {
 	public RBV getRBV() {
 		return rbv;
 	}
+	
+	
+	/**
+	 * Increase the size of the array dataValues by n values
+	 * New entries are initialized with 0f.  
+	 * @param n 
+	 */
+	void extendDataValuesFields(int n){
+		assert (n>=0);
+		if (dataValues == null)
+			dataValues = new float[n];
+		else
+			dataValues = Arrays.copyOf(dataValues, dataValues.length+n);
+	}
+	
+	/**
+	 * Remove the entry in dataValue at the given index
+	 * All following entries are shifted by one
+	 * @param index
+	 */
+	void deleteDataValueField(int index){
+		assert (index < dataValues.length);
+		if (dataValues.length == 1){
+			dataValues = null;
+			return;
+		}
+		//Create a copy of the array not containing the value at the index
+		float[] d = new float[dataValues.length-1];
+	    System.arraycopy(dataValues, 0, d, 0, index );
+	    System.arraycopy(dataValues, index+1, d, index, dataValues.length - index-1);
+		dataValues = d;
+	}
+	
 	
 	/**
 	 * Sets the values for the resultant Burgers vector and the line direction to this atom
@@ -179,27 +212,25 @@ public class Atom extends Vec3 implements Pickable {
 	}
 	
 	@Override
-	public String printMessage(InputEvent ev) {
+	public String printMessage(InputEvent ev, AtomData data) {
 		StringBuilder sb = new StringBuilder();
 		
-		Vec3 offset = Configuration.getCurrentAtomData().getBox().getOffset();
+		Vec3 offset = data.getBox().getOffset();
 		sb.append(String.format("Nr=%d, ", getNumber()));
 		sb.append(String.format("xyz=( %.4f, %.4f, %.4f ),", x+offset.x, y+offset.y, z+offset.z));
-		sb.append(String.format(" (%s),", Configuration.getCrystalStructure().getNameForType(getType())));
-		if (Configuration.getNumElements()>1) sb.append(String.format(" Element=%d,", getElement()));
-		if (ImportStates.POLY_MATERIAL.isActive() && getGrain() != DEFAULT_GRAIN) 
+		sb.append(String.format(" (%s),", data.getCrystalStructure().getNameForType(getType())));
+		if (data.getNameOfElement(getElement()).isEmpty())
+			sb.append(String.format(" Element=%d,", getElement()));
+		else sb.append(String.format(" Element=%d (%s),", getElement(), data.getNameOfElement(getElement())));
+		
+		if (getGrain() != DEFAULT_GRAIN) 
 			sb.append(String.format(" Grain=%s", getGrain()==IGNORED_GRAIN?"None":Integer.toString(getGrain())));
 		if (getRBV()!=null) {
 			CrystalRotationTools crt = null;
-			if (ImportStates.POLY_MATERIAL.isActive()){
-				//Poly crystal
-				if (getGrain() == DEFAULT_GRAIN)
-					crt = Configuration.getCrystalRotationTools();
-				else crt = Configuration.getCurrentAtomData().getGrains(getGrain()).getCystalRotationTools();
-			} else {
-				//Single crystal
-				crt = Configuration.getCrystalRotationTools();
-			}
+			
+			if (getGrain() == DEFAULT_GRAIN)
+				crt = data.getCrystalRotation();
+			else crt = data.getGrains(getGrain()).getCystalRotationTools();
 			
 			Vec3 bv = crt.getInCrystalCoordinates(this.getRBV().bv);
 			sb.append(String.format(" RBV=[ %.3f | %.3f | %.3f ],", bv.x, bv.y, bv.z));
@@ -211,17 +242,17 @@ public class Atom extends Vec3 implements Pickable {
 			sb.append(" TBV="+tbv.toString());
 		}
 		
-		for (int i=0; i< Configuration.getSizeDataColumns(); i++){
-			DataColumnInfo c = Configuration.getDataColumnInfo(i);
-			if (!c.isSpecialColoumn())
-				sb.append(String.format(" %s=%s%s", c.getName(), 
-						CommonUtils.outputDecimalFormatter.format(getData(i)),
-						c.getUnit()));	
+		List<DataColumnInfo> dci = data.getDataColumnInfos(); 
+		for (int i=0; i < dci.size(); i++){
+			DataColumnInfo c = dci.get(i);
+			sb.append(String.format(" %s=%s%s", c.getName(), 
+					CommonUtils.outputDecimalFormatter.format(getData(i)),
+					c.getUnit()));	
 		}
 		
 		if (ev!=null && (ev.getModifiersEx() & InputEvent.CTRL_DOWN_MASK) == InputEvent.CTRL_DOWN_MASK){
 			sb.append("\n");
-			sb.append(Configuration.getCurrentAtomData().plotNeighborsGraph(this));
+			sb.append(data.plotNeighborsGraph(this));
 		}
 		return sb.toString();
 	}

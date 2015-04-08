@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License along
 // with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
 
-package model.polygrain.mesh;
+package model.mesh;
 
 import common.*;
 
@@ -27,8 +27,8 @@ public class BSPTree extends ClosestTriangleSearchAlgorithm{
 		super(threshold);
 	}
 	
-	
-	public void add(Triangle t){
+	@Override
+	public void add(FinalizedTriangle t){
 		if (root == null){
 			root = new BSPNode(t);
 		} else {
@@ -37,29 +37,26 @@ public class BSPTree extends ClosestTriangleSearchAlgorithm{
 	}
 	
 	@Override
-	public Tupel<Float, MeshElement> sqrDistToMeshElement(Vec3 eye){
-		if (root == null) return new Tupel<Float, MeshElement>(Float.MAX_VALUE, null);
-		Tupel<Float, MeshElement> best = root.distToClosestMeshElement(eye, new Tupel<Float, MeshElement>(Float.MAX_VALUE, null));
-		best.o1 = Math.abs(best.o1);
+	public float sqrDistToMeshElement(Vec3 eye){
+		if (root == null) return Float.MAX_VALUE;
+		float best = root.distToClosestMeshElement(eye, Float.MAX_VALUE);
 		return best;
 	}
 	
 	private class BSPNode{
-		public Vec3 normal;
 		public float d;
-		public Triangle element;
+		public FinalizedTriangle element;
 		
 		public BSPNode front = null;
 		public BSPNode back = null;
 		
 		
-		public BSPNode(Triangle t){
-			this.normal = t.getUnitNormalVector();
-			this.d = normal.dot(t.getVertex());
+		public BSPNode(FinalizedTriangle t){
+			this.d = element.getUnitNormalVector().dot(t.getVertex());
 			this.element = t;
 		}
 	
-		public void add(Triangle t){
+		public void add(FinalizedTriangle t){
 			int c = compareTo(t);
 			//front plane
 			if (c == 1){
@@ -83,20 +80,19 @@ public class BSPTree extends ClosestTriangleSearchAlgorithm{
 			}
 		}
 		
-		private Tupel<Float, MeshElement> distToClosestMeshElement(Vec3 eye, Tupel<Float, MeshElement> best){			
-			float distToPlane = eye.dot(normal) - d;
+		private float distToClosestMeshElement(Vec3 eye, float best){			
+			float distToPlane = eye.dot(element.normal) - d;
 			float distToPlaneSqr = distToPlane* distToPlane; //Squared distance to compare with the rest
 			
-			if (distToPlaneSqr < best.o1){
-				Tupel<Float, MeshElement> distToTriangle = element.getMinSqrDistAndClosestObject(eye, normal);
-				if (distToTriangle.o1 < best.o1){
-					best.o1 = distToTriangle.o1;
-					best.o2 = distToTriangle.o2;
-					if (best.o1 < threshold) return best;
+			if (distToPlaneSqr < best){
+				float distToTriangle = element.getMinSqrDist(eye);
+				if (distToTriangle < best){
+					best = distToTriangle;
+					if (best < threshold) return best;
 				}
 			}
 			
-			if (distToPlaneSqr > best.o1){
+			if (distToPlaneSqr > best){
 				if (distToPlane < 0f){
 					if (back!=null) return back.distToClosestMeshElement(eye, best);
 				} else {
@@ -106,7 +102,7 @@ public class BSPTree extends ClosestTriangleSearchAlgorithm{
 			}
 			
 			if (back!=null) best = back.distToClosestMeshElement(eye, best);
-			if (best.o1 < threshold) return best;
+			if (best < threshold) return best;
 			if (front!=null) best = front.distToClosestMeshElement(eye, best);
 						
 			return best; 
@@ -117,12 +113,12 @@ public class BSPTree extends ClosestTriangleSearchAlgorithm{
 		 * @param t
 		 * @return 0: equal plane, 1 front, -1 back, 2 both
 		 */
-		public int compareTo(Triangle t) {
-			Vertex[] vert = t.getVertices();
+		public int compareTo(FinalizedTriangle t) {
+			Vec3 normal = t.normal;
 			
-			float p0 = vert[0].dot(normal)-d;
-			float p1 = vert[1].dot(normal)-d;
-			float p2 = vert[2].dot(normal)-d;
+			float p0 = t.a.dot(normal)-d;
+			float p1 = t.b.dot(normal)-d;
+			float p2 = t.c.dot(normal)-d;
 			
 			int pos = 0;
 			int neg = 0;

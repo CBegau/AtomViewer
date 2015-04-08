@@ -18,19 +18,33 @@
 
 package model.skeletonizer;
 
+import gui.JDislocationMenuPanel;
+import gui.JDislocationMenuPanel.Option;
+import gui.JPrimitiveVariablesPropertiesDialog.FloatProperty;
+import gui.JPrimitiveVariablesPropertiesDialog;
+import gui.RenderRange;
+import gui.ViewerGLJPanel;
+import gui.ViewerGLJPanel.RenderOption;
+import gui.glUtils.*;
+import gui.glUtils.Shader.BuiltInShader;
+
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
-import common.FastDeletableVector;
+import javax.media.opengl.GL;
+import javax.media.opengl.GL3;
+import javax.swing.JSeparator;
+
+import common.FastDeletableArrayList;
 import common.ThreadPool;
-import common.UniqueID;
 import common.UniqueIDCounter;
 import common.Vec3;
+import crystalStructures.CrystalStructure;
 import model.*;
+import model.BurgersVector.BurgersVectorType;
+import model.dataContainer.DataContainer;
+import model.dataContainer.JDataPanel;
 import model.skeletonizer.Dislocation.BurgersVectorInformation;
 import model.skeletonizer.processors.*;
 
@@ -38,42 +52,44 @@ import model.skeletonizer.processors.*;
  * Creates a dislocation skeleton from given set of dislocation core atoms 
  * and additionally, if possible, a set of stacking fault planes 
  */
-public class Skeletonizer {	  
-	private FastDeletableVector<SkeletonNode> nodes = new FastDeletableVector<SkeletonNode>();
-	private ArrayList<Dislocation> dislocations = new ArrayList<Dislocation>();
+public class Skeletonizer extends DataContainer {
+	private static JDislocationMenuPanel dataPanel;
+	private static final float CORE_THICKNESS = 5f;
 	
+	private FastDeletableArrayList<SkeletonNode> nodes = new FastDeletableArrayList<SkeletonNode>();
+	private ArrayList<Dislocation> dislocations = new ArrayList<Dislocation>();
 	private ArrayList<PlanarDefect> planarDefects = new ArrayList<PlanarDefect>();
 	
-	private final BoxParameter box;
-	private final boolean[] pbc;
+	private UniqueIDCounter dislocationIDSource = UniqueIDCounter.getNewUniqueIDCounter();
 	
-	private float meshingThreshold;
+	private AtomData data;
+	
+	private float meshingThreshold = -1;
+	private float minRBV = -1;
 	
 	/**
 	 * Creates a dislocation skeleton from dislocation core atoms and planes of stacking faults
 	 */
-	public Skeletonizer(AtomData data) {
-		this.pbc = Configuration.getPbc();
-		this.box = data.getBox();
-		this.meshingThreshold = Configuration.getCrystalStructure().getSkeletonizationMeshingThreshold();
+	public boolean processData(final AtomData data) {
+		this.data = data;
 		
-		//reinit numbering of dislocations and surfaces
-		UniqueIDCounter.resetStaticCounters();
+		this.meshingThreshold *= data.getCrystalStructure().getNearestNeighborSearchRadius();
 
-		List<Atom> defectAtoms = Configuration.getCrystalStructure().getDislocationDefectAtoms(data);
+		List<Atom> defectAtoms = data.getCrystalStructure().getDislocationDefectAtoms(data, minRBV);
 		//create a initial mesh to skeletonize
 		//Each atom becomes a node, edges are derived from nearest neighborhood relationship
+		int id = 0;
 		for (Atom a : defectAtoms) {
-			nodes.add(new SkeletonNode(a));
+			nodes.add(new SkeletonNode(a, id++));
 		}
 		
 		//The skeletonizer does not need modifications for polycrystalline materials
 		//If atoms are placed in different grains, no neighborhood will be created in "c.buildNeigh(nnb)", thus 
 		//the basic algorithm works exactly the same in single- and polycrystals
-		final NearestNeighborBuilder<SkeletonNode> nnb = new NearestNeighborBuilder<SkeletonNode>(meshingThreshold);
-		for (SkeletonNode c: nodes) 
-			nnb.add(c);
-		
+		final NearestNeighborBuilder<SkeletonNode> nnb = 
+				new NearestNeighborBuilder<SkeletonNode>(data.getBox(), meshingThreshold, true);
+		nnb.addAll(nodes);
+		final boolean sameGrainsOnly = data.isPolyCrystalline() && !data.getCrystalStructure().skeletonizeOverMultipleGrains();
 		//Parallel build
 		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
 		for (int i=0; i<ThreadPool.availProcessors(); i++){
@@ -85,30 +101,15 @@ public class Skeletonizer {
 					int end = (int)(((long)nodes.size() * (j+1))/ThreadPool.availProcessors());
 
 					for (int i=start; i<end; i++)
-						nodes.get(i).buildNeigh(nnb);
+						nodes.get(i).buildNeigh(nnb, sameGrainsOnly);
 					return null;
 				}
 			});
 		}
 		ThreadPool.executeParallel(parallelTasks);
-	}
-	
-	/**
-	 * Constructor to directly create a skeleton (e.g. from a file)
-	 * @param nodes Collection of all skeletonNodes
-	 * @param dislocations Collection of all dislocations
-	 * @param stackingFaults Collection of all stacking faults 
-	 * @param size box dimension
-	 * @param pbc Periodic boundary conditions in xyz-Direction
-	 */
-	public Skeletonizer(Collection<SkeletonNode> nodes, Collection<Dislocation> dislocations,
-			Collection<PlanarDefect> stackingFaults, BoxParameter box, boolean[] pbc) {
-		super();
-		this.nodes = new FastDeletableVector<SkeletonNode>(nodes);
-		this.dislocations = new ArrayList<Dislocation>(dislocations);
-		this.planarDefects = new ArrayList<PlanarDefect>(stackingFaults);
-		this.box = box;
-		this.pbc = pbc.clone();
+		
+		this.transform(data);
+		return true;
 	}
 
 	/**
@@ -116,7 +117,7 @@ public class Skeletonizer {
 	 * The list is null after the skeleton is finished
 	 * @return all SkeletonNodes
 	 */
-	public FastDeletableVector<SkeletonNode> getNodes() {
+	public List<SkeletonNode> getNodes() {
 		return nodes;
 	}
 	
@@ -147,10 +148,10 @@ public class Skeletonizer {
 	/**
 	 * Creates a skeleton with a default set of post- and preprocessors
 	 */
-	public void transform(AtomData data){
+	private void transform(AtomData data){
 		ArrayList<SkeletonPreprocessor> preprocessors = new ArrayList<SkeletonPreprocessor>();
 		
-		preprocessors.addAll(Configuration.getCrystalStructure().getSkeletonizerPreProcessors());
+		preprocessors.addAll(data.getCrystalStructure().getSkeletonizerPreProcessors());
 		
 		ArrayList<SkeletonMeshPostprocessor> meshPostprocessors = new ArrayList<SkeletonMeshPostprocessor>();
 		meshPostprocessors.add(new PruneProcessor());
@@ -164,7 +165,6 @@ public class Skeletonizer {
 		}
 	}
 	
-	
 	/**
 	 * Creates a skeleton with given sets of post- and preprocessors
 	 * @param preprocessors Preprocessors are executed on the initial created mesh in the order in which they are inserted in the list 
@@ -173,7 +173,7 @@ public class Skeletonizer {
 	 * @param dislocationPostprocessors These postprocessors are executed after the mesh is transformed to dislocations.
 	 * They are applied in the order in which they are inserted in the list
 	 */
-	public void transform(List<SkeletonPreprocessor> preprocessors, 
+	private void transform(List<SkeletonPreprocessor> preprocessors, 
 			List<SkeletonMeshPostprocessor> meshPostprocessors, 
 			List<SkeletonDislocationPostprocessor> dislocationPostprocessors, AtomData data){
 		if( this.nodes.size()==0 ) return;
@@ -211,34 +211,26 @@ public class Skeletonizer {
 				post.postProcessDislocations(this);
 		
 		//detect hexagonally shaped stacking faults
-		if (Configuration.getCrystalStructure().hasStackingFaults()){
+		if (data.getCrystalStructure().hasStackingFaults()){
+			//this map will later contain the relation between atoms and the planes they are part of
 			TreeMap<PlanarDefectAtom, PlanarDefect> planarDefectMap = new TreeMap<PlanarDefectAtom, PlanarDefect>();
-			List<Atom> sfAtoms = Configuration.getCrystalStructure().getStackingFaultAtoms(data);
-			if (!sfAtoms.isEmpty()){
-				TreeSet<PlanarDefectAtom> pda = new TreeSet<PlanarDefectAtom>();
-				for (Atom a: sfAtoms)
-					pda.add(new PlanarDefectAtom(a));
-				
-				//this map will later contain the relation between atoms and the planes they are part of
-				this.planarDefects = PlanarDefect.createPlanarDefects(pda, planarDefectMap);
 			
-				NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(
-						Configuration.getCrystalStructure().getSkeletonizationMeshingThreshold());
-				for (PlanarDefectAtom a : planarDefectMap.keySet())
-					nnb.add(a.getAtom());
-				
-				//Copy map
-				HashMap<Atom, PlanarDefect> defectAtomMap = new HashMap<Atom, PlanarDefect>();
-				for (Map.Entry<PlanarDefectAtom, PlanarDefect> e : planarDefectMap.entrySet()){
-					defectAtomMap.put(e.getKey().getAtom(), e.getValue());
-				}
-				
-				//Create links between stacking faults and dislocations
-				for (Dislocation d : dislocations) d.findAdjacentStackingFaults(defectAtomMap, nnb);
-				for (PlanarDefect s : planarDefects) s.findAdjacentDislocations(dislocations);
-			}
-		}
+			this.planarDefects = PlanarDefect.createPlanarDefects(data, planarDefectMap);
 		
+			NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), meshingThreshold);
+			for (PlanarDefectAtom a : planarDefectMap.keySet())
+				nnb.add(a.getAtom());
+			
+			//Copy map
+			HashMap<Atom, PlanarDefect> defectAtomMap = new HashMap<Atom, PlanarDefect>();
+			for (Map.Entry<PlanarDefectAtom, PlanarDefect> e : planarDefectMap.entrySet()){
+				defectAtomMap.put(e.getKey().getAtom(), e.getValue());
+			}
+			
+			//Create links between stacking faults and dislocations
+			for (Dislocation d : dislocations) d.findAdjacentStackingFaults(defectAtomMap, nnb);
+			for (PlanarDefect s : planarDefects) s.findAdjacentDislocations(dislocations);
+		}
 		
 		//Store dislocation junction information in the junction nodes
 		for (Dislocation d : dislocations){
@@ -249,7 +241,7 @@ public class Skeletonizer {
 		//Analyze the skeleton and find Burgers vectors
 		//TODO: Extension required to identify Burgersvectors in poly-phase material 
 		//with completely different crystal structures 
-		Configuration.getCrystalStructure().analyse(this);
+		data.getCrystalStructure().analyse(this);
 		
 		// Remove dislocation with length less than two nodes
 		Iterator<Dislocation> disIter = dislocations.iterator();
@@ -259,15 +251,8 @@ public class Skeletonizer {
 				disIter.remove();
 		}
 		
-		for (SkeletonNode n : nodes){
+		for (SkeletonNode n : nodes)
 			n.setNeighborsToNull();
-		}
-		
-		if (ImportStates.KILL_ALL_ATOMS.isActive())
-			for (SkeletonNode n : nodes){
-				n.getMappedAtoms().clear();
-				n.getMappedAtoms().trimToSize();
-			}
 		
 		nodes = null;
 	}
@@ -316,7 +301,7 @@ public class Skeletonizer {
 				for (int i=0; i<t.getNeigh().size(); i++){
 					SkeletonNode n = t.getNeigh().get(i); 
 					if (!n.isCriticalNode()){
-						float dist = Configuration.pbcCorrectedDirection(n, t).getLengthSqr(); 
+						float dist = data.getBox().getPbcCorrectedDirection(n, t).getLengthSqr(); 
 						if (dist < minDist && t.hasCommonNeighbor(n)){
 							minDist = dist;
 							nearestIndex = i;
@@ -344,20 +329,20 @@ public class Skeletonizer {
 	 */
 	private void convertToDislocations() {
 		ArrayList<Dislocation> dislocations = new ArrayList<Dislocation>();
-		TreeSet<Edge<SkeletonNode>> edges = new TreeSet<Edge<SkeletonNode>>();
+		TreeSet<Edge> edges = new TreeSet<Edge>();
 		
 		for (SkeletonNode a : nodes){
 			//Center the skeletonNode
-			a.centerToMappedAtoms(pbc, box);
+			a.centerToMappedAtoms(data.getBox());
 			//get a unique set of all edges
 			for (int j = 0; j < a.getNeigh().size(); j++) {
 				SkeletonNode b = a.getNeigh().get(j);
-				edges.add(new Edge<SkeletonNode>(a, b));
+				edges.add(new Edge(a, b));
 			}
 		}
 
 		while (!edges.isEmpty()) {
-			Edge<SkeletonNode> e = edges.first();
+			Edge e = edges.first();
 			//Find a node with more than two neighbors -> start of a polyline
 			while (e!=null && e.a.getNeigh().size() == 2 && e.b.getNeigh().size() == 2) {
 				e = edges.higher(e);
@@ -388,12 +373,12 @@ public class Skeletonizer {
 				SkeletonNode overnext = (current == next.getNeigh().get(0)) ? next.getNeigh().get(1) : next.getNeigh().get(0);
 				current = next;
 				next = overnext;
-				edges.remove(new Edge<SkeletonNode>(current, next));
+				edges.remove(new Edge(current, next));
 				polyline.add(current);
 			}
 			//Create and store the polyline as a dislocation
 			polyline.add(next);
-			dislocations.add(new Dislocation(polyline.toArray(new SkeletonNode[polyline.size()])));
+			dislocations.add(new Dislocation(polyline.toArray(new SkeletonNode[polyline.size()]), this));
 		}
 		this.dislocations = dislocations;
 	}
@@ -406,7 +391,7 @@ public class Skeletonizer {
 	 */
 	public boolean writeDislocationSkeleton(File f) throws FileNotFoundException{
 		PrintWriter pw = new PrintWriter(f);
-
+		
 		TreeMap<Integer, SkeletonNode> nodeMap = new TreeMap<Integer,SkeletonNode>();
 		for (Dislocation d : dislocations)
 			for (SkeletonNode n : d.getLine())
@@ -430,8 +415,8 @@ public class Skeletonizer {
 				BurgersVectorInformation bvInfo = d.getBurgersVectorInfo();
 				if (bvInfo.getBurgersVector().getType() == BurgersVector.BurgersVectorType.UNDEFINED) {
 					CrystalRotationTools crt;
-					if (ImportStates.POLY_MATERIAL.isActive()) crt = d.getGrain().getCystalRotationTools();
-					else crt = Configuration.getCrystalRotationTools();
+					if (data.isPolyCrystalline()) crt = d.getGrain().getCystalRotationTools();
+					else crt = data.getCrystalRotation();
 						
 					Vec3 abv = crt.getInCrystalCoordinates(bvInfo.getAverageResultantBurgersVector());
 					pw.println(String.format("%.4f %.4f %.4f n", abv.x, abv.y, abv.z));
@@ -455,17 +440,16 @@ public class Skeletonizer {
 	 * An edge between two points A and B that are tagged by different unique IDs.
 	 * The class implements the equal method that treats edges A-B and B-A as equal.
 	 * Provided that ID as unique for each point in a set of edges, the edges can be sorted
-	 * @param <T>
 	 */
-	public class Edge<T extends Vec3 & UniqueID> implements Comparable<Edge<T>>{
-		public T a, b;
+	public class Edge implements Comparable<Edge>{
+		public SkeletonNode a, b;
 		
 		/**
 		 * Create an edge between two
 		 * @param a
 		 * @param b
 		 */
-		public Edge(T a, T b){
+		public Edge(SkeletonNode a, SkeletonNode b){
 			if (a.getID() == b.getID()) 
 				throw new IllegalArgumentException("Needs two unique atoms");
 			if (a.getID() < b.getID()){
@@ -480,15 +464,14 @@ public class Skeletonizer {
 		@Override
 		public boolean equals(Object obj) {
 			if (obj == null) return false;
-			if (!(obj instanceof Edge<?>) || !(obj instanceof UniqueID)) return false;
-			@SuppressWarnings("unchecked")
-			Edge<T> e = (Edge<T>)obj;
+			if (!(obj instanceof Edge)) return false;
+			Edge e = (Edge)obj;
 			if (this.a.getID()==e.a.getID() && this.b.getID()==e.b.getID()) return true;
 			else return false;
 		}
 		
 		@Override
-		public int compareTo(Edge<T> o) {
+		public int compareTo(Edge o) {
 			if (a.getID()<o.a.getID()) return 1;
 			if (a.getID()>o.a.getID()) return -1;
 			if (b.getID()<o.b.getID()) return 1;
@@ -531,7 +514,7 @@ public class Skeletonizer {
 					
 					for (SkeletonNode n : a.getNeigh()) {
 						if (!n.isCriticalNode()){
-							Vec3 dir = Configuration.pbcCorrectedDirection(n, a);
+							Vec3 dir = data.getBox().getPbcCorrectedDirection(n, a);
 							float l = 1f / dir.getLengthSqr();
 							dirsLenght[dirsSize] = l;
 							dirs[dirsSize++] = dir;
@@ -548,7 +531,7 @@ public class Skeletonizer {
 					}
 
 					//Store new coordinate if it differs significantly from the current  
-					if (Math.abs(move.x) > 0.001f || Math.abs(move.y) > 0.001f || Math.abs(move.z) > 0.001f) {
+					if (move.getLengthSqr()> 1e-6f) {
 						nodesMoved.add(a);
 						nodesMovedTo.add(move);
 					}
@@ -561,10 +544,269 @@ public class Skeletonizer {
 				SkeletonNode n = nodesMoved.get(i);
 				//Move node
 				n.add(nodesMovedTo.get(i));
-				box.backInBox(n);
+				data.getBox().backInBox(n);
 			}
 			
 			return nodesMoved.size();
 		}
+	}
+
+	@Override
+	public boolean isTransparenceRenderingRequired() {
+		return Option.STACKING_FAULT.isEnabled();
+	}
+
+	@Override
+	public void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
+		if (Option.DISLOCATIONS.isEnabled())
+			drawCores(viewer, gl, renderRange, picking, box);
+	}
+
+	@Override
+	public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
+		if (Option.STACKING_FAULT.isEnabled())
+			drawSurfaces(viewer, gl, renderRange, picking, box);
+	}
+
+	@Override
+	public JDataPanel getDataControlPanel() {
+		if (dataPanel == null)
+			dataPanel = new JDislocationMenuPanel();
+		return dataPanel;
+	}
+
+	@Override
+	public String getDescription() {
+		return "Creates a dislocation network from defects";
+	}
+
+	@Override
+	public String getName() {
+		return "Dislocation skeletonizer";
+	}
+
+	@Override
+	public boolean showOptionsDialog() {
+		JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(null, getName());
+		
+		dialog.addLabel(getDescription());
+		dialog.add(new JSeparator());	
+		
+		CrystalStructure cs = Configuration.getCurrentAtomData().getCrystalStructure();
+		
+		FloatProperty meshThreshold = dialog.addFloat("meshThreshold", "Meshing distance factor for dislocation networks"
+				, "<html>During creation fo dislocation networks, a mesh between defect atoms is created.<br>"
+						+ "<br> A factor of one usually is equal to the nearest neighbor distance."
+						+ "<br> Larger values create smoother dislcoations curves, but can suppress fine details like stair-rods or"
+						+ "only slightly seperated partial dislocation cores"
+						+ "<br> Min: 1.0, Max: 2.0</html>", cs.getDefaultSkeletonizerMeshingThreshold(), 1f, 2f);
+		
+		
+		FloatProperty minRBVLength = dialog.addFloat("minRBVLength", "Minimum RBV factor for dislocation networks",
+						"<html>During creation fo dislocation networks, only atoms with a minimum length of the RBV are included.<br>"
+						+ "This value defines a factor which atoms are to be considered as dislocations."
+						+ "<br> The factor is relative to the length of a perfect burgers vector in the crystal."
+						+ "<br> Larger values filter more noise, but small details may be lost."
+						+ "<br> Min: 0.05, Max: 1.0</html>",
+						cs.getDefaultSkeletonizerRBVThreshold(), 0.05f, 1f);
+		
+		boolean ok = dialog.showDialog();
+		if (ok){
+			this.meshingThreshold = meshThreshold.getValue(); 
+			this.minRBV = minRBVLength.getValue();
+		}
+		return ok;
+	}
+
+	@Override
+	public DataContainer deriveNewInstance() {
+		Skeletonizer clone = new Skeletonizer();
+		clone.minRBV = this.minRBV;
+		clone.meshingThreshold = this.meshingThreshold;
+		return clone;
+	}
+	
+	private void drawSurfaces(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box){
+		Shader shader = BuiltInShader.VERTEX_ARRAY_COLOR_UNIFORM.getShader();
+		shader.enable(gl);
+		int colorUniform = gl.glGetUniformLocation(shader.getProgram(), "Color");
+		
+		gl.glDisable(GL.GL_CULL_FACE);
+		for (int i=0; i<this.getPlanarDefects().size(); i++) {
+			PlanarDefect s = this.getPlanarDefects().get(i);
+			
+			VertexDataStorageLocal vds = new VertexDataStorageLocal(gl, s.getFaces().length, 3, 0, 0, 0, 0, 0, 0, 0);
+			int numElements = 0;
+			vds.beginFillBuffer(gl);
+			if (picking){
+				float[] color = viewer.getNextPickingColor(s);
+				gl.glUniform4f(colorUniform, color[0], color[1], color[2], color[3]);
+			}
+			else {
+				if (data.getCrystalStructure().hasMultipleStackingFaultTypes()){
+					float[] c = data.getCrystalStructure().getGLColor(s.getPlaneComposedOfType());
+					if (viewer.getHighLightObjects().contains(s))
+						gl.glUniform4f(colorUniform, c[0], c[1], c[2], 0.85f);
+					else gl.glUniform4f(colorUniform, c[0], c[1], c[2], 0.35f);
+				} else {
+					if (viewer.getHighLightObjects().contains(s))
+						gl.glUniform4f(colorUniform, 0.8f,0.0f,0.0f,0.35f);
+					else {
+						if (RenderOption.PRINTING_MODE.isEnabled()) gl.glUniform4f(colorUniform, 0.0f,0.0f,0.0f,0.35f);
+						else gl.glUniform4f(colorUniform, 0.5f,0.5f,0.5f,0.35f);
+					}
+				}
+			}
+			
+			for (int j = 0; j < s.getFaces().length; j+=3) {
+				if (renderRange.isInInterval(s.getFaces()[j]) && 
+						box.isVectorInPBC(s.getFaces()[j].subClone(s.getFaces()[j+1])) && 
+						box.isVectorInPBC(s.getFaces()[j].subClone(s.getFaces()[j+2])) && 
+						box.isVectorInPBC(s.getFaces()[j+1].subClone(s.getFaces()[j+2]))) {
+					vds.setVertex(s.getFaces()[j].x, s.getFaces()[j].y, s.getFaces()[j].z);
+					vds.setVertex(s.getFaces()[j+1].x, s.getFaces()[j+1].y, s.getFaces()[j+1].z);
+					vds.setVertex(s.getFaces()[j+2].x, s.getFaces()[j+2].y, s.getFaces()[j+2].z);
+					numElements += 3;
+				}
+			}
+			
+			vds.endFillBuffer(gl);
+			vds.setNumElements(numElements);
+			vds.draw(gl, GL.GL_TRIANGLES);
+			vds.dispose(gl);
+		}
+		gl.glEnable(GL.GL_CULL_FACE);
+	}
+		
+	private void drawCores(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
+		//Check for object to highlight
+		if (!picking){
+			int numEle = data.getCrystalStructure().getNumberOfElements();
+			ArrayList<RenderableObject<Atom>> objectsToRender = new ArrayList<RenderableObject<Atom>>();
+			ArrayList<Atom> atomsToRender = new ArrayList<Atom>();
+			
+			float[] sphereSize = data.getCrystalStructure().getSphereSizeScalings();
+			float maxSphereSize = 0f;
+			for (int i=0; i<sphereSize.length; i++){
+				sphereSize[i] *= viewer.getSphereSize();
+				if (maxSphereSize < sphereSize[i]) maxSphereSize = sphereSize[i];
+			}
+			
+			for (int i=0; i<this.getDislocations().size(); i++) {
+				Dislocation dis = this.getDislocations().get(i);
+				if (viewer.getHighLightObjects().contains(dis)) {
+					for (int  j=0; j<dis.getLine().length; j++) {
+						SkeletonNode sn = dis.getLine()[j];
+						for (Atom a : sn.getMappedAtoms()){
+							float[] color;
+							if (j==0) color = new float[]{0f, 1f, 0f, 1f};
+							else if (j==dis.getLine().length-1) color = new float[]{0f, 0f, 1f, 1f};
+							else color = new float[]{1f, 0f, 0f, 1f};
+							objectsToRender.add(new RenderableObject<Atom>(a, color, sphereSize[a.getElement()%numEle]));
+							atomsToRender.add(a);
+						}
+					}
+				}
+			}
+					
+			ObjectRenderData<?> ord = new ObjectRenderData<Atom>(atomsToRender, false, box);
+			ObjectRenderData<?>.Cell c = ord.getRenderableCells().get(0);
+			for(int i=0; i<objectsToRender.size(); i++){
+				c.getColorArray()[3*i+0] = objectsToRender.get(i).color[0];
+				c.getColorArray()[3*i+1] = objectsToRender.get(i).color[1];
+				c.getColorArray()[3*i+2] = objectsToRender.get(i).color[2];
+				c.getSizeArray()[i] = objectsToRender.get(i).size;
+				c.getVisibiltyArray()[i] = true;
+			}
+			ord.reinitUpdatedCells();
+			viewer.drawSpheres(gl, ord, false);
+			gl.glDisable(GL.GL_BLEND);
+		}
+		
+		//Render the dislocation core elements
+		Shader s = BuiltInShader.UNIFORM_COLOR_DEFERRED.getShader();
+		int colorUniform = gl.glGetUniformLocation(s.getProgram(), "Color");
+		s.enable(gl);
+		
+		for (int i=0; i<this.getDislocations().size(); i++) {
+			Dislocation dis = this.getDislocations().get(i);
+			//Disable some dislocations if needed
+			if (dis.getBurgersVectorInfo().getBurgersVector().getType() == BurgersVectorType.DONT_SHOW) continue;
+			if (picking){
+				float[] col = viewer.getNextPickingColor(dis);
+				gl.glUniform4f(colorUniform, col[0], col[1], col[2], col[3]);
+			}
+			else if (dis.getBurgersVectorInfo()!=null) {
+				float[] col = dis.getBurgersVectorInfo().getBurgersVector().getType().getColor();
+				gl.glUniform4f(colorUniform, col[0], col[1], col[2], 1f);
+			} else gl.glUniform4f(colorUniform, 0.5f, 0.5f, 0.5f, 1f);
+			
+			ArrayList<Vec3> path = new ArrayList<Vec3>();
+			
+			for (int j = 0; j < dis.getLine().length; j++) {
+				SkeletonNode c = dis.getLine()[j];
+				if (renderRange.isInInterval(c)) {
+					path.add(c);
+				} else {
+					if (path.size()>1) 
+						TubeRenderer.drawTube(gl, path, CORE_THICKNESS);
+					path.clear();
+				}
+				//Check PBC and restart tube if necessary
+				if (j<dis.getLine().length-1){
+					SkeletonNode c1 = dis.getLine()[j+1];
+					if (!box.isVectorInPBC(c.subClone(c1))){
+						if (path.size()>1)
+							TubeRenderer.drawTube(gl, path, CORE_THICKNESS);
+						path.clear();
+					}
+				}
+			}
+			if (path.size()>1)
+				TubeRenderer.drawTube(gl, path, CORE_THICKNESS);
+		}
+		
+		//Draw Burgers vectors on cores
+		if (!picking && Option.BURGERS_VECTORS_ON_CORES.isEnabled() && data.isRbvAvailable()){
+			for (int i = 0; i < this.getDislocations().size(); i++) {
+				Dislocation dis = this.getDislocations().get(i);
+				
+				Vec3 f;
+				float[] col;
+				if (dis.getBurgersVectorInfo().getBurgersVector().isFullyDefined()) {
+					col = new float[]{ 0f, 1f, 0f, 1f};
+					if (dis.getGrain() == null)
+						f = dis.getBurgersVectorInfo().getBurgersVector().getInXYZ(data.getCrystalRotation());
+					else
+						f = dis.getBurgersVectorInfo().getBurgersVector().getInXYZ(dis.getGrain().getCystalRotationTools());
+				} else {
+					col = new float[]{1f, 0f, 0f, 1f};
+					f = dis.getBurgersVectorInfo().getAverageResultantBurgersVector();
+				}
+
+				f.multiply(CORE_THICKNESS);
+				SkeletonNode c = dis.getLine()[dis.getLine().length / 2]; // node "in the middle"
+				if (renderRange.isInInterval(c))
+					ArrowRenderer.renderArrow(gl, c, f, 0.4f, col, true);
+			}
+		}
+	}
+	
+	public AtomData getAtomData(){
+		return data;
+	}
+	
+	public UniqueIDCounter getDislocationIDSource() {
+		return dislocationIDSource;
+	}
+
+	@Override
+	public String getRequirementDescription(){
+		return "Resultant Burgers vectors must be computed for skeletonization";
+	}	
+	
+	@Override
+	public boolean isApplicable(AtomData data) {
+		return data.isRbvAvailable();
 	}
 }

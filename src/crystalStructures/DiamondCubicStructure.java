@@ -67,14 +67,13 @@ public class DiamondCubicStructure extends CrystalStructure {
 		return new DiamondCubicStructure();
 	}
 	
-	public DiamondCubicStructure() {
-		super();
-		this.minRBVLength.defaultValue = 0.2f;
-	}
-	
 	@Override
 	protected String getIDName() {
 		return "DiamondCubic";
+	}
+	
+	public float getDefaultSkeletonizerRBVThreshold(){
+		return 0.2f;
 	}
 	
 	@Override
@@ -181,11 +180,6 @@ public class DiamondCubicStructure extends CrystalStructure {
 
 	@Override
 	public int getDefaultType() {
-		return 0;
-	}
-
-	@Override
-	public float getGrainBoundaryFilterDistance() {
 		return 0;
 	}
 }

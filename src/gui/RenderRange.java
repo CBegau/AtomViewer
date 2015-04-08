@@ -22,10 +22,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import model.Atom;
-import model.AtomFilter;
+import model.Filter;
 import common.Vec3;
 
-public class RenderRange implements AtomFilter {
+public class RenderRange implements Filter<Atom> {
 	
 	private float[] currentLimit = new float[6];
 	private float[] globalLimit = new float[6];
@@ -169,5 +169,4 @@ public class RenderRange implements AtomFilter {
 	public boolean accept(Atom a) {
 		return isInInterval(a);
 	}
-	
 }

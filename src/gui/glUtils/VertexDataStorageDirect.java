@@ -272,5 +272,13 @@ public final class VertexDataStorageDirect extends VertexDataStorage {
 	public void dispose(GL3 gl) {
 		gl.glDeleteBuffers(2, boundBuffer, 0);
 	}
+	
+	public int getArrayBufferIndex(){
+		return boundBuffer[0];
+	}
+	
+	public int getElementArrayBufferIndex(){
+		return boundBuffer[1];
+	}
 
 }

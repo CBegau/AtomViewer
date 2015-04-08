@@ -41,7 +41,7 @@ public class UndefinedCrystalStructure extends CrystalStructure {
 	
 	@Override
 	public int getNumberOfTypes() {
-		return 10;
+		return 1;
 	}
 	
 	@Override
@@ -51,9 +51,7 @@ public class UndefinedCrystalStructure extends CrystalStructure {
 
 	@Override
 	public int identifyAtomType(Atom atom, NearestNeighborBuilder<Atom> nnb) {
-		ArrayList<Atom> neigh = nnb.getNeigh(atom);
-		int type = (neigh.size()+1)/2;
-		return type<10 ? type : 9;
+		return 0;
 	}
 
 	@Override
@@ -69,16 +67,7 @@ public class UndefinedCrystalStructure extends CrystalStructure {
 	@Override
 	public String getNameForType(int i) {
 		switch(i){
-		case 0 : return "0 neighbors";
-		case 1 : return "1-2 neighbors";
-		case 2 : return "3-4 neighbors";
-		case 3 : return "5-6 neighbors";
-		case 4 : return "7-8 neighbors";
-		case 5 : return "9-10 neighbors";
-		case 6 : return "11-12 neighbors";
-		case 7 : return "13-14 neighbors";
-		case 8 : return "15-16 neighbors";
-		case 9 : return ">16 neighbors";
+		case 0 : return "atoms";
 		default: return "unknown";
 		}
 	}
@@ -100,7 +89,7 @@ public class UndefinedCrystalStructure extends CrystalStructure {
 
 	@Override
 	public int getNumberOfNearestNeighbors() {
-		return 12;
+		return 1;
 	}
 
 	@Override

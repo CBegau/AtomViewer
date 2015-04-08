@@ -21,11 +21,13 @@ package crystalStructures;
 import java.util.*;
 import java.util.concurrent.Callable;
 
+import javax.swing.JFrame;
+
 import processingModules.ProcessingModule;
+import processingModules.ProcessingResult;
 import Jama.Matrix;
 import model.Atom;
 import model.AtomData;
-import model.Configuration;
 import model.DataColumnInfo;
 import model.NearestNeighborBuilder;
 import common.ThreadPool;
@@ -35,6 +37,9 @@ import common.ColorTable.ColorBarScheme;
 public final class MonoclinicNiTi extends B2NiTi implements ProcessingModule{
 	public static final int IGNORED_VARIANT = -1;
 	public static final int UNKNOWN_VARIANT = 13;
+	
+	private static DataColumnInfo variantColumn = new DataColumnInfo("Variant", "variant", "",  
+			0f, 13f, true, ColorBarScheme.MARTENSITE_COLORING);
 	
 	//Both in <100>/<010>/<001> orientation
 //	private static double[][] neighPerfTiTi = new double[][]{
@@ -94,14 +99,12 @@ public final class MonoclinicNiTi extends B2NiTi implements ProcessingModule{
 	
 	@Override
 	public DataColumnInfo[] getDataColumnsInfo() {
-		DataColumnInfo c = new DataColumnInfo("Variant", "variant", "",  
-				0f, 13f, true, 1f, ColorBarScheme.MARTENSITE_COLORING);
-		return new DataColumnInfo[]{c};
+		return new DataColumnInfo[]{variantColumn};
 	}
 	
 	@Override
-	public boolean isApplicable() {
-		return Configuration.getCrystalStructure() instanceof B2NiTi;
+	public boolean isApplicable(AtomData data) {
+		return data.getCrystalStructure() instanceof B2NiTi;
 	}
 	
 	@Override
@@ -116,24 +119,16 @@ public final class MonoclinicNiTi extends B2NiTi implements ProcessingModule{
 	
 	@Override
 	public String getRequirementDescription() {
-		return "None";
+		return "";
 	}
 	
 	@Override
-	public void process(final AtomData data){
+	public ProcessingResult process(final AtomData data){
 		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(
-				Configuration.getCrystalStructure().getNearestNeighborSearchRadius());
+				data.getBox(), this.getNearestNeighborSearchRadius());
 		
-		final float[][] rot = Configuration.getCrystalRotationTools().getDefaultRotationMatrix();
-		
-		//Find the correct column containing the martensite variant values
-		int mc = 0;
-		for (int i=0; i<Configuration.getSizeDataColumns(); i++){
-			DataColumnInfo cci = Configuration.getDataColumnInfo(i);
-			if (cci.getName() == "Variant")
-				mc = i;
-		}
-		final int martColumn = mc;
+		final float[][] rot = data.getCrystalRotation().getDefaultRotationMatrix();
+		final int martColumn = data.getIndexForCustomColumn(variantColumn);
 		
 		for (Atom a : data.getAtoms()){
 			if (a.getElement() % 2 == 1) nnb.add(a);
@@ -158,7 +153,8 @@ public final class MonoclinicNiTi extends B2NiTi implements ProcessingModule{
 				}
 			});
 		}
-		ThreadPool.executeParallel(parallelTasks);		
+		ThreadPool.executeParallel(parallelTasks);
+		return null;
 	}
 	
 	private static Vec3[] sortBondsNi(Vec3[] unsortedBonds){
@@ -291,5 +287,15 @@ public final class MonoclinicNiTi extends B2NiTi implements ProcessingModule{
 		if (m[2] ==-1 && m[4] == 1) return 10;
 		
 		return UNKNOWN_VARIANT;
+	}
+	
+	@Override
+	public boolean showConfigurationDialog(JFrame frame, AtomData data) {
+		return true;
+	}
+
+	@Override
+	public boolean canBeAppliedToMultipleFilesAtOnce() {
+		return true;
 	}
 }

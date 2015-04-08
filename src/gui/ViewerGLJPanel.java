@@ -19,11 +19,11 @@
 package gui;
 
 import model.*;
-import model.BurgersVector.BurgersVectorType;
+import model.Configuration.AtomDataChangedEvent;
+import model.Configuration.AtomDataChangedListener;
 import model.dataContainer.DataContainer;
+import model.mesh.Mesh;
 import model.polygrain.Grain;
-import model.polygrain.mesh.*;
-import model.skeletonizer.*;
 import gui.glUtils.*;
 import gui.glUtils.Shader.BuiltInShader;
 
@@ -51,15 +51,13 @@ import common.ColorTable.ColorBarScheme;
 import crystalStructures.CrystalStructure;
 
 public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, MouseListener, 
-	MouseWheelListener, GLEventListener, KeyListener {
+	MouseWheelListener, GLEventListener, KeyListener, AtomDataChangedListener {
 	
 	public enum RenderOption {
-		INDENTER(false), BURGERS_VECTORS_ON_CORES(false), GRAINS(false), DISLOCATIONS(false),
-		STACKING_FAULT(false), LEGEND(true), COORDINATE_SYSTEM(false), THOMPSON_TETRAEDER(false),
+		INDENTER(false), GRAINS(false), LEGEND(true), COORDINATE_SYSTEM(false), THOMPSON_TETRAEDER(false),
 		PRINTING_MODE(false), STEREO(false), BOUNDING_BOX(true), PERSPECTIVE(false), LENGTH_SCALE(false);
 		
 		private boolean enabled;
-		private static ViewerGLJPanel viewer;
 		
 		private RenderOption(boolean enabled){
 			this.enabled = enabled;
@@ -67,27 +65,22 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		
 		public void setEnabled(boolean enabled){
 			this.enabled = enabled;
-			if (viewer!=null) viewer.reDraw();
+			if (RenderingConfiguration.getViewer()!=null) RenderingConfiguration.getViewer().reDraw();
 			if (this == RenderOption.PRINTING_MODE){
-				viewer.makeBackground();
+				RenderingConfiguration.getViewer().makeBackground();
 			}
 		}
 		
 		public boolean isEnabled(){
 			return enabled;
 		}
-		
-		private static void setViewer(ViewerGLJPanel viewer){
-			RenderOption.viewer = viewer;
-		}
 	}
 	
 	public enum AtomRenderType {
-		TYPE, ELEMENTS, GRAINS, DATA
+		TYPE, ELEMENTS, GRAINS, DATA, VECTOR_DATA
 	};
 	
 	private static final long serialVersionUID = 1L;
-	private static final float CORE_THICKNESS = 5f;
 	
 	private AtomData atomData;
 	private RenderRange renderInterval;
@@ -122,17 +115,13 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	private ArrayList<Pickable> pickList = new ArrayList<Pickable>();
 
 	private boolean[] ignoreTypes;
-	private boolean[] ignoreElement;
+	private boolean[] ignoreElement = new boolean[0];
 	private HashMap<Integer,Boolean> ignoreGrain = new HashMap<Integer, Boolean>();
 	private HashMap<Integer,float[]> grainColorTable = new HashMap<Integer, float[]>();
 	private boolean renderingAtomsAsRBV;
 	
 	private AtomRenderType atomRenderType = AtomRenderType.TYPE;
-	//Sphere render data
-	private int[] sphereVboIndices;
 	private float defaultSphereSize = 1.5f;
-	private int sphereVBOIndexCount = 0;
-	private int sphereVBOPrimitive = GL.GL_TRIANGLE_FAN;
 	
 	private ArrayList<Object> highLightObjects = new ArrayList<Object>();
 	
@@ -141,14 +130,13 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	private GLMatrix projectionMatrix = new GLMatrix();
 	private GLMatrix modelViewMatrix = new GLMatrix();
 	private TextRenderer textRenderer = null;
+	private SphereRenderer sphereRenderer = null;
+	private ArrowRenderer arrowRenderer = null;
 	
 	private boolean updateRenderContent = true;
 	
 	private boolean showRotationSphere = false;
-	
-	private final static int SIZE_CELL_RENDER_RING = 8;
-	private RingBuffer<CellRenderBuffer> cellRenderRingBuffer = null;
-	private SphereRenderData<Atom> renderData;
+	private ObjectRenderData<Atom> renderData;
 	
 	public static double openGLVersion = 0.;
 	private GLAutoDrawable glDrawable = null;
@@ -161,38 +149,62 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	private boolean colorShiftForVElements = true;
 	
 	private DataColoringAndFilter dataAtomFilter = new DataColoringAndFilter();
+	private VectorDataColoringAndFilter vectorDataAtomFilter = new VectorDataColoringAndFilter();
+	
+	//TODO Move this filter to a different place
 	private final AtomFilterSet atomFilterSet = new AtomFilterSet();
+	// Time it took to render the last frame in nanoseconds
+	private long timeToRenderFrame = 0l;
+	
+	//TODO make private?
+	public int defaultVAO = -1;
 	
 	public ViewerGLJPanel(int width, int height, GLCapabilities caps) {
 		super(caps);
+		
+		RenderingConfiguration.setViewer(this);
 		
 		addKeyListener(this);
 		addMouseListener(this);
 		addMouseMotionListener(this);
 		addMouseWheelListener(this);
 		addGLEventListener(this);
+		Configuration.addAtomDataListener(this);
 		
 		this.setPreferredSize(new Dimension(width, height));
 		this.setMinimumSize(new Dimension(100, 100));
 		
 		this.setFocusable(true);
-		
-		RenderOption.setViewer(this);
-		Configuration.Options.setViewerPanel(this);
 	}
 	
 	@Override
 	public void display(GLAutoDrawable arg0) {
+		boolean frameCounter = false;
+		long fence = 0L;
+		
 		this.glDrawable = arg0;
 		GL3 gl = arg0.getGL().getGL3();
 		
+		if (frameCounter){
+			fence = gl.glFenceSync(GL3.GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+			this.timeToRenderFrame = System.nanoTime();
+		}
+		
 		if (reRenderTexture){
-			updateIntInAllShader(gl, "ads", Configuration.Options.ADS_SHADING.isEnabled() ? 1 : 0);
+			updateIntInAllShader(gl, "ads", RenderingConfiguration.Options.ADS_SHADING.isEnabled() ? 1 : 0);
 			renderSceneIntoFBOs(gl, RenderOption.STEREO.isEnabled());
 			reRenderTexture = false;
 		}
 		
-		renderFinalScene(gl, null);
+		composeCompleteScene(gl, null);
+		
+		//FrameCounter
+		if (frameCounter){
+			gl.glClientWaitSync(fence, GL3.GL_SYNC_FLUSH_COMMANDS_BIT, GL3.GL_TIMEOUT_IGNORED);
+			gl.glDeleteSync(fence);
+			this.timeToRenderFrame = System.nanoTime()-this.timeToRenderFrame;
+			System.out.println(1000000000./(this.timeToRenderFrame));
+		}
 	}
 
 	@Override
@@ -210,7 +222,16 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		}
 		
 		GL3 gl = arg0.getGL().getGL3();
-		createSphereRenderData(gl);
+
+        int[] buf = new int[1];
+        gl.glGenVertexArrays(1, buf, 0);
+        this.defaultVAO = buf[0];
+        gl.glBindVertexArray(defaultVAO);
+		
+		if (sphereRenderer == null)
+			sphereRenderer = new SphereRenderer(this, gl);
+		if (arrowRenderer == null)
+			arrowRenderer = new ArrowRenderer(this, gl);
 		
         gl.glEnable(GL.GL_DEPTH_TEST);
         gl.glCullFace(GL.GL_BACK);
@@ -220,10 +241,12 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		gl.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA);
         gl.glDepthFunc(GL.GL_LESS);
         gl.glEnable(GL3.GL_DEPTH_CLAMP);
+        gl.glClearColor(0f, 0f, 0f, 0f);
         
         Shader.init(gl);
         this.initShaderUniforms(gl);
 
+        
         Font font = new Font(Font.SANS_SERIF, Font.PLAIN, 72);
         Font[] fonts = GraphicsEnvironment.getLocalGraphicsEnvironment().getAllFonts();
         for (Font f : fonts){
@@ -237,17 +260,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		this.arcBall = new ArcBall(width, height);
 		
 		makeFullScreenQuad(gl);
-		
-		if (openGLVersion >=3.3 && cellRenderRingBuffer == null){
-			ArrayList<CellRenderBuffer> ringElements = new ArrayList<ViewerGLJPanel.CellRenderBuffer>();
-			for (int i = 0; i < SIZE_CELL_RENDER_RING; i++) {
-				CellRenderBuffer crb = new CellRenderBuffer();
-				crb.init(gl, SphereRenderData.MAX_ELEMENTS_PER_CELL * 8 * Float.SIZE / 8, GL.GL_ARRAY_BUFFER);
-				ringElements.add(crb);
-			}			
-			cellRenderRingBuffer = new RingBuffer<ViewerGLJPanel.CellRenderBuffer>(ringElements);
-		}
-		
 		
 		if (noiseTexture == null){
 			final String resourcesPath = "resources/noise.png";
@@ -280,41 +292,40 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		this.width = arg3;
 		this.height = arg4;
 		
-		if (fboDeferredBuffer != null) fboDeferredBuffer.destroy(gl);
-		if (fboLeft != null) fboLeft.destroy(gl);
-		if (fboRight != null) fboRight.destroy(gl);
-		if (fboBackground != null) fboBackground.destroy(gl);
-		
-		fboDeferredBuffer = new FrameBufferObject(width, height, gl, true);
-		fboLeft = new FrameBufferObject(width, height, gl);
-		fboRight = new FrameBufferObject(width, height, gl);
-		fboBackground = new FrameBufferObject(width, height, gl);
+		if (fboDeferredBuffer != null) fboDeferredBuffer.reset(gl, width, height);
+		else fboDeferredBuffer = new FrameBufferObject(width, height, gl, true);
+		if (fboLeft != null) fboLeft.reset(gl, width, height);
+		else fboLeft = new FrameBufferObject(width, height, gl);
+		if (fboRight != null) fboRight.reset(gl, width, height);
+		else fboRight = new FrameBufferObject(width, height, gl);
+		if (fboBackground != null) fboBackground.reset(gl, width, height);
+		else fboBackground = new FrameBufferObject(width, height, gl);
+
 		this.makeBackground();
-		
 		this.arcBall.setSize(this.width, this.height);
 		this.makeFullScreenQuad(gl);
 	}
 	
-	private void setupProjectionOrthogonal() {
-		projectionMatrix.loadIdentity();
-
+	private GLMatrix setupProjectionOrthogonal() {
+		GLMatrix pm = new GLMatrix();
 		// Correct the screen-aspect
 		float aspect = width / (float) height;
 		if (aspect > 1) {
-			projectionMatrix.createOrtho(-aspect, aspect, -1f, 1f, -2, +2);
+			pm.createOrtho(-aspect, aspect, -1f, 1f, -2, +2);
 		} else {
-			projectionMatrix.createOrtho(-1f, 1f, (-1f / aspect), (1f / aspect), -2, +2);
+			pm.createOrtho(-1f, 1f, (-1f / aspect), (1f / aspect), -2, +2);
 		}
 		
-		projectionMatrix.scale(this.zoom, this.zoom, 1f);
+		pm.scale(this.zoom, this.zoom, 1f);
+		return pm;
 	}
 	
 	/**
 	 * 
 	 * @param eye -1: left eye,1 right eye, 0 centered (no shift) 
 	 */
-	private void setupProjectionPerspective(int eye) {
-		projectionMatrix.loadIdentity();
+	private GLMatrix setupProjectionPerspective(int eye) {
+		GLMatrix pm = new GLMatrix();
 		
 		float zNear = 1.2f;
         float zFar  = 10f;
@@ -337,39 +348,37 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
         left  += eyeDist * focus * eye;
         right += eyeDist * focus * eye;
 
-        projectionMatrix.createFrustum(left, right, bottom, top, zNear, zFar);
+        pm.createFrustum(left, right, bottom, top, zNear, zFar);
 
         //Eye Position
-        projectionMatrix.translate(eyeDist*eye, 0f, -3.2f);
-        projectionMatrix.scale(this.zoom, this.zoom, 1f);
+        pm.translate(eyeDist*eye, 0f, -3.2f);
+        pm.scale(this.zoom, this.zoom, 1f);
+        return pm;
 	}
 
-	private GLMatrix getProjectionFlatMatrix() {
+	private GLMatrix setupProjectionFlatMatrix() {
 		GLMatrix pm = new GLMatrix();
 		pm.createOrtho(0f, width, 0f, height, -5f, +5f);
 		return pm;
 	}
 	
-	private void setupModelView() {
-		modelViewMatrix.loadIdentity();
-
-		modelViewMatrix.translate(-moveX, -moveY, 0);
-		modelViewMatrix.mult(rotMatrix);
-		modelViewMatrix.translate(coordinateCenterOffset.x , coordinateCenterOffset.y, coordinateCenterOffset.z);
+	private GLMatrix setupModelView() {
+		GLMatrix mv = new GLMatrix();
+		
+		mv.translate(-moveX, -moveY, 0);
+		mv.mult(rotMatrix);
+		mv.translate(coordinateCenterOffset.x , coordinateCenterOffset.y, coordinateCenterOffset.z);
 		float scale = 1f / globalMaxBounds.maxComponent();
-		modelViewMatrix.scale(scale, scale, scale);
-		modelViewMatrix.translate(-halfbounds.x, -halfbounds.y, -halfbounds.z);
+		mv.scale(scale, scale, scale);
+		mv.translate(-halfbounds.x, -halfbounds.y, -halfbounds.z);
+		return mv;
 	}
 
 	private void renderSceneIntoFBOs(GL3 gl, boolean stereo){
-//		long time = System.nanoTime();
-		
 		//Render content
 		if (stereo) {
 			fboLeft.bind(gl, true);
 			renderScene(gl, false, -1,fboLeft); //left eye
-			fboLeft.unbind(gl);
-			
 			fboRight.bind(gl, true);
 			renderScene(gl, false, 1, fboRight); //right eye
 			fboRight.unbind(gl);
@@ -378,47 +387,44 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			renderScene(gl, false, 0, fboLeft); 	//central view
 			fboLeft.unbind(gl);
 		}
-//		gl.glFinish();
-//		System.out.println(1000000000./(System.nanoTime()-time));
 	}
 
 	/**
-	 * Renders the scene into the given framebuffer or directly to the screen if fbo is null.
+	 * Composes the scene into the given framebuffer or directly to the screen if fbo is null.
 	 * The scene must be rendered to textures by calling
 	 * "renderSceneToTexture(gl)" before. The textures are then placed on a
 	 * large quad into the current framebuffer. 
 	 * @param gl
 	 * @param fbo
 	 */
-	private void renderFinalScene(GL3 gl, FrameBufferObject fbo) {
+	private void composeCompleteScene(GL3 gl, FrameBufferObject fbo) {
 		if (GLContext.getCurrent() == null) {
 			System.out.println("Current context is null");
 			System.exit(0);
 		}
 		
-		if (Configuration.Options.FXAA.isEnabled()) //Draw into an FBO if anti-aliasing is required
+		if (RenderingConfiguration.Options.FXAA.isEnabled()) //Draw into an FBO if anti-aliasing is required
 			fboDeferredBuffer.bind(gl, false);
 		else if (fbo!=null){
 			fbo.bind(gl, false);
 			gl.glViewport(0, 0, width, height);
 		}
 		
-		GLMatrix proj = getProjectionFlatMatrix();
+		GLMatrix proj = setupProjectionFlatMatrix();
 		updateModelViewInShader(gl, BuiltInShader.ANAGLYPH_TEXTURED.getShader(), new GLMatrix(), proj);
 		
 		gl.glDisable(GL.GL_DEPTH_TEST);
-		gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_NEAREST);
-	    gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_NEAREST);
 	    BuiltInShader.ANAGLYPH_TEXTURED.getShader().enable(gl);
 	    
 		gl.glActiveTexture(GL.GL_TEXTURE0);
 		gl.glBindTexture(GL.GL_TEXTURE_2D, fboLeft.getColorTextureName());
 		
-		gl.glUniform1i(gl.glGetUniformLocation(BuiltInShader.ANAGLYPH_TEXTURED.getShader().getProgram(), "stereo"), 0);
+		int uniLocation = gl.glGetUniformLocation(BuiltInShader.ANAGLYPH_TEXTURED.getShader().getProgram(), "stereo");
+		gl.glUniform1i(uniLocation, 0);
 		if (RenderOption.STEREO.isEnabled()){	//Bind second texture
 			gl.glActiveTexture(GL.GL_TEXTURE1);
 			gl.glBindTexture(GL.GL_TEXTURE_2D, fboRight.getColorTextureName());		    
-		    gl.glUniform1i(gl.glGetUniformLocation(BuiltInShader.ANAGLYPH_TEXTURED.getShader().getProgram(), "stereo"), 1);
+		    gl.glUniform1i(uniLocation, 1);
 		}
 		//Bind background
 		gl.glActiveTexture(GL.GL_TEXTURE2);
@@ -426,7 +432,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	   
 		fullScreenQuad.draw(gl, GL.GL_TRIANGLE_STRIP);
 		
-		if (Configuration.Options.FXAA.isEnabled()){
+		if (RenderingConfiguration.Options.FXAA.isEnabled()){
 			//Draw the image in the FBO to the target using FXAA
 			fboDeferredBuffer.unbind(gl);
 			
@@ -463,26 +469,23 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			System.out.println("Current context is null");
 			System.exit(0);
 		}
-
-		//Update sphere render data if necessary
-		createSphereRenderData(gl);
-		
-		// clear colour and depth buffers
-		gl.glClearColor(0f, 0f, 0f, 0f);
 		gl.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT);
 		
 		if (atomData == null) return;
 		
 		//setup modelview and projection matrices
-		setupModelView();
+		modelViewMatrix = setupModelView();
 		
 		if (RenderOption.STEREO.isEnabled())
-			setupProjectionPerspective(eye);
+			projectionMatrix = setupProjectionPerspective(eye);
 		else if (RenderOption.PERSPECTIVE.isEnabled())
-			setupProjectionPerspective(0);
-		else setupProjectionOrthogonal();
+			projectionMatrix = setupProjectionPerspective(0);
+		else 
+			projectionMatrix = setupProjectionOrthogonal();
 		 
 		updateModelViewInAllShader(gl);
+		
+		sphereRenderer.updateSphereRenderData(gl, atomData);
 		
 		//Perform all draw calls in the scene
 		draw(gl, picking, drawIntoFBO);
@@ -501,16 +504,12 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		if (!picking)
 			fboDeferredBuffer.bind(gl, false);
 		
-		gl.glClearColor(1f, 1f, 1f, 1f);
-		gl.glClear(GL.GL_DEPTH_BUFFER_BIT);
-		gl.glClearColor(0f, 0f, 0f, 0f);
-		gl.glClear(GL.GL_COLOR_BUFFER_BIT);
+		gl.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT);
 		
-		//Render solid objects
+		//Render solid objects using deferred rendering
 		drawSimulationBox(gl, picking);
-		drawCores(gl, picking);
 		for (DataContainer dc : atomData.getAdditionalData())
-			dc.drawSolidObjects(this, gl, renderInterval, picking);
+			dc.drawSolidObjects(this, gl, renderInterval, picking, atomData.getBox());
 		
 		drawAtoms(gl, picking);
 		
@@ -526,10 +525,9 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		if (!picking) gl.glEnable(GL.GL_BLEND);
 		if (!picking) gl.glDepthMask(false);	
 		
-		drawSurfaces(gl, picking);
 		drawGrain(gl, picking);
 		for (DataContainer dc : atomData.getAdditionalData())
-			dc.drawTransparentObjects(this, gl, renderInterval, picking);
+			dc.drawTransparentObjects(this, gl, renderInterval, picking, atomData.getBox());
 		
 		gl.glDepthMask(true);
 		drawGrain(gl, picking);
@@ -551,7 +549,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	}
 
 	private void drawFromDeferredBuffer(GL3 gl, boolean picking) {
-		GLMatrix pm = getProjectionFlatMatrix();
+		GLMatrix pm = setupProjectionFlatMatrix();
 	    
 		gl.glActiveTexture(GL.GL_TEXTURE0+Shader.FRAG_COLOR);
 		gl.glBindTexture(GL.GL_TEXTURE_2D, fboDeferredBuffer.getColorTextureName());
@@ -568,17 +566,18 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		gl.glUniformMatrix4fv(gl.glGetUniformLocation(s.getProgram(), "mvpm"), 1, false, pm.getMatrix());
 		
 		if (!picking){
-			if (Configuration.Options.NO_SHADING.isEnabled() || picking)
-				gl.glUniform1i(gl.glGetUniformLocation(BuiltInShader.DEFERRED_ADS_RENDERING.getShader().getProgram(), "picking"), 1);
+			if (RenderingConfiguration.Options.NO_SHADING.isEnabled())
+				gl.glUniform1i(gl.glGetUniformLocation(prog, "picking"), 1);
 			else gl.glUniform1i(gl.glGetUniformLocation(prog, "picking"), 0);
 		}
 		
-		if (Configuration.Options.SSAO.isEnabled()){
+		if (RenderingConfiguration.Options.SSAO.isEnabled()){
 			gl.glActiveTexture(GL.GL_TEXTURE0+4);
 			gl.glBindTexture(GL.GL_TEXTURE_2D, noiseTexture.getTextureObject());
 			gl.glUniform1f(gl.glGetUniformLocation(prog, "ssaoOffset"), 5.25f*zoom);
 		}
-		gl.glUniform1i(gl.glGetUniformLocation(prog, "ambientOcclusion"), Configuration.Options.SSAO.isEnabled()?1:0);
+		gl.glUniform1i(gl.glGetUniformLocation(prog, "ambientOcclusion"), 
+				RenderingConfiguration.Options.SSAO.isEnabled()?1:0);
 		
 		fullScreenQuad.draw(gl, GL.GL_TRIANGLE_STRIP);
 	}
@@ -634,7 +633,8 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		SimpleGeometriesRenderer.drawSphere(gl);
 		updateModelViewInShader(gl, s, modelViewMatrix, projectionMatrix);
 		
-		gl.glUniform1i(gl.glGetUniformLocation(s.getProgram(), "ads"), Configuration.Options.ADS_SHADING.isEnabled() ? 1 : 0);
+		gl.glUniform1i(gl.glGetUniformLocation(s.getProgram(), "ads"), 
+				RenderingConfiguration.Options.ADS_SHADING.isEnabled() ? 1 : 0);
 	}
 	
 	private void drawSimulationBox(GL3 gl, boolean picking) {
@@ -665,9 +665,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			boxVertices[i*3+2] = z;
 		}
 		
-		boolean[] pbc = Configuration.getPbc();
-		Configuration.setPBC(new boolean[]{false, false, false}); //Turn off PBC before drawing a box with tubes
-		
 		BuiltInShader.UNIFORM_COLOR_DEFERRED.getShader().enable(gl);
 		int colorUniform = gl.glGetUniformLocation(BuiltInShader.UNIFORM_COLOR_DEFERRED.getShader().getProgram(), "Color");
 		gl.glUniform4f(colorUniform, 0.7f, 0.7f, 0.7f, 1f);
@@ -676,9 +673,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			points.add(new Vec3(boxVertices[i*6], boxVertices[i*6+1], boxVertices[i*6+2]));
 			points.add(new Vec3(boxVertices[i*6+3], boxVertices[i*6+4], boxVertices[i*6+5]));
 			TubeRenderer.drawTube(gl, points, atomData.getBox().getHeight().maxComponent()/200f);
-		}
-		
-		Configuration.setPBC(pbc); //Turn back on PBCs	
+		}	
 	}
 	
 	private void drawIndent(GL3 gl){
@@ -747,187 +742,15 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		}
 	}
 	
-	private void drawSurfaces(GL3 gl, boolean picking){
-		if (!RenderOption.STACKING_FAULT.isEnabled()  || !ImportStates.SKELETONIZE.isActive())
-			return;
-		
-		Skeletonizer skel = atomData.getSkeletonizer();
-		if (skel.getDislocations()==null) return;
-		
-		Shader shader = BuiltInShader.VERTEX_ARRAY_COLOR_UNIFORM.getShader();
-		shader.enable(gl);
-		int colorUniform = gl.glGetUniformLocation(shader.getProgram(), "Color");
-		
-		gl.glDisable(GL.GL_CULL_FACE);
-		for (int i=0; i<skel.getPlanarDefects().size(); i++) {
-			PlanarDefect s = skel.getPlanarDefects().get(i);
-			
-			VertexDataStorageLocal vds = new VertexDataStorageLocal(gl, s.getFaces().length, 3, 0, 0, 0, 0, 0, 0, 0);
-			int numElements = 0;
-			vds.beginFillBuffer(gl);
-			if (picking){
-				float[] color = getNextPickingColor(s);
-				gl.glUniform4f(colorUniform, color[0], color[1], color[2], color[3]);
-			}
-			else {
-				if (Configuration.getCrystalStructure().hasMultipleStackingFaultTypes()){
-					float[] c = Configuration.getCrystalStructure().getGLColor(s.getPlaneComposedOfType());
-					if (highLightObjects.contains(s))
-						gl.glUniform4f(colorUniform, c[0], c[1], c[2], 0.85f);
-					else gl.glUniform4f(colorUniform, c[0], c[1], c[2], 0.35f);
-				} else {
-					if (highLightObjects.contains(s))
-						gl.glUniform4f(colorUniform, 0.8f,0.0f,0.0f,0.35f);
-					else {
-						if (RenderOption.PRINTING_MODE.isEnabled()) gl.glUniform4f(colorUniform, 0.0f,0.0f,0.0f,0.35f);
-						else gl.glUniform4f(colorUniform, 0.5f,0.5f,0.5f,0.35f);
-					}
-				}
-			}
-			
-			for (int j = 0; j < s.getFaces().length; j+=3) {
-				if (renderInterval.isInInterval(s.getFaces()[j]) && 
-						isVectorInPBC(s.getFaces()[j].subClone(s.getFaces()[j+1])) && 
-						isVectorInPBC(s.getFaces()[j].subClone(s.getFaces()[j+2])) && 
-						isVectorInPBC(s.getFaces()[j+1].subClone(s.getFaces()[j+2]))) {
-					vds.setVertex(s.getFaces()[j].x, s.getFaces()[j].y, s.getFaces()[j].z);
-					vds.setVertex(s.getFaces()[j+1].x, s.getFaces()[j+1].y, s.getFaces()[j+1].z);
-					vds.setVertex(s.getFaces()[j+2].x, s.getFaces()[j+2].y, s.getFaces()[j+2].z);
-					numElements += 3;
-				}
-			}
-			
-			vds.endFillBuffer(gl);
-			vds.setNumElements(numElements);
-			vds.draw(gl, GL.GL_TRIANGLES);
-			vds.dispose(gl);
-		}
-		gl.glEnable(GL.GL_CULL_FACE);
-	}
-		
-	private void drawCores(GL3 gl, boolean picking) {
-		if (!RenderOption.DISLOCATIONS.isEnabled() || !ImportStates.SKELETONIZE.isActive()) return;
-		
-		Skeletonizer skel = atomData.getSkeletonizer();
-		if (skel.getDislocations() == null) return;
-		
-		//Check for object to highlight
-		if (!picking){
-			int numEle = Configuration.getCrystalStructure().getNumberOfElements();
-			ArrayList<RenderableObject<Atom>> objectsToRender = new ArrayList<RenderableObject<Atom>>();
-			ArrayList<Atom> atomsToRender = new ArrayList<Atom>();
-			
-			float[] sphereSize = Configuration.getCrystalStructure().getSphereSizeScalings();
-			float maxSphereSize = 0f;
-			for (int i=0; i<sphereSize.length; i++){
-				sphereSize[i] *= defaultSphereSize;
-				if (maxSphereSize < sphereSize[i]) maxSphereSize = sphereSize[i];
-			}
-			
-			for (int i=0; i<skel.getDislocations().size(); i++) {
-				Dislocation dis = skel.getDislocations().get(i);
-				if (highLightObjects.contains(dis)) {
-					for (int  j=0; j<dis.getLine().length; j++) {
-						SkeletonNode sn = dis.getLine()[j];
-						for (Atom a : sn.getMappedAtoms()){
-							float[] color;
-							if (j==0) color = new float[]{0f, 1f, 0f, 1f};
-							else if (j==dis.getLine().length-1) color = new float[]{0f, 0f, 1f, 1f};
-							else color = new float[]{1f, 0f, 0f, 1f};
-							objectsToRender.add(new RenderableObject<Atom>(a, color, sphereSize[a.getElement()%numEle]));
-							atomsToRender.add(a);
-						}
-					}
-				}
-			}
-					
-			SphereRenderData<?> ard = new SphereRenderData<Atom>(atomsToRender, false);
-			SphereRenderData<?>.Cell c = ard.getRenderableCells().get(0);
-			for(int i=0; i<objectsToRender.size(); i++){
-				c.getColorArray()[3*i+0] = objectsToRender.get(i).color[0];
-				c.getColorArray()[3*i+1] = objectsToRender.get(i).color[1];
-				c.getColorArray()[3*i+2] = objectsToRender.get(i).color[2];
-				c.getSizeArray()[i] = objectsToRender.get(i).size;
-				c.getVisibiltyArray()[i] = true;
-			}
-			ard.reinitUpdatedCells();
-			drawSpheres(gl, ard, false);
-			gl.glDisable(GL.GL_BLEND);
-		}
-		
-		//Render the dislocation core elements
-		Shader s = BuiltInShader.UNIFORM_COLOR_DEFERRED.getShader();
-		int colorUniform = gl.glGetUniformLocation(s.getProgram(), "Color");
-		s.enable(gl);
-		
-		for (int i=0; i<skel.getDislocations().size(); i++) {
-			Dislocation dis = skel.getDislocations().get(i);
-			//Disable some dislocations if needed
-			if (dis.getBurgersVectorInfo().getBurgersVector().getType() == BurgersVectorType.DONT_SHOW) continue;
-			if (picking){
-				float[] col = getNextPickingColor(dis);
-				gl.glUniform4f(colorUniform, col[0], col[1], col[2], col[3]);
-			}
-			else if (dis.getBurgersVectorInfo()!=null) {
-				float[] col = dis.getBurgersVectorInfo().getBurgersVector().getType().getColor();
-				gl.glUniform4f(colorUniform, col[0], col[1], col[2], 1f);
-			} else gl.glUniform4f(colorUniform, 0.5f, 0.5f, 0.5f, 1f);
-			
-			ArrayList<Vec3> path = new ArrayList<Vec3>();
-			
-			for (int j = 0; j < dis.getLine().length; j++) {
-				SkeletonNode c = dis.getLine()[j];
-				if (renderInterval.isInInterval(c)) {
-					path.add(c);
-				} else {
-					if (path.size()>1) 
-						TubeRenderer.drawTube(gl, path, CORE_THICKNESS);
-					path.clear();
-				}
-				//Check PBC and restart tube if necessary
-				if (j<dis.getLine().length-1){
-					SkeletonNode c1 = dis.getLine()[j+1];
-					if (!isVectorInPBC(c.subClone(c1))){
-						if (path.size()>1)
-							TubeRenderer.drawTube(gl, path, CORE_THICKNESS);
-						path.clear();
-					}
-				}
-			}
-			if (path.size()>1)
-				TubeRenderer.drawTube(gl, path, CORE_THICKNESS);
-		}
-		
-		//Draw Burgers vectors on cores
-		if (!picking && RenderOption.BURGERS_VECTORS_ON_CORES.isEnabled() && atomData.isRbvAvailable()){
-			for (int i = 0; i < skel.getDislocations().size(); i++) {
-				Dislocation dis = skel.getDislocations().get(i);
-				
-				Vec3 f;
-				float[] col;
-				if (dis.getBurgersVectorInfo().getBurgersVector().isFullyDefined()) {
-					col = new float[]{ 0f, 1f, 0f, 1f};
-					if (!ImportStates.POLY_MATERIAL.isActive() || dis.getGrain() == null)
-						f = dis.getBurgersVectorInfo().getBurgersVector().getInXYZ(Configuration.getCrystalRotationTools());
-					else
-						f = dis.getBurgersVectorInfo().getBurgersVector().getInXYZ(dis.getGrain().getCystalRotationTools());
-				} else {
-					col = new float[]{1f, 0f, 0f, 1f};
-					f = dis.getBurgersVectorInfo().getAverageResultantBurgersVector();
-				}
 
-				f.multiply(CORE_THICKNESS);
-				SkeletonNode c = dis.getLine()[dis.getLine().length / 2]; // node "in the middle"
-				if (renderInterval.isInInterval(c))
-					ArrowRenderer.renderArrow(gl, c, f, 0.4f, col, true);
-			}
-		}
+	public void drawSpheres(GL3 gl, ObjectRenderData<?> ard, boolean picking){
+		//Forward the call to a highly specialized routine
+		sphereRenderer.drawSpheres(gl, ard, picking);
 	}
 	
 	private void drawAtoms(GL3 gl, boolean picking){
-		final int numEle = Configuration.getCrystalStructure().getNumberOfElements();
-		
-		final CrystalStructure cs = Configuration.getCrystalStructure();
+		final CrystalStructure cs = atomData.getCrystalStructure();
+		final int numEle = cs.getNumberOfElements();
 
 		final float[] sphereSize = cs.getSphereSizeScalings();
 		float maxSphereSize = 0f;
@@ -937,28 +760,40 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		}
 			
 		if (!renderingAtomsAsRBV || !atomData.isRbvAvailable()){
-			if (atomRenderType == AtomRenderType.DATA){
-				DataColumnInfo dataInfo = Configuration.getSelectedColumn();
+			DataColumnInfo dataInfo = null;
+			
+			if (atomRenderType == AtomRenderType.DATA || atomRenderType == AtomRenderType.VECTOR_DATA){
+				DataColumnInfo dataInfoColoring = null;
 				
-				final float min = dataInfo.getLowerLimit();
-				final float max = dataInfo.getUpperLimit();
+				if (atomRenderType == AtomRenderType.DATA){
+					dataInfo = RenderingConfiguration.getSelectedColumn();
+					if (dataInfo == null) return;
+					dataInfoColoring = dataInfo;
+				} else if (atomRenderType == AtomRenderType.VECTOR_DATA){
+					dataInfo = RenderingConfiguration.getSelectedVectorColumn();
+					if (dataInfo == null) return;
+					dataInfoColoring = dataInfo.getVectorComponents()[3];
+				}
+				
+				final float min = dataInfoColoring.getLowerLimit();
+				final float max = dataInfoColoring.getUpperLimit();
 				
 				//Set custom color scheme of the data value if present
 				ColorBarScheme scheme = ColorTable.getColorBarScheme();
 				boolean swapped = ColorTable.isColorBarSwapped();
-				if (dataInfo.getScheme()!=null){
-					ColorTable.setColorBarScheme(dataInfo.getScheme());
+				if (dataInfoColoring.getScheme()!=null){
+					ColorTable.setColorBarScheme(dataInfoColoring.getScheme());
 					ColorTable.setColorBarSwapped(false);
 				}
 				
-				if (dataInfo.getScheme()!=null){
+				if (dataInfoColoring.getScheme()!=null){
 					ColorTable.setColorBarScheme(scheme);
 					ColorTable.setColorBarSwapped(swapped);
 				} else if (RenderOption.LEGEND.isEnabled()){
 					drawLegendThisFrame(
-							Float.toString(min)+" "+dataInfo.getUnit(), 
-							Float.toString((max+min)*0.5f)+" "+dataInfo.getUnit(),
-							Float.toString(max)+" "+dataInfo.getUnit()
+							Float.toString(min)+" "+dataInfoColoring.getUnit(), 
+							Float.toString((max+min)*0.5f)+" "+dataInfoColoring.getUnit(),
+							Float.toString(max)+" "+dataInfoColoring.getUnit()
 							);
 				}
 			}
@@ -977,8 +812,14 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 				//Test if cutting planes are defined for filtering
 				if (!renderInterval.isNoLimiting()) atomFilterSet.addFilter(renderInterval);
 				//Test if data needs to be filtered
-				if (Configuration.isFilterRange() && Configuration.getSizeDataColumns() != 0)
+				if ((RenderingConfiguration.isFilterMin() || RenderingConfiguration.isFilterMax()) 
+						&& !atomData.getDataColumnInfos().isEmpty()
+						&& atomRenderType != AtomRenderType.VECTOR_DATA) 
 					atomFilterSet.addFilter(dataAtomFilter);
+				if ((RenderingConfiguration.isFilterMin() || RenderingConfiguration.isFilterMax())
+						&& atomRenderType == AtomRenderType.VECTOR_DATA) 
+					atomFilterSet.addFilter(vectorDataAtomFilter);
+				
 				
 				final ColoringFunction colFunc;
 				switch (atomRenderType){
@@ -986,6 +827,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 					case ELEMENTS: colFunc = new ElementColoringAndFilter(); break;
 					case GRAINS: colFunc = new GrainColoringAndFilter(); break;
 					case DATA: colFunc = dataAtomFilter; break;
+					case VECTOR_DATA: colFunc = vectorDataAtomFilter; break;
 					default: colFunc = null;
 				}
 				colFunc.update();
@@ -1000,7 +842,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 							final int end = (int)(((long)renderData.getRenderableCells().size() * (j+1))/ThreadPool.availProcessors());
 							
 							for (int i = start; i < end; i++) {
-								SphereRenderData<Atom>.Cell cell = renderData.getRenderableCells().get(i);
+								ObjectRenderData<Atom>.Cell cell = renderData.getRenderableCells().get(i);
 								for (int j=0; j<cell.getNumObjects();j++){
 									Atom c = cell.getObjects().get(j);
 									if (atomFilterSet.accept(c)) {
@@ -1025,8 +867,16 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 				renderData.reinitUpdatedCells();
 			}
 			
-			//Draw the spheres using the pre-computed render cells 
-			drawSpheres(gl, renderData, picking);
+			//Draw the spheres using the pre-computed render cells
+			if (atomRenderType == AtomRenderType.VECTOR_DATA){
+				int v1 = atomData.getIndexForCustomColumn(dataInfo.getVectorComponents()[0]);
+				int v2 = atomData.getIndexForCustomColumn(dataInfo.getVectorComponents()[1]);
+				int v3 = atomData.getIndexForCustomColumn(dataInfo.getVectorComponents()[2]);
+				arrowRenderer.drawVectors(gl, renderData, picking, v1, v2, v3, 
+						RenderingConfiguration.getVectorDataScaling(),
+						RenderingConfiguration.getVectorDataThickness(), 
+						RenderingConfiguration.isNormalizedVectorData());
+			} else sphereRenderer.drawSpheres(gl, renderData, picking);
 		} else {
 			gl.glDisable(GL.GL_BLEND);
 			float lsVectorLength = cs.getLatticeConstant()/3f;
@@ -1055,7 +905,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	
 	
 	private void drawGrain(GL3 gl, boolean picking){
-		if (!RenderOption.GRAINS.isEnabled() || !ImportStates.POLY_MATERIAL.isActive()) return;
+		if (!RenderOption.GRAINS.isEnabled() || !atomData.isPolyCrystalline()) return;
 		Shader s = BuiltInShader.ADS_UNIFORM_COLOR.getShader();
 		s.enable(gl);
 		int colorUniform = gl.glGetUniformLocation(s.getProgram(), "Color");
@@ -1106,7 +956,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		BuiltInShader.NO_LIGHTING.getShader().enable(gl);
 		updateModelViewInShader(gl, BuiltInShader.NO_LIGHTING.getShader(), mvm, pm);
 		
-		Vec3[] a = Configuration.getCrystalRotationTools().getThompsonTetraeder();
+		Vec3[] a = atomData.getCrystalRotation().getThompsonTetraeder();
 		float[] alpha = a[1].addClone(a[2]).add(a[3]).multiply(0.333f).asArray();
 		float[] beta  = a[0].addClone(a[2]).add(a[3]).multiply(0.333f).asArray();
 		float[] gamma = a[0].addClone(a[1]).add(a[3]).multiply(0.333f).asArray();
@@ -1192,9 +1042,9 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		
 		//Labels
 		for (int i=0; i<3; i++){
-			String s = "["+(int)Configuration.getCrystalOrientation()[i].x+" "
-				+(int)Configuration.getCrystalOrientation()[i].y+" "
-				+(int)Configuration.getCrystalOrientation()[i].z +"]";
+			String s = "["+(int)atomData.getCrystalRotation().getCrystalOrientation()[i].x+" "
+				+(int)atomData.getCrystalRotation().getCrystalOrientation()[i].y+" "
+				+(int)atomData.getCrystalRotation().getCrystalOrientation()[i].z +"]";
 			if (i==0) s = "x="+s;
 			if (i==1) s = "y="+s;
 			if (i==2) s = "z="+s;
@@ -1227,7 +1077,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		gl.glDisable(GL.GL_DEPTH_TEST);
 		
 		GLMatrix mvm = new GLMatrix();
-		GLMatrix pm = getProjectionFlatMatrix();
+		GLMatrix pm = setupProjectionFlatMatrix();
 		updateModelViewInShader(gl, BuiltInShader.NO_LIGHTING.getShader(), mvm, pm);
 		
 		float[][] scale = ColorTable.getColorBarScheme().getColorBar();
@@ -1243,7 +1093,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
     		float h = height*(0.015f + 0.24f*(i/(float)(scale.length-1)));
     		vds.setVertex(width*0.005f,                h, 0f); 
     		vds.setVertex(width*0.005f + height*0.06f, h, 0f);
-    		
     	}
         vds.endFillBuffer(gl);
         vds.draw(gl, GL.GL_TRIANGLE_STRIP);
@@ -1265,7 +1114,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	private void drawLengthScale(GL3 gl){
 		if (!RenderOption.LENGTH_SCALE.isEnabled()) return;
 		if (RenderOption.STEREO.isEnabled() || RenderOption.PERSPECTIVE.isEnabled()) return;
-		if (Configuration.getCurrentAtomData() == null) return;
+		if (atomData == null) return;
 		
 		float size = 50;
 		float unitLengthInPixel = estimateUnitLengthInPixels();
@@ -1280,7 +1129,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		
 		size *= (int)Math.pow(10, power);
 		
-		String sizeString = Float.toString(size);
+		String sizeString = String.format("%.1f",size);
 		int blocks = 4;
 		
 		int xshift = width/10;
@@ -1289,7 +1138,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		gl.glDisable(GL.GL_DEPTH_TEST);
 		
 		GLMatrix mvm = new GLMatrix();
-		GLMatrix pm = getProjectionFlatMatrix();
+		GLMatrix pm = setupProjectionFlatMatrix();
 		updateModelViewInShader(gl, BuiltInShader.NO_LIGHTING.getShader(), mvm, pm);
 		
 		BuiltInShader.NO_LIGHTING.getShader().enable(gl);
@@ -1298,7 +1147,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		float h_scale = (height/20f)/10f;
 		
 		float textscale = 0.1f*h_scale;
-		int border = 2;
+		float border = 0.5f*h_scale;
 		float textHeigh = textscale*textRenderer.getStringHeigh();
 		float textWidth = textRenderer.getStringWidth(sizeString)*textscale;
 		float minSize = Math.max(textWidth+5, w*blocks);
@@ -1306,10 +1155,10 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		VertexDataStorageLocal vds = new VertexDataStorageLocal(gl, 4, 2, 0, 0, 4, 0, 0, 0, 0);
 		vds.beginFillBuffer(gl);
 		
-		vds.setColor(1f, 1f, 1f, 1f); vds.setVertex(xshift-10-border, yshift-textHeigh-border);
-		vds.setColor(1f, 1f, 1f, 1f); vds.setVertex(xshift+minSize+10+border, yshift-textHeigh-border);
-		vds.setColor(1f, 1f, 1f, 1f); vds.setVertex(xshift-10-border, yshift+10*h_scale+border);
-		vds.setColor(1f, 1f, 1f, 1f); vds.setVertex(xshift+minSize+10+border, yshift+10*h_scale+border);
+		vds.setColor(0f, 0f, 0f, 1f); vds.setVertex(xshift-10-border, yshift-textHeigh-border);
+		vds.setColor(0f, 0f, 0f, 1f); vds.setVertex(xshift+minSize+10+border, yshift-textHeigh-border);
+		vds.setColor(0f, 0f, 0f, 1f); vds.setVertex(xshift-10-border, yshift+10*h_scale+border);
+		vds.setColor(0f, 0f, 0f, 1f); vds.setVertex(xshift+minSize+10+border, yshift+10*h_scale+border);
 			
 		vds.endFillBuffer(gl);
 		vds.draw(gl, GL.GL_TRIANGLE_STRIP);
@@ -1411,7 +1260,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			Point newDragPosition = e.getPoint();
 			if ((e.getModifiersEx() & InputEvent.ALT_DOWN_MASK) == InputEvent.ALT_DOWN_MASK){
 				zoom *= 1 + (newDragPosition.y - startDragPosition.y) / 50f;
-				if (zoom>50f) zoom = 50f;
+				if (zoom>400f) zoom = 400f;
 				if (zoom<0.05f) zoom = 0.05f;
 			}
 			else if ((e.getModifiersEx() & (InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK)) == 
@@ -1466,32 +1315,54 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	// region MouseWheelListener
 	public void mouseWheelMoved(MouseWheelEvent arg0) {
 		zoom *= 1 + arg0.getWheelRotation() / 20f;
-		if (zoom>200f) zoom = 200f;
+		if (zoom>400f) zoom = 400f;
 		if (zoom<0.05f) zoom = 0.05f;
 		this.reDraw();
 	}
 
 	// endregion MouseWheelListener
 	
-	public void setAtomData(AtomData ada, boolean newSet){
-		this.atomData = ada;
-		if (ada == null) {
+	@Override
+	public void atomDataChanged(AtomDataChangedEvent e) {
+		setAtomData(e.getNewAtomData(), e.isResetGUI());
+	}
+	
+	private void setAtomData(AtomData atomData, boolean reinit){
+		this.atomData = atomData;
+		if (atomData == null) {
 			renderData = null;
 			return;
 		}
 		
-		this.halfbounds = ada.getBox().getHeight().multiplyClone(0.5f);
-		if (newSet){
-			ignoreTypes = new boolean[Configuration.getCrystalStructure().getNumberOfTypes()];
-			ignoreElement = new boolean[Configuration.getNumElements()];
-			setSphereSize(Configuration.getCrystalStructure().getDistanceToNearestNeighbor()*0.55f);
-			if (!ImportStates.POLY_MATERIAL.isActive()) RenderOption.GRAINS.enabled = false;
-			if (!ImportStates.SKELETONIZE.isActive()) RenderOption.DISLOCATIONS.enabled = false;
-			if (!ImportStates.SKELETONIZE.isActive()) RenderOption.STACKING_FAULT.enabled = false;
+		this.halfbounds = atomData.getBox().getHeight().multiplyClone(0.5f);
+		
+		//TODO switching between ortho & non-ortho
+		if (this.renderInterval==null || reinit)
+			this.renderInterval = new RenderRange(atomData.getBox().getHeight());
+		else {
+			renderInterval.setGlobalLimit(3, this.atomData.getBox().getHeight().x);
+			renderInterval.setGlobalLimit(4, this.atomData.getBox().getHeight().y);
+			renderInterval.setGlobalLimit(5, this.atomData.getBox().getHeight().z);
+			if (reinit || renderInterval.isNoLimiting()) renderInterval.reset();		
+		}
+		renderData = new ObjectRenderData<Atom>(atomData.getAtoms(), true, atomData.getBox());
+		this.updateAtoms();
+		
+		if (atomData.getNumberOfElements() > ignoreElement.length){
+			boolean[] newIgnore = new boolean[atomData.getNumberOfElements()];
+			for (int i=0; i<ignoreElement.length;i++) newIgnore[i] = ignoreElement[i];
+			ignoreElement = newIgnore;
+		}
+		
+		if (reinit){
+			ignoreTypes = new boolean[atomData.getCrystalStructure().getNumberOfTypes()];
+			ignoreElement = new boolean[atomData.getNumberOfElements()];
+			setSphereSize(atomData.getCrystalStructure().getDistanceToNearestNeighbor()*0.55f);
+			if (!atomData.isPolyCrystalline()) RenderOption.GRAINS.enabled = false;
 			
 			//Find global maximum boundaries
 			globalMaxBounds = new Vec3();
-			AtomData tmp = ada;
+			AtomData tmp = atomData;
 			//Iterate over the whole set
 			while (tmp.getPrevious()!=null) tmp = tmp.getPrevious();
 			do {
@@ -1501,7 +1372,9 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 				if (bounds.z>globalMaxBounds.z) globalMaxBounds.z = bounds.z;
 				tmp = tmp.getNext();
 			} while (tmp != null);
-			
+		}
+		
+		if (atomData.isPolyCrystalline()){
 			ignoreGrain.clear();
 			if (Configuration.getGrainIndices().size()!=0){
 				for (int g : Configuration.getGrainIndices()){
@@ -1510,21 +1383,8 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 				ignoreGrain.put(Atom.IGNORED_GRAIN, false);
 				ignoreGrain.put(Atom.DEFAULT_GRAIN, false);
 			}
-			
 			createGrainColorTable();
 		}
-		
-		//TODO switching between ortho & non-ortho
-		if (this.renderInterval==null || newSet)
-			this.renderInterval = new RenderRange(ada.getBox().getHeight());
-		else {
-			renderInterval.setGlobalLimit(3, this.atomData.getBox().getHeight().x);
-			renderInterval.setGlobalLimit(4, this.atomData.getBox().getHeight().y);
-			renderInterval.setGlobalLimit(5, this.atomData.getBox().getHeight().z);
-			if (newSet || renderInterval.isNoLimiting()) renderInterval.reset();		
-		}
-		renderData = new SphereRenderData<Atom>(atomData.getAtoms(), true);
-		this.updateAtoms();
 	}
 
 	private void createGrainColorTable() {
@@ -1596,7 +1456,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	}
 	
 	public void setTypeIgnored(int i, boolean ignore){
-		if (i>Configuration.getCrystalStructure().getNumberOfTypes()) return;
+		if (i>atomData.getCrystalStructure().getNumberOfTypes()) return;
 		ignoreTypes[i] = ignore;
 	}
 	
@@ -1613,6 +1473,22 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		zoom = 1f;
 		coordinateCenterOffset.setTo(0f, 0f, 0f);
 		this.reDraw();
+	}
+	
+	public GLMatrix getModelViewMatrix() {
+		return modelViewMatrix;
+	}
+	
+	public GLMatrix getProjectionMatrix() {
+		return projectionMatrix;
+	}
+	
+	public GLMatrix getRotationMatrix() {
+		return rotMatrix;
+	}
+	
+	public ArrayList<Object> getHighLightObjects() {
+		return highLightObjects;
 	}
 	
 	/**
@@ -1647,7 +1523,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		this.rotMatrix.rotate(rotY, 0.0f, 1.0f, 0.0f);
 		this.rotMatrix.rotate(rotZ, 0.0f, 0.0f, 1.0f);
 		this.moveX = 0f; this.moveY = 0;
-		
 		this.reDraw();
 	}
 	
@@ -1675,6 +1550,10 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		m[20] = coordinateCenterOffset.y;
 		m[21] = coordinateCenterOffset.z;
 		return m;
+	}
+	
+	public Filter<Atom> getCurrentAtomFilter(){
+		return atomFilterSet;
 	}
 	
 	/**
@@ -1733,7 +1612,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			if (num == 0x000000) continue; //Pure black > Background
 			
 			Pickable picked = pickList.get(num-1);
-			JLogPanel.getJLogPanel().addLog(picked.printMessage(e));
+			JLogPanel.getJLogPanel().addLog(picked.printMessage(e, atomData));
 			
 			if (picked.isHighlightable()){
 				if (!cleared) {
@@ -1767,12 +1646,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			this.reDraw();
 		}
 	}
-	
-    private boolean isVectorInPBC(Vec3 v){
-		return (!(Configuration.getPbc()[0] && Math.abs(v.x) > halfbounds.x)
-				&& !(Configuration.getPbc()[1] && Math.abs(v.y) > halfbounds.y)
-				&& !(Configuration.getPbc()[2] && Math.abs(v.z) > halfbounds.z));
-	}
     
     //region export methods
 	public void makeScreenshot(String filename, String type, boolean sequence, int w, int h){
@@ -1791,6 +1664,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			FrameBufferObject fboBackgroundOld = fboBackground;
 			FrameBufferObject deferredFBOOld = fboDeferredBuffer;
 			
+			gl.glViewport(0, 0, w, h);
 			fboDeferredBuffer= new FrameBufferObject(w, h, gl, true);
 			fboLeft = new FrameBufferObject(w, h, gl);
 			fboRight = new FrameBufferObject(w, h, gl);
@@ -1800,7 +1674,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			
 			if (!sequence) {
 				renderSceneIntoFBOs(gl, RenderOption.STEREO.isEnabled());
-				renderFinalScene(gl, screenshotFBO);
+				composeCompleteScene(gl, screenshotFBO);
 				
 				BufferedImage bi = screenshotFBO.textureToBufferedImage(w, h, gl);
 				ImageIO.write(bi, type, new java.io.File(filename));
@@ -1812,22 +1686,18 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 					while (atomData.getPrevious()!=null)
 						this.atomData = atomData.getPrevious();
 					
-					this.setAtomData(this.atomData, false);
-					Configuration.setCurrentAtomData(this.atomData);
-					
 					do {
+						this.setAtomData(atomData, false);
 						renderSceneIntoFBOs(gl, RenderOption.STEREO.isEnabled());
-						renderFinalScene(gl, screenshotFBO);
+						composeCompleteScene(gl, screenshotFBO);
 
 						BufferedImage bi = screenshotFBO.textureToBufferedImage(w, h, gl);
 						ImageIO.write(bi, type, new java.io.File(filename+atomData.getName()+"."+type) );
 						
-						this.setAtomData(this.atomData.getNext(), false);
-						Configuration.setCurrentAtomData(this.atomData);
+						this.atomData = atomData.getNext();
 					} while (this.atomData != null);
 					
 					this.setAtomData(currentAtomData, false);
-					Configuration.setCurrentAtomData(currentAtomData);
 				}
 			}
 			//restore old size and FBOs
@@ -1845,6 +1715,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		} finally {
 			this.width = oldwidth;
 			this.height = oldheight;
+			gl.glViewport(0, 0, this.width, this.height);
 			this.makeFullScreenQuad(gl);
 		}
 		this.reDraw();
@@ -1852,97 +1723,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	
 	//endregion export methods
 	
-	/**
-	 * Creates oriented billboards.
-	 * Depending on the visible size of atoms on screen, the detail level of billboards is adjusted,
-	 * ranging from a simple flat quad, to close approximations of a hemisphere.
-	 * This way, atoms do visibly correctly overlap each other on screen
-	 * @param gl
-	 */
-	private void createSphereRenderData(GL3 gl){
-		int[] t;
-		float[] v = null;
-		
-		float maxPixelSize = estimatePixelSizeOfAtom();
-		
-		float[] normal = new float[]{0.0f,0.0f,  -1f, 1f,   1f, -1f,  1f, 1f,  -1f, -1f};
-		float[] v_orig = new float[]{0f,0f,1f, -1f,1f,0f,  1f,-1f,0f, 1f,1f,0f, -1f,-1f,0f};
-		if (Configuration.Options.PERFECT_SPHERES.isEnabled())
-			v_orig = new float[]{0f,0f,0f, -1f,1f,0f,  1f,-1f,0f, 1f,1f,0f, -1f,-1f,0f};
-		
-		//A simple flat quad
-		t = new int[]{4,2,1,3};
-		sphereVBOPrimitive = GL.GL_TRIANGLE_STRIP;
-		
-		if (maxPixelSize>10 && !Configuration.Options.PERFECT_SPHERES.isEnabled()){
-			//upgrade to a pyramid of 4 triangles
-			t = new int[]{0,1,4,2,3,1};
-			sphereVBOPrimitive = GL.GL_TRIANGLE_FAN;
-			
-			if (maxPixelSize>40){ 
-				//Tesselate two or three times for improved rendering
-				float s = (float)(1./Math.sqrt(2.))*1f;
-				v_orig = new float[]{0f,0f,1f, -s,s,0f,  s,-s,0f, s,s,0f, -s,-s,0f};
-				t = new int[]{0,1,4, 0,4,2, 0,2,3, 0,3,1};
-				
-				Tupel<int[],float[]> data;
-				int iter = maxPixelSize > 200 ? 3 : 2;
-				normal = new float[v_orig.length/3*2];
-				
-				for (int j=0; j<iter;j++){
-					data = SphereGenerator.tesselate(t, v_orig);
-					t = data.o1;
-					v_orig=data.o2;
-					normal = new float[v_orig.length/3*2];
-					
-					for (int i = 0; i<v_orig.length/3; i++){
-						normal[i*2]   = v_orig[i*3];
-						normal[i*2+1] = v_orig[i*3+1];
-						float a = 1f-(v_orig[i*3]*v_orig[i*3] + v_orig[i*3+1]*v_orig[i*3+1]);
-						if (a<0f) a = 0.0f; 
-						v_orig[i*3+2] = (float)Math.sqrt(a);
-					}
-				}
-				
-				sphereVBOPrimitive = GL.GL_TRIANGLES;
-			}
-		}
-		
-		GLMatrix rotInverse = rotMatrix.clone();
-		rotInverse.inverse();
-		float[] tmp = new float[16];
-		rotInverse.getMatrix().get(tmp, 0, 16);
-		
-		v = new float[v_orig.length];
-		for (int i = 0; i<v.length; i+=3){
-			v[i+0] = v_orig[i] * tmp[0] + v_orig[i+1] * tmp[4] + v_orig[i+2] * tmp[8]; 
-			v[i+1] = v_orig[i] * tmp[1] + v_orig[i+1] * tmp[5] + v_orig[i+2] * tmp[9];
-			v[i+2] = v_orig[i] * tmp[2] + v_orig[i+1] * tmp[6] + v_orig[i+2] * tmp[10];
-		}
-		
-		sphereVBOIndexCount = t.length;
-		if (sphereVboIndices != null)
-			gl.glDeleteBuffers(3, sphereVboIndices, 0);
-		else  sphereVboIndices = new int[3];
-		
-		gl.glGenBuffers(3, sphereVboIndices, 0);
-		
-		IntBuffer tb = IntBuffer.wrap(t);
-		gl.glBindBuffer(GL.GL_ARRAY_BUFFER, sphereVboIndices[0]);
-		gl.glBufferData(GL.GL_ARRAY_BUFFER, tb.capacity()*Integer.SIZE/8, tb, GL.GL_STATIC_DRAW);
-		
-		FloatBuffer vb = FloatBuffer.wrap(v);
-		gl.glBindBuffer(GL.GL_ARRAY_BUFFER, sphereVboIndices[1]);
-		gl.glBufferData(GL.GL_ARRAY_BUFFER, vb.capacity()*Float.SIZE/8, vb, GL.GL_STATIC_DRAW);
-		
-		if (normal != null){
-			FloatBuffer texb = FloatBuffer.wrap(normal);
-			gl.glBindBuffer(GL.GL_ARRAY_BUFFER, sphereVboIndices[2]);
-			gl.glBufferData(GL.GL_ARRAY_BUFFER, texb.capacity()*Float.SIZE/8, texb, GL.GL_STATIC_DRAW);
-		}
-		
-		gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
-	}
+	
 	
 	private void makeFullScreenQuad(GL3 gl){
 		if (fullScreenQuad != null)
@@ -1965,7 +1746,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	
 		//Use a gray to gray color gradient as background, otherwise use pure white
 		GLMatrix mvm = new GLMatrix();
-		GLMatrix pm = getProjectionFlatMatrix();
+		GLMatrix pm = setupProjectionFlatMatrix();
 		
 		updateModelViewInShader(gl, BuiltInShader.NO_LIGHTING.getShader(), mvm, pm);
 		BuiltInShader.NO_LIGHTING.getShader().enable(gl);
@@ -1989,24 +1770,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		fboBackground.unbind(gl);
 	}
 	
-	/**
-	 * Computes the size of the largest atom on the screen in pixel.
-	 * Using orthogonal projection, the value is exact, in perspective projection
-	 * an approximation
-	 * @return
-	 */
-	private float estimatePixelSizeOfAtom(){
-		if (atomData == null) return 1f;
-		float[] sphereSize = Configuration.getCrystalStructure().getSphereSizeScalings();
-		float maxSphereSize = 0f;
-		for (int i=0; i<sphereSize.length; i++){
-			sphereSize[i] *= defaultSphereSize;
-			if (maxSphereSize < sphereSize[i]) maxSphereSize = sphereSize[i];
-		}
-		return estimateUnitLengthInPixels()*maxSphereSize*2;
-	}
-	
-	private float estimateUnitLengthInPixels(){
+	public float estimateUnitLengthInPixels(){
 		if (atomData == null) return 1f;
 		float boxSize = atomData.getBox().getHeight().maxComponent();
 		float unitFraction = 1f/boxSize;	//Apply scaling factor as in modelview
@@ -2020,8 +1784,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			//Depending on the aspect ratio, select the correct size
 			size = Math.min(Math.abs(p1),Math.abs(p2))*unitFraction*Math.max(width, height)/2;
 		} else {
-			//Perspective projection is currently an approximation
-			//TODO Implement formula correctly
+			//Perspective projection can only be an approximation
 			float p1 = (pm[0][0]+pm[0][1]+pm[0][2]+pm[2][0]-pm[2][1]-pm[2][2]);
 			float p2 = (pm[1][0]+pm[1][2]+pm[1][2]+pm[2][0]-pm[2][1]-pm[2][2]);
 			size = Math.max(Math.abs(p1),Math.abs(p2))*unitFraction*Math.min(width, height)/2;
@@ -2042,259 +1805,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		return f;
 	}
 	
-	public void drawSpheres(GL3 gl, SphereRenderData<?> ard, boolean picking){
-		VertexDataStorage.unbindAll(gl);
-		
-		if (openGLVersion>=3.3 && ard.isSubdivided()){
-			drawSpheresInstanced(gl.getGL3(), ard, picking);
-			return;
-		}
-		
-		gl.glDisable(GL.GL_BLEND); //Transparency can cause troubles and should be avoided, disabling blending might be faster then
-		gl.glDisable(GL.GL_CULL_FACE); // The billboard is always correctly oriented, do not bother testing
-		
-		//Select the rendering shader
-		Shader shader;
-		if (Configuration.Options.PERFECT_SPHERES.isEnabled())
-			shader = BuiltInShader.BILLBOARD_DEFERRED_PERFECT.getShader();
-		else shader = BuiltInShader.BILLBOARD_DEFERRED.getShader();
-		
-		//Set all uniforms, depending on the active shader, some may not be used
-		shader.enable(gl);
-		//Pass transpose (=inverse) of rotation matrix to rotate billboard normals
-		gl.glUniformMatrix3fv(gl.glGetUniformLocation(shader.getProgram(), "inv_rot"), 1, true, rotMatrix.getUpper3x3Matrix());
-		
-
-		gl.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, sphereVboIndices[0]);
-		gl.glBindBuffer(GL.GL_ARRAY_BUFFER, sphereVboIndices[1]);
-		gl.glVertexAttribPointer(Shader.ATTRIB_VERTEX, 3, GL.GL_FLOAT, false, 0, 0);
-
-		gl.glBindBuffer(GL.GL_ARRAY_BUFFER, sphereVboIndices[2]);
-		gl.glVertexAttribPointer(Shader.ATTRIB_TEX0, 2, GL.GL_FLOAT, false, 0, 0);
-		
-		if (!picking){
-			if (Configuration.Options.NO_SHADING.isEnabled())
-				gl.glUniform1i(gl.glGetUniformLocation(shader.getProgram(), "picking"), 1);
-			else gl.glUniform1i(gl.glGetUniformLocation(shader.getProgram(), "picking"), 0);
-		}
-
-		int sphereColorUniform = gl.glGetUniformLocation(shader.getProgram(), "Color");
-		int sphereTranslateUniform = gl.glGetUniformLocation(shader.getProgram(), "Move");
-
-		for (int i=0; i<ard.getRenderableCells().size(); ++i){
-			SphereRenderData<? extends Pickable>.Cell c = ard.getRenderableCells().get(i);
-			//TODO remove this line and the upper extend in case of Java7 or higher
-			SphereRenderData<? extends Vec3>.Cell c2 = ard.getRenderableCells().get(i);
-			if (c.getNumVisibleObjects() == 0) continue;
-			float[] colors = c.getColorArray();
-			float[] sizes = c.getSizeArray();
-			List<? extends Vec3> objects = c2.getObjects();
-			boolean[] visible = c.getVisibiltyArray();
-			
-			for (int j=0; j<c.getNumObjects(); j++){
-				if (visible[j]){
-					Vec3 a = objects.get(j);
-					 
-					if (picking){
-						float[] col = getNextPickingColor(c.getObjects().get(j));
-						gl.glUniform4f(sphereColorUniform, col[0], col[1], col[2], 1f);
-					} else {
-						gl.glUniform4f(sphereColorUniform, colors[3*j], colors[3*j+1], colors[3*j+2], 1f);
-					}
-					
-					gl.glUniform4f(sphereTranslateUniform, a.x, a.y, a.z, sizes[j]);
-	
-					gl.glDrawElements(sphereVBOPrimitive, sphereVBOIndexCount, GL.GL_UNSIGNED_INT, 0);
-				}
-			}
-		}
-
-		//Disable vbos and switch active shader
-		gl.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, 0);
-		gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
-		Shader.disableLastUsedShader(gl);
-		
-		if (!picking) gl.glEnable(GL.GL_BLEND);
-		gl.glEnable(GL.GL_CULL_FACE);
-	}
-
-	private void drawSpheresInstanced(GL3 gl, SphereRenderData<?> ard, boolean picking){
-		gl.glDisable(GL.GL_BLEND); //Transparency can cause troubles and should be avoided, disabling blending might be faster then
-		gl.glDisable(GL.GL_CULL_FACE); // The billboard is always correctly oriented, do not bother testing
-		
-		//Select the rendering shader
-		Shader shader;
-		if (Configuration.Options.PERFECT_SPHERES.isEnabled())
-			if (BuiltInShader.BILLBOARD_INSTANCED_DEFERRED_PERFECT_GL4.getShader().isAvailable()) 
-				shader = BuiltInShader.BILLBOARD_INSTANCED_DEFERRED_PERFECT_GL4.getShader();
-			else shader = BuiltInShader.BILLBOARD_INSTANCED_DEFERRED_PERFECT.getShader();
-		else shader = BuiltInShader.BILLBOARD_INSTANCED_DEFERRED.getShader();
-
-		// Init the shader for drawing test bounding boxes
-		Shader visTestShader = BuiltInShader.VERTEX_ARRAY_COLOR_UNIFORM.getShader();
-		visTestShader.enable(gl);
-		int visMvmpUniform = gl.glGetUniformLocation(visTestShader.getProgram(), "mvpm");
-		GLMatrix mvmp = projectionMatrix.clone();
-		mvmp.mult(modelViewMatrix);
-		gl.glUniform4f(
-				gl.glGetUniformLocation(visTestShader.getProgram(), "Color"),1f, 0f, 0f, 1f);
-
-		shader.enable(gl);
-		gl.glBindBuffer(GL.GL_ARRAY_BUFFER, sphereVboIndices[2]);
-		gl.glVertexAttribPointer(Shader.ATTRIB_TEX0, 2, GL.GL_FLOAT, false, 0, 0);
-		gl.glVertexAttribDivisor(Shader.ATTRIB_TEX0, 0);
-		//Pass transpose (=inverse) of rotation matrix to rotate billboard normals
-		gl.glUniformMatrix3fv(gl.glGetUniformLocation(shader.getProgram(), "inv_rot"), 1, true, rotMatrix.getUpper3x3Matrix());
-		
-		if (!picking){
-			if (Configuration.Options.NO_SHADING.isEnabled())
-				gl.glUniform1i(gl.glGetUniformLocation(shader.getProgram(), "picking"), 1);
-			else gl.glUniform1i(gl.glGetUniformLocation(shader.getProgram(), "picking"), 0);
-		}
-
-		gl.glVertexAttribDivisor(Shader.ATTRIB_VERTEX, 0);
-		gl.glVertexAttribDivisor(Shader.ATTRIB_VERTEX_OFFSET, 1);
-		gl.glVertexAttribDivisor(Shader.ATTRIB_COLOR, 1);
-
-		CellRenderBuffer cbr = cellRenderRingBuffer.getCurrent();
-		ard.sortCells(modelViewMatrix);
-
-		HashMap<SphereRenderData<?>.Cell, int[]> currentActiveRenderingTest = 
-				new HashMap<SphereRenderData<?>.Cell, int[]>();
-		boolean hasRenderedCell = true;	//Set to true if spheres have been rendered and to false in occlusion test
-				
-//		int cellsDrawn = 0;
-
-		for (int j=0; j<ard.getRenderableCells().size(); j++){
-			SphereRenderData<? extends Pickable>.Cell c = ard.getRenderableCells().get(j);
-			//TODO remove this line and the upper extend in case of Java7 or higher
-			SphereRenderData<? extends Vec3>.Cell c2 = ard.getRenderableCells().get(j);
-
-			boolean renderCell = true;
-			//Test if the cell needs to be rendered 
-			if (currentActiveRenderingTest.containsKey(c)){
-				int[] result = new int[1];
-				int[] query = currentActiveRenderingTest.remove(c);
-				gl.glGetQueryObjectuiv(query[0], GL3.GL_QUERY_RESULT, result, 0);
-				if (result[0] == 0) renderCell=false;
-				gl.glDeleteQueries(1, query, 0);
-			}
-			
-			//Full renderer
-			if (renderCell){
-				if (cbr.fence != -1){
-					// Wait until last call using the buffer is finished
-					gl.glClientWaitSync(cbr.fence, GL3.GL_SYNC_FLUSH_COMMANDS_BIT, GL3.GL_TIMEOUT_IGNORED);
-					gl.glDeleteSync(cbr.fence);
-					cbr.fence = -1;
-				}
-				
-				if (c.getNumVisibleObjects()>0){
-//					cellsDrawn++;
-					//Reenable masks that have been disable in the occlusion test
-					gl.glColorMask(true, true, true, true);
-					gl.glDepthMask(true);
-					VertexDataStorage.unbindAll(gl);
-					
-					shader.enable(gl);
-					
-					gl.glBindBuffer(cbr.bufferType, cbr.buffer);
-					FloatBuffer buf = gl.glMapBufferRange(cbr.bufferType,0, cbr.bufferSize, 
-							 GL3.GL_MAP_WRITE_BIT | GL3.GL_MAP_INVALIDATE_BUFFER_BIT| GL3.GL_MAP_UNSYNCHRONIZED_BIT).asFloatBuffer();
-					
-					float[] colors = c.getColorArray();
-					float[] sizes = c.getSizeArray();
-					List<? extends Vec3> objects = c2.getObjects();
-					boolean[] visible = c.getVisibiltyArray();
-					//Fill render buffer, color values is either the given value or a picking color
-					if (picking){
-						for (int i=0; i<c.getNumObjects(); i++){
-							if (visible[i]){
-								Vec3 ra = objects.get(i);
-								float[] col = getNextPickingColor(c.getObjects().get(i));
-								buf.put(col[0]); buf.put(col[1]); buf.put(col[2]); buf.put(1f);
-								buf.put(ra.x); buf.put(ra.y); buf.put(ra.z); buf.put(sizes[i]);
-							}
-						}	
-					} else {
-						for (int i=0; i<c.getNumObjects(); i++){
-							if (visible[i]){
-								Vec3 ra = objects.get(i);
-								buf.put(colors[3*i]); buf.put(colors[3*i+1]); buf.put(colors[3*i+2]); buf.put(1f);
-								buf.put(ra.x); buf.put(ra.y); buf.put(ra.z); buf.put(sizes[i]);
-							}
-						}
-					}
-					gl.glUnmapBuffer(cbr.bufferType);
-					
-					gl.glVertexAttribPointer(Shader.ATTRIB_COLOR, 4, GL.GL_FLOAT, false, 8*Float.SIZE/8, 0);
-					gl.glVertexAttribPointer(Shader.ATTRIB_VERTEX_OFFSET, 4, GL.GL_FLOAT, false, 8*Float.SIZE/8, 4*Float.SIZE/8);
-					gl.glBindBuffer(GL.GL_ARRAY_BUFFER, sphereVboIndices[1]);
-					gl.glVertexAttribPointer(Shader.ATTRIB_VERTEX, 3, GL.GL_FLOAT, false, 0, 0);
-					gl.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, sphereVboIndices[0]);
-					//Draw spheres
-					gl.glDrawElementsInstanced(sphereVBOPrimitive, sphereVBOIndexCount, GL.GL_UNSIGNED_INT, 0, c.getNumVisibleObjects());
-					
-					cbr.fence = gl.glFenceSync(GL3.GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-					hasRenderedCell = true;
-					cbr = cellRenderRingBuffer.getNext();
-				}
-			}
-			//Occlusion test
-			if (j+SIZE_CELL_RENDER_RING<ard.getRenderableCells().size()){
-				SphereRenderData<?>.Cell futureCell = ard.getRenderableCells().get(j+SIZE_CELL_RENDER_RING);
-				if (futureCell.getNumVisibleObjects() > 0){
-					int[] query = new int[1];
-					gl.glGenQueries(1, query, 0);
-					if (hasRenderedCell){
-						gl.glColorMask(false, false, false, false);
-						gl.glDepthMask(false);
-						visTestShader.enable(gl);
-						hasRenderedCell = false;
-					}
-					
-					Vec3 trans = futureCell.getOffset();
-					Vec3 scale = futureCell.getSize();
-					GLMatrix m = mvmp.clone();
-					m.translate(trans.x, trans.y, trans.z);
-					m.scale(scale.x, scale.y, scale.z);
-	
-//					gl.glUniform4f(gl.glGetUniformLocation(visTestShader.getProgram(), "Color"), 1f,1f, 0f, 1f);
-//					gl.glColorMask(true, true, true, true);
-//					gl.glDepthMask(true);
-//					
-//					gl.glPolygonMode(GL.GL_FRONT_AND_BACK, GL3.GL_LINE);
-					gl.glUniformMatrix4fv(visMvmpUniform, 1, false, m.getMatrix());
-					gl.glBeginQuery(GL3.GL_SAMPLES_PASSED, query[0]);
-					SimpleGeometriesRenderer.drawCubeWithoutNormals(gl);	//Bounding box
-					gl.glEndQuery(GL3.GL_SAMPLES_PASSED);
-//					gl.glPolygonMode(GL.GL_FRONT_AND_BACK, GL3.GL_FILL);
-					
-					currentActiveRenderingTest.put(futureCell, query);
-				}
-			}
-		}
-
-		//System.out.println("Drawn "+cellsDrawn+" of "+ard.getRenderableCells().size());
-
-		gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
-		gl.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, 0);
-
-		gl.glVertexAttribDivisor(Shader.ATTRIB_VERTEX_OFFSET, 0);
-		gl.glVertexAttribDivisor(Shader.ATTRIB_COLOR, 0);
-		
-		VertexDataStorage.unbindAll(gl);
-		gl.glColorMask(true, true, true, true);
-		gl.glDepthMask(true);
-		
-		Shader.disableLastUsedShader(gl);
-
-		updateModelViewInShader(gl, visTestShader, modelViewMatrix, projectionMatrix);
-		if (!picking) gl.glEnable(GL.GL_BLEND);
-		gl.glEnable(GL.GL_CULL_FACE);
-	}
-	
-	private void updateModelViewInShader(GL3 gl, Shader shader, GLMatrix modelView, GLMatrix projection){
+	public void updateModelViewInShader(GL3 gl, Shader shader, GLMatrix modelView, GLMatrix projection){
 		GLMatrix pmvp = projection.clone();
 		pmvp.mult(modelView);
 		Shader.pushShader();
@@ -2307,7 +1818,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			gl.glUseProgram(s.getProgram());
 	}
 	
-	private void updateModelViewInAllShader(GL3 gl){
+	void updateModelViewInAllShader(GL3 gl){
 		for (Shader s : Shader.getAllShader()){
 			updateModelViewInShader(gl, s, modelViewMatrix, projectionMatrix);
 		}
@@ -2379,55 +1890,25 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	public void dispose(GLAutoDrawable arg0) {
 		//Delete all GL context related objects
 		GL3 gl = arg0.getGL().getGL3();
-		if (sphereVboIndices != null)
-			gl.glDeleteBuffers(3, sphereVboIndices, 0);
-		sphereVboIndices = null;
 		
-		if (cellRenderRingBuffer != null){
-			for (int i=0; i<cellRenderRingBuffer.size(); i++)
-				cellRenderRingBuffer.getNext().dispose(gl);
-		}
-		cellRenderRingBuffer = null;
+		sphereRenderer.dispose(gl);
+		sphereRenderer = null;
+		arrowRenderer.dispose(gl);
+		arrowRenderer = null;
 
 		SimpleGeometriesRenderer.dispose(gl);
-		ArrowRenderer.dispose(gl);
 		TubeRenderer.dispose(gl);
 		VertexDataStorage.unbindAll(gl);
 		Shader.dispose(gl);
 		textRenderer.dispose(gl);
 		
+        gl.glGenVertexArrays(1, new int[]{defaultVAO}, 0);
+        gl.glBindVertexArray(0);
+		
 		if (fboDeferredBuffer != null)   fboDeferredBuffer.destroy(gl);
 		if (fboLeft != null) 	   fboLeft.destroy(gl);
 		if (fboRight != null) 	   fboRight.destroy(gl);
 		if (fboBackground != null) fboBackground.destroy(gl);
-	}
-	
-	private class CellRenderBuffer{
-		int buffer;
-		long bufferSize;
-		long fence = -1;
-		int bufferType;
-		
-		void init(GL3 gl, long size, int bufferType){
-			this.bufferType = bufferType;
-			int[] buf = new int[1];
-			gl.glGenBuffers(1, buf, 0);
-	
-			gl.glBindBuffer(bufferType, buf[0]);
-			gl.glBufferData(bufferType, size, null, GL3.GL_STREAM_DRAW);
-			gl.glBindBuffer(bufferType, 0);
-	
-			this.buffer = buf[0];
-			this.bufferSize = size;
-		}
-		
-		void dispose(GL3 gl){
-			int[] buffers = new int[1];
-			buffers[0] = buffer;
-			gl.glDeleteBuffers(1, buffers, 0);
-			if (fence != -1)
-				gl.glDeleteSync(fence);
-		}
 	}
 	
 	@Override
@@ -2455,7 +1936,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		void update();
 	}
 	
-	private class TypeColoringAndFilter implements AtomFilter, ColoringFunction{
+	private class TypeColoringAndFilter implements Filter<Atom>, ColoringFunction{
 		float[][] colors = null;
 		int numEleColors;
 		
@@ -2479,14 +1960,14 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		@Override
 		public void update() {
 			Tupel<float[][], Integer> colorsAndNumElements =
-					ColorUtils.getColorShift(colorShiftForVElements, 
-							Configuration.getCrystalStructure(), colorShiftForElements);
+					ColorUtils.getColorShift(atomData.getNumberOfElements(), colorShiftForVElements, 
+							atomData.getCrystalStructure(), colorShiftForElements);
 			colors = colorsAndNumElements.o1;
 			numEleColors = colorsAndNumElements.o2;
 		}
 	}
 	
-	private class GrainColoringAndFilter implements AtomFilter, ColoringFunction{
+	private class GrainColoringAndFilter implements Filter<Atom>, ColoringFunction{
 		boolean isNeeded(){
 			for (boolean b : ignoreGrain.values())
 				if (b) return true;
@@ -2506,11 +1987,11 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		};
 	}
 	
-	private class ElementColoringAndFilter implements AtomFilter, ColoringFunction{
+	private class ElementColoringAndFilter implements Filter<Atom>, ColoringFunction{
 		float[][] colorTable = null;
 		
 		boolean isNeeded(){
-			if (Configuration.getNumElements()==1) return false;
+			if (atomData.getNumberOfElements()==1) return false;
 			for (int i=0; i<ignoreElement.length;i++)
 				if (ignoreElement[i]) return true;
 			return false;
@@ -2528,19 +2009,23 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		
 		@Override
 		public void update() {
-			colorTable = ColorTable.getColorTableForElements(Configuration.getNumElements());
+			colorTable = ColorTable.getColorTableForElements(atomData.getNumberOfElements());
 		}
 	}
 	
-	private class DataColoringAndFilter implements AtomFilter, ColoringFunction{
-		boolean filter = false;
+	private class DataColoringAndFilter implements Filter<Atom>, ColoringFunction{
+		boolean filterMin = false;
+		boolean filterMax = false;
 		boolean inversed = false;
 		float min = 0f, max = 0f;
 		int selected = 0;
 		
 		@Override
 		public boolean accept(Atom a) {
-		    return (!filter || (a.getData(selected)>=min && a.getData(selected)<=max) ^ inversed);
+			if ((filterMin && a.getData(selected)<min) ||
+					(filterMax && a.getData(selected)>max))
+					return inversed;
+				return !inversed;
 		}
 		
 		@Override
@@ -2550,13 +2035,50 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		
 		@Override
 		public void update() {
-			DataColumnInfo dataInfo = Configuration.getSelectedColumn();
-			selected = dataInfo.getColumn();
+			DataColumnInfo dataInfo = RenderingConfiguration.getSelectedColumn();
+			if (dataInfo == null) return;
+			selected = atomData.getIndexForCustomColumn(dataInfo);
+			if (selected == -1) return;
 			
 			min = dataInfo.getLowerLimit();
 			max = dataInfo.getUpperLimit();
-			filter = Configuration.isFilterRange();
-			inversed = Configuration.isFilterInversed();
+			filterMin = RenderingConfiguration.isFilterMin();
+			filterMax = RenderingConfiguration.isFilterMax();
+			inversed = RenderingConfiguration.isFilterInversed();
+		}
+	}
+	
+	private class VectorDataColoringAndFilter implements Filter<Atom>, ColoringFunction{
+		boolean filterMin = false;
+		boolean filterMax = false;
+		boolean inversed = false;
+		float min = 0f, max = 0f;
+		int selectedVectorAbs = 0;
+		
+		@Override
+		public boolean accept(Atom a) {
+			if ((filterMin && a.getData(selectedVectorAbs)<min) ||
+				(filterMax && a.getData(selectedVectorAbs)>max))
+				return inversed;
+			return !inversed;
+		}
+		
+		@Override
+		public float[] getColor(Atom c) {
+			return ColorTable.getIntensityGLColor(min, max, c.getData(selectedVectorAbs));
+		}
+		
+		@Override
+		public void update() {
+			DataColumnInfo dataInfo = RenderingConfiguration.getSelectedVectorColumn();
+			if (dataInfo == null) return;
+			selectedVectorAbs = atomData.getIndexForCustomColumn(dataInfo.getVectorComponents()[3]);
+			
+			min = dataInfo.getVectorComponents()[3].getLowerLimit();
+			max = dataInfo.getVectorComponents()[3].getUpperLimit();
+			filterMin = RenderingConfiguration.isFilterMin();
+			filterMax = RenderingConfiguration.isFilterMax();
+			inversed = RenderingConfiguration.isFilterInversed();
 		}
 	}
 }

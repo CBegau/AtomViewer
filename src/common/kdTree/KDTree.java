@@ -1,4 +1,4 @@
-package model.polygrain.kdTree;
+package common.kdTree;
 
 import common.Vec3;
 

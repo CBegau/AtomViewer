@@ -24,8 +24,7 @@ import java.util.Hashtable;
 import java.util.Map;
 
 import common.Vec3;
-
-import model.ImportStates;
+import model.ImportConfiguration.ImportStates;
 import model.io.MDFileLoader.ImportDataContainer;
 
 class PolygrainMetadata{
@@ -41,7 +40,7 @@ class PolygrainMetadata{
 	
 	static boolean processMetadataLine(String s, Map<String, Object> metaContainer,
 			LineNumberReader lnr, ImportDataContainer idc) throws IOException{
-		if (ImportStates.OVERRIDE.isActive()) return false;
+		if (!ImportStates.IMPORT_GRAINS.isActive()) return false;
 		
 		if (s.startsWith("##grain")){
 			PolygrainMetadata meta;
@@ -82,7 +81,6 @@ class PolygrainMetadata{
 			return true;
 		}
 		if (s.startsWith("##mesh")){
-			idc.meshImported = true;
 			PolygrainMetadata meta;
 			Object o = metaContainer.get("grain");
 			if (o!=null)

@@ -16,15 +16,14 @@
 // You should have received a copy of the GNU General Public License along
 // with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
 
-package model.polygrain.mesh;
+package model.mesh;
 
 import java.util.ArrayList;
 
-import model.polygrain.kdTree.*;
-import common.UniqueID;
+import model.NearestNeighborBuilder;
 import common.Vec3;
 
-public class Vertex extends Vec3 implements Comparable<Vertex>, MeshElement, UniqueID{	
+public class Vertex extends Vec3 implements Comparable<Vertex>, MeshElement{	
 	private final int id;
 	HalfEdge neighborEdge;
 	
@@ -53,6 +52,16 @@ public class Vertex extends Vec3 implements Comparable<Vertex>, MeshElement, Uni
 		return t;
 	}
 	
+	public Vec3 getCurvatureDependentLaplacianSmoother(){
+		Vec3 s = getLaplacianSmoother();
+		
+		Vec3 normal = getUnitNormalVector();
+		float sn = s.dot(normal); 
+		
+		s.sub(normal.multiply(sn));
+		return s;
+	}
+	
 	public Vec3 getLaplacianSmoother(){
 		int size = 0;
 		Vec3 s = new Vec3();
@@ -68,10 +77,6 @@ public class Vertex extends Vec3 implements Comparable<Vertex>, MeshElement, Uni
 		s.divide(size);
 		s.sub(this);
 		
-		Vec3 normal = getUnitNormalVector();
-		float sn = s.dot(normal); 
-		
-		s.sub(normal.multiply(sn));
 		return s;
 	}
 	
@@ -102,9 +107,13 @@ public class Vertex extends Vec3 implements Comparable<Vertex>, MeshElement, Uni
 		return true;
 	}
 	
-	public void shrink(KDTree<? extends Vec3> tree){
-		Vec3 p1 = tree.getNearest(this);
-		this.add(p1.subClone(this).multiply(0.4f));
+	public void shrink(NearestNeighborBuilder<? extends Vec3> nnb, float offset){
+		Vec3 dir = nnb.getVectorToNearest(this);
+		if (dir==null) return;
+		if (offset>0f)
+			dir.sub(dir.normalizeClone().multiply(offset));
+		
+		this.add(dir.multiply(0.4f));
 	}
 	
 	public HalfEdge getNeighborEdge() {

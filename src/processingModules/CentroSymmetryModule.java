@@ -18,14 +18,21 @@
 
 package processingModules;
 
+import gui.JPrimitiveVariablesPropertiesDialog;
+import gui.ProgressMonitor;
+import gui.JPrimitiveVariablesPropertiesDialog.BooleanProperty;
+import gui.JPrimitiveVariablesPropertiesDialog.FloatProperty;
+import gui.JPrimitiveVariablesPropertiesDialog.IntegerProperty;
+
 import java.util.ArrayList;
 import java.util.Vector;
 import java.util.concurrent.Callable;
 
+import javax.swing.JFrame;
+
 import model.Atom;
 import model.AtomData;
-import model.AtomFilter;
-import model.Configuration;
+import model.Filter;
 import model.DataColumnInfo;
 import model.NearestNeighborBuilder;
 import common.ThreadPool;
@@ -34,21 +41,16 @@ import common.Vec3;
 
 public class CentroSymmetryModule implements ProcessingModule {
 
-	private DataColumnInfo centroSymmetryColumn;
-	private AtomFilter filter;
-	
-	public CentroSymmetryModule(AtomFilter filter) {
-		this.filter = filter;
-	}
+	private static DataColumnInfo centroSymmetryColumn = new DataColumnInfo("Centrosymmetry" , "CSD" ,"");
+	private Filter<Atom> filter;
+	private float radius = 0f;
+	private int maxBonds = 0;
+	private boolean adaptiveCentroSymmetry = false;
+	private float scaling = 1f;
 	
 	@Override
 	public DataColumnInfo[] getDataColumnsInfo() {
-		String name = "Centrosymmetry"; 
-		String id = "CSD";
-		DataColumnInfo cci = new DataColumnInfo(name, id,"", 1f);
-		
-		this.centroSymmetryColumn = cci;
-		return new DataColumnInfo[]{cci};
+		return new DataColumnInfo[]{centroSymmetryColumn};
 	}
 	
 	@Override
@@ -57,8 +59,20 @@ public class CentroSymmetryModule implements ProcessingModule {
 	}
 	
 	@Override
+	public boolean canBeAppliedToMultipleFilesAtOnce() {
+		return true;
+	}
+	
+	@Override
 	public String getFunctionDescription() {
-		return "Computes the centrosymmetry deviation per atom";
+		return "Computes the centrosymmetry deviation (CSD) per atom, originally described in"
+				+ " Kelchner et al. \"Dislocation nucleation and defect structure during surface indentation\", "
+				+ "Phys. Rev. B (58), 1998. "
+				+ "<br>The implementation here is generalized in certain aspects: "
+				+ "The CSD value is divided by the given radius, in order to be invariant to different lattice constant. "
+				+ "Furthermore, it can compute the centrosymmetry for an arbitrary number of bonds, or a fixed number of nearest neighbors. "
+				+ "<br>The results of the original algorithm can be reproduced if the scaling factor is set equal to the cut-off radius and the"
+				+ "number of bonds is limited to 12.";
 	}
 	
 	@Override
@@ -67,30 +81,19 @@ public class CentroSymmetryModule implements ProcessingModule {
 	}
 	
 	@Override
-	public boolean isApplicable() {
+	public boolean isApplicable(AtomData atomData) {
 		return true;
 	}
 
 	@Override
-	public void process(final AtomData data) throws Exception {
-		final float averageDistance = Configuration.getCrystalStructure().getNearestNeighborSearchRadius();
-		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(averageDistance, false);
+	public ProcessingResult process(final AtomData data) throws Exception {
+		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), radius, filter==null);
 		
-		final int v = centroSymmetryColumn.getColumn();
+		final int v = data.getIndexForCustomColumn(centroSymmetryColumn);
 		
-		Configuration.currentFileLoader.getProgressMonitor().start(data.getAtoms().size());
-		
-		if (filter == null){
-			//Parallel add
-			for (int i=0; i<data.getAtoms().size(); i++){
-				nnb.add(data.getAtoms().get(i));
-			}
-		} else {
-			for (int i=0; i<data.getAtoms().size(); i++){
-				Atom a = data.getAtoms().get(i);
-				if (filter.accept(a)) nnb.add(a);
-			}
-		}
+		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
+
+		nnb.addAll(data.getAtoms(), filter);		
 		
 		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
 		for (int i=0; i<ThreadPool.availProcessors(); i++){
@@ -104,14 +107,17 @@ public class CentroSymmetryModule implements ProcessingModule {
 					
 					for (int i=start; i<end; i++){
 						if ((i-start)%1000 == 0)
-							Configuration.currentFileLoader.getProgressMonitor().addToCounter(1000);
+							ProgressMonitor.getProgressMonitor().addToCounter(1000);
 						
 						Atom a = data.getAtoms().get(i);
 						if (filter != null && !filter.accept(a)) continue;
 
 						float csd = 0f;
 						
-						ArrayList<Vec3> neigh = nnb.getNeighVec(a);
+						ArrayList<Vec3> neigh;
+						if (adaptiveCentroSymmetry)
+							neigh = nnb.getNeighVec(a, maxBonds);
+						else neigh = nnb.getNeighVec(a);
 						
 						boolean[] paired = new boolean[neigh.size()];
 						for (int j=0; j<neigh.size(); j++){
@@ -119,7 +125,7 @@ public class CentroSymmetryModule implements ProcessingModule {
 							if (!paired[j]){
 								Vec3 inv = neigh.get(j).multiplyClone(-1f);
 								int minIndex = j;
-								float minDistance = 4*averageDistance*averageDistance;
+								float minDistance = 4*radius*radius;
 								for (int k=j+1; k<neigh.size(); k++){
 									float d = inv.getSqrDistTo(neigh.get(k));
 									if (d<minDistance) {
@@ -133,17 +139,46 @@ public class CentroSymmetryModule implements ProcessingModule {
 							}
 						}
 						
-						csd /= averageDistance;
+						csd /= radius;
+						csd *= scaling;
 						a.setData(csd, v);
 					}
 					
-					Configuration.currentFileLoader.getProgressMonitor().addToCounter(end-start%1000);
+					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
 					return null;
 				}
 			});
 		}
 		ThreadPool.executeParallel(parallelTasks);	
 		
-		Configuration.currentFileLoader.getProgressMonitor().stop();
-	};
+		ProgressMonitor.getProgressMonitor().stop();
+		
+		return null;
+	}
+
+	@Override
+	public boolean showConfigurationDialog(JFrame frame, AtomData data) {
+		JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(frame, "Centrosymmetry deviation");
+		dialog.addLabel(getFunctionDescription());
+		float def = data.getCrystalStructure().getNearestNeighborSearchRadius();
+		
+		FloatProperty avRadius = dialog.addFloat("avRadius", "Radius of a sphere to find neighbors."
+				, "", def, 0f, 1e10f);
+		BooleanProperty adaptive = dialog.addBoolean("adaptive", "Adaptive Centrosymmetry, "
+				+ "only consider a fixed number of nearest neighbors", 
+				"If more neighbors are found, the farthest once are excluded", false);
+		IntegerProperty maxBonds = dialog.addInteger("maxBonds", "Maximum number of bonds for adaptive centrosymmetry",
+				"", 12, 0, 100000);
+		FloatProperty scaling = dialog.addFloat("scalingFactor", "Scaling factor for the result."
+				+ "", "", 1f, 0f, 1e20f);
+		
+		boolean ok = dialog.showDialog();
+		if (ok){
+			this.radius = avRadius.getValue();
+			this.adaptiveCentroSymmetry = adaptive.getValue();
+			this.maxBonds = maxBonds.getValue();
+			this.scaling = scaling.getValue();
+		}
+		return ok;
+	}
 }

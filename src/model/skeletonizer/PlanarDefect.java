@@ -24,8 +24,6 @@ import java.util.Map.Entry;
 
 import model.*;
 import model.polygrain.Grain;
-import common.UniqueID;
-import common.UniqueIDCounter;
 import common.Vec3;
 
 /**
@@ -34,12 +32,7 @@ import common.Vec3;
  * In general, it is only designed to handle defects that are limited to exactly on plane.
  * The more general case of grain- and phaseboundaries are handle in model.polygrain.Grain
  */
-public class PlanarDefect implements Pickable, UniqueID{
-	/**
-	 * Each PlanarDefect instance needs an unique number to easily check for equality
-	 * and sorting in sets 
-	 */
-	private static UniqueIDCounter id_source = UniqueIDCounter.getNewUniqueIDCounter(true);
+public class PlanarDefect implements Pickable{
 	private int id;
 	
 	private Dislocation[] adjacentDislocations;
@@ -52,30 +45,11 @@ public class PlanarDefect implements Pickable, UniqueID{
 	 */
 	private int planeComposedOfType;
 	
-	/**
-	 * Constructor for import
-	 * @param num Unique number for the stacking fault plane
-	 * @param planarDefectAtoms The set of atoms in the stacking fault plane
-	 * @param normal the planes's normal
-	 * @param adjacentDislocations a collection of adjacent dislocations, can be empty but not null
-	 * @param grain In case of polycrystalline material, the grain in which the defect exist, may be null in single crystals 
-	 */
-	public PlanarDefect(int num, Set<PlanarDefectAtom> planarDefectAtoms, Vec3 normal,
-			Collection<Dislocation> adjacentDislocations, 
-			Map<PlanarDefectAtom, PlanarDefect> defectMap, Grain grain){
-		this(planarDefectAtoms, normal, defectMap, grain);
-		this.id = num;
-		this.adjacentDislocations = adjacentDislocations.toArray(new Dislocation[adjacentDislocations.size()]);
-		for (Dislocation d : this.adjacentDislocations){
-			d.addAdjacentStackingFault(this);
-		}
-	}
-	
 	protected PlanarDefect(final Set<PlanarDefectAtom> planarDefectAtoms, Vec3 normal,
-			Map<PlanarDefectAtom, PlanarDefect> defectMap, Grain grain) {
+			Map<PlanarDefectAtom, PlanarDefect> defectMap, Grain grain, int id) {
 		if (planarDefectAtoms.size() < 3) throw new IllegalArgumentException("To small set (need >=3 points)");
 		this.grain = grain;
-		this.id = id_source.getUniqueID();
+		this.id = id;
 		
 		this.numberOfAtoms = planarDefectAtoms.size();
 		this.normal = normal.normalizeClone();
@@ -94,15 +68,21 @@ public class PlanarDefect implements Pickable, UniqueID{
 	 * Creates planar defects 
 	 * nearest neighbor atoms between defects need to be created before calling this method
 	 * Important note: the relationship between planar defects and atoms in returned in the defectMap!
-	 * @param planarDefectAtoms input of all possible planar defect atoms 
+	 * @param data the set of atom Data 
 	 * @param defectMap contains the relationship between planar defects and atoms AFTER completion
 	 * @return a list of all created planar defects
 	 */
-	public static ArrayList<PlanarDefect> createPlanarDefects(TreeSet<PlanarDefectAtom> planarDefectAtoms, 
+	public static ArrayList<PlanarDefect> createPlanarDefects(AtomData data, 
 			Map<PlanarDefectAtom, PlanarDefect> defectMap){
 
+		List<Atom> sfAtoms = data.getCrystalStructure().getStackingFaultAtoms(data);
+		TreeSet<PlanarDefectAtom> planarDefectAtoms = new TreeSet<PlanarDefectAtom>();
+		int id = 0;
+		for (Atom a: sfAtoms)
+			planarDefectAtoms.add(new PlanarDefectAtom(a, id++));
+		
 		NearestNeighborBuilder<PlanarDefectAtom> nnb = new NearestNeighborBuilder<PlanarDefectAtom>(
-				Configuration.getCrystalStructure().getNearestNeighborSearchRadius());
+				data.getBox(), data.getCrystalStructure().getNearestNeighborSearchRadius());
 		
 		for (PlanarDefectAtom p : planarDefectAtoms)
 			nnb.add(p);
@@ -110,9 +90,10 @@ public class PlanarDefect implements Pickable, UniqueID{
 		for (PlanarDefectAtom p : planarDefectAtoms)
 			p.setNeigh(nnb.getNeigh(p));
 		
-		if (!ImportStates.POLY_MATERIAL.isActive()){
+		if (!data.isPolyCrystalline()){
 			return createPlanarDefects(planarDefectAtoms, 
-					Configuration.getCrystalStructure().getStackingFaultNormals(Configuration.getCrystalRotationTools()), defectMap, null);
+					data.getCrystalStructure().getStackingFaultNormals(data.getCrystalRotation()),
+					defectMap, null, data);
 		} else {
 			//For polycrystalline material, split everything into separate grains
 			HashMap<Integer, TreeSet<PlanarDefectAtom>> sfPerGrain = new HashMap<Integer, TreeSet<PlanarDefectAtom>>();
@@ -129,11 +110,11 @@ public class PlanarDefect implements Pickable, UniqueID{
 			for (Entry<Integer, TreeSet<PlanarDefectAtom>> e : sfPerGrain.entrySet()){
 				sfPerGrain.remove(e);	//reference in the map is not needed anymore
 				if (e.getKey() != Atom.DEFAULT_GRAIN  && e.getKey() != Atom.IGNORED_GRAIN){
-					Grain g = Configuration.getCurrentAtomData().getGrains(e.getKey()); 
+					Grain g = data.getGrains(e.getKey()); 
 					
 					def.addAll(createPlanarDefects(e.getValue(), 
 							g.getCrystalStructure().getStackingFaultNormals(g.getCystalRotationTools()),
-							defectMap, g));
+							defectMap, g, data));
 				}
 			}
 			
@@ -146,14 +127,14 @@ public class PlanarDefect implements Pickable, UniqueID{
 	 * @param planeNormals
 	 * @return
 	 */
-	public static ArrayList<PlanarDefect> createPlanarDefects(TreeSet<PlanarDefectAtom> planarDefectAtoms, 
-			Vec3[] planeNormals, Map<PlanarDefectAtom, PlanarDefect> defectMap, Grain grain){
+	private static ArrayList<PlanarDefect> createPlanarDefects(TreeSet<PlanarDefectAtom> planarDefectAtoms, 
+			Vec3[] planeNormals, Map<PlanarDefectAtom, PlanarDefect> defectMap, Grain grain, AtomData data){
 		HashSet<PlanarDefectAtom> planarDefectAtomsLookup = new HashSet<PlanarDefectAtom>(planarDefectAtoms);
 		ArrayList<PlanarDefect> planarDefectList = new ArrayList<PlanarDefect>();
 		
 		TreeSet<PlanarDefectAtom> leftOverAtoms = findDefects(planarDefectAtoms, true, 
-				planarDefectList, planarDefectAtomsLookup, planeNormals, defectMap, grain);
-		findDefects(leftOverAtoms, false, planarDefectList, planarDefectAtomsLookup, planeNormals, defectMap, grain);
+				planarDefectList, planarDefectAtomsLookup, planeNormals, defectMap, grain, data);
+		findDefects(leftOverAtoms, false, planarDefectList, planarDefectAtomsLookup, planeNormals, defectMap, grain, data);
 
 		//wait till all planarDefects are processed in worker threads
 		for (PlanarDefect pd : planarDefectList)
@@ -169,7 +150,10 @@ public class PlanarDefect implements Pickable, UniqueID{
 			HashSet<PlanarDefectAtom> planarDefectAtomsLookup,
 			Vec3[] planeNormals, 
 			Map<PlanarDefectAtom, PlanarDefect> defectMap, 
-			Grain grain){
+			Grain grain,
+			AtomData data){
+		
+		int id = 0;
 		
 		int bondThreshold = firstRun ? 3 : 2;
 		PlanarDefectAtom[] fittingArray = new PlanarDefectAtom[20];
@@ -186,18 +170,18 @@ public class PlanarDefect implements Pickable, UniqueID{
 			for (int i=0; i<c.getNeigh().size()-1; i++){
 				if (!firstRun || planarDefectAtomsLookup.contains(c.getNeigh().get(i))){
 					
-					Vec3 vec1 = Configuration.pbcCorrectedDirection(c, c.getNeigh().get(i));
+					Vec3 vec1 = data.getBox().getPbcCorrectedDirection(c, c.getNeigh().get(i));
 					float vec1_sqrlength = vec1.getLengthSqr();
 					float v1LengthTimesThreshold = 0.9025f * vec1_sqrlength;
 					
 					for (int j=i+1; j<c.getNeigh().size(); j++){
 						if (!firstRun || planarDefectAtomsLookup.contains(c.getNeigh().get(j))){
 							
-							Vec3 vec2 = Configuration.pbcCorrectedDirection(c, c.getNeigh().get(j));
+							Vec3 vec2 = data.getBox().getPbcCorrectedDirection(c, c.getNeigh().get(j));
 							float p = vec1.dot(vec2);
 							
 							if (p < 0f && (p*p) > v1LengthTimesThreshold * vec2.getLengthSqr()){ 
-								straightBonds.add(Configuration.pbcCorrectedDirection(c.getNeigh().get(i), c.getNeigh().get(j)));
+								straightBonds.add(data.getBox().getPbcCorrectedDirection(c.getNeigh().get(i), c.getNeigh().get(j)));
 							}
 						}
 					}
@@ -240,7 +224,7 @@ public class PlanarDefect implements Pickable, UniqueID{
 						//Count nearest neighbor hcp-atoms in the same plane 
 						if (planarDefectAtomsLookup.contains(n)){
 							// equals (vec/|vec|)*normal < 0.2, but this method is more efficient 
-							Vec3 vec = Configuration.pbcCorrectedDirection(b, n);
+							Vec3 vec = data.getBox().getPbcCorrectedDirection(b, n);
 							float p = vec.dot(normal);
 							if ( p*p < 0.04f * vec.getLengthSqr() && n.getAtom().getType() == c.getAtom().getType()){
 								fittingAtoms++;
@@ -263,7 +247,7 @@ public class PlanarDefect implements Pickable, UniqueID{
 					}
 				}
 				if (atomsInSet.size()>=3){
-					planarDefectList.add(new PlanarDefect(atomsInSet, planeNormals[t], defectMap, grain));
+					planarDefectList.add(new PlanarDefect(atomsInSet, planeNormals[t], defectMap, grain, id++));
 					planarDefectAtomsLookup.removeAll(atomsInSet);
 				}
 				
@@ -375,17 +359,8 @@ public class PlanarDefect implements Pickable, UniqueID{
 	
 	@Override
 	public String toString() {
-		Vec3 o;
-		String type;
-		if (grain == null){
-			o = Configuration.getCrystalRotationTools().getInCrystalCoordinates(normal);			
-		} else { 
-			o = grain.getCystalRotationTools().getInCrystalCoordinates(normal);
-		}
-		type = Configuration.getCrystalStructure().getNameForType(getPlaneComposedOfType());
-		o.multiply(Configuration.getCrystalStructure().getLatticeConstant());
-		return String.format("Planar defect (%d) Normal=(%.3f,%.3f,%.3f) in crystal axis=(%.3f,%.3f,%.3f) #Atoms=%d Area=%f Type: %s", 
-				id, normal.x, normal.y, normal.z, o.x, o.y, o.z, numberOfAtoms, getArea(), type);
+		return String.format("Planar defect (%d) Normal=(%.3f,%.3f,%.3f) #Atoms=%d Area=%f", 
+				id, normal.x, normal.y, normal.z, numberOfAtoms, getArea());
 	}
 	
 	@Override
@@ -403,7 +378,17 @@ public class PlanarDefect implements Pickable, UniqueID{
 	}
 	
 	@Override
-	public String printMessage(InputEvent ev) {
-		return toString();
+	public String printMessage(InputEvent ev, AtomData data) {
+		Vec3 o;
+		String type;
+		if (grain == null){
+			o = data.getCrystalRotation().getInCrystalCoordinates(normal);			
+		} else { 
+			o = grain.getCystalRotationTools().getInCrystalCoordinates(normal);
+		}
+		type = data.getCrystalStructure().getNameForType(getPlaneComposedOfType());
+		o.multiply(data.getCrystalStructure().getLatticeConstant());
+		return String.format("Planar defect (%d) Normal=(%.3f,%.3f,%.3f) in crystal axis=(%.3f,%.3f,%.3f) #Atoms=%d Area=%f Type: %s", 
+				id, normal.x, normal.y, normal.z, o.x, o.y, o.z, numberOfAtoms, getArea(), type);
 	}
 }

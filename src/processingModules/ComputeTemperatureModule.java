@@ -1,7 +1,7 @@
 // Part of AtomViewer: AtomViewer is a tool to display and analyse
 // atomistic simulations
 //
-// Copyright (C) 2014  ICAMS, Ruhr-Universität Bochum
+// Copyright (C) 2015  ICAMS, Ruhr-Universität Bochum
 //
 // AtomViewer is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,27 +19,35 @@
 package processingModules;
 
 import gui.JLogPanel;
+import gui.JPrimitiveVariablesPropertiesDialog;
+import gui.ProgressMonitor;
+import gui.JPrimitiveVariablesPropertiesDialog.FloatProperty;
 
 import java.util.ArrayList;
 import java.util.Vector;
 import java.util.concurrent.Callable;
 
+import javax.swing.JFrame;
+import javax.swing.JSeparator;
+
 import common.ThreadPool;
 import model.Atom;
 import model.AtomData;
-import model.Configuration;
 import model.DataColumnInfo;
 import model.DataColumnInfo.Component;
 import model.NearestNeighborBuilder;
 
 public class ComputeTemperatureModule implements ProcessingModule {
 
-	private float averagingDistance = 5f;
+	private static DataColumnInfo temperatureColumn = new DataColumnInfo("Temperature", "temp", "");
+	private float centerOfMassVelocityRadius = 0f;
+	private float scalingFactor = 11605f;
 	
 	@Override
 	public String getFunctionDescription() {
-		return "Computes temperatures from atomic masses and velocities, "
-				+ "considering the center of mass velocity in a given spherical area";
+		return "Computes the temperature T per atom from a velocity vector δv and the atomic mass m as T=|δv|*m/3. "
+				+ "The velocity vector δv is the difference of the atom's velocity "
+				+ "and the center of mass velocity of all atoms within the given cutoff radius.";
 	}
 	
 	@Override
@@ -51,15 +59,20 @@ public class ComputeTemperatureModule implements ProcessingModule {
 	public String getShortName() {
 		return "Compute temperature";
 	}
+	
+	@Override
+	public boolean canBeAppliedToMultipleFilesAtOnce() {
+		return true;
+	}
 
 	@Override
-	public boolean isApplicable() {
+	public boolean isApplicable(AtomData data) {
 		int m = -1;
 		int v_x = -1;
 		int v_y = -1;
 		int v_z = -1;
-		for (int i=0; i<Configuration.getSizeDataColumns(); i++){
-			DataColumnInfo cci = Configuration.getDataColumnInfo(i);
+		for (int i=0; i<data.getDataColumnInfos().size(); i++){
+			DataColumnInfo cci = data.getDataColumnInfos().get(i);
 			
 			if (cci.getComponent() == Component.MASS)
 				m = i;
@@ -81,23 +94,22 @@ public class ComputeTemperatureModule implements ProcessingModule {
 
 	@Override
 	public DataColumnInfo[] getDataColumnsInfo() {
-		return new DataColumnInfo[]{new DataColumnInfo("Temperature", "temp", "K", 1f, 5f)};
+		return new DataColumnInfo[]{temperatureColumn};
 	}
 	
 	@Override
-	public void process(final AtomData data) throws Exception {
-		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(averagingDistance);
+	public ProcessingResult process(final AtomData data) throws Exception {
+		final NearestNeighborBuilder<Atom> nnb;
+		if (centerOfMassVelocityRadius > 0)
+			nnb = new NearestNeighborBuilder<Atom>(data.getBox(), centerOfMassVelocityRadius, true);
+		else nnb = null;
 		
-		int t = -1;
 		int m = -1;
 		int v_x = -1;
 		int v_y = -1;
 		int v_z = -1;
-		for (int i=0; i<Configuration.getSizeDataColumns(); i++){
-			DataColumnInfo cci = Configuration.getDataColumnInfo(i);
-			if (cci.getId().equals("temp"))
-				t = i;
-			
+		for (int i=0; i<data.getDataColumnInfos().size(); i++){
+			DataColumnInfo cci = data.getDataColumnInfos().get(i);
 			if (cci.getComponent() == Component.MASS)
 				m = i;
 			
@@ -109,22 +121,21 @@ public class ComputeTemperatureModule implements ProcessingModule {
 			
 			if (cci.getComponent() == Component.VELOCITY_Z)
 				v_z = i;
-			
 		}
-		final int tempColumn = t;
+		
+		final int tempColumn = data.getIndexForCustomColumn(temperatureColumn);
 		final int massColumn = m;
 		final int vxColumn = v_x;
 		final int vyColumn = v_y;
 		final int vzColumn = v_z;
 		
 		if (massColumn == -1  || tempColumn == -1 || vxColumn == -1 || vyColumn == -1 || vzColumn == -1)
-			return;
+			throw new RuntimeException("Could not find all all input data");
 		
-		Configuration.currentFileLoader.getProgressMonitor().start(data.getAtoms().size());
+		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
 		
-		for (Atom a : data.getAtoms()){
-			nnb.add(a);
-		}
+		if (centerOfMassVelocityRadius > 0)
+			nnb.addAll(data.getAtoms());
 		
 		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
 		for (int i=0; i<ThreadPool.availProcessors(); i++){
@@ -137,57 +148,82 @@ public class ComputeTemperatureModule implements ProcessingModule {
 					final int end = (int)(((long)data.getAtoms().size() * (j+1))/ThreadPool.availProcessors());
 					for (int i=start; i<end; i++){
 						if ((i-start)%1000 == 0)
-							Configuration.currentFileLoader.getProgressMonitor().addToCounter(1000);
+							ProgressMonitor.getProgressMonitor().addToCounter(1000);
 						
 						Atom a = data.getAtoms().get(i);
 						float vx = a.getData(vxColumn);
 						float vy = a.getData(vyColumn);
 						float vz = a.getData(vzColumn);
-						
-						float av_vx = vx;
-						float av_vy = vy;
-						float av_vz = vz;
-						
-						ArrayList<Atom> neigh = nnb.getNeigh(a);
-						for (Atom n : neigh){
-							av_vx += n.getData(vxColumn);
-							av_vy += n.getData(vyColumn);
-							av_vz += n.getData(vzColumn);
+							
+						if (centerOfMassVelocityRadius > 0){
+							float m = a.getData(massColumn);
+							float massSum = m;
+							float av_vx = vx*m;
+							float av_vy = vy*m;
+							float av_vz = vz*m;
+							
+							ArrayList<Atom> neigh = nnb.getNeigh(a);
+							for (Atom n : neigh){
+								m = n.getData(massColumn);
+								av_vx += n.getData(vxColumn)*m;
+								av_vy += n.getData(vyColumn)*m;
+								av_vz += n.getData(vzColumn)*m;
+								massSum+=m;
+							}
+							
+							av_vx /= massSum;
+							av_vy /= massSum;
+							av_vz /= massSum;
+							
+							vx -= av_vx;
+							vy -= av_vy;
+							vz -= av_vz;
 						}
 						
-						av_vx /= neigh.size()+1;
-						av_vy /= neigh.size()+1;
-						av_vz /= neigh.size()+1;
-						
-						vx -= av_vx;
-						vy -= av_vy;
-						vz -= av_vz;
-						
 						temp = ((a.getData(massColumn) * (vx*vx+vy*vy+vz*vz))) / 3;
-						temp *= 11605;
+						temp *= scalingFactor;
 						
 						a.setData(temp, tempColumn);
 					}
-					Configuration.currentFileLoader.getProgressMonitor().addToCounter(end-start%1000);
+					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
 					return null;
 				}
 			});
 		}
 		ThreadPool.executeParallel(parallelTasks);
 		
-		double[] tempPerElement = new double[Configuration.getNumElements()];
-		int[] numPerElement = new int[Configuration.getNumElements()];
+		double[] tempPerElement = new double[data.getNumberOfElements()];
+		int[] numPerElement = new int[data.getNumberOfElements()];
 		for (Atom a : data.getAtoms()){
 			tempPerElement[a.getElement()] += a.getData(tempColumn);
 			numPerElement[a.getElement()]++;
 		}
 		
-		for (int i=tempPerElement.length-1; i>0; i--){
+		for (int i=tempPerElement.length-1; i>=0; i--){
 			JLogPanel.getJLogPanel().addLog(String.format("Element %d: %.6f", i, numPerElement[i]==0 ? 0. : 
 					tempPerElement[i]/numPerElement[i]));
 		}
 		JLogPanel.getJLogPanel().addLog("Average temperatures for elements in "+data.getName());
 		
-		Configuration.currentFileLoader.getProgressMonitor().stop();
+		ProgressMonitor.getProgressMonitor().stop();
+		
+		//TODO: Store average temperatures in a ProcessingResults
+		return null;
+	}
+
+	@Override
+	public boolean showConfigurationDialog(JFrame frame, AtomData data) {
+		JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(frame, "Compute temperature");
+		dialog.addLabel(getFunctionDescription());
+		dialog.add(new JSeparator());
+		FloatProperty comRadius = dialog.addFloat("comvRadius", "Center of mass velocity cutoff"
+				, "", centerOfMassVelocityRadius, 0f, 1000f);
+		FloatProperty scaling = dialog.addFloat("scalingFactor", "Scaling factor (e.g. 1eV->11605K)", "", scalingFactor, 0f, 1e20f);
+		boolean ok = dialog.showDialog();
+		if (ok){
+			this.centerOfMassVelocityRadius = comRadius.getValue();
+			this.scalingFactor = scaling.getValue();
+		}
+		return ok;
 	}
 }

@@ -25,7 +25,6 @@ import common.Tupel;
 import common.Vec3;
 import model.Atom;
 import model.AtomData;
-import model.ImportStates;
 import model.NearestNeighborBuilder;
 
 public class L12_Ni3AlStructure extends FCCStructure{
@@ -62,7 +61,6 @@ public class L12_Ni3AlStructure extends FCCStructure{
 	
 	public L12_Ni3AlStructure() {
 		super();
-		this.minRBVLength.defaultValue = 0.25f;
 	}
 	
 	@Override
@@ -73,6 +71,10 @@ public class L12_Ni3AlStructure extends FCCStructure{
 	@Override
 	protected String getIDName() {
 		return "Ni3Al";
+	}
+	
+	public float getDefaultSkeletonizerRBVThreshold(){
+		return 0.25f;
 	}
 	
 	@Override
@@ -239,7 +241,7 @@ public class L12_Ni3AlStructure extends FCCStructure{
 		List<Atom> sfAtoms = new ArrayList<Atom>();
 		for (int i=0; i<data.getAtoms().size(); i++){
 			Atom a = data.getAtoms().get(i);
-			if (a.getType() >= 1 && a.getType() <= 3 && (!ImportStates.POLY_MATERIAL.isActive() || a.getGrain() != Atom.IGNORED_GRAIN))
+			if (a.getType() >= 1 && a.getType() <= 3 && a.getGrain() != Atom.IGNORED_GRAIN)
 				sfAtoms.add(a);
 		}
 		return sfAtoms;

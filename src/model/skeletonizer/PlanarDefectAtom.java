@@ -20,24 +20,19 @@ package model.skeletonizer;
 
 import java.util.ArrayList;
 
-import common.UniqueIDCounter;
 import common.Vec3;
 import model.Atom;
 
 class PlanarDefectAtom extends Vec3 implements Comparable<PlanarDefectAtom>{
 	private ArrayList<PlanarDefectAtom> neigh;
 	private Atom atom;
-	
-	private static UniqueIDCounter id_source = UniqueIDCounter.getNewUniqueIDCounter(true);
-	//This value is guaranteed to be unique and identical if the same file is loaded twice
 	private int id;
 	
-	
-	public PlanarDefectAtom(Atom a){
+	public PlanarDefectAtom(Atom a, int id){
 		this.atom = a;
 		this.setTo(a);
 		
-		this.id = id_source.getUniqueID();
+		this.id = id;
 	}
 	
 	public Atom getAtom() {

@@ -21,10 +21,13 @@ import javax.swing.border.EtchedBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import common.ColorTable;
 import common.Vec3;
 import model.AtomData;
+import model.BoxParameter;
+import model.Configuration;
 import model.Pickable;
 
 public class LoadBalancingData extends DataContainer {
@@ -38,19 +41,20 @@ public class LoadBalancingData extends DataContainer {
 	private float maxLoad;
 	private float minLoad;
 //	private float variance;
+	private File dataFile = null;
 	
 	private static final int[] triangleIndices = new int[]{0,5,4, 0,1,5, 1,7,5, 1,3,7, 3,2,7, 
 		2,6,7, 2,0,6, 0,4,6, 4,7,6, 4,5,7, 0,2,3, 3,1,0};
 	
 	
 	@Override
-	public void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking) {
+	public void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
 		return;
 	}
 	
 	@Override
-	public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking) {
-if (!getDataControlPanel().isDataVisible()) return;
+	public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
+		if (!getDataControlPanel().isDataVisible()) return;
 		
 		int xMin, xMax, yMin, yMax, zMin, zMax;
 		
@@ -185,7 +189,19 @@ if (!getDataControlPanel().isDataVisible()) return;
 	}
 
 	@Override
-	public boolean processData(File dataFile, AtomData atomData) throws IOException {
+	public boolean showOptionsDialog() {
+		File folder = Configuration.getLastOpenedFolder();
+		JFileChooser chooser = new JFileChooser(folder);
+		chooser.setFileFilter(new FileNameExtensionFilter("Load balancing data", "lb"));
+		
+		int result = chooser.showOpenDialog(null);
+		if (result == JFileChooser.APPROVE_OPTION)
+			dataFile = chooser.getSelectedFile();
+		return result == JFileChooser.APPROVE_OPTION;
+	};
+	
+	@Override
+	public boolean processData(AtomData atomData) throws IOException {
 		LineNumberReader lnr = null;
 		Pattern p = Pattern.compile(" +");
 		
@@ -288,23 +304,13 @@ if (!getDataControlPanel().isDataVisible()) return;
 	}
 
 	@Override
-	public String[] getFileExtensions() {
-		return new String[]{"lb"};
-	}
-
-	@Override
-	public boolean isExternalFileRequired() {
-		return true;
-	}
-
-	@Override
 	public String getDescription() {
-		return "Load Balancing stuff";
+		return "Import the geometry of the dynamic IMD load balacing for visualization.";
 	}
 
 	@Override
 	public String getName() {
-		return "Load Balancing";
+		return "Import Load Balancing data";
 	}
 
 	@Override
@@ -449,7 +455,7 @@ if (!getDataControlPanel().isDataVisible()) return;
 		}
 		
 		@Override
-		public String printMessage(InputEvent ev) {
+		public String printMessage(InputEvent ev, AtomData data) {
 			return String.format("CPU %d load: %.6f particles: %d volume: %.6f", cpu, load, particles, volume);
 		}
 	}
@@ -465,5 +471,15 @@ if (!getDataControlPanel().isDataVisible()) return;
 		public void stateChanged(ChangeEvent e) {
 			this.viewer.reDraw();
 		}
+	}
+
+	@Override
+	public boolean isApplicable(AtomData data) {
+		return true;
+	}
+
+	@Override
+	public String getRequirementDescription() {
+		return "";
 	}
 }

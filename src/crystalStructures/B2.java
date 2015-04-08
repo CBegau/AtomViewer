@@ -43,8 +43,6 @@ public class B2 extends BCCStructure{
 	
 	public B2() {
 		super();
-		this.minRBVLength.defaultValue = 0.35f;
-		this.dislocationMeshRadius.defaultValue = 1.28f;
 	}
 	
 	@Override
@@ -89,5 +87,13 @@ public class B2 extends BCCStructure{
 	@Override
 	public ArrayList<ClassificationPattern> getBurgersVectorClassificationPattern() {
 		return bvClassifcationPattern;
+	}
+	
+	public float getDefaultSkeletonizerMeshingThreshold(){
+		return 1.28f;
+	}
+	
+	public float getDefaultSkeletonizerRBVThreshold(){
+		return 0.35f;
 	}
 }

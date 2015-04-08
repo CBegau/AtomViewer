@@ -18,13 +18,21 @@
 
 package processingModules;
 
+import gui.JPrimitiveVariablesPropertiesDialog;
+import gui.ProgressMonitor;
+import gui.JPrimitiveVariablesPropertiesDialog.FloatProperty;
+
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Vector;
 import java.util.concurrent.Callable;
 
+import javax.swing.JComboBox;
+import javax.swing.JFrame;
+import javax.swing.JSeparator;
+
 import model.Atom;
 import model.AtomData;
-import model.Configuration;
 import model.DataColumnInfo;
 import model.NearestNeighborBuilder;
 import common.ThreadPool;
@@ -32,27 +40,33 @@ import common.ThreadPool;
 
 public class SpatialAveragingModule implements ProcessingModule {
 
+	private static HashMap<DataColumnInfo, DataColumnInfo> existingAverageColumns 
+		= new HashMap<DataColumnInfo, DataColumnInfo>();
+	
 	private DataColumnInfo toAverageColumn;
 	private DataColumnInfo averageColumn;
 	
-	public SpatialAveragingModule(DataColumnInfo toAverage) {
-		this.toAverageColumn = toAverage;
-	}
+	private float averageRadius = 0f;
+
+	public SpatialAveragingModule() {}
 	
 	@Override
 	public DataColumnInfo[] getDataColumnsInfo() {
-		String name = toAverageColumn.getName()+"(av.)"; 
-		String id = toAverageColumn.getId()+"_av";
-		DataColumnInfo cci = new DataColumnInfo(name, id,
-				toAverageColumn.getUnit(), toAverageColumn.getScalingFactor());
+		if (existingAverageColumns.containsKey(toAverageColumn)){
+			this.averageColumn = existingAverageColumns.get(toAverageColumn);
+		} else {
+			String name = toAverageColumn.getName()+"(av.)";
+			String id = toAverageColumn.getId()+"_av";
+			this.averageColumn = new DataColumnInfo(name, id, toAverageColumn.getUnit());
+			SpatialAveragingModule.existingAverageColumns.put(toAverageColumn, averageColumn);
+		}
 		
-		this.averageColumn = cci;
-		return new DataColumnInfo[]{cci};
+		return new DataColumnInfo[]{averageColumn};
 	}
 	
 	@Override
 	public String getShortName() {
-		return "Spatial averaging "+toAverageColumn.getName();
+		return "Spatial averaging";
 	}
 	
 	@Override
@@ -61,29 +75,30 @@ public class SpatialAveragingModule implements ProcessingModule {
 	}
 	
 	@Override
+	public boolean canBeAppliedToMultipleFilesAtOnce() {
+		return true;
+	}
+	
+	@Override
 	public String getRequirementDescription() {
 		return "";
 	}
 	
 	@Override
-	public boolean isApplicable() {
-		return true;
+	public boolean isApplicable(AtomData data) {
+		return (!data.getDataColumnInfos().isEmpty());
 	}
 
 	@Override
-	public void process(final AtomData data) throws Exception {
-		float averageDistance = toAverageColumn.getSpatiallyAveragingRadius();
-		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(averageDistance);
+	public ProcessingResult process(final AtomData data) throws Exception {
+		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), averageRadius, true);
 		
-		final int v = toAverageColumn.getColumn();
-		final int av = averageColumn.getColumn();
+		final int v = data.getIndexForCustomColumn(toAverageColumn);
+		final int av = data.getIndexForCustomColumn(averageColumn);
 		
-		Configuration.currentFileLoader.getProgressMonitor().start(data.getAtoms().size());
+		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
 		
-		//Parallel add
-		for (int i=0; i<data.getAtoms().size(); i++){
-			nnb.add(data.getAtoms().get(i));
-		}
+		nnb.addAll(data.getAtoms());
 		
 		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
 		for (int i=0; i<ThreadPool.availProcessors(); i++){
@@ -97,7 +112,7 @@ public class SpatialAveragingModule implements ProcessingModule {
 					
 					for (int i=start; i<end; i++){
 						if ((i-start)%1000 == 0)
-							Configuration.currentFileLoader.getProgressMonitor().addToCounter(1000);
+							ProgressMonitor.getProgressMonitor().addToCounter(1000);
 						
 						Atom a = data.getAtoms().get(i);
 						temp = a.getData(v);
@@ -108,13 +123,39 @@ public class SpatialAveragingModule implements ProcessingModule {
 						a.setData(temp, av);
 					}
 					
-					Configuration.currentFileLoader.getProgressMonitor().addToCounter(end-start%1000);
+					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
 					return null;
 				}
 			});
 		}
 		ThreadPool.executeParallel(parallelTasks);	
 		
-		Configuration.currentFileLoader.getProgressMonitor().stop();
+		ProgressMonitor.getProgressMonitor().stop();
+		
+		return null;
 	};
+	
+	@Override
+	public boolean showConfigurationDialog(JFrame frame, AtomData data) {
+		JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(frame, "Compute spatial average");
+		
+		dialog.addLabel("Computes the spatial average fo a value");
+		dialog.add(new JSeparator());
+		
+		JComboBox averageComponentsComboBox = new JComboBox();
+		for (DataColumnInfo dci : data.getDataColumnInfos())
+			averageComponentsComboBox.addItem(dci);
+		
+		dialog.addLabel("Select value to average");
+		dialog.addComponent(averageComponentsComboBox);
+		FloatProperty avRadius = dialog.addFloat("avRadius", "Cutoff radius for averaging"
+				, "", 5f, 0f, 1000f);
+		
+		boolean ok = dialog.showDialog();
+		if (ok){
+			this.averageRadius = avRadius.getValue();
+			this.toAverageColumn = (DataColumnInfo)averageComponentsComboBox.getSelectedItem(); 
+		}
+		return ok;
+	}
 }

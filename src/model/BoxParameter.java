@@ -8,12 +8,17 @@ public class BoxParameter {
 	final private Vec3 tBoxSize[] = new Vec3[3];
 	final private Vec3 height = new Vec3();
 	final private Vec3 offset = new Vec3();
+	final private boolean pbc[] = new boolean[3];
 	final private float volume;
 	
-	public BoxParameter(Vec3 x, Vec3 y, Vec3 z){
+	public BoxParameter(Vec3 x, Vec3 y, Vec3 z, boolean pbc_x, boolean pbc_y, boolean pbc_z){
 		boxSize[0] = x.clone();
 		boxSize[1] = y.clone();
 		boxSize[2] = z.clone();
+		
+		pbc[0] = pbc_x;
+		pbc[1] = pbc_y;
+		pbc[2] = pbc_z;
 		
 		tBoxSize[0] = boxSize[1].cross(boxSize[2]);
 		tBoxSize[1] = boxSize[2].cross(boxSize[0]);
@@ -34,6 +39,10 @@ public class BoxParameter {
 		}
 		
 		assert (volume != 0) : "AtomData bounding box has size 0";
+	}
+	
+	public boolean[] getPbc() {
+		return pbc;
 	}
 	
 	public boolean isOrtho(){
@@ -88,13 +97,35 @@ public class BoxParameter {
 		return cellDim;
 	}
 	
+	public Vec3 getPbcCorrectedDirection(Vec3 c1, Vec3 c2){
+		Vec3 dir = c1.subClone(c2);
+		if (pbc[0]){
+			if (dir.x > height.x * 0.5f) dir.sub(boxSize[0]);
+			else if (dir.x < -height.x * 0.5f) dir.add(boxSize[0]);
+		}
+		if (pbc[1]){
+			if (dir.y > height.y * 0.5f) dir.sub(boxSize[1]);
+			else if (dir.y < -height.y * 0.5f) dir.add(boxSize[1]);
+		}
+		if (pbc[2]){
+			if (dir.z > height.z * 0.5f) dir.sub(boxSize[2]);
+			else if (dir.z < -height.z * 0.5f) dir.add(boxSize[2]);
+		}
+		return dir;
+	}
+	
+	public boolean isVectorInPBC(Vec3 v){
+		return (!(pbc[0] && Math.abs(v.x) > height.x * 0.5f)
+				&& !(pbc[1] && Math.abs(v.y) > height.y * 0.5f)
+				&& !(pbc[2] && Math.abs(v.z) > height.z * 0.5f));
+	}
 	
 	/**
 	 * Moves a vector back into the simulation box in case of PBC 
 	 * @param pos
 	 */
 	public final void backInBox(Vec3 pos){
-		if (Configuration.getPbc()[0]) {
+		if (pbc[0]) {
 			float a = pos.dot(tBoxSize[0]);
 			int i = (int)a;
 			if (a < 0f) i--;
@@ -103,7 +134,7 @@ public class BoxParameter {
 			pos.z -= i * boxSize[0].z;
 		}
 
-		if (Configuration.getPbc()[1]) {
+		if (pbc[1]) {
 			float a = pos.dot(tBoxSize[1]);
 			int i = (int)a;
 			if (a < 0f) i--;
@@ -112,7 +143,7 @@ public class BoxParameter {
 			pos.z -= i * boxSize[1].z;
 		}
 
-		if (Configuration.getPbc()[2]) {
+		if (pbc[2]) {
 			float a = pos.dot(tBoxSize[2]);
 			int i = (int)a;
 			if (a < 0f) i--;

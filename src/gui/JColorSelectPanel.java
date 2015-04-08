@@ -10,19 +10,17 @@ import javax.swing.JPanel;
 import javax.swing.border.LineBorder;
 
 import model.Configuration;
-
+import model.RenderingConfiguration;
 import common.ColorTable;
 
 public class JColorSelectPanel extends JPanel{		
 	private static final long serialVersionUID = 1L;
 	public enum ColorSelectPanelTypes{ELEMENTS, TYPES};
-	private ViewerGLJPanel viewer;
 	
-	public JColorSelectPanel(final int number, Color c, final ColorSelectPanelTypes type, ViewerGLJPanel viewer){
+	public JColorSelectPanel(final int number, Color c, final ColorSelectPanelTypes type){
 		this.setSize(100, 20);
 		this.setBackground(c);
 		this.setBorder(new LineBorder(Color.BLACK, 1));
-		this.viewer = viewer;
 		this.addMouseListener(new MouseListener() {
 			@Override
 			public void mouseReleased(MouseEvent e) {}				
@@ -40,7 +38,7 @@ public class JColorSelectPanel extends JPanel{
 					message = String.format("Choose color for element %d", number);
 				} else if (type == ColorSelectPanelTypes.TYPES){
 					message = String.format("Choose color for type %d (%s)", number, 
-							Configuration.getCrystalStructure().getNameForType(number));
+							Configuration.getCurrentAtomData().getCrystalStructure().getNameForType(number));
 				}
 
 				Color newColor = JColorChooser.showDialog(null, 
@@ -52,17 +50,17 @@ public class JColorSelectPanel extends JPanel{
 				color[1] = newColor.getGreen()/255f;
 				color[2] = newColor.getBlue()/255f;
 				if (type == ColorSelectPanelTypes.ELEMENTS){
-					float[][] colors = ColorTable.getColorTableForElements(Configuration.getNumElements());
+					float[][] colors = 
+							ColorTable.getColorTableForElements(Configuration.getCurrentAtomData().getNumberOfElements());
 					colors[number][0] = color[0];
 					colors[number][1] = color[1];
 					colors[number][2] = color[2];
 					ColorTable.saveColorScheme(colors, ColorTable.ELEMENT_COLORS_ID);
 				}  else if (type == ColorSelectPanelTypes.TYPES){
-					Configuration.getCrystalStructure().setGLColors(number, color);
-					Configuration.getCrystalStructure().saveColorScheme();
+					Configuration.getCurrentAtomData().getCrystalStructure().setGLColors(number, color);
+					Configuration.getCurrentAtomData().getCrystalStructure().saveColorScheme();
 				}
-				JColorSelectPanel.this.viewer.updateAtoms();
-				JColorSelectPanel.this.viewer.reDraw();
+				RenderingConfiguration.getViewer().updateAtoms();
 			}
 		});
 	}
@@ -93,13 +91,9 @@ public class JColorSelectPanel extends JPanel{
 				colorArray[1] = newColor.getGreen()/255f;
 				colorArray[2] = newColor.getBlue()/255f;
 				
-				JColorSelectPanel.this.viewer.updateAtoms();
-				JColorSelectPanel.this.viewer.reDraw();
+				RenderingConfiguration.getViewer().updateAtoms();
 			}
 		});
 	}
 	
-	public void setViewer(ViewerGLJPanel viewer) {
-		this.viewer = viewer;
-	}
 }

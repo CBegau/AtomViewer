@@ -24,7 +24,6 @@ import java.util.concurrent.Callable;
 
 import common.ThreadPool;
 
-import model.Configuration;
 import model.NearestNeighborBuilder;
 import model.skeletonizer.SkeletonNode;
 import model.skeletonizer.Skeletonizer;
@@ -33,15 +32,16 @@ public class ReMeshingPreprocessor implements SkeletonPreprocessor {
 
 	@Override
 	public void preProcess(final Skeletonizer skel) {
-		final NearestNeighborBuilder<SkeletonNode> nnb = new NearestNeighborBuilder<SkeletonNode>(
-				Configuration.getCrystalStructure().getSkeletonizationMeshingThreshold());
-		for (SkeletonNode c: skel.getNodes()){
-			nnb.add(c);
-		}
+		final NearestNeighborBuilder<SkeletonNode> nnb = 
+				new NearestNeighborBuilder<SkeletonNode>(skel.getAtomData().getBox(), skel.getNearestNeigborDist(), true);
+		nnb.addAll(skel.getNodes());
 			
 		//Parallel build
 		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
 		final List<SkeletonNode> nodes = skel.getNodes(); 
+		
+		final boolean sameGrainsOnly = skel.getAtomData().isPolyCrystalline() && 
+			!skel.getAtomData().getCrystalStructure().skeletonizeOverMultipleGrains();
 		for (int i=0; i<ThreadPool.availProcessors(); i++){
 			final int j = i;
 			parallelTasks.add(new Callable<Void>() {
@@ -51,7 +51,7 @@ public class ReMeshingPreprocessor implements SkeletonPreprocessor {
 					int end = (int)(((long)nodes.size() * (j+1))/ThreadPool.availProcessors());
 
 					for (int i=start; i<end; i++)
-						nodes.get(i).buildNeigh(nnb);
+						nodes.get(i).buildNeigh(nnb, sameGrainsOnly);
 					return null;
 				}
 			});

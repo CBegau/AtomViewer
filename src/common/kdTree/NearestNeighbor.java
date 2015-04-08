@@ -1,4 +1,4 @@
-package model.polygrain.kdTree;
+package common.kdTree;
 
 /**
  * Original code released under the Gnu Lesser General Public License:

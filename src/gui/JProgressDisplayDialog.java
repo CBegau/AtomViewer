@@ -28,30 +28,36 @@ public class JProgressDisplayDialog extends JDialog implements PropertyChangeLis
 	private JProgressBar operationProgressBar = new JProgressBar(0, 100);
 	
 	public JProgressDisplayDialog(final SwingWorker<?,?> worker, Frame owner) {
+		this(worker, owner, true);
+	}
+	
+	public JProgressDisplayDialog(final SwingWorker<?,?> worker, Frame owner, final boolean cancellable) {
 		super(owner);
 		worker.addPropertyChangeListener(this);
 		this.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
 		addWindowListener(new WindowAdapter(){
             public void windowClosing(WindowEvent evt){
-            	System.out.println("Cancel "+worker.cancel(true));
+            	if (cancellable) worker.cancel(true);
             }
         });
-		this.setLayout(new GridLayout(3,1));
+		this.setLayout(new GridLayout(2+(cancellable?1:0),1));
 		this.add(progressBar);
 		progressBar.setStringPainted(true);
 		operationProgressBar.setStringPainted(true);
+		operationProgressBar.setIndeterminate(true);
 		progressBar.setString("");
 		
 		this.add(operationProgressBar);
-		
-		JButton cancelButton = new JButton("Cancel");
-		cancelButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				worker.cancel(true);
-			}
-		});
-		this.add(cancelButton);
+		if (cancellable){
+			JButton cancelButton = new JButton("Cancel");
+			cancelButton.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					worker.cancel(true);
+				}
+			});
+			this.add(cancelButton);
+		}
 		
 		this.setSize(new Dimension(400,100));
 		this.setResizable(false);
@@ -85,6 +91,11 @@ public class JProgressDisplayDialog extends JDialog implements PropertyChangeLis
 		
 		if ("operation_no_progress" == evt.getPropertyName()) {
 			operationProgressBar.setValue(0);
+			operationProgressBar.setIndeterminate(true);
+		}
+		
+		if ("destroy" == evt.getPropertyName()) {
+			this.dispose();
 		}
 	}
 }
