@@ -1,0 +1,754 @@
+// Part of AtomViewer: AtomViewer is a tool to display and analyse
+// atomistic simulations
+//
+// Copyright (C) 2013  ICAMS, Ruhr-Universität Bochum
+//
+// AtomViewer is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// AtomViewer is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
+
+package model.io;
+
+import gui.JMDFileChooser;
+
+import java.io.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.regex.*;
+import java.util.zip.GZIPInputStream;
+
+import common.DataInputStreamWrapper;
+import common.ThreadPool;
+import common.Vec3;
+import model.*;
+
+public class ImdFileLoader extends MDFileLoader{
+	
+	public ImdFileLoader(JMDFileChooser chooser) {
+		super(chooser);
+	}
+
+	
+	@Override
+	public String[] getColumnsNamesFromHeader(File f) throws IOException {
+		LineNumberReader lnr = null;
+		GZIPInputStream gzipis = null;
+		FileInputStream fis;
+		
+		final boolean gzipped = f.getName().endsWith(".gz");
+		fis = new FileInputStream(f);
+		if (gzipped){
+			//Directly read gzip-compressed files
+			gzipis = new GZIPInputStream(fis);
+			lnr = new LineNumberReader(new InputStreamReader(gzipis));
+		} else 
+			lnr = new LineNumberReader(new InputStreamReader(fis));
+		
+		ArrayList<String> filteredValues = new ArrayList<String>();
+		try{
+			ArrayList<String> values = IMD_Header.readValuesFromHeader(lnr);
+			
+			for (String s : values){
+				if (!s.equals("number") && !s.equals("type") && !s.equals("rbv_data")
+						&& !s.equals("rbv_x") && !s.equals("rbv_y") && !s.equals("rbv_z")
+						&& !s.equals("ls_x") && !s.equals("ls_y") && !s.equals("ls_z")
+						&& !s.equals("x") && !s.equals("y") && !s.equals("z")
+						&& !s.equals("grain") && !s.equals("ada_type"))
+					filteredValues.add(s);
+			}
+		} catch (IOException e){
+			filteredValues.clear();
+			throw(e);
+		} finally{
+			lnr.close();
+		}
+		return filteredValues.toArray(new String[filteredValues.size()]);
+	}
+	
+	@Override
+	protected AtomData readInputData() throws IOException{
+		AtomData toReturn = null;
+						
+		if (ImportStates.isImportSequence()){
+			String filename = chooser.getSelectedFile().getAbsolutePath();
+			
+			final Pattern postFix = Pattern.compile("\\.chkpt|\\.ada|\\.ss");
+			Matcher m = postFix.matcher(filename); 
+			m.find();
+			int postfixStart = m.start();
+			String filenamePostFix = filename.substring(postfixStart, filename.length());
+			
+			filename = filename.substring(0, filename.length()-filenamePostFix.length());
+			String[] parts = filename.split("\\.");
+			int num = 0;
+			String prefix = parts[0];
+			
+			File f;
+			
+			num = Integer.parseInt(parts[parts.length-1]);
+			for (int i=1; i<parts.length-1; i++) prefix+="."+parts[i];
+			f = new File(prefix+String.format(".%05d%s", num, filenamePostFix));
+			
+			AtomData previous = null;
+			
+			int count = 0; 
+						
+			while (f.exists() && count < ImportStates.getFilesInSequence() && !isCancelled()){
+				getProgressMonitor().setCurrentFilename(f.getName());
+				System.out.println("Processing "+f.getName());
+				long time = System.currentTimeMillis();
+				AtomData ada = new AtomData(previous, this.readFile(f));
+				
+				previous = ada;
+				num++;
+				count++;
+				System.out.println("Processing time "+(System.currentTimeMillis()-time));
+				
+				f = new File(prefix+String.format(".%05d%s", num, filenamePostFix));
+			}
+			toReturn =  previous;
+		} else {
+			AtomData previous = null;
+			for (File f : chooser.getSelectedFiles()){
+				getProgressMonitor().setCurrentFilename(f.getName());
+				toReturn = new AtomData(previous, this.readFile(f));
+				previous = toReturn;
+			}
+		}
+		
+		return toReturn;
+	}
+	
+	@Override
+	public AtomData readInputData(File f) throws IOException{
+		AtomData toReturn = null;
+						
+		getProgressMonitor().setCurrentFilename(f.getName());
+		toReturn = new AtomData(null, this.readFile(f));
+		
+		return toReturn;
+	}
+	
+	/**
+	 * Read IMD-files, both ASCII and binary versions are supported
+	 * @param f File to read
+	 * @throws IOException
+	 */
+	protected ImportDataContainer readFile(File f) throws IOException{
+		final ImportDataContainer idc = new ImportDataContainer();
+		idc.name = f.getName();
+		idc.fullPathAndFilename = f.getCanonicalPath();
+		LineNumberReader lnr = null;
+		GZIPInputStream gzipis = null;
+		FileInputStream fis;
+		
+		final boolean gzipped = f.getName().endsWith(".gz");
+		fis = new FileInputStream(f);
+		if (gzipped){
+			//Directly read gzip-compressed files
+			gzipis = new GZIPInputStream(fis);
+			lnr = new LineNumberReader(new InputStreamReader(gzipis));
+		} else 
+			lnr = new LineNumberReader(new InputStreamReader(fis));
+		
+		//Reading the header
+		final IMD_Header header = IMD_Header.readHeader(lnr, idc);
+		
+		if (f.getPath().endsWith(".head") || f.getPath().endsWith(".head.gz"))
+			header.multiFileInput = true;
+		
+		try{
+			if (header.format.equals("A")){	//Ascii-Format
+				if (header.multiFileInput){
+					lnr.close();
+					
+					int fileNumber = 0;
+					File nextFile = null;
+					do {
+						String nextFilename = f.getAbsolutePath();
+						if (gzipped)	//remove ".head.gz"
+							nextFilename = nextFilename.substring(0, nextFilename.length()-8);
+						else //remove ".head"
+							nextFilename = nextFilename.substring(0, nextFilename.length()-5);
+						
+						nextFilename += "."+fileNumber;
+						if (gzipped) nextFilename += ".gz";
+						nextFile = new File(nextFilename);
+						if (nextFile.exists()){
+							try{
+								fis = new FileInputStream(nextFile);
+								if (gzipped){
+									//Directly read gzip-compressed files
+									gzipis = new GZIPInputStream(fis);
+									lnr = new LineNumberReader(new InputStreamReader(gzipis));
+								} else 
+									lnr = new LineNumberReader(new FileReader(nextFile));
+								readASCIIFile(idc, lnr, header, fis);
+								fileNumber++;
+							} finally {
+								if (lnr!=null) lnr.close();	
+							}
+						}
+					} while (nextFile.exists());
+				} else
+					readASCIIFile(idc, lnr, header, fis);
+			}
+			//binary formats
+			else if (header.format.equals("l") || header.format.equals("b") || 
+					header.format.equals("L") || header.format.equals("B")){
+				if (header.multiFileInput){
+					lnr.close();
+					
+					int fileNumber = 0;
+					File nextFile = null;
+					ArrayList<Future<Void>> tasks = new ArrayList<Future<Void>>();
+					do {
+						String nextFilename = f.getAbsolutePath();
+						if (gzipped)	//remove ".head.gz"
+							nextFilename = nextFilename.substring(0, nextFilename.length()-8);
+						else //remove ".head"
+							nextFilename = nextFilename.substring(0, nextFilename.length()-5);
+						
+						nextFilename += "."+fileNumber;
+						if (gzipped) nextFilename += ".gz";
+						nextFile = new File(nextFilename);
+						if (nextFile.exists()){
+							final File nf = nextFile; 
+							Callable<Void> c = new Callable<Void>() {
+								@Override
+								public Void call() throws Exception {
+									//Read one file per thread
+									readBinaryFile(nf, idc, gzipped, header);
+									return null;
+								}
+							};
+							tasks.add(ThreadPool.submit(c));
+							
+							fileNumber++;
+						}
+					} while (nextFile.exists());
+					for (Future<Void> t : tasks){ //Wait until all files are processed
+						t.get();
+					}
+				} else
+					readBinaryFile(f, idc, gzipped, header);
+			}
+			else throw new IllegalArgumentException("File format not supported");
+			
+			//Handling of special case using data columns, such as reading x,y,z
+			for (int j = 0; j<Configuration.getSizeDataColumns(); j++){
+				if (Configuration.getDataColumnInfo(j).getId().equals("x")){
+					for (Atom a : idc.atoms)
+						a.setData(a.x, j);
+				}
+				if (Configuration.getDataColumnInfo(j).getId().equals("y")){
+					for (Atom a : idc.atoms)
+						a.setData(a.y, j);
+				}
+				if (Configuration.getDataColumnInfo(j).getId().equals("z")){
+					for (Atom a : idc.atoms)
+						a.setData(a.z, j);
+				}
+				if (Configuration.getDataColumnInfo(j).getId().equals("grain")){
+					for (Atom a : idc.atoms)
+						a.setData(a.getGrain(), j);
+				}
+			}
+		}catch (IOException ex){
+			throw ex;
+		} catch (InterruptedException e) {
+		} catch (ExecutionException e) {
+		} finally {
+			lnr.close();
+		}
+		return idc;
+	}
+
+	private void readBinaryFile(File f, ImportDataContainer idc, boolean gzipped, IMD_Header header)
+			throws FileNotFoundException, IOException {
+		GZIPInputStream gzipis;
+		if (header.numberColumn == -1) 
+			throw new IllegalArgumentException("binary files must contain number");
+		
+		FileInputStream fis = new FileInputStream(f);
+		BufferedInputStream bis;
+		long filesize = 0l;
+		byte defaultType = (byte)Configuration.getCrystalStructure().getDefaultType();
+		
+		if (gzipped){
+			//Setup streams for compressed files
+			//read streamSize from the last 4 bytes in the file
+			//This value is equal to the true file size modulo 2^32
+			RandomAccessFile raf = new RandomAccessFile(f, "r");
+			long l = raf.length();
+			raf.seek(l-4);
+			
+			byte[] w = new byte[4];
+			raf.readFully(w, 0, 4);
+			filesize =  (long)(w[3]&0xff) << 24 | (long)(w[2]&0xff) << 16 | (long)(w[1]&0xff) << 8 | (long)(w[0]&0xff);
+			raf.close();
+			gzipis = new GZIPInputStream(fis, 16384*64);
+			bis = new BufferedInputStream(gzipis);
+		} else {
+			bis = new BufferedInputStream(fis, 16384*64);
+			filesize = fis.getChannel().size();
+		}
+		
+		if (!header.multiFileInput){
+			//Set an approximate size of the array to store atoms and avoid frequent reallocations
+			int approxBytesPerAtom = header.numColumns;
+			if (header.format.equals("l") || header.format.equals("b")) approxBytesPerAtom*=4;
+			else approxBytesPerAtom*=8;
+			int approxAtoms = (int)((filesize/approxBytesPerAtom)*1.1);
+			idc.atoms.ensureCapacity(approxAtoms);
+		}
+		
+		getProgressMonitor().start(fis.getChannel().size());
+		
+		boolean littleEndian = header.format.equals("l") || header.format.equals("L");
+		boolean doublePrecision = header.format.equals("L") || header.format.equals("B");
+		
+		DataInputStreamWrapper dis = 
+			DataInputStreamWrapper.getDataInputStreamWrapper(bis, doublePrecision, littleEndian);
+		
+		AtomFilter atomFilter = Configuration.getCrystalStructure().getIgnoreAtomsDuringImportFilter();
+		
+		try {
+			if (!header.multiFileInput){ //Files created with parallel output do not have a header
+				//Seek the end of the header
+				boolean terminationSymbolFound = false;
+				byte b1, b2 = 0;
+				do {
+					b1 = b2;
+					b2 = dis.readByte();
+					if (b1 == 0x23 && b2 == 0x45) terminationSymbolFound = true; // search "#E" 
+				} while (!terminationSymbolFound);
+				//read end of line - lf for unix or cr/lf for windows
+				do {
+					b1 = dis.readByte(); //read bytes until end of line (there might be whitespace after #E 
+					if (b1 == 0x0d) {    //cr found, read lf 
+						dis.readByte();
+					}
+				} while (b1!=0x0a && b1!=0x0d);
+			}
+			
+			Vec3 pos = new Vec3();
+			Vec3 rbv = new Vec3();
+			Vec3 lineDirection = new Vec3();
+			byte type = (byte)(defaultType+1);
+			byte element = 0;
+			int num = 0;
+			boolean rbv_read = false;
+			if (header.lsX_Column != -1 && header.readRBV) rbv_read = true;
+			//Add six values for RBV and line direction
+			float[] dataColumnValues = new float[header.dataColumns.length+6];
+			int grain = 0;
+			
+			int atomRead = 0;
+			
+			while (filesize > dis.getBytesRead()){
+				atomRead++;
+				if (atomRead%10000 == 0){	//Update the progressBar
+					getProgressMonitor().setCounter(fis.getChannel().position());
+				}
+				int read=0;
+				if (header.numberColumn!=-1){	    //Read number if present
+					num = dis.readIntSingle();	    //always 32bit
+					read++;
+				}
+				if (header.elementColumn != -1){	//Read type if present
+					element = (byte)dis.readIntSingle();	//always 32bit
+					read++;
+				}
+				if (header.massColumn == read){       //Read mass if present
+					if (header.columnToCustomIndex[read] != -1) {
+						dataColumnValues[header.columnToCustomIndex[read]] = dis.readFloat();
+					} else dis.skip();
+					read++;
+				}
+				
+				//Read position
+				pos.x = dis.readFloat();
+				pos.y = dis.readFloat();
+				pos.z = dis.readFloat();
+				read += 3;
+				//Read optional values
+				while (read < header.numColumns) {
+					if (!header.columnToBeRead[read]) {
+						dis.skip();
+					} else {
+						if (header.columnToCustomIndex[read] != -1) {
+							dataColumnValues[header.columnToCustomIndex[read]] = dis.readFloat();
+						} else if (read == header.atomTypeColumn) {
+							type = (byte) dis.readInt();
+						} else if (read == header.rbv_data) {
+							rbv_read = false;
+							if (dis.readInt() == 1) {
+								dataColumnValues[header.dataColumns.length+0] = dis.readFloat();
+								dataColumnValues[header.dataColumns.length+1] = dis.readFloat();
+								dataColumnValues[header.dataColumns.length+2] = dis.readFloat();
+								dataColumnValues[header.dataColumns.length+3] = dis.readFloat();
+								dataColumnValues[header.dataColumns.length+4] = dis.readFloat();
+								dataColumnValues[header.dataColumns.length+5] = dis.readFloat();
+								rbv_read = true;
+							}
+						} else if (read == header.grainColumn) {
+							grain = dis.readInt();
+						}
+					}
+					read++;
+				}
+
+				if ( header.importPerfect || type != defaultType) {
+					//Put atoms back into the simulation box, they might be slightly outside
+					idc.box.backInBox(pos);
+					
+					Atom a = new Atom(pos, type, num, element);
+					if (element+1 > idc.maxElementNumber) idc.maxElementNumber = (byte)(element + 1);
+					
+					//Add rbv info is found in file
+					if (header.readRBV && rbv_read){
+						lineDirection.x = dataColumnValues[header.dataColumns.length+0];
+						lineDirection.y = dataColumnValues[header.dataColumns.length+1];
+						lineDirection.z = dataColumnValues[header.dataColumns.length+2];
+						rbv.x = dataColumnValues[header.dataColumns.length+3];
+						rbv.y = dataColumnValues[header.dataColumns.length+4];
+						rbv.z = dataColumnValues[header.dataColumns.length+5];
+						a.setRBV(rbv, lineDirection);
+					}
+					if (header.grainColumn!=-1 && ImportStates.POLY_MATERIAL.isActive()) 
+						a.setGrain(grain);	//Assign grain number if found
+					
+					if (atomFilter == null || atomFilter.accept(a)){
+						//Put atom into the list of all atoms
+						if (header.multiFileInput) 
+							idc.addAtom(a);     //Thread safe access
+						else idc.atoms.add(a);	//Non thread safe access
+					}
+
+					//Custom columns
+					for (int i = 0; i<header.dataColumns.length; i++){
+						if (header.dataColumns[i]!=-1)
+							a.setData(dataColumnValues[i], i);
+					}
+				}
+				if (gzipped && filesize <= dis.getBytesRead()){
+					if (filesize < dis.getBytesRead())
+						filesize += 1l<<32;	//File seems to be larger than 4GB
+					else if (bis.available()>1 &&  fis.getChannel().position() != fis.getChannel().size()-1){
+						//File seems to be larger than 4GB, there is data left in the InputStreams
+						filesize += 1l<<32;	 
+					}
+				}
+			}
+		} catch (IOException ex) {
+			throw ex;
+		} finally {
+			dis.close();
+			getProgressMonitor().stop();
+		}
+	}
+
+	private void readASCIIFile(ImportDataContainer idc, LineNumberReader lnr, IMD_Header header,
+			FileInputStream fis) throws IOException {
+		String s = lnr.readLine();
+		Vec3 pos = new Vec3();
+		byte type = 0;
+		int num = 0;
+		byte element = 0;
+		Pattern p = Pattern.compile("\\s+");
+		int atomRead = 0;
+		
+		getProgressMonitor().start(fis.getChannel().size());
+		AtomFilter atomFilter = Configuration.getCrystalStructure().getIgnoreAtomsDuringImportFilter();
+		
+		while (s!=null){
+			atomRead++;
+			if (atomRead%10000 == 0){	//Update the progressBar
+				getProgressMonitor().setCounter(fis.getChannel().position());
+			}
+			
+			s = s.trim();
+			if (s.isEmpty()){ /*Skipping empty lines if someone inserted them in the file */
+				s = lnr.readLine();
+				continue;
+			}
+			String[] parts = p.split(s);
+			
+			int grain = 0;
+			
+			if (header.atomTypeColumn!=-1) type = (byte)Integer.parseInt(parts[header.atomTypeColumn]);
+			if (header.grainColumn!=-1) {
+				grain = Integer.parseInt(parts[header.grainColumn]);
+			}
+			if (header.elementColumn!=-1) {
+				element = (byte)Integer.parseInt(parts[header.elementColumn]);
+				if (element + 1 > idc.maxElementNumber) idc.maxElementNumber = (byte)(element + 1);
+			}
+			
+			if ( header.importPerfect || type!=Configuration.getCrystalStructure().getDefaultType()) {
+				if (header.numberColumn != -1)
+					num = Integer.parseInt(parts[header.numberColumn]);
+				
+				pos.x = Float.parseFloat(parts[header.xColumn]);
+				pos.y = Float.parseFloat(parts[header.xColumn+1]);
+				pos.z = Float.parseFloat(parts[header.xColumn+2]);
+				
+				//Put atoms back into the simulation box, they might be slightly outside
+				idc.box.backInBox(pos);
+
+				Atom a = new Atom(pos, type, num, element);
+				if (header.grainColumn!=-1 && ImportStates.POLY_MATERIAL.isActive()) 
+					a.setGrain(grain);	//Assign grain number if found
+				
+				//Put atom into the list of all atoms
+				if (atomFilter == null || atomFilter.accept(a)){
+					if (header.multiFileInput) 
+						idc.addAtom(a);     //Thread safe access
+					else idc.atoms.add(a);	//Non thread safe access
+				}
+				
+				//Custom columns
+				for (int i = 0; i<header.dataColumns.length; i++){
+					if (header.dataColumns[i]!=-1)
+						a.setData(Float.parseFloat(parts[header.dataColumns[i]]), i);
+				}
+				
+				if (header.readRBV){
+					Vec3 rbv = new Vec3();
+					Vec3 lineDirection = new Vec3();
+
+					if (header.rbv_data == -1){
+						rbv.x = Float.parseFloat(parts[header.rbvX_Column]);
+						rbv.y = Float.parseFloat(parts[header.rbvX_Column+1]);
+						rbv.z = Float.parseFloat(parts[header.rbvX_Column+2]);
+							
+						lineDirection.x = Float.parseFloat(parts[header.lsX_Column]);
+						lineDirection.y = Float.parseFloat(parts[header.lsX_Column+1]);
+						lineDirection.z = Float.parseFloat(parts[header.lsX_Column+2]);
+					} else {
+						int data = Integer.parseInt(parts[header.rbv_data]);
+						if (data == 1){
+							lineDirection.x = Float.parseFloat(parts[header.rbv_data+1]);
+							lineDirection.y = Float.parseFloat(parts[header.rbv_data+2]);
+							lineDirection.z = Float.parseFloat(parts[header.rbv_data+3]);
+							
+							rbv.x = Float.parseFloat(parts[header.rbv_data+4]);
+							rbv.y = Float.parseFloat(parts[header.rbv_data+5]);
+							rbv.z = Float.parseFloat(parts[header.rbv_data+6]);
+						}
+					}
+
+					if (rbv.dot(rbv)>0f)
+						a.setRBV(rbv, lineDirection);
+				}
+			}
+			s = lnr.readLine();
+		}
+		getProgressMonitor().stop();
+	}
+	
+	private static class IMD_Header{
+		int atomTypeColumn = -1; int elementColumn = -1;
+		int xColumn = -1;
+		int rbvX_Column = -1;
+		int lsX_Column = -1;
+		int rbv_data = -1;
+		int grainColumn = -1;
+		int numberColumn = -1;
+		int numColumns = 0;
+		int massColumn = -1; 
+		String format = "A";
+		int[] dataColumns;
+		
+		boolean multiFileInput = false;
+		boolean importPerfect = false;
+		boolean readRBV = false;
+		
+		boolean[] columnToBeRead;
+		int[] columnToCustomIndex;
+		
+		private static ArrayList<String> readValuesFromHeader(LineNumberReader lnr) throws IOException{
+			ArrayList<String> values = new ArrayList<String>();
+			Pattern p = Pattern.compile("\\s+");
+
+			String s = lnr.readLine();
+			while (s != null && !s.startsWith("#E")) {
+				if (s.startsWith("#C")) {
+					String[] parts = p.split(s);
+					for (int i = 1; i < parts.length; i++) {
+						values.add(parts [i]);
+					}
+					return values;
+				}
+				s = lnr.readLine();
+			}
+			return values;
+		}
+		
+		
+		private static IMD_Header readHeader(LineNumberReader lnr,
+				ImportDataContainer idc) throws IOException{
+			
+			IMD_Header header = new IMD_Header();
+			Pattern p = Pattern.compile("\\s+");
+			header.dataColumns = new int[Configuration.getSizeDataColumns()];
+			for (int i = 0; i<Configuration.getSizeDataColumns(); i++){
+				header.dataColumns[i] = -1;
+			}
+			
+			String defectTypeID = Configuration.getCrystalStructure().getAtomTypeKeyword();
+			
+			String s = lnr.readLine();
+			while (s != null && !s.startsWith("#E")) {
+				if (s.startsWith("#F")){
+					String[] parts = p.split(s);
+					header.format = parts[1];
+				}
+				if (s.startsWith("#C")) {
+					String[] parts = p.split(s);
+					header.numColumns = parts.length - 1;
+					header.columnToBeRead = new boolean[header.numColumns+1];
+					header.columnToCustomIndex = new int[header.numColumns+1];
+					
+					for (int i = 0; i < parts.length; i++) {
+						header.columnToCustomIndex[i] = -1;
+						if (parts[i].equals("number")) {
+							header.numberColumn = i - 1;
+							header.columnToBeRead[i-1] = true;
+						} else if (!ImportStates.OVERRIDE.isActive() && parts[i].equals(defectTypeID)){
+							header.atomTypeColumn = i - 1;
+							header.columnToBeRead[i-1] = true;
+						} else if (parts[i].equals("type")){
+							header.elementColumn = i - 1;
+							header.columnToBeRead[i-1] = true;
+						} else if (parts[i].equals("mass")){
+							header.massColumn = i - 1;
+							for (int j = 0; j<Configuration.getSizeDataColumns(); j++){
+								if (parts[i].equals(Configuration.getDataColumnInfo(j).getId())){
+									header.dataColumns[j] = i - 1;
+									header.columnToBeRead[i-1] = true;
+									header.columnToCustomIndex[i-1] = j;
+								}
+							}
+						} else if (parts[i].equals("x")){
+							header.xColumn = i - 1;
+							header.columnToBeRead[i-1] = true;
+							header.columnToBeRead[i] = true;
+							header.columnToBeRead[i+1] = true;
+						} else if (parts[i].equals("rbv_data")) {
+							header.rbv_data = i - 1;
+							header.columnToBeRead[i-1] = true;
+						} else if (!ImportStates.OVERRIDE.isActive() && parts[i].equals("rbv_x")) {
+							header.rbvX_Column = i - 1;
+							header.columnToBeRead[i-1] = true;
+							header.columnToCustomIndex[i-1] = Configuration.getSizeDataColumns()+3;
+						} else if (!ImportStates.OVERRIDE.isActive() && parts[i].equals("rbv_y")) {
+							header.columnToBeRead[i-1] = true;
+							header.columnToCustomIndex[i-1] = Configuration.getSizeDataColumns()+4;
+						} else if (!ImportStates.OVERRIDE.isActive() && parts[i].equals("rbv_z")) {
+							header.columnToBeRead[i-1] = true;
+							header.columnToCustomIndex[i-1] = Configuration.getSizeDataColumns()+5;
+						} else if (!ImportStates.OVERRIDE.isActive() && parts[i].equals("ls_x")){
+							header.lsX_Column = i - 1;
+							header.columnToBeRead[i-1] = true;
+							header.columnToCustomIndex[i-1] = Configuration.getSizeDataColumns();
+						} else if (!ImportStates.OVERRIDE.isActive() && parts[i].equals("ls_y")){
+							header.columnToBeRead[i-1] = true;
+							header.columnToCustomIndex[i-1] = Configuration.getSizeDataColumns()+1;
+						} else if (!ImportStates.OVERRIDE.isActive() && parts[i].equals("ls_z")){
+							header.columnToBeRead[i-1] = true;
+							header.columnToCustomIndex[i-1] = Configuration.getSizeDataColumns()+2;
+						} else if (!ImportStates.OVERRIDE.isActive() && parts[i].equals("grain")) {
+							header.grainColumn = i - 1;
+							header.columnToBeRead[i-1] = true;
+						} else {
+							for (int j = 0; j<Configuration.getSizeDataColumns(); j++){
+								if (parts[i].equals(Configuration.getDataColumnInfo(j).getId())){
+									header.dataColumns[j] = i - 1;
+									header.columnToBeRead[i-1] = true;
+									header.columnToCustomIndex[i-1] = j;
+								}
+							}
+						}
+					}
+				} else if (s.startsWith("#X")){
+					String[] parts = p.split(s);
+					idc.boxSizeX.x = Float.parseFloat(parts[1]);
+					idc.boxSizeX.y = Float.parseFloat(parts[2]);
+					idc.boxSizeX.z = Float.parseFloat(parts[3]);
+				} else if (s.startsWith("#Y")){
+					String[] parts = p.split(s);
+					idc.boxSizeY.x = Float.parseFloat(parts[1]);
+					idc.boxSizeY.y = Float.parseFloat(parts[2]);
+					idc.boxSizeY.z = Float.parseFloat(parts[3]);
+				} else if (s.startsWith("#Z")){
+					String[] parts = p.split(s);
+					idc.boxSizeZ.x = Float.parseFloat(parts[1]);
+					idc.boxSizeZ.y = Float.parseFloat(parts[2]);
+					idc.boxSizeZ.z = Float.parseFloat(parts[3]);
+				} else if (s.startsWith("##META")){
+					s = lnr.readLine();
+					if (idc.fileMetaData == null)
+						idc.fileMetaData = new HashMap<String, Object>();
+					while (!s.startsWith("##METAEND")) {
+						//First check if there are custom options
+						if (s.startsWith("##") &&
+								!Configuration.getCrystalStructure().processMetadataLine(s, idc.fileMetaData, lnr, idc)){
+							//Try to store the line as a array of floats, e.g. timesteps, indenter...
+							try{
+								s = s.substring(2);
+								String[] parts = p.split(s);
+								float[] info = new float[parts.length-1];
+								for (int i=1; i<parts.length; i++){
+									info[i-1] = Float.parseFloat(parts[i]);
+								}
+								idc.fileMetaData.put(parts[0].toLowerCase(), info);
+							} catch (Exception e) {}
+						}
+						s = lnr.readLine();
+					}
+				}
+				s = lnr.readLine();
+			}
+			
+			if (header.xColumn ==-1) 
+				throw new IllegalArgumentException("Broken header, no coordinates x y z");
+			idc.makeBox();
+			if (idc.boxSizeX.x <= 0f || idc.boxSizeY.y <= 0f || idc.boxSizeZ.z <= 0f){
+				throw new IllegalArgumentException("Broken header, box sizes must be larger than 0");
+			}
+			
+			if (header.grainColumn != -1) idc.grainsImported = true;
+			if (header.atomTypeColumn != -1) idc.atomTypesAvailable = true;
+			else header.importPerfect = true;
+			
+			if ( !ImportStates.OVERRIDE.isActive() && 
+					((header.rbvX_Column!=-1 && header.lsX_Column!=-1 ) || header.rbv_data!=-1) &&
+					ImportStates.BURGERS_VECTORS.isActive()){
+				header.readRBV = true;
+				idc.rbvAvailable = true;
+			}
+			
+			if (!ImportStates.DISPOSE_DEFAULT.isActive() || 
+					(ImportStates.BURGERS_VECTORS.isActive() && !idc.rbvAvailable) ||
+					(ImportStates.POLY_MATERIAL.isActive() && !idc.grainsImported)) 
+				header.importPerfect = true;
+
+			return header;
+		}
+		
+	}
+}

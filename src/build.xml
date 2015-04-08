@@ -1,0 +1,53 @@
+<project default="makeViewer">
+	
+	<!-- define path to libraries -->
+	<property name="libDir" value="./../../" />
+	
+	<!-- define path where compiled files are stores -->
+	<property name="binDir" value="./../tmp_bin/" />
+	
+	<!-- define path where to write the final jar file -->
+	<property name="jarDir" value="./../" />
+	
+	
+	<path id="libs.classpath">
+		<pathelement path="${libDir}jogamp/jar/gluegen-rt.jar"/>
+		<pathelement path="${libDir}libs/Jama/Jama.jar"/>
+		<pathelement path="${libDir}jogamp/jar/jogl-all.jar"/>
+		<pathelement path="${libDir}libs/Quickhull3d/quickhull3d.jar"/>
+	 </path>	
+	
+	<target name="compile">
+		 <mkdir dir="${binDir}" />
+		<delete>
+			<fileset dir="${binDir}" includes="**/*.class" />
+		</delete>
+		<javac includeantruntime="false" srcdir="." debug="on" destdir="${binDir}" source="1.6" target="1.6">
+			<include name="**/*.*" />
+			<classpath refid="libs.classpath" />
+			<compilerarg line="-encoding utf-8"/>
+		</javac>
+	</target>
+
+	<target name="makeViewer" depends="compile">
+		<delete file="${jarDir}/AtomViewer.jar" />
+
+		<jar destfile="${jarDir}/AtomViewer.jar">
+			<fileset dir="${binDir}">
+				<include name="**/*.class" />
+			</fileset>
+			<fileset dir=".">
+				<include name="**/*.java"/>
+				<include name="**/*.xml"/>
+				<include name="**/resources/*.*"/>
+			</fileset>
+			<manifest>
+				<attribute name="Main-Class" value="gui.JMainWindow" />
+				<attribute name="Class-Path" value="jogamp/jar/gluegen-rt.jar jogamp/jar/jogl-all.jar libs/Jama/Jama.jar libs/Quickhull3d/quickhull3d.jar" />
+			</manifest>
+		</jar>
+		
+		<!-- delete bin-dir -->
+		<delete dir="${binDir}" />
+	</target>
+</project>
