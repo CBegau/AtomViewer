@@ -67,6 +67,7 @@ private final static ArrayList<ProcessingModule> otherModules;
 		otherModules.add(new DataContainerAsProcessingModuleWrapper(new StressData(), false));
 		otherModules.add(new DataContainerAsProcessingModuleWrapper(new LoadBalancingData(), false));
 		otherModules.add(new GrainIdentificationModule());
+		otherModules.add(new RemoveInvisibleAtomsModule());
 	}
 	
 	public static java.util.List<ProcessingModule> getAtomicScaleProcessingModule() {

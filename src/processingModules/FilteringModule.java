@@ -54,6 +54,7 @@ public class FilteringModule implements ProcessingModule {
 	
 	@Override
 	public ProcessingResult process(AtomData data) throws Exception {
+		if (filter == null) return null;
 		List<Atom> atoms = data.getAtoms();
 		int origSize = atoms.size();
 		int size = origSize;
