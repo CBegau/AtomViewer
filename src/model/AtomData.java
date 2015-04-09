@@ -233,15 +233,8 @@ public class AtomData {
 			}).process(this);
 		}
 		
-		countAtomTypes();
-		
-		//Count atoms of different (virtual) elements
 		atomsPerElement = new int[maxNumElements];
-		if (maxNumElements>1){
-			for (int i = 0; i< atoms.size(); i++){
-				atomsPerElement[atoms.get(i).getElement()]++;
-			}
-		} else atomsPerElement[0] = atoms.size();
+		countAtomTypes();
 		
 		this.atoms.trimToSize();		
 		
@@ -256,6 +249,13 @@ public class AtomData {
 	public void countAtomTypes() {
 		int maxType = defaultCrystalStructure.getNumberOfTypes();
 		int warnings = 0;
+		
+		for (int i=0; i<atomsPerType.length;i++)
+			atomsPerType[i] = 0; 
+		
+		for (int i=0; i<atomsPerElement.length;i++)
+			atomsPerElement[i] = 0; 
+		
 		for (int i=0; i<atoms.size();i++){
 			if (atoms.get(i).getType()>=maxType || atoms.get(i).getType()<0){
 				atoms.get(i).setType(0);
@@ -269,7 +269,8 @@ public class AtomData {
 		
 		for (int i=0; i<atoms.size();i++){
 			if (atoms.get(i).getType() >= 0 && atoms.get(i).getType() < atomsPerType.length)
-				atomsPerType[atoms.get(i).getType()]++;			
+				atomsPerType[atoms.get(i).getType()]++;		
+			atomsPerElement[atoms.get(i).getElement()]++;
 		}
 	}
 	
