@@ -4,7 +4,7 @@
 	<property name="libDir" value="./../" />
 	
 	<!-- define path where compiled files are stores -->
-	<property name="binDir" value="./../tmp_bin/" />
+	<property name="binDir" value="./tmp_bin/" />
 	
 	<!-- define path where to write the final jar file -->
 	<property name="jarDir" value="./../" />
