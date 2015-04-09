@@ -1,7 +1,7 @@
 <project default="makeViewer">
 	
 	<!-- define path to libraries -->
-	<property name="libDir" value="./../../" />
+	<property name="libDir" value="./../" />
 	
 	<!-- define path where compiled files are stores -->
 	<property name="binDir" value="./../tmp_bin/" />
