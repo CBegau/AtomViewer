@@ -62,8 +62,6 @@ public class GLMatrix {
 	}
 	
 	public void scale(float x, float y, float z){
-		assert (x!=0f && y!=0 && z!=0);
-		
 		float[] t = new float[16];
 		t[0]= x;
 		t[5]= y;

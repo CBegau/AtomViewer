@@ -210,7 +210,7 @@ public class JPrimitiveVariablesPropertiesDialog extends JDialog {
 			this.max = max;
 			this.value = defaultValue;
 			this.defaultValue = defaultValue;
-			assert (min>value  || max<value);
+			assert (value>=min && value<=max);
 			
 			valueSpinner = new JSpinner(new SpinnerNumberModel(value, min, max, 1));
 			valueSpinner.addChangeListener(new ChangeListener() {
@@ -255,7 +255,7 @@ public class JPrimitiveVariablesPropertiesDialog extends JDialog {
 			this.max = max;
 			this.value = defaultValue;
 			this.defaultValue = defaultValue;
-			assert (min<=value && max>=value);
+			assert (value>=min && value<=max);
 			
 			valueSpinner = new JSpinner(new SpinnerNumberModel(value, min, max, (max-min)/1000.));
 			valueSpinner.addChangeListener(new ChangeListener() {
