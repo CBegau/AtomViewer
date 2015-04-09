@@ -60,7 +60,7 @@ import model.dataContainer.DataContainer;
 public class JMainWindow extends JFrame implements WindowListener, AtomDataChangedListener {
 
 	public static final String VERSION = "3.0 alpha"; 
-	public static String buildVersion = "06.April.2015";
+	public static String buildVersion = "";
 	
 	private static final long serialVersionUID = 1L;
 	

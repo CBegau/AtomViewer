@@ -152,6 +152,28 @@ public class Shader {
 		"}"
 	};
 	
+	private static String[] passThroughDeferredColorVertexShader = {
+		"#version 150\n"+
+	
+		"in vec3 v;"+
+		"in vec3 norm;"+
+		"in vec3 Color;"+
+		
+		"out vec4 FrontColor;"+
+		"out vec3 normal;"+
+		"out vec4 position;"+
+		
+		"uniform mat3 nm;"+
+		"uniform mat4 mvpm;"+
+
+		"void main(void) {"+
+		"  FrontColor     = vec4(Color,1.);\n"+
+		"  position       = vec4(v, 1.);\n"+
+		"  normal         = normalize(nm*norm);\n"+
+		"  gl_Position    = mvpm * position;\n"+
+		"}"
+	};
+	
 	private static String[] pplFragmentwithADSShader = {
 		"#version 150\n"+
 		"in vec3 lightvec;"+
@@ -898,6 +920,8 @@ public class Shader {
 				new int[]{ATTRIB_VERTEX, ATTRIB_TEX0}, new String[]{"v", "Tex"}),
 		ADS_UNIFORM_COLOR(defaultPPLVertexShaderUniformColor, pplFragmentwithADSShader,
 				new int[]{ATTRIB_VERTEX, ATTRIB_NORMAL}, new String[]{"v", "norm"}),
+		ADS_VERTEX_COLOR(defaultVertexShader, pplFragmentwithADSShader,
+				new int[]{ATTRIB_VERTEX, ATTRIB_NORMAL, ATTRIB_COLOR}, new String[]{"v", "norm", "Color"}),
 		
 		//Render from deferred buffers
 		DEFERRED_ADS_RENDERING(defaultVertexShader, deferredADSFragmentShader,
@@ -905,7 +929,8 @@ public class Shader {
 		//Rendering into deferred buffer
 		UNIFORM_COLOR_DEFERRED(passThroughDeferredVertexShader, toGBufferFragmentShader,
 				new int[]{ATTRIB_VERTEX, ATTRIB_NORMAL}, new String[]{"v", "norm"}),
-				
+		VERTEX_COLOR_DEFERRED(passThroughDeferredColorVertexShader, toGBufferFragmentShader,
+						new int[]{ATTRIB_VERTEX, ATTRIB_NORMAL, ATTRIB_COLOR}, new String[]{"v", "norm", "Color"}),		
 		
 		//Shader for specialized objects like spheres and arrows
 		BILLBOARD_INSTANCED_DEFERRED(translateBillboardVertexInstancedShaderDeferred, billboardFragmentShaderDeferred, 
