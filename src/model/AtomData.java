@@ -147,7 +147,7 @@ public class AtomData {
 	 * Adds a set of DataColumnInfos to the data. Adds only non-existing columns.
 	 * @param dci
 	 */
-	public void addDataColumnInfo(DataColumnInfo ... dci){
+	private void addDataColumnInfo(DataColumnInfo ... dci){
 		if (dci == null) return;
 		int added = 0;
 		for (DataColumnInfo d : dci)
@@ -185,6 +185,24 @@ public class AtomData {
 		}
 	}
 	
+	/**
+	 * Apply a processing module
+	 * @param pm
+	 * @throws Exception
+	 */
+	public void applyProcessingModule(ProcessingModule pm) throws Exception{
+		this.addDataColumnInfo(pm.getDataColumnsInfo());
+		ProcessingResult pr = pm.process(this);
+		if (pr != null && pr.getDataContainer() != null){
+			this.addAdditionalData(pr.getDataContainer());
+		}
+		if (pm.getDataColumnsInfo() != null){
+			for (DataColumnInfo dci : pm.getDataColumnsInfo())
+				if (!dci.isInitialized())
+					dci.findRange(this, false);
+		}
+	}
+	
 	private void processInputData(MDFileLoader.ImportDataContainer idc) throws Exception{
 		//Short circuit for empty files
 		if (this.atoms.size() == 0) return;
@@ -192,10 +210,8 @@ public class AtomData {
 		{
 			List<DataContainer> data = defaultCrystalStructure.getDataContainerToApplyAtBeginningOfAnalysis();
 			if (data != null){
-				for (DataContainer dc : data){
-					ProcessingResult pr = new DataContainerAsProcessingModuleWrapper(dc.deriveNewInstance(), true).process(this);
-					this.addAdditionalData(pr.getDataContainer());
-				}
+				for (DataContainer dc : data)
+					this.applyProcessingModule(new DataContainerAsProcessingModuleWrapper(dc.deriveNewInstance(), true));
 			}
 		}
 		
@@ -459,7 +475,7 @@ public class AtomData {
 		return rbvAvailable;
 	}
 	
-	public void addAdditionalData(DataContainer dc){
+	private void addAdditionalData(DataContainer dc){
 		boolean replaced = false;
 		for (int i=0; i<this.additionalData.size(); i++){
 			if (this.additionalData.get(i).getClass() == dc.getClass()){

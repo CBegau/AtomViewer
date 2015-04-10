@@ -41,7 +41,6 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import processingModules.AvailableProcessingModules;
 import processingModules.AvailableProcessingModules.JProcessingModuleDialog;
 import processingModules.ProcessingModule;
-import processingModules.ProcessingResult;
 
 import com.jogamp.opengl.JoglVersion;
 
@@ -1103,19 +1102,9 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 			ProgressMonitor.getProgressMonitor().setActivityName(pm.getShortName());
 	
 			try {
-				data.addDataColumnInfo(pm.getDataColumnsInfo());
-				ProcessingResult pr = pm.process(data);
-				if (pr != null && pr.getDataContainer() != null){
-					data.addAdditionalData(pr.getDataContainer());
-				}
-				if (pm.getDataColumnsInfo() != null){
-					for (DataColumnInfo dci : pm.getDataColumnsInfo())
-						if (!dci.isInitialized())
-							dci.findRange(data, false);
-				}
-				if (updateViewer){
+				data.applyProcessingModule(pm);
+				if (updateViewer)
 					RenderingConfiguration.getViewer().updateAtoms();
-				}
 			} catch (Exception e) {
 				ProgressMonitor.getProgressMonitor().destroy();
 				JOptionPane.showMessageDialog(JMainWindow.this, e.getMessage());
