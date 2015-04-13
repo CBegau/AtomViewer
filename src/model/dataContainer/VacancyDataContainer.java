@@ -18,14 +18,15 @@
 
 package model.dataContainer;
 
+import gui.JPrimitiveVariablesPropertiesDialog;
 import gui.ProgressMonitor;
+import gui.JPrimitiveVariablesPropertiesDialog.BooleanProperty;
+import gui.JPrimitiveVariablesPropertiesDialog.FloatProperty;
 
 import java.awt.event.InputEvent;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
-
-import javax.swing.JOptionPane;
 
 import quickhull3d.Point3d;
 import quickhull3d.QuickHull3D;
@@ -39,6 +40,7 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 	private static JParticleDataControlPanel<Vacancy> dataPanel;
 	
 	private float nnd_tolerance = 0.8f;
+	private boolean testForSurfaces = true;
 	
 	@Override
 	public boolean isTransparenceRenderingRequired() {
@@ -59,14 +61,11 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 		final float nnd = cs.getDistanceToNearestNeighbor();
 		final float nndSearch = cs.getNearestNeighborSearchRadius();
 		
-		//Data structure to get all neighbors up to twice the distance
-		final NearestNeighborBuilder<Vec3> secondNearestNeighbors = 
-				new NearestNeighborBuilder<Vec3>(data.getBox(),1.5f*nndSearch, true);
-		final NearestNeighborBuilder<Vec3> firstNearestNeighbors = 
+		//Data structure to get all neighbors up to a selected distance
+		final NearestNeighborBuilder<Vec3> defectedNearestNeighbors = 
 				new NearestNeighborBuilder<Vec3>(data.getBox(), 1.5f*nndSearch, true);
-		
-		//Data structure to get all vacancies in small neighborhood
-		final NearestNeighborBuilder<Vacancy> realVacancies = new NearestNeighborBuilder<Vacancy>(data.getBox(), 0.707f*nnd);
+		final NearestNeighborBuilder<Vec3> allNearestNeighbors = 
+				new NearestNeighborBuilder<Vec3>(data.getBox(), 1.5f*nndSearch, true);
 		
 		final List<Vec3> possibleVacancyList = Collections.synchronizedList(new ArrayList<Vec3>());
 		
@@ -74,25 +73,26 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 		final int defaultType = cs.getDefaultType();
 		final int surfaceType = cs.getSurfaceType();
 		
-		final ArrayList<Atom> defectAtoms = new ArrayList<Atom>();
+		final ArrayList<Atom> nextToVancanyCandidateAtoms = new ArrayList<Atom>();
 		
 		final float minDistanceToAtom = nnd_tolerance*nnd;
 		
 		//Prepare nearest neighbor builders
 		for (Atom a : data.getAtoms()){
-			if (a.getType() != defaultType && a.getType() != surfaceType){
-				defectAtoms.add(a);
+			if (a.getType() != defaultType){
+				defectedNearestNeighbors.add(a);
+				
+				if (a.getType() != surfaceType)
+					nextToVancanyCandidateAtoms.add(a);
 			}
-			if (a.getType() != defaultType)
-				secondNearestNeighbors.add(a);
 		}
 		
-		firstNearestNeighbors.addAll(data.getAtoms());
+		allNearestNeighbors.addAll(data.getAtoms());
 		
 		
 		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
 		
-		ProgressMonitor.getProgressMonitor().start(defectAtoms.size());
+		ProgressMonitor.getProgressMonitor().start(nextToVancanyCandidateAtoms.size());
 		
 		for (int i = 0; i < ThreadPool.availProcessors(); i++){
 		
@@ -102,8 +102,8 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 				@Override
 				public Void call() throws Exception {
 				
-					final int start = ThreadPool.getSliceStart(defectAtoms.size(), j);
-					final int end = ThreadPool.getSliceEnd(defectAtoms.size(), j);
+					final int start = ThreadPool.getSliceStart(nextToVancanyCandidateAtoms.size(), j);
+					final int end = ThreadPool.getSliceEnd(nextToVancanyCandidateAtoms.size(), j);
 		
 					/*
 					 * Identify possible vacancy sites for each defect atom in parallel.
@@ -115,10 +115,10 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 						if ((k-start)%1000 == 0)
 							ProgressMonitor.getProgressMonitor().addToCounter(1000);
 				
-						Atom a = defectAtoms.get(k);
+						Atom a = nextToVancanyCandidateAtoms.get(k);
 						
 						//Datastructure to store second nearest neighbors of selected atom
-						ArrayList<Vec3> nnb = secondNearestNeighbors.getNeighVec(a);
+						ArrayList<Vec3> nnb = defectedNearestNeighbors.getNeighVec(a);
 						
 						if (nnb.size() < 4) continue;
 						
@@ -128,10 +128,12 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 						if(allVoronoiVertices.size() == 0) continue;
 												
 						ArrayList<Vec3> acceptedVoronoiVertices = new ArrayList<Vec3>();
-						ArrayList<Vec3> first = firstNearestNeighbors.getNeighVec(a);
-						ArrayList<Tupel<Vec3,Vec3>> convHullPlanes = null;
+						ArrayList<Vec3> first = allNearestNeighbors.getNeighVec(a);
+						
 						
 						nnb.add(new Vec3(0f, 0f, 0f)); //Add the central atom for the next steps
+						ArrayList<Tupel<Vec3,Vec3>> convHullPlanes = null;
+						if (testForSurfaces) convHullPlanes = getConvexHullBoundaryPlanes(nnb);
 						
 						for(Vec3 point : allVoronoiVertices) {
 							boolean aboveMinDist = true;
@@ -143,7 +145,7 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 									aboveMinDist = false;
 									break;
 								}
-								if (d > 2*firstNearestNeighbors.getCutoff()) {
+								if (d > 2*allNearestNeighbors.getCutoff()) {
 									//Too far away, won't be in convex hull
 									belowMaxDist = false;
 									break;
@@ -151,12 +153,12 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 							}
 							
 							if (aboveMinDist && belowMaxDist){
-								//Test more precisely if the site detected is inside the convex hull of points
-								if (convHullPlanes == null) convHullPlanes = getConvexHullBoundaryPlanes(nnb);
-								
-							    if (isInConvexHull(point, convHullPlanes) == true) {
-							    	acceptedVoronoiVertices.add(point);
-							    }
+								if (testForSurfaces){
+									//Test more precisely if the site detected is inside the convex hull of points
+								    if (isInConvexHull(point, convHullPlanes)) 
+								    	acceptedVoronoiVertices.add(point);
+								} else
+									acceptedVoronoiVertices.add(point);								
 							}
 						}
 						if (acceptedVoronoiVertices.size() == 0) continue;
@@ -168,7 +170,7 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 							//Fix periodicity
 							data.getBox().backInBox(point);
 								
-							//Add found Voronoi vertex to the list
+							//Add Voronoi vertex to the list
 							possibleVacancyList.add(point);
 						}
 					}
@@ -200,10 +202,11 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 			}
 		});
 		
-		//Data structure to get all possible vacancies in small neighborhood
-		final NearestNeighborBuilder<Vec3> possibleVacancies = new NearestNeighborBuilder<Vec3>(data.getBox(), nnd_tolerance*nnd, true);
-		possibleVacancies.addAll(possibleVacancyList);
 		
+		//Data structure to get all possible vacancies in small neighborhood
+		final NearestNeighborBuilder<Vec3> possibleVacancies = new NearestNeighborBuilder<Vec3>(data.getBox(), 0.5f*nnd, true);
+		possibleVacancies.addAll(possibleVacancyList);
+		final NearestNeighborBuilder<Vacancy> realVacancies = new NearestNeighborBuilder<Vacancy>(data.getBox(), 0.707f*nnd);
 		/**
 		 * Find the unique vacancy sites by selecting a vacancy site, average it with its duplicates
 		 * which may be minimally displaced by the numerical construction.
@@ -278,14 +281,20 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 	
 	@Override
 	public boolean showOptionsDialog(){
-		String value = JOptionPane.showInputDialog(null, "Enter fraction of distance to nearest neghbor "
-				+ "of a gap to be considered as vacancy", nnd_tolerance);
-		try {
-			nnd_tolerance = Float.parseFloat(value);
-		} catch (RuntimeException e){
-			return false;
+		JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(null, "Detect vacancies");
+		
+		FloatProperty tolerance = dialog.addFloat("nnd_tolerance", 
+				"Fraction of distance to nearest neghbor of a gap to be considered as vacancy"
+				, "", nnd_tolerance, 0.01f, 1000f);
+		BooleanProperty surface = dialog.addBoolean("testSurface", "Test for surfaces", "", testForSurfaces);
+		
+		boolean ok = dialog.showDialog();
+		if (ok){
+			
+			this.nnd_tolerance = tolerance.getValue();
+			this.testForSurfaces = surface.getValue();
 		}
-		return true;
+		return ok;
 	}
 
 	//Calculate the center of mass for given set of points
