@@ -668,6 +668,7 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 					selectedColumn = (DataColumnInfo)valueComboBox.getSelectedItem();
 					setSpinner();
 					RenderingConfiguration.setSelectedColumn(selectedColumn);
+					RenderingConfiguration.getViewer().updateAtoms();
 				}
 			});
 			
