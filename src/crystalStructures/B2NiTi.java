@@ -175,11 +175,6 @@ public class B2NiTi extends BCCStructure{
 		return true;
 	}
 	
-	@Override
-	public boolean createRBVbeforeGrains(){
-		return true;
-	}
-	
 	public float getDefaultSkeletonizerMeshingThreshold(){
 		return 1.28f;
 	}

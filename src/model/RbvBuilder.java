@@ -657,7 +657,7 @@ public class RbvBuilder implements ProcessingModule{
 
 	@Override
 	public ProcessingResult process(AtomData data) throws Exception {
-		if (data.getGrains() == null || data.getGrains().size() == 0 || data.getCrystalStructure().createRBVbeforeGrains())
+		if (data.getGrains() == null || data.getGrains().size() == 0)
 			RbvBuilder.createRBV(data);
 		else {
 			for (Grain g : data.getGrains())

@@ -801,17 +801,6 @@ public abstract class CrystalStructure{
 	}
 	
 	/**
-	 * In true polycrystalline materials, grains must be identified beforehand the
-	 * Nye tensor method can be applied. In some polyphase material like in Shape Memory Alloys
-	 * the lattice structure is not deviating that much and it is better to compute RBV first and 
-	 * filter dislocations
-	 * @return
-	 */
-	public boolean createRBVbeforeGrains(){
-		return false;
-	}
-	
-	/**
 	 * Defines if connection in the dislocation structure are possible
 	 * over multiple grains (phases) or not
 	 * @return
