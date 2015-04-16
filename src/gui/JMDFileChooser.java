@@ -29,6 +29,7 @@ import model.io.ImdFileLoader;
 import model.io.MDFileLoader;
 import model.Configuration;
 import model.ImportConfiguration;
+import model.RenderingConfiguration;
 import model.ImportConfiguration.ImportStates;
 
 public class JMDFileChooser extends JFileChooser{
@@ -71,9 +72,14 @@ public class JMDFileChooser extends JFileChooser{
 		
 		//TODO Remove this ugly workaround in a future user interface
 		this.components = new JOpenOptionComponent(loader instanceof ImdFileLoader);
+		JPanel panel = new JPanel();
+		panel.setLayout(new GridLayout(1, 1));
+		panel.add(this.components);
+		panel.doLayout();
+		this.setAccessory(panel);
 		
-		this.setAccessory(components);
-		this.setPreferredSize(new Dimension(720,500));
+		float factor = RenderingConfiguration.getGUIScalingFactor();
+		this.setPreferredSize(new Dimension((int)(720*factor),(int)(500*factor)));
 		
 		this.addPropertyChangeListener(new PropertyChangeListener() {
 			@Override
@@ -154,8 +160,6 @@ public class JMDFileChooser extends JFileChooser{
 			gbc.fill = GridBagConstraints.HORIZONTAL;
 			gbc.weightx = 0.33;
 			gbc.gridx = 0; gbc.gridy = 0;
-			
-			this.setPreferredSize(new Dimension(180, 80));
 			
 			final JCheckBox importedAtomTypeCheckbox = new JCheckBox("<html>Import atom types<br> from file</html>", ImportStates.IMPORT_ATOMTYPE.isActive());
 			final JCheckBox disposeDefaultAtomsCheckBox = new JCheckBox("<html>Dispose perfect<br>lattice atoms</html>", ImportStates.DISPOSE_DEFAULT.isActive());

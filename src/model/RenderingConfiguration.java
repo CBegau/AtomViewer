@@ -20,6 +20,7 @@ package model;
 
 import gui.ViewerGLJPanel;
 
+import java.awt.Font;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -33,6 +34,13 @@ public class RenderingConfiguration {
 	
 	private static File configFile;
 	private static boolean headless = false;
+	public static String defaultFont = Font.SANS_SERIF;
+	public static int defaultFontSize = 12;
+	public static int defaultFontStyle = Font.PLAIN;
+	
+	static {
+		loadProperties();
+	}
 	
 	/**
 	 * Global options for AtomViewer, accessible in the settings-menu
@@ -78,74 +86,88 @@ public class RenderingConfiguration {
 		public boolean isEnabled(){
 			return enabled;
 		}
+	}
+	
+	private static void loadProperties() {
+		if (headless) return;
+		Properties prop = new Properties();
 		
-		static{
-			loadProperties();
+		try {
+			if (Configuration.RUN_AS_STICKWARE){
+				configFile = new File("viewerSettings.conf");
+			} else {
+				String userHome = System.getProperty("user.home");
+				File dir = new File(userHome+"/.AtomViewer");
+				if (!dir.exists()) dir.mkdir();
+				configFile = new File(dir, "viewerSettings.conf");
+			}
+			if (!configFile.exists()) saveProperties();
+			prop.load(new FileReader(configFile));
+		} catch (IOException e){
+			e.printStackTrace();
+		}
+	
+		for (Options i: Options.values()){
+			if (prop.getProperty(i.toString()) != null)
+				i.setEnabled(Boolean.parseBoolean(prop.getProperty(i.toString())));
 		}
 		
-		private static void loadProperties() {
-			if (headless) return;
-			Properties prop = new Properties();
-			
-			try {
-				if (Configuration.RUN_AS_STICKWARE){
-					configFile = new File("viewerSettings.conf");
-				} else {
-					String userHome = System.getProperty("user.home");
-					File dir = new File(userHome+"/.AtomViewer");
-					if (!dir.exists()) dir.mkdir();
-					configFile = new File(dir, "viewerSettings.conf");
+		String scheme = prop.getProperty("ColorScheme");
+		if (scheme != null){
+			for (ColorBarScheme cbs : ColorBarScheme.values()){
+				if (cbs.name().equals(scheme)){
+					ColorTable.setColorBarScheme(cbs);
+					break;
 				}
-				if (!configFile.exists()) saveProperties();
-				prop.load(new FileReader(configFile));
-			} catch (IOException e){
-				e.printStackTrace();
 			}
+		}
+		String schemeSwapped = prop.getProperty("ColorSchemeSwapped");
+		if (schemeSwapped != null)
+			ColorTable.setColorBarSwapped(Boolean.parseBoolean(schemeSwapped));
 		
-			for (Options i: Options.values()){
-				if (prop.getProperty(i.toString()) != null)
-					i.setEnabled(Boolean.parseBoolean(prop.getProperty(i.toString())));
-			}
-			
-			String scheme = prop.getProperty("ColorScheme");
-			if (scheme != null){
-				for (ColorBarScheme cbs : ColorBarScheme.values()){
-					if (cbs.name().equals(scheme)){
-						ColorTable.setColorBarScheme(cbs);
-						break;
-					}
-				}
-			}
-			String schemeSwapped = prop.getProperty("ColorSchemeSwapped");
-			if (schemeSwapped != null)
-				ColorTable.setColorBarSwapped(Boolean.parseBoolean(schemeSwapped));
-			
-			
-			prop.setProperty("ColorScheme", ColorTable.getColorBarScheme().name());
-			prop.setProperty("ColorSchemeSwapped", Boolean.toString(ColorTable.isColorBarSwapped()));
+		String font = prop.getProperty("Font");
+		if (font != null)
+			defaultFont = font;
+		else defaultFont = Font.decode(null).getFamily();
+		
+		String fontSize = prop.getProperty("FontSize");
+		if (fontSize != null){
+			defaultFontSize = Integer.parseInt(fontSize);
+		} else defaultFontSize = Font.decode(null).getSize();
+		
+		String fontStyle = prop.getProperty("FontStyle");
+		if (fontStyle != null){
+			defaultFontStyle = Integer.parseInt(fontStyle);
+		} else defaultFontStyle = Font.PLAIN;
+		
+		prop.setProperty("ColorScheme", ColorTable.getColorBarScheme().name());
+		prop.setProperty("ColorSchemeSwapped", Boolean.toString(ColorTable.isColorBarSwapped()));
+	}
+	
+	public static void saveProperties() {
+		if (headless) return;
+		Properties prop = new Properties();
+	
+		for (Options i: Options.values()){
+			prop.setProperty(i.toString(), Boolean.toString(i.isEnabled()));
 		}
 		
-		public static void saveProperties() {
-			if (headless) return;
-			Properties prop = new Properties();
+		prop.setProperty("ColorScheme", ColorTable.getColorBarScheme().name());
+		prop.setProperty("ColorSchemeSwapped", Boolean.toString(ColorTable.isColorBarSwapped()));
 		
-			for (Options i: Options.values()){
-				prop.setProperty(i.toString(), Boolean.toString(i.isEnabled()));
+		prop.setProperty("Font", defaultFont);
+		prop.setProperty("FontSize", Integer.toString(defaultFontSize));
+		prop.setProperty("FontStyle", Integer.toString(defaultFontStyle));
+		
+		try {
+			if (!configFile.exists()) configFile.createNewFile();
+			if (configFile.canWrite()){
+				prop.store(new FileWriter(configFile), "Viewer settings config file");
 			}
-			
-			prop.setProperty("ColorScheme", ColorTable.getColorBarScheme().name());
-			prop.setProperty("ColorSchemeSwapped", Boolean.toString(ColorTable.isColorBarSwapped()));
-			
-			try {
-				if (!configFile.exists()) configFile.createNewFile();
-				if (configFile.canWrite()){
-					prop.store(new FileWriter(configFile), "Viewer settings config file");
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
+		
 	}
 	
 	private static boolean filterMin = false;
@@ -239,5 +261,9 @@ public class RenderingConfiguration {
 	
 	public static boolean isHeadless() {
 		return headless;
+	}
+	
+	public static float getGUIScalingFactor(){
+		return defaultFontSize/12f;
 	}
 }

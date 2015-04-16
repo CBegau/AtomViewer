@@ -28,6 +28,7 @@ import java.io.*;
 import java.text.DecimalFormat;
 import java.util.Locale;
 import java.util.List;
+import java.util.Map;
 
 import javax.imageio.ImageIO;
 import javax.media.opengl.GLCapabilities;
@@ -72,10 +73,22 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 	private final JGraphicOptionCheckBoxMenuItem whiteBackgroundCheckBoxMenu;
 	private final JMenuItem editRangeMenuItem;
 	private final JMenuItem exportSkeletonFileMenuItem;
-	private final JMenuItem editCrystalConf = new JMenuItem("Edit configuration");
+	private final JMenuItem editCrystalConf;
 	private final JMenu typeColorMenu;
 	
 	public JMainWindow() {
+		//Set fonts
+		for (Map.Entry<Object, Object> entry : javax.swing.UIManager.getDefaults().entrySet()) {
+		    Object key = entry.getKey();
+		    Object value = javax.swing.UIManager.get(key);
+		    if (value != null && value instanceof javax.swing.plaf.FontUIResource) {
+		        javax.swing.plaf.FontUIResource fr=(javax.swing.plaf.FontUIResource)value;
+		        javax.swing.plaf.FontUIResource f = new javax.swing.plaf.FontUIResource(RenderingConfiguration.defaultFont, 
+		        		fr.getStyle(), RenderingConfiguration.defaultFontSize);
+		        javax.swing.UIManager.put(key, f);
+		    }
+		}
+		
 		//Load the icon
 		try {
 			final String resourcesPath = "resources/icon.png";
@@ -289,7 +302,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 			public void actionPerformed(ActionEvent arg0) {
 				ColorTable.setColorBarSwapped(swapLegend.isSelected());
 				RenderingConfiguration.getViewer().updateAtoms();
-				RenderingConfiguration.Options.saveProperties();
+				RenderingConfiguration.saveProperties();
 			}
 		});
 		legendStyleMenu.add(swapLegend);
@@ -305,7 +318,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 					@Override
 					public void actionPerformed(ActionEvent arg0) {
 						ColorTable.setColorBarScheme(scheme);
-						RenderingConfiguration.Options.saveProperties();
+						RenderingConfiguration.saveProperties();
 						RenderingConfiguration.getViewer().updateAtoms();
 					}
 				});
@@ -316,6 +329,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		menu.add(viewMenu);
 		
 		JMenu editMenu = new JMenu("Edit");
+		editCrystalConf = new JMenuItem("Edit configuration");
 		editMenu.add(editCrystalConf);
 		editCrystalConf.setEnabled(false);
 		editCrystalConf.addActionListener(new ActionListener() {
@@ -473,6 +487,27 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		for (Options o : RenderingConfiguration.Options.values()){
 			settingsMenu.add(new JOptionCheckBoxMenuItem(o));
 		}
+		final JMenuItem selectFontMenuItem = new JMenuItem("Select font");
+		selectFontMenuItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(JMainWindow.this, "Select font");
+				JFontChooser fc = new JFontChooser();
+				JPanel panel = new JPanel(new GridLayout(1,1));
+				panel.add(fc);
+				dialog.addComponent(panel);
+				boolean ok = dialog.showDialog();
+				if (ok){
+					RenderingConfiguration.defaultFont = fc.getSelectedFontFamily();
+					RenderingConfiguration.defaultFontStyle = fc.getSelectedFontStyle();
+					RenderingConfiguration.defaultFontSize = fc.getSelectedFontSize();
+					RenderingConfiguration.saveProperties();
+					JOptionPane.showMessageDialog(JMainWindow.this, "AtomViewer must be restarted to change the font", "AtomViewer", JOptionPane.INFORMATION_MESSAGE);
+				}
+				
+			}
+		});
+		settingsMenu.add(selectFontMenuItem);
 		menu.add(settingsMenu);
 		
 		final JMenuItem helpMenu = new JMenu("Help");
@@ -611,7 +646,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 					option.setEnabled(JOptionCheckBoxMenuItem.this.isSelected());
 					if (!option.getActivateMessage().isEmpty())
 						JOptionPane.showMessageDialog(JMainWindow.this, option.getActivateMessage());
-					Options.saveProperties();
+					RenderingConfiguration.saveProperties();
 				}
 			});
 		}

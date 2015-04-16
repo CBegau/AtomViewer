@@ -16,6 +16,8 @@ import javax.swing.JDialog;
 import javax.swing.JProgressBar;
 import javax.swing.SwingWorker;
 
+import model.RenderingConfiguration;
+
 /**
  * Displays a progress bar suitable for a background task in a swing worker
  * Events to update the state of this dialog should be fired using an instance of @link{ProgressMonitor}
@@ -59,7 +61,9 @@ public class JProgressDisplayDialog extends JDialog implements PropertyChangeLis
 			this.add(cancelButton);
 		}
 		
-		this.setSize(new Dimension(400,100));
+		float factor = RenderingConfiguration.getGUIScalingFactor(); 
+		
+		this.setSize(new Dimension((int)(factor*400),(int)(factor*100)));
 		this.setResizable(false);
 		this.setModalityType(ModalityType.TOOLKIT_MODAL);
 		

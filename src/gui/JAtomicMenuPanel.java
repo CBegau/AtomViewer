@@ -545,7 +545,7 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		public JIgnoreElementCheckbox(final int number, String label){
 			this.setText(Integer.toString(number)+" "+label);
 			this.setSelected(!RenderingConfiguration.getViewer().isElementIgnored(number));
-			this.setSize(new Dimension(200, 20));
+			this.setSize(new Dimension(200, (int)(20*RenderingConfiguration.getGUIScalingFactor())));
 			this.addActionListener(new ActionListener(){
 				@Override
 				public void actionPerformed(ActionEvent e) {
@@ -568,7 +568,7 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 			this.setSelected(!RenderingConfiguration.getViewer().isGrainIgnored(number));
 			float[] color = RenderingConfiguration.getViewer().getGrainColor(number);
 			this.setBackground(new Color(color[0], color[1], color[2]));
-			this.setSize(new Dimension(200, 20));
+			this.setSize(new Dimension(200, (int)(20*RenderingConfiguration.getGUIScalingFactor())));
 			this.addActionListener(new ActionListener(){
 				@Override
 				public void actionPerformed(ActionEvent e) {

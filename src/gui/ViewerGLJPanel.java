@@ -103,8 +103,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	private boolean mousePressed = false;
 	private Point startDragPosition;
 
-	//Caching one half of the bounding box
-	private Vec3 halfbounds = new Vec3();
 	private Vec3 globalMaxBounds = new Vec3();
 	
 	private String[] legendLabels = new String[3];
@@ -370,7 +368,8 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		mv.translate(coordinateCenterOffset.x , coordinateCenterOffset.y, coordinateCenterOffset.z);
 		float scale = 1f / globalMaxBounds.maxComponent();
 		mv.scale(scale, scale, scale);
-		mv.translate(-halfbounds.x, -halfbounds.y, -halfbounds.z);
+		Vec3 bounds = atomData.getBox().getHeight();
+		mv.translate(-bounds.x*0.5f, -bounds.y*0.5f, -bounds.z*0.5f);
 		return mv;
 	}
 
@@ -591,8 +590,9 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		gl.glUniform4f(colorUniform, 0.0f, 0.0f, 0.0f, 1f);
 		gl.glUniform1i(gl.glGetUniformLocation(s.getProgram(), "ads"), 0);
 		
-		float maxSize = atomData.getBox().getHeight().maxComponent()*0.866f;
-		Vec3 h = coordinateCenterOffset.multiplyClone(-globalMaxBounds.maxComponent()).add(halfbounds);
+		Vec3 bounds = atomData.getBox().getHeight();
+		float maxSize = bounds.maxComponent()*0.866f;
+		Vec3 h = coordinateCenterOffset.multiplyClone(-globalMaxBounds.maxComponent()).add(bounds.multiplyClone(0.5f));
 				
 		//three rings, aligned at the x,y,z axes, centered around the coordinate system
 		ArrayList<Vec3> path = new ArrayList<Vec3>();
@@ -691,15 +691,16 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			GLMatrix mvm = modelViewMatrix.clone();
 			mvm.translate(indent[1], indent[2], indent[3]);
 			
+			Vec3 bounds = atomData.getBox().getHeight();
 			float length = 0f;
 			if (indent[1] == 0f){
-				length = halfbounds.x * 2f;
+				length = bounds.x * 2f;
 				mvm.rotate(90f, 0f, -1f, 0f);
 			} else if (indent[2] == 0f){
-				length = halfbounds.y * 2f;
+				length = bounds.y * 2f;
 				mvm.rotate(90f, -1f, 0f, 0f);
 			} else if (indent[3] == 0f){
-				length = halfbounds.z * 2f;
+				length = bounds.z * 2f;
 			}
 			mvm.scale(indent[4], indent[4], length);
 			
@@ -1333,8 +1334,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			renderData = null;
 			return;
 		}
-		
-		this.halfbounds = atomData.getBox().getHeight().multiplyClone(0.5f);
 		
 		//TODO switching between ortho & non-ortho
 		if (this.renderInterval==null || reinit)
