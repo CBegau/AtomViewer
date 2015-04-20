@@ -315,7 +315,9 @@ public class LoadBalancingData extends DataContainer {
 
 	@Override
 	public DataContainer deriveNewInstance() {
-		return new LoadBalancingData();
+		LoadBalancingData clone = new LoadBalancingData();
+		clone.dataFile = this.dataFile;
+		return clone;
 	}
 
 	

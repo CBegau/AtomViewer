@@ -546,7 +546,9 @@ public class StressData extends DataContainer {
 	
 	@Override
 	public DataContainer deriveNewInstance() {
-		return new StressData();
+		StressData clone = new StressData();
+		clone.stressFile = this.stressFile;
+		return clone;
 	}
 	
 	@Override
