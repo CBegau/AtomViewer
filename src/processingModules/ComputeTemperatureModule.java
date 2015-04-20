@@ -155,32 +155,31 @@ public class ComputeTemperatureModule implements ProcessingModule {
 						float vy = a.getData(vyColumn);
 						float vz = a.getData(vzColumn);
 							
-						if (centerOfMassVelocityRadius > 0){
-							float m = a.getData(massColumn);
-							float massSum = m;
-							float av_vx = vx*m;
-							float av_vy = vy*m;
-							float av_vz = vz*m;
-							
+						float av_x = vx;
+						float av_y = vx;
+						float av_z = vx;
+						
+						if (centerOfMassVelocityRadius > 0){	
 							ArrayList<Atom> neigh = nnb.getNeigh(a);
 							for (Atom n : neigh){
-								m = n.getData(massColumn);
-								av_vx += n.getData(vxColumn)*m;
-								av_vy += n.getData(vyColumn)*m;
-								av_vz += n.getData(vzColumn)*m;
-								massSum+=m;
+								float ax = n.getData(vxColumn);
+								float ay = n.getData(vyColumn);
+								float az = n.getData(vzColumn);
+								av_x += ax;
+								av_y += ay;
+								av_z += az;
 							}
 							
-							av_vx /= massSum;
-							av_vy /= massSum;
-							av_vz /= massSum;
+							av_x /= (neigh.size()+1);
+							av_y /= (neigh.size()+1);
+							av_z /= (neigh.size()+1);
 							
-							vx -= av_vx;
-							vy -= av_vy;
-							vz -= av_vz;
+							vx-=av_x;
+							vy-=av_y;
+							vz-=av_z;
 						}
 						
-						temp = ((a.getData(massColumn) * (vx*vx+vy*vy+vz*vz))) / 3;
+						temp = ((a.getData(massColumn) * ((vx*vx+vy*vy+vz*vz) ))) / 3;
 						temp *= scalingFactor;
 						
 						a.setData(temp, tempColumn);
