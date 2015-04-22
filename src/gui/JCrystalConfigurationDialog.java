@@ -499,26 +499,39 @@ public class JCrystalConfigurationDialog extends JDialog{
 			update();
 		}
 		
-		
 		private void update(){
-			int[] x = new int[3];
-			int[] y = new int[3];
+			float[] x = new float[3];
+			float[] y = new float[3];
 			
-			x[0] = ((Number) crystalOrientation[0][0].getValue()).intValue();
-			x[1] = ((Number) crystalOrientation[0][1].getValue()).intValue();
-			x[2] = ((Number) crystalOrientation[0][2].getValue()).intValue();
+			x[0] = ((Number) crystalOrientation[0][0].getValue()).floatValue();
+			x[1] = ((Number) crystalOrientation[0][1].getValue()).floatValue();
+			x[2] = ((Number) crystalOrientation[0][2].getValue()).floatValue();
 			
-			y[0] = ((Number) crystalOrientation[1][0].getValue()).intValue();
-			y[1] = ((Number) crystalOrientation[1][1].getValue()).intValue();
-			y[2] = ((Number) crystalOrientation[1][2].getValue()).intValue();
+			y[0] = ((Number) crystalOrientation[1][0].getValue()).floatValue();
+			y[1] = ((Number) crystalOrientation[1][1].getValue()).floatValue();
+			y[2] = ((Number) crystalOrientation[1][2].getValue()).floatValue();
 			
-			int[] z = new int[]{ x[1]*y[2]-x[2]*y[1],
+			float[] z = new float[]{ x[1]*y[2]-x[2]*y[1],
 					             x[2]*y[0]-x[0]*y[2],
 					             x[0]*y[1]-x[1]*y[0]};
 			
-			int gcd = CommonUtils.greatestCommonDivider(z);
-			if (gcd != 0){
-				z[0] /= gcd; z[1] /= gcd; z[2] /= gcd;
+			//Handle the special case of even numbers, here values can be reduced
+			boolean evenNumbers = true;
+			for (int i=0; i<3; i++){
+				float xi = (int)Math.round(x[i]);
+				if (Math.abs(xi-x[i]) > 1e-5f) evenNumbers = false;
+				float yi = (int)Math.round(y[i]);
+				if (Math.abs(yi-y[i]) > 1e-5f) evenNumbers = false;
+			}
+			if (evenNumbers){
+				int[] zint = {(int)Math.round(z[0]), (int)Math.round(z[1]), (int)Math.round(z[2])};
+				int gcd = CommonUtils.greatestCommonDivider(zint);
+				if (gcd != 0){
+					zint[0] /= gcd; zint[1] /= gcd; zint[2] /= gcd;
+				}
+				z[0] = zint[0];
+				z[1] = zint[1];
+				z[2] = zint[2];
 			}
 			
 			crystalOrientation[2][0].setValue(z[0]);
@@ -536,33 +549,21 @@ public class JCrystalConfigurationDialog extends JDialog{
 		if (!f.canWrite()) return;
 		PrintWriter pw = new PrintWriter(f);
 		
-		int[] l = new int[3];
-		l[0] = ((Number) crystalOrientation[0][0].getValue()).intValue();
-		l[1] = ((Number) crystalOrientation[0][1].getValue()).intValue();
-		l[2] = ((Number) crystalOrientation[0][2].getValue()).intValue();
-		int gcd = CommonUtils.greatestCommonDivider(l);
-		if (gcd != 0){
-			l[0] /= gcd; l[1] /= gcd; l[2] /= gcd;
-		}
-		pw.println(String.format("orientation_x %d %d %d", l[0],l[1], l[2]));
+		Vec3 l = new Vec3();
+		l.x = ((Number) crystalOrientation[0][0].getValue()).floatValue();
+		l.y = ((Number) crystalOrientation[0][1].getValue()).floatValue();
+		l.z = ((Number) crystalOrientation[0][2].getValue()).floatValue();
+		pw.println(String.format("orientation_x %f %f %f", l.x,l.y, l.z));
 		
-		l[0] = ((Number) crystalOrientation[1][0].getValue()).intValue();
-		l[1] = ((Number) crystalOrientation[1][1].getValue()).intValue();
-		l[2] = ((Number) crystalOrientation[1][2].getValue()).intValue();
-		gcd = CommonUtils.greatestCommonDivider(l);
-		if (gcd != 0){
-			l[0] /= gcd; l[1] /= gcd; l[2] /= gcd;
-		}
-		pw.println(String.format("orientation_y %d %d %d", l[0],l[1], l[2]));
+		l.x = ((Number) crystalOrientation[1][0].getValue()).floatValue();
+		l.y = ((Number) crystalOrientation[1][1].getValue()).floatValue();
+		l.z = ((Number) crystalOrientation[1][2].getValue()).floatValue();
+		pw.println(String.format("orientation_y %f %f %f", l.x,l.y, l.z));
 		
-		l[0] = ((Number) crystalOrientation[2][0].getValue()).intValue();
-		l[1] = ((Number) crystalOrientation[2][1].getValue()).intValue();
-		l[2] = ((Number) crystalOrientation[2][2].getValue()).intValue();
-		gcd = CommonUtils.greatestCommonDivider(l);
-		if (gcd != 0){
-			l[0] /= gcd; l[1] /= gcd; l[2] /= gcd;
-		}
-		pw.println(String.format("orientation_z %d %d %d", l[0],l[1], l[2]));
+		l.x = ((Number) crystalOrientation[2][0].getValue()).floatValue();
+		l.y = ((Number) crystalOrientation[2][1].getValue()).floatValue();
+		l.z = ((Number) crystalOrientation[2][2].getValue()).floatValue();
+		pw.println(String.format("orientation_z %f %f %f", l.x,l.y, l.z));
 		
 		CrystalStructure cs = (CrystalStructure)crystalStructureComboBox.getSelectedItem();
 		

@@ -1039,16 +1039,28 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		ArrowRenderer.renderArrow(gl, o, atomData.getBox().getBoxSize()[1].normalizeClone(), 0.02f, col, false);
 		ArrowRenderer.renderArrow(gl, o, atomData.getBox().getBoxSize()[2].normalizeClone(), 0.02f, col, false);
 		
+		boolean evenNumbers = true;
+		for (int i=0; i<3; i++){
+			float x = (int)Math.round(atomData.getCrystalRotation().getCrystalOrientation()[i].x);
+			if (Math.abs(x-atomData.getCrystalRotation().getCrystalOrientation()[i].x) > 1e-5f) evenNumbers = false;
+			float y = (int)Math.round(atomData.getCrystalRotation().getCrystalOrientation()[i].y);
+			if (Math.abs(y-atomData.getCrystalRotation().getCrystalOrientation()[i].y) > 1e-5f) evenNumbers = false;
+			float z = (int)Math.round(atomData.getCrystalRotation().getCrystalOrientation()[i].z);
+			if (Math.abs(z-atomData.getCrystalRotation().getCrystalOrientation()[i].z) > 1e-5f) evenNumbers = false;
+		}
+		
 		textRenderer.setColor(gl, 0f, 0f, 0f, 1f);
 		
 		//Labels
 		for (int i=0; i<3; i++){
-			String s = "["+(int)atomData.getCrystalRotation().getCrystalOrientation()[i].x+" "
-				+(int)atomData.getCrystalRotation().getCrystalOrientation()[i].y+" "
-				+(int)atomData.getCrystalRotation().getCrystalOrientation()[i].z +"]";
-			if (i==0) s = "x="+s;
-			if (i==1) s = "y="+s;
-			if (i==2) s = "z="+s;
+			String s = "";
+			if (evenNumbers)
+				s = "=[" +(int)Math.round(atomData.getCrystalRotation().getCrystalOrientation()[i].x)+" "
+						+(int)Math.round(atomData.getCrystalRotation().getCrystalOrientation()[i].y)+" "
+						+(int)Math.round(atomData.getCrystalRotation().getCrystalOrientation()[i].z) +"]";
+			if (i==0) s = "x"+s;
+			if (i==1) s = "y"+s;
+			if (i==2) s = "z"+s;
 			
 			GLMatrix mvm_new = mvm.clone();
 			Vec3 v = atomData.getBox().getBoxSize()[i].normalizeClone();
@@ -1056,7 +1068,8 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			GLMatrix rotInverse = new GLMatrix(rotMatrix.getMatrix());
 			rotInverse.inverse();
 			mvm_new.mult(rotInverse);
-			mvm_new.translate(-0.5f, 0.1f, 0f);
+			if (evenNumbers) mvm_new.translate(-0.5f, 0.1f, 0f);
+			else mvm_new.translate(-0.05f, 0.1f, 0f);
 			
 			gl.glDisable(GL.GL_DEPTH_TEST);
 			textRenderer.beginRendering(gl);
