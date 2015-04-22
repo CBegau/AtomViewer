@@ -1272,8 +1272,8 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 				Vec3 x_rot = new Vec3(-a[0][0], -a[1][0], -a[2][0]);
 				Vec3 y_rot = new Vec3(a[0][1], a[1][1], a[2][1]);
 				
-				x_rot.multiply((startDragPosition.x - newDragPosition.x) / (globalMaxBounds.maxComponent()*zoom));
-				y_rot.multiply((startDragPosition.y - newDragPosition.y) / (globalMaxBounds.maxComponent()*zoom));
+				x_rot.multiply((startDragPosition.x - newDragPosition.x) / (globalMaxBounds.minComponent()*zoom));
+				y_rot.multiply((startDragPosition.y - newDragPosition.y) / (globalMaxBounds.minComponent()*zoom));
 				
 				Vec3 newOffset = coordinateCenterOffset.addClone(x_rot).add(y_rot);
 				Vec3 max = globalMaxBounds.divideClone(globalMaxBounds.maxComponent());
@@ -1285,8 +1285,8 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 				
 			}
 			else if ((e.getModifiersEx() & InputEvent.CTRL_DOWN_MASK) == InputEvent.CTRL_DOWN_MASK){
-				moveX -= (newDragPosition.x - startDragPosition.x) / (globalMaxBounds.maxComponent()*zoom);
-				moveY += (newDragPosition.y - startDragPosition.y) / (globalMaxBounds.maxComponent()*zoom);
+				moveX -= (newDragPosition.x - startDragPosition.x) / (globalMaxBounds.minComponent()*zoom);
+				moveY += (newDragPosition.y - startDragPosition.y) / (globalMaxBounds.minComponent()*zoom);
 			} else {
 				if ((e.getModifiersEx() & InputEvent.SHIFT_DOWN_MASK) == InputEvent.SHIFT_DOWN_MASK){
 					GLMatrix mat = new GLMatrix();
