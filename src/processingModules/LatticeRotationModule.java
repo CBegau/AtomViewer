@@ -64,6 +64,7 @@ public class LatticeRotationModule implements ProcessingModule {
 		CrystalStructure cs = data.getCrystalStructure();
 		float[][] rot = data.getCrystalRotation().getDefaultRotationMatrix();
 		Vec3[] perf_0 = cs.getPerfectNearestNeighborsUnrotated();
+		final int numPerf = perf_0.length;
 		
 		//Adding the default grain orientation
 		Vec3[] p_0 = new Vec3[perf_0.length];
@@ -139,8 +140,8 @@ public class LatticeRotationModule implements ProcessingModule {
 						Vec3[] p_0 = p.get(grain);
 						float[] p_l_0 = p_l.get(grain);
 						
-						ArrayList<Vec3> neighVecList = nnb.getNeighVec(atom);
-
+						ArrayList<Vec3> neighVecList = nnb.getNeighVec(atom,numPerf);
+						
 						for (int i=0; i<neighVecList.size(); i++){
 							float bestAngle = -1;
 							int best = 0;
