@@ -280,34 +280,32 @@ public class Shader {
 		
 		"void main(void) {"+
 		"  vec4 FrontColor = texture(colorTexture, TexCoord0.st);"+
-		"  vec4 normTexel;"+
-		"  gl_FragDepth = 1.;"+
-		"  if (FrontColor.a < 0.05) {"+
-		"    return;"+
-		"  } else {"+
-		"    normTexel = texture(normalTexture, TexCoord0.st);"+
+		"  if (FrontColor.a >= 0.05) {"+
+		"    vec4 normTexel = texture(normalTexture, TexCoord0.st);"+
 		"    gl_FragDepth = normTexel[3];"+			// normal[3] is the depth value
-		"  }"+
+		"    if (picking == 1){\n"+
+		"      vFragColor = FrontColor;\n"+
+		"    } else { \n"+
+		"      float ambient = ads==1 ? 0.3: 0.5;"+
+		"      float occ = ambientOcclusion==1 ? occlusion(normTexel) : 0.;"+
 		
-		"  if (picking == 1){\n"+
-		"    vFragColor = FrontColor;\n"+
-		"  } else { \n"+
-		"    vec4 position = texture(posTexture, TexCoord0.st);"+
-		"    vec3 norm = normTexel.xyz;"+
-		"    float occ = 0.; if (ambientOcclusion==1) occ = occlusion(normTexel) ;"+
-		"    vec3 v = (mvm*position).xyz;"+
-		"    vec3 lv = normalize(lightPos - v);"+
-		"    if (ads == 1){\n"+
+		"      vec4 position = texture(posTexture, TexCoord0.st);"+
+		"      vec3 norm = normTexel.xyz;"+
+
+		"      vec3 v = (mvm*position).xyz;"+
+		"      vec3 lv = normalize(lightPos - v);"+
 		"      float diff = max(0.0, dot(norm, lv)-occ);"+
-		"      vFragColor = vec4(diff+0.3,diff+0.3,diff+0.3, 1.) * FrontColor;"+
-		"      float spec = max(0.0, dot(norm, reflect(-lv, norm))-occ);"+
-		"      float fSpec = pow(spec, 96.0);"+
-		"      vFragColor.rgb += vec3(fSpec, fSpec, fSpec);"+
-		"    } else {\n"+
-		"      vFragColor.rgb = (max(dot(norm, lv)-occ, 0.) + 0.5) * FrontColor.rgb;"+
-		"      vFragColor.a = FrontColor.a;"+
+		"      vFragColor = vec4((diff+ambient) * FrontColor.rgb, FrontColor.a);"+
+		
+		"      if (ads == 1){\n"+
+		"        float spec = max(0.0, dot(norm, reflect(-lv, norm))-occ);"+
+		"        float fSpec = pow(spec, 96.0);"+
+		"        vFragColor.rgb += fSpec;"+
+		"      }\n"+
 		"    }\n"+
-		"  }\n"+
+		"  }"+
+		"  else "+
+		"    gl_FragDepth = 1.;"+
 		"}"
 	};
 	
