@@ -271,4 +271,23 @@ public class DataColumnInfo {
 	public String getVectorName(){
 		return vectorName;
 	}
+	
+	/**
+	 * Simple wrapper calls to display the vector name if the vector is needed in comboBoxes...
+	 */
+	public static class VectorDataColumnInfo{
+		DataColumnInfo dci;
+		public VectorDataColumnInfo(DataColumnInfo dci) {
+			this.dci = dci;
+		}
+		
+		public DataColumnInfo getDci() {
+			return dci;
+		}
+		
+		@Override
+		public String toString() {
+			return dci.getVectorName();
+		}
+	}
 }

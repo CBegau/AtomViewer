@@ -900,7 +900,7 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 				@Override
 				public void actionPerformed(ActionEvent arg0) {
 					if (valueComboBox.getSelectedItem() != null && !isResetActive){
-						selectedColumn = ((VectorDataColumnInfo)valueComboBox.getSelectedItem()).dci;
+						selectedColumn = ((DataColumnInfo.VectorDataColumnInfo)valueComboBox.getSelectedItem()).getDci();
 						setSpinner();
 						RenderingConfiguration.setSelectedVectorColumn(selectedColumn);
 						RenderingConfiguration.getViewer().updateAtoms();
@@ -1033,12 +1033,12 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 			List<DataColumnInfo> dci = atomData.getDataColumnInfos();
 			for (int i = 0; i<dci.size(); i++)
 				if (dci.get(i).isFirstVectorComponent())
-					valueComboBox.addItem(new VectorDataColumnInfo(dci.get(i)));
+					valueComboBox.addItem(new DataColumnInfo.VectorDataColumnInfo(dci.get(i)));
 			
 			if (valueComboBox.getModel().getSize() == 0) return;
 			
 			if (s == null || !dci.contains(s)){
-				selectedColumn = ((VectorDataColumnInfo)valueComboBox.getItemAt(0)).dci;
+				selectedColumn = ((DataColumnInfo.VectorDataColumnInfo)valueComboBox.getItemAt(0)).getDci();
 				setSpinner();
 			}
 			else if (dci.size()>0){
@@ -1048,18 +1048,6 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 			this.isResetActive = false;
 			
 			RenderingConfiguration.setSelectedVectorColumn(selectedColumn);
-		}
-		
-		private class VectorDataColumnInfo{
-			DataColumnInfo dci;
-			public VectorDataColumnInfo(DataColumnInfo dci) {
-				this.dci = dci;
-			}
-			
-			@Override
-			public String toString() {
-				return dci.getVectorName();
-			}
 		}
 	}
 	

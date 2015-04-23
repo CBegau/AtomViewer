@@ -56,6 +56,8 @@ private final static ArrayList<ProcessingModule> otherModules;
 		atomicScaleModules.add(new DeltaValueModule());
 		atomicScaleModules.add(new CoordinationNumberModule());
 		atomicScaleModules.add(new AtomicVolumeModule());
+		atomicScaleModules.add(new SpatialAveragingVectorModule());
+		atomicScaleModules.add(new DeltaVectorModule());
 		atomicScaleModules.add(new MonoclinicNiTi());
 		
 		otherModules.add(new FilterSurfaceModule());

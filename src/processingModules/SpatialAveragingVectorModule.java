@@ -38,7 +38,7 @@ import model.NearestNeighborBuilder;
 import common.ThreadPool;
 
 
-public class SpatialAveragingModule implements ProcessingModule {
+public class SpatialAveragingVectorModule implements ProcessingModule {
 
 	private static HashMap<DataColumnInfo, DataColumnInfo> existingAverageColumns 
 		= new HashMap<DataColumnInfo, DataColumnInfo>();
@@ -48,30 +48,37 @@ public class SpatialAveragingModule implements ProcessingModule {
 	
 	private float averageRadius = 0f;
 
-	public SpatialAveragingModule() {}
+	public SpatialAveragingVectorModule() {}
 	
 	@Override
 	public DataColumnInfo[] getDataColumnsInfo() {
 		if (existingAverageColumns.containsKey(toAverageColumn)){
 			this.averageColumn = existingAverageColumns.get(toAverageColumn);
 		} else {
-			String name = toAverageColumn.getName()+"(av.)";
-			String id = toAverageColumn.getId()+"_av";
-			this.averageColumn = new DataColumnInfo(name, id, toAverageColumn.getUnit());
-			SpatialAveragingModule.existingAverageColumns.put(toAverageColumn, averageColumn);
+			String name = toAverageColumn.getVectorName()+"(av.)";
+			DataColumnInfo[] vec = toAverageColumn.getVectorComponents();
+			DataColumnInfo avX = new DataColumnInfo("", vec[0].getId()+"_av",vec[0].getUnit());
+			DataColumnInfo avY = new DataColumnInfo("", vec[1].getId()+"_av", vec[0].getUnit());
+			DataColumnInfo avZ = new DataColumnInfo("", vec[2].getId()+"_av", vec[0].getUnit());
+			DataColumnInfo avA = new DataColumnInfo("", vec[3].getId()+"_av", vec[0].getUnit());
+			
+			avX.setAsFirstVectorComponent(avY, avZ, avA, name);
+			
+			this.averageColumn = avX;
+			existingAverageColumns.put(toAverageColumn, averageColumn);
 		}
 		
-		return new DataColumnInfo[]{averageColumn};
+		return averageColumn.getVectorComponents();
 	}
 	
 	@Override
 	public String getShortName() {
-		return "Spatial averaging";
+		return "Spatial averaging of vectors";
 	}
 	
 	@Override
 	public String getFunctionDescription() {
-		return "Computes the average value in a spherical volume around each atom";
+		return "Computes the average value of a vector in a spherical volume around each atom";
 	}
 	
 	@Override
@@ -86,15 +93,23 @@ public class SpatialAveragingModule implements ProcessingModule {
 	
 	@Override
 	public boolean isApplicable(AtomData data) {
-		return (!data.getDataColumnInfos().isEmpty());
+		for (DataColumnInfo dci: data.getDataColumnInfos())
+			if (dci.isFirstVectorComponent()) return true; 
+		
+		return false;
 	}
 
 	@Override
 	public ProcessingResult process(final AtomData data) throws Exception {
 		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), averageRadius, true);
 		
-		final int v = data.getIndexForCustomColumn(toAverageColumn);
-		final int av = data.getIndexForCustomColumn(averageColumn);
+		final int vx = data.getIndexForCustomColumn(toAverageColumn.getVectorComponents()[0]);
+		final int avx = data.getIndexForCustomColumn(averageColumn.getVectorComponents()[0]);
+		final int vy = data.getIndexForCustomColumn(toAverageColumn.getVectorComponents()[1]);
+		final int avy = data.getIndexForCustomColumn(averageColumn.getVectorComponents()[1]);
+		final int vz = data.getIndexForCustomColumn(toAverageColumn.getVectorComponents()[2]);
+		final int avz = data.getIndexForCustomColumn(averageColumn.getVectorComponents()[2]);
+		final int ava = data.getIndexForCustomColumn(averageColumn.getVectorComponents()[3]);
 		
 		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
 		
@@ -106,7 +121,7 @@ public class SpatialAveragingModule implements ProcessingModule {
 			parallelTasks.add(new Callable<Void>() {
 				@Override
 				public Void call() throws Exception {
-					float temp = 0f;
+					float tempX, tempY, tempZ;
 					final int start = (int)(((long)data.getAtoms().size() * j)/ThreadPool.availProcessors());
 					final int end = (int)(((long)data.getAtoms().size() * (j+1))/ThreadPool.availProcessors());
 					
@@ -115,12 +130,23 @@ public class SpatialAveragingModule implements ProcessingModule {
 							ProgressMonitor.getProgressMonitor().addToCounter(1000);
 						
 						Atom a = data.getAtoms().get(i);
-						temp = a.getData(v);
+						tempX = a.getData(vx);
+						tempY = a.getData(vy);
+						tempZ = a.getData(vz);
+						
 						ArrayList<Atom> neigh = nnb.getNeigh(a);
-						for (Atom n : neigh)
-							temp += n.getData(v);
-						temp /= neigh.size()+1;
-						a.setData(temp, av);
+						for (Atom n : neigh){
+							tempX += n.getData(vx);
+							tempY += n.getData(vy);
+							tempZ += n.getData(vz);
+						}
+						tempX /= neigh.size()+1;
+						tempY /= neigh.size()+1;
+						tempZ /= neigh.size()+1;
+						a.setData(tempX, avx);
+						a.setData(tempY, avy);
+						a.setData(tempZ, avz);
+						a.setData((float)Math.sqrt(tempX*tempX + tempY*tempY + tempZ*tempZ), ava);
 					}
 					
 					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
@@ -137,16 +163,17 @@ public class SpatialAveragingModule implements ProcessingModule {
 	
 	@Override
 	public boolean showConfigurationDialog(JFrame frame, AtomData data) {
-		JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(frame, "Compute spatial average");
+		JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(frame, "Compute spatial average of a vector");
 		
-		dialog.addLabel("Computes the spatial average of a value");
+		dialog.addLabel("Computes the spatial average for a vector");
 		dialog.add(new JSeparator());
 		
 		JComboBox averageComponentsComboBox = new JComboBox();
 		for (DataColumnInfo dci : data.getDataColumnInfos())
-			averageComponentsComboBox.addItem(dci);
+			if (dci.isFirstVectorComponent())
+				averageComponentsComboBox.addItem(new DataColumnInfo.VectorDataColumnInfo(dci));
 		
-		dialog.addLabel("Select value to average");
+		dialog.addLabel("Select vector to average");
 		dialog.addComponent(averageComponentsComboBox);
 		FloatProperty avRadius = dialog.addFloat("avRadius", "Cutoff radius for averaging"
 				, "", 5f, 0f, 1000f);
@@ -154,7 +181,7 @@ public class SpatialAveragingModule implements ProcessingModule {
 		boolean ok = dialog.showDialog();
 		if (ok){
 			this.averageRadius = avRadius.getValue();
-			this.toAverageColumn = (DataColumnInfo)averageComponentsComboBox.getSelectedItem(); 
+			this.toAverageColumn = ((DataColumnInfo.VectorDataColumnInfo)averageComponentsComboBox.getSelectedItem()).getDci(); 
 		}
 		return ok;
 	}
