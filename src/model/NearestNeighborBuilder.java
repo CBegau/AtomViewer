@@ -322,8 +322,7 @@ public class NearestNeighborBuilder<T extends Vec3> {
 				if (possibleNeigh!=null){
 					for (int l=0; l<possibleNeigh.size(); l++){
 						T s = possibleNeigh.get(l);
-						Vec3 t = s.subClone(c);
-						if (!s.equals(c) && t.getLengthSqr()<=sqrCutoff) neigh.add(t);
+						if (!s.equals(c) && s.getSqrDistTo(c)<=sqrCutoff) neigh.add(s.subClone(c));
 					}
 				}
 			}
@@ -399,9 +398,8 @@ public class NearestNeighborBuilder<T extends Vec3> {
 				if (possibleNeigh!=null){
 					for (int l=0; l<possibleNeigh.size(); l++){
 						T s = possibleNeigh.get(l);
-						Vec3 t = s.subClone(c);
-						if (!s.equals(c) && t.getLengthSqr()<= sqrCutoff)
-							neigh.add(new Tupel<T, Vec3>(s, t));
+						if (!s.equals(c) && s.getSqrDistTo(c)<= sqrCutoff)
+							neigh.add(new Tupel<T, Vec3>(s, s.subClone(c)));
 					}	
 				}	
 			}
