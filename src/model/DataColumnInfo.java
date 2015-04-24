@@ -272,6 +272,18 @@ public class DataColumnInfo {
 		return vectorName;
 	}
 	
+	@Override
+	public boolean equals(Object obj) {
+		if (!(obj instanceof DataColumnInfo)) return false;
+		DataColumnInfo c = (DataColumnInfo)obj;
+		return c.id.equals(this.id);
+	}
+	
+	@Override
+	public int hashCode() {
+		return id.hashCode();
+	}
+	
 	/**
 	 * Simple wrapper calls to display the vector name if the vector is needed in comboBoxes...
 	 */
