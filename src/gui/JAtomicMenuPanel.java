@@ -518,6 +518,9 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		
 		this.colorShiftButton.setVisible(atomData.getNumberOfElements()>1);
 		
+		if (e.isResetGUI())
+			drawAsTypesButton.doClick();
+		
 		this.revalidate();
 		this.repaint();
 	}
