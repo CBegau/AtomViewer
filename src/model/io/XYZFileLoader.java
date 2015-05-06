@@ -87,9 +87,7 @@ public class XYZFileLoader extends MDFileLoader {
 					}
 				}
 				
-				
-				
-				while ( (line = lnr.readLine())!=null){
+				while ( (line = lnr.readLine())!=null && !line.isEmpty()){
 					String[] parts = p.split(line);
 					String element = parts[0];
 					int ele = 0;
@@ -134,21 +132,32 @@ public class XYZFileLoader extends MDFileLoader {
 					pos.y = Float.parseFloat(parts[2]);
 					pos.z = Float.parseFloat(parts[3]);
 					
-					if (pos.x > box.x) box.x = pos.x;
-					if (pos.y > box.y) box.y = pos.y;
-					if (pos.z > box.z) box.z = pos.z;
-					
 					Atom a = new Atom(pos, (byte)ele, 0, (byte)ele);
 					idc.addAtom(a);
 				}
 				
-				idc.boxSizeX.x = box.x;
-				idc.boxSizeY.y = box.y;
-				idc.boxSizeZ.z = box.z;				
-				
-				idc.pbc[0] = false;
-				idc.pbc[1] = false;
-				idc.pbc[2] = false;
+				if (!extendedFormat){
+					Vec3 offset = new Vec3();
+					for (Atom a : idc.atoms){
+						if (a.x > box.x) box.x = a.x;
+						if (a.y > box.y) box.y = a.y;
+						if (a.z > box.z) box.z = a.z;
+						
+						if (a.x<offset.x) offset.x = a.x;
+						if (a.y<offset.y) offset.y = a.y;
+						if (a.z<offset.z) offset.z = a.z;
+					}
+					
+					for (Atom a : idc.atoms){
+						a.sub(offset);
+					}
+					box.sub(offset);
+					
+					idc.offset.setTo(offset);
+					idc.boxSizeX.x = box.x;
+					idc.boxSizeY.y = box.y;
+					idc.boxSizeZ.z = box.z;
+				}
 				
 				idc.makeBox();
 			}
