@@ -24,7 +24,7 @@ import model.NearestNeighborBuilder;
 
 public class SlipVectorModule implements ProcessingModule{
 	
-	private static DataColumnInfo[] cci = { new DataColumnInfo("Slip-Vector", "slip_z", ""),
+	private static DataColumnInfo[] cci = { new DataColumnInfo("Slip-Vector", "slip_x", ""),
 			new DataColumnInfo("Slip-Vector", "slip_y", ""),
 			new DataColumnInfo("Slip-Vector", "slip_z", ""),
 			new DataColumnInfo("Slip-Vector (length)" , "slip_abs" ,"")};
