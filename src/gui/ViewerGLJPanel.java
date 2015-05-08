@@ -468,9 +468,11 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			System.out.println("Current context is null");
 			System.exit(0);
 		}
+		
 		gl.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT);
 		
 		if (atomData == null) return;
+		
 		
 		//setup modelview and projection matrices
 		modelViewMatrix = setupModelView();
@@ -1345,6 +1347,8 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		this.atomData = atomData;
 		if (atomData == null) {
 			renderData = null;
+			makeBackground();
+			this.reDraw();
 			return;
 		}
 		

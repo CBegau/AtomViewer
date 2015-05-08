@@ -72,7 +72,6 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 	private final JGraphicOptionCheckBoxMenuItem whiteBackgroundCheckBoxMenu;
 	private final JMenuItem editRangeMenuItem;
 	private final JMenuItem exportSkeletonFileMenuItem;
-	private final JMenuItem editCrystalConf;
 	private final JMenu typeColorMenu;
 	
 	public JMainWindow() {
@@ -328,12 +327,12 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		menu.add(viewMenu);
 		
 		JMenu editMenu = new JMenu("Edit");
-		editCrystalConf = new JMenuItem("Edit configuration");
+		JMenuItem editCrystalConf = new JMenuItem("Edit configuration");
 		editMenu.add(editCrystalConf);
-		editCrystalConf.setEnabled(false);
 		editCrystalConf.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
+				if (Configuration.getCurrentAtomData()==null) return;
 				File selectedFile = new File(Configuration.getCurrentAtomData().getFullPathAndFilename());
 				
 				JCrystalConfigurationDialog ccd = 
@@ -342,6 +341,26 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 				if (ccd.isSavedSuccessfully()) {
 					JOptionPane.showMessageDialog(JMainWindow.this, "File(s) must be reloaded for changes to be effective");
 				}
+			}
+		});
+		
+		JMenuItem dropAtomDataMenuItem = new JMenuItem("Drop atom data file");
+		editMenu.add(dropAtomDataMenuItem);
+		dropAtomDataMenuItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				AtomData atomData = Configuration.getCurrentAtomData();
+				if (atomData == null) return;
+				AtomData next = atomData.getNext();
+				AtomData pre = atomData.getPrevious();
+				if (pre != null) pre.setNext(next);
+				if (next != null) next.setPrevious(pre);
+				atomData.clear();
+				atomData = null;
+				if (next!=null) atomData = next;
+				else atomData = pre;
+				
+				Configuration.setCurrentAtomData(atomData, true, false);
 			}
 		});
 		
@@ -1028,7 +1047,6 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 				boolean successfulCreated = chooser.createConfiguration();
 				if (!successfulCreated) return;
 				Configuration.setLastOpenedFolder(chooser.getSelectedFile().getParentFile());
-				editCrystalConf.setEnabled(true);
 				typeColorMenu.setEnabled(true);
 
 				final JProgressDisplayDialog progressDisplay = new JProgressDisplayDialog(fileLoader, JMainWindow.this);

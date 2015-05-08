@@ -376,8 +376,16 @@ public class AtomData {
 		return next;
 	}
 	
+	public void setNext(AtomData next) {
+		this.next = next;
+	}
+	
 	public AtomData getPrevious() {
 		return previous;
+	}
+	
+	public void setPrevious(AtomData previous) {
+		this.previous = previous;
 	}
 	
 	public CrystalStructure getCrystalStructure() {
