@@ -100,11 +100,11 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		gbc.gridwidth = 2;
 		gbc.weightx = 0.5;
 		
-		gbc.gridy = 0; cont.add(totalAtomsLabel = new JLabel("Total number of atoms: "), gbc);
+		gbc.gridy = 0; cont.add(totalAtomsLabel = new JLabel(), gbc);
 		gbc.gridy++; cont.add(timeStepLabel, gbc);
-		gbc.gridy++; cont.add(boxSizeLabel[0] = new JLabel("Boxsize X: "), gbc);
-		gbc.gridy++; cont.add(boxSizeLabel[1] = new JLabel("Boxsize Y: "), gbc);
-		gbc.gridy++; cont.add(boxSizeLabel[2] = new JLabel("Boxsize Z: "), gbc);
+		gbc.gridy++; cont.add(boxSizeLabel[0] = new JLabel(), gbc);
+		gbc.gridy++; cont.add(boxSizeLabel[1] = new JLabel(), gbc);
+		gbc.gridy++; cont.add(boxSizeLabel[2] = new JLabel(), gbc);
 		gbc.gridy++;
 		
 		JPanel infoPanel = new JPanel();
@@ -377,6 +377,12 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		if (this.atomData == null) {
 			this.revalidate();
 			this.repaint();
+			fillIgnoreBoxPanel();
+			totalAtomsLabel.setText("");
+			boxSizeLabel[0].setText("");
+			boxSizeLabel[1].setText("");
+			boxSizeLabel[2].setText("");
+			crystalStructureLabel.setText("");
 			return;
 		}
 		
