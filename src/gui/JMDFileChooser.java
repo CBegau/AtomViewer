@@ -161,6 +161,9 @@ public class JMDFileChooser extends JFileChooser{
 			gbc.weightx = 0.33;
 			gbc.gridx = 0; gbc.gridy = 0;
 			
+			final JCheckBox appendFilesCheckbox = new JCheckBox("<html>Append files</html>", false);
+			ImportConfiguration.ImportStates.APPEND_FILES.setState(false);
+			
 			final JCheckBox importedAtomTypeCheckbox = new JCheckBox("<html>Import atom types<br> from file</html>", ImportStates.IMPORT_ATOMTYPE.isActive());
 			final JCheckBox disposeDefaultAtomsCheckBox = new JCheckBox("<html>Dispose perfect<br>lattice atoms</html>", ImportStates.DISPOSE_DEFAULT.isActive());
 			final JCheckBox calculateRBVcheckBox = new JCheckBox("<html>Import<br>Burgers Vectors</html>", ImportStates.IMPORT_BURGERS_VECTORS.isActive());
@@ -181,6 +184,10 @@ public class JMDFileChooser extends JFileChooser{
 			zCheckBox.setSelected(importConfig.getPeriodicBoundaryConditions()[2]);
 			
 			gbc.gridwidth = 3;
+			if (Configuration.getCurrentAtomData() != null){
+				p.add(appendFilesCheckbox, gbc);
+				gbc.gridx = 0; gbc.gridy++;
+			}
 			p.add(editCrystalConfButton, gbc);
 			gbc.gridx = 0; gbc.gridy++;
 			p.add(new JLabel("Periodic boundaries"), gbc); gbc.gridy++;
@@ -215,9 +222,11 @@ public class JMDFileChooser extends JFileChooser{
 						importConfig.getPeriodicBoundaryConditions()[1] = ((JCheckBox)(e.getSource())).isSelected();
 					else if (command.equals("pbc_z"))
 						importConfig.getPeriodicBoundaryConditions()[2] = ((JCheckBox)(e.getSource())).isSelected();
-					else if (command.equals("disposeDefaultAtoms")){
+					else if (command.equals("disposeDefaultAtoms"))
 						ImportStates.DISPOSE_DEFAULT.setState(((JCheckBox)e.getSource()).isSelected());
-					} else if (command.equals("importRBV"))
+					else if (command.equals("appendFiles"))
+						ImportStates.APPEND_FILES.setState(((JCheckBox)e.getSource()).isSelected());
+					else if (command.equals("importRBV"))
 						ImportStates.IMPORT_BURGERS_VECTORS.setState(((JCheckBox)e.getSource()).isSelected());
 				}
 			};
@@ -233,6 +242,9 @@ public class JMDFileChooser extends JFileChooser{
 			
 			identifyGrainsCheckBox.setActionCommand("importGrains");
 			identifyGrainsCheckBox.addActionListener(simpleCheckBoxListener);
+			
+			appendFilesCheckbox.setActionCommand("appendFiles");
+			appendFilesCheckbox.addActionListener(simpleCheckBoxListener);
 			
 			xCheckBox.setActionCommand("pbc_x");
 			xCheckBox.addActionListener(simpleCheckBoxListener);

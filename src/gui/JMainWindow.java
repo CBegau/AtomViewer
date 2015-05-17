@@ -53,6 +53,7 @@ import model.io.MDFileLoader.InputFormat;
 import model.skeletonizer.Skeletonizer;
 import model.Configuration.AtomDataChangedEvent;
 import model.Configuration.AtomDataChangedListener;
+import model.ImportConfiguration.ImportStates;
 import model.RenderingConfiguration.Options;
 import model.dataContainer.DataContainer;
 
@@ -1040,7 +1041,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 			}
 			int result = chooser.showOpenDialog(JMainWindow.this);
 			if (result == JFileChooser.APPROVE_OPTION){	
-				if (Configuration.getCurrentAtomData() != null) {
+				if (Configuration.getCurrentAtomData() != null && !ImportStates.APPEND_FILES.isActive()) {
 					Configuration.getCurrentAtomData().clear();
 					RenderingConfiguration.getViewer().getRenderRange().reset();
 				}
@@ -1073,7 +1074,9 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 				};
 				fileLoader.addPropertyChangeListener(pcl);
 				
-				Configuration.setCurrentAtomData(null, true, true);
+				if (!ImportStates.APPEND_FILES.isActive())
+					Configuration.setCurrentAtomData(null, true, true);
+				
 				fileLoader.setFilesToRead(chooser.getSelectedFiles());
 				fileLoader.execute();
 				

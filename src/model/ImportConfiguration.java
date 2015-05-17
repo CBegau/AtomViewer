@@ -38,7 +38,8 @@ public class ImportConfiguration {
 		DISPOSE_DEFAULT,
 		IMPORT_BURGERS_VECTORS,
 		IMPORT_GRAINS,
-		IMPORT_ATOMTYPE;
+		IMPORT_ATOMTYPE,
+		APPEND_FILES;
 		
 		private boolean state;
 		private ImportStates(){

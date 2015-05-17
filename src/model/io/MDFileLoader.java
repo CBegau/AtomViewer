@@ -33,6 +33,7 @@ import javax.swing.SwingWorker;
 
 import common.Vec3;
 import model.*;
+import model.ImportConfiguration.ImportStates;
 
 public abstract class MDFileLoader extends SwingWorker<AtomData, String> {
 	public enum InputFormat {IMD, LAMMPS, XYZ};
@@ -48,6 +49,13 @@ public abstract class MDFileLoader extends SwingWorker<AtomData, String> {
 		AtomData toReturn = null;
 		
 		AtomData previous = null;
+		//If new files are to be appended on the current file set, get the
+		//last in the set of currently opened files
+		if (ImportStates.APPEND_FILES.isActive()){
+			previous = Configuration.getCurrentAtomData();
+			while (previous.getNext()!=null) previous = previous.getNext();
+		}
+		
 		for (File f : filesToRead){
 			ProgressMonitor.getProgressMonitor().setCurrentFilename(f.getName());
 			toReturn = readInputData(f, previous);
