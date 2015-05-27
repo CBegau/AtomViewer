@@ -136,7 +136,6 @@ private final static ArrayList<ProcessingModule> otherModules;
 					dispose();
 				}
 			});
-			this.setResizable(false);
 			this.setLayout(new BorderLayout());
 			this.add(new JScrollPane(moduleList,
 					JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED), BorderLayout.WEST);
@@ -156,7 +155,7 @@ private final static ArrayList<ProcessingModule> otherModules;
 			descriptionContainer.setLayout(new BoxLayout(descriptionContainer, BoxLayout.Y_AXIS));
 			descriptionContainer.add(new JLabel("Description"));
 			descriptionContainer.add(new JScrollPane(descriptionlabel,
-					JScrollPane.VERTICAL_SCROLLBAR_NEVER, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED));
+					JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED));
 			c.add(descriptionContainer);
 			
 			final Container requirementContainer = new Container();
@@ -164,9 +163,9 @@ private final static ArrayList<ProcessingModule> otherModules;
 			requirementContainer.setLayout(new BoxLayout(requirementContainer, BoxLayout.Y_AXIS));
 			requirementContainer.add(new JLabel("Requirements"));
 			requirementContainer.add(new JScrollPane(requirementlabel,
-					JScrollPane.VERTICAL_SCROLLBAR_NEVER, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED));
+					JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED));
 			c.add(requirementContainer);
-			this.add(c,BorderLayout.EAST);
+			this.add(c,BorderLayout.CENTER);
 			
 			c = new Container();
 			c.setLayout(new GridBagLayout());
