@@ -404,7 +404,7 @@ public class AtomData {
 	 */
 	public int getIndexForCustomColumn(DataColumnInfo dci){
 		for (int i=0; i < dataColumns.size(); i++)
-			if (dci == dataColumns.get(i)) 
+			if (dci.equals(dataColumns.get(i)))
 				return i;
 		return -1;
 	}
