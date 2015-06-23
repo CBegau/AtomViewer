@@ -253,4 +253,70 @@ public class VoronoiVolume {
 		return atomic_volume;
 	}
 	
+	/**
+	 * Identifies the vertices that are connected in a Delaunay diagram around a fixed point at (0, 0, 0) 
+	 * @param points a set of points around the center (0,0,0)
+	 * @return the subset of the input points that share connection in the Delaunay diagram
+	 */
+	public static List<Vec3> getDelaunayNeighbors(List<Vec3> points) {
+	    final float TOL2 = 1.0e-10f;
+	    final float TOL_VERT2 = 1.0e-6f;
+
+		List<Vec3> vertex = new ArrayList<Vec3>();
+		
+		float[] distSqr = new float[points.size()];
+		for (int i=0; i<points.size(); i++)
+			distSqr[i] = points.get(i).getLengthSqr();
+		
+		/* Each possible vertex defined by the intersection of 3 planes is examined */
+		for (int i = 0; i < points.size() - 2; ++i) {
+			Vec3 icoord = points.get(i);
+
+			for (int j = i + 1; j < points.size() - 1; ++j) {
+			
+				Vec3 jcoord = points.get(j);
+
+				float ab = icoord.x * jcoord.y - jcoord.x * icoord.y;
+				float bc = icoord.y * jcoord.z - jcoord.y * icoord.z;
+				float ca = icoord.z * jcoord.x - jcoord.z * icoord.x;
+				float da = distSqr[j] * icoord.x - distSqr[i] * jcoord.x;
+				float db = distSqr[j] * icoord.y - distSqr[i] * jcoord.y;
+				float dc = distSqr[j] * icoord.z - distSqr[i] * jcoord.z;
+
+				for (int k = j + 1; k < points.size(); ++k) {
+					Vec3 kcoord = points.get(k);
+					
+					float det = kcoord.x * bc + kcoord.y * ca + kcoord.z * ab;
+
+					/* Check whether planes intersect */
+					if (det*det > TOL2) {
+						float detinv = 1.0f / det;
+						Vec3 tmpvertex = new Vec3();
+						tmpvertex.x = (distSqr[k] * bc + kcoord.y * dc - kcoord.z * db) * detinv;
+						tmpvertex.y = (-kcoord.x * dc + distSqr[k] * ca + kcoord.z * da) * detinv;
+						tmpvertex.z = (kcoord.x * db - kcoord.y * da + distSqr[k] * ab)  * detinv;
+
+						/* Check whether vertex belongs to the Voronoi cell */
+						int l = 0;
+						boolean ok = true;
+
+						do {
+							if (l != i && l != j && l != k)
+								ok = ( points.get(l).dot(tmpvertex) <= distSqr[l] + TOL_VERT2);
+							l++;
+						} while (ok && (l < points.size()));
+
+						if (ok){
+							if (!vertex.contains(icoord)) vertex.add(icoord);
+							if (!vertex.contains(jcoord)) vertex.add(jcoord);
+							if (!vertex.contains(kcoord)) vertex.add(kcoord);
+						}
+					} /* Planes intersect */
+
+				} /* k */
+			} /* j */
+		} /* i */
+
+		return vertex;
+	}
 }
