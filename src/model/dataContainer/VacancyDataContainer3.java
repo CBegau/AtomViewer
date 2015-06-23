@@ -83,10 +83,10 @@ public final class VacancyDataContainer3 extends ParticleDataContainer<Vacancy>{
 		
 		//Prepare nearest neighbor builders
 		for (Atom a : data.getAtoms()){
-			if (a.getType() != defaultType){
+			if (a.getType() != defaultType && allNearestNeighbors.getNeigh(a).size()<defaultNumNeigh){
 				defectedNearestNeighbors.add(a);
 				//Detect undercoordinated atoms
-				if (a.getType() != surfaceType && allNearestNeighbors.getNeigh(a).size()<defaultNumNeigh){
+				if (a.getType() != surfaceType){
 					nextToVancanyCandidateAtoms.add(a);
 				}
 					
@@ -111,6 +111,8 @@ public final class VacancyDataContainer3 extends ParticleDataContainer<Vacancy>{
 		 * Here, the sites are identified and stored. The reduction of duplicates
 		 * is done in a later step
 		 */
+		final float squaredCutoff = defectedNearestNeighbors.getCutoff()*defectedNearestNeighbors.getCutoff();
+		
 		for (int k = 0; k < nextToVancanyCandidateAtoms.size(); k++) {
 			if (k % 1000 == 0) ProgressMonitor.getProgressMonitor().addToCounter(1000);
 
@@ -119,26 +121,21 @@ public final class VacancyDataContainer3 extends ParticleDataContainer<Vacancy>{
 			// Datastructure to store second nearest neighbors of selected atom
 			ArrayList<Vec3> nnb = defectedNearestNeighbors.getNeighVec(a);
 
-			if (nnb.size() < 4) continue;
-
-			//Build delaunay graph
-			
-			
-			
+			if (nnb.size() < 4) continue;			
 			
 			//get the voronoi cell
 			List<Vec3> voronoi = VoronoiVolume.getVoronoiVertices(nnb);
-
-			List<Vec3> voronoi2 = VoronoiVolume.getVoronoiVertices(nnb); 
-			if(voronoi.size() != voronoi2.size())
-				System.out.println("Andere Punkte "+voronoi.size()+" "+ voronoi2.size());
+			
+			
 			
 			for (Vec3 point : voronoi){
-				//Exclude points that are very close to an 
-				if (point.getLengthSqr() < 0.25f*minDistanceToAtom)
+				//Exclude points that are very close to an atom
+				if (point.getLength() < 0.25f*minDistanceToAtom || point.getLengthSqr() > squaredCutoff)
 					continue;
 				
-				List<Vec3> nnb2 = defectedNearestNeighbors.getNeighVec(point);
+				point.add(a);
+				
+				List<Vec3> nnb2 = allNearestNeighbors.getNeighVec(point);
 				
 				List<Vec3> hull = VoronoiVolume.getDelaunayNeighbors(nnb2);
 				if (hull.size() < 4) continue;
@@ -147,12 +144,12 @@ public final class VacancyDataContainer3 extends ParticleDataContainer<Vacancy>{
 				chebyshevCenter.add(point);
 				
 				// Test validity of chebychev center
-				final List<Vec3> chebyNeigh = defectedNearestNeighbors.getNeighVec(chebyshevCenter.addClone(a));
+				final List<Vec3> chebyNeigh = allNearestNeighbors.getNeighVec(chebyshevCenter);
 				
 				boolean valid = true;
 				for (Vec3 p : chebyNeigh) {
 					float d = p.getLength();
-					if (d < minDistanceToAtom) {
+					if (d < minDistanceToAtom || p.getLength() > nndSearch) {
 						valid = false;
 						break;
 					}
@@ -160,10 +157,10 @@ public final class VacancyDataContainer3 extends ParticleDataContainer<Vacancy>{
 
 				if (valid) {
 					Vec3NoEqual tmp = new Vec3NoEqual();
-					tmp.setTo(chebyshevCenter.addClone(a));
+					tmp.setTo(chebyshevCenter);
 
 					List<Vec3> nearest = possibleVacancies.getNeighVec(tmp, 1);
-					if (nearest.size() == 0 || nearest.get(0).getLength() > 0.f) {
+					if (nearest.size() == 0 || nearest.get(0).getLength() > 0.5f) {
 						possibleVacancies.add(tmp);
 						data.getBox().backInBox(tmp);
 						possibleVacancyList.add(tmp);
