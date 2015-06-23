@@ -32,9 +32,6 @@ import quickhull3d.Point3d;
 import quickhull3d.QuickHull3D;
 import common.*;
 import crystalStructures.CrystalStructure;
-import delaunay.Tetrahedralization;
-import delaunay.Vertex;
-import delaunay2.Delaunay;
 import model.*;
 import model.dataContainer.VacancyDataContainer3.Vacancy;
 
@@ -126,13 +123,11 @@ public final class VacancyDataContainer3 extends ParticleDataContainer<Vacancy>{
 
 			//Build delaunay graph
 			
-			Vec3 center = new Vec3();
-			ArrayList<Vec3> copy = new ArrayList<Vec3>();
-			copy.add(center); copy.addAll(nnb);
-			Delaunay t = new Delaunay(copy);
+			
+			
 			
 			//get the voronoi cell
-			List<Vec3> voronoi = t.getVoronoiVertices(center);
+			List<Vec3> voronoi = VoronoiVolume.getVoronoiVertices(nnb);
 
 			List<Vec3> voronoi2 = VoronoiVolume.getVoronoiVertices(nnb); 
 			if(voronoi.size() != voronoi2.size())
@@ -143,14 +138,13 @@ public final class VacancyDataContainer3 extends ParticleDataContainer<Vacancy>{
 				if (point.getLengthSqr() < 0.25f*minDistanceToAtom)
 					continue;
 				
-				ArrayList<Vec3> copy2 = new ArrayList<Vec3>(copy);
-				copy2.add(point);
-				Delaunay t2 = new Delaunay(copy2);
+				List<Vec3> nnb2 = defectedNearestNeighbors.getNeighVec(point);
 				
-				List<Vec3> hull = t2.getSurroundingVertices(point);
+				List<Vec3> hull = VoronoiVolume.getDelaunayNeighbors(nnb2);
 				if (hull.size() < 4) continue;
 				
 				Vec3 chebyshevCenter = getChebyshevCenter(hull);
+				chebyshevCenter.add(point);
 				
 				// Test validity of chebychev center
 				final List<Vec3> chebyNeigh = defectedNearestNeighbors.getNeighVec(chebyshevCenter.addClone(a));

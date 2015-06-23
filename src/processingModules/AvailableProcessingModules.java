@@ -60,7 +60,6 @@ private final static ArrayList<ProcessingModule> otherModules;
 		otherModules.add(new RbvBuilder());
 		otherModules.add(new DataContainerAsProcessingModuleWrapper(new Skeletonizer(), true));
 		otherModules.add(new DataContainerAsProcessingModuleWrapper(new VacancyDataContainer(), true));
-		otherModules.add(new DataContainerAsProcessingModuleWrapper(new VacancyDataContainer2(), true));
 		otherModules.add(new DataContainerAsProcessingModuleWrapper(new VacancyDataContainer3(), true));
 		otherModules.add(new DataContainerAsProcessingModuleWrapper(new SurfaceApproximationDataContainer(), true));
 		otherModules.add(new DataContainerAsProcessingModuleWrapper(new DislocationDensityTensorData(), true));
