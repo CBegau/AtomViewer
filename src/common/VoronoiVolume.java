@@ -127,7 +127,7 @@ public class VoronoiVolume {
 
 		float atomic_volume = 0.0f;
 		
-		int numfaces = 0;
+//		int numfaces = 0;
 		int[] vertexnumi = new int[points.size()];
 		int[] ord = new int[points.size()];
 		Vec3[] coord = new Vec3[points.size()];
@@ -166,7 +166,7 @@ public class VoronoiVolume {
 
 			/* Surface i exists */
 			if (vertexnumi[i] > 2) {
-				++numfaces;
+//				++numfaces;
 
 				/* Compute coordinates of vertices belonging to surface i */
 				int k = 0;
@@ -190,16 +190,17 @@ public class VoronoiVolume {
 
 		} /* i */
 
-		/* Number of edges of Voronoi cell */
-		int edgesnum = 0;
-
-		for (int n = 0; n < points.size(); ++n)
-			if (vertexnumi[n] > 2) edgesnum += vertexnumi[n];
-
-		edgesnum /= 2;
-
-		/* Check whether Euler relation holds */
-		if ((numVertex - edgesnum + numfaces) != 2) return 0f;
+		//Disabled, often rejects due to rounding error even if the result is correct
+//		/* Number of edges of Voronoi cell */
+//		int edgesnum = 0;
+//
+//		for (int n = 0; n < points.size(); ++n)
+//			if (vertexnumi[n] > 2) edgesnum += vertexnumi[n];
+//
+//		edgesnum /= 2;
+//
+//		/* Check whether Euler relation holds */
+//		if ((numVertex - edgesnum + numfaces) != 2) return 0f;
 		
 		
 		/* Compute volume of Voronoi cell */
