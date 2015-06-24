@@ -280,6 +280,7 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 	public DataContainer deriveNewInstance() {
 		VacancyDataContainer clone = new VacancyDataContainer();
 		clone.nnd_tolerance = this.nnd_tolerance;
+		clone.testForSurfaces = this.testForSurfaces;
 		return clone;
 	}
 	
