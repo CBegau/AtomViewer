@@ -181,7 +181,8 @@ public class FinalMesh {
 		this.volume = 0.;
 		for (int i=0; i<triangles.length; i+=3){
 			Vec3 c = new Vec3(vertices[triangles[i]+0], vertices[triangles[i]+1], vertices[triangles[i]+2]);
-			this.volume += getTriangleArea(i)*getTriangleNormal(i).dot(c);
+			this.volume += getTriangleArea(i)*getTriangleUnitNormal(i).dot(c);
+
 		}		
 		this.volume /= 3.;
 		
