@@ -290,6 +290,12 @@ public class Grain implements Pickable{
 		return toString();
 	}
 	
+	@Override
+	public Vec3 getCenterOfObject() {
+		if(mesh == null) return null;
+		return mesh.getCenterOfObject();
+	}
+	
 	private static class AtomMeshDistanceHelper extends Vec3 {
 		Atom atom;
 		float distance;

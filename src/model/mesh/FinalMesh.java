@@ -136,6 +136,10 @@ public class FinalMesh {
 	}
 	
 	private Vec3 getTriangleUnitNormal(int index){
+		return getTriangleNormal(index).normalize();
+	}
+	
+	private Vec3 getTriangleNormal(int index){
 		float v2_v1_x = vertices[triangles[index+1]+0] - vertices[triangles[index]+0];
 		float v2_v1_y = vertices[triangles[index+1]+1] - vertices[triangles[index]+1];
 		float v2_v1_z = vertices[triangles[index+1]+2] - vertices[triangles[index]+2];
@@ -148,7 +152,6 @@ public class FinalMesh {
 				v2_v1_z*v3_v1_x-v2_v1_x*v3_v1_z,
 				v2_v1_x*v3_v1_y-v2_v1_y*v3_v1_x);
 		
-		norm.normalize();
 		return norm;
 	}
 	
@@ -177,7 +180,7 @@ public class FinalMesh {
 		
 		this.volume = 0.;
 		for (int i=0; i<triangles.length; i+=3){
-			Vec3 c = new Vec3(vertices[triangles[i+0]+0], vertices[triangles[i+0]+1], vertices[triangles[i+0]+2]);
+			Vec3 c = new Vec3(vertices[triangles[i]+0], vertices[triangles[i]+1], vertices[triangles[i]+2]);
 			this.volume += getTriangleArea(i)*getTriangleUnitNormal(i).dot(c);
 		}		
 		this.volume /= 3.;
@@ -193,6 +196,26 @@ public class FinalMesh {
 			this.area += getTriangleArea(i);
 		
 		return this.area;
+	}
+	
+	public Vec3 getCentroid(){
+		Vec3 centroid = new Vec3();
+		
+		for (int i=0; i<triangles.length; i+=3){
+			Vec3 n = getTriangleNormal(i);
+			Vec3 a = new Vec3(vertices[triangles[i]+0], vertices[triangles[i]+1], vertices[triangles[i]+2]);
+			Vec3 b = new Vec3(vertices[triangles[i+1]+0], vertices[triangles[i+1]+1], vertices[triangles[i+1]+2]);
+			Vec3 c = new Vec3(vertices[triangles[i+2]+0], vertices[triangles[i+2]+1], vertices[triangles[i+2]+2]);
+		
+			centroid.x += n.x * ( (a.x+b.x)*(a.x+b.x) + (b.x+c.x)*(b.x+c.x) + (c.x+a.x)*(c.x+a.x));
+			centroid.y += n.y * ( (a.y+b.y)*(a.y+b.y) + (b.y+c.y)*(b.y+c.y) + (c.y+a.y)*(c.y+a.y));
+			centroid.z += n.z * ( (a.z+b.z)*(a.z+b.z) + (b.z+c.z)*(b.z+c.z) + (c.z+a.z)*(c.z+a.z));
+		}
+		
+		centroid.divide(24f);
+		centroid.divide(2*(float)getVolume());
+		
+		return centroid;
 	}
 	
 	public void printMetaData(DataOutputStream dos, int number) throws IOException{

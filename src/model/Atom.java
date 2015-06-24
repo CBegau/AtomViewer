@@ -261,4 +261,9 @@ public class Atom extends Vec3 implements Pickable {
 	public boolean equals(Object obj) {
 		return this == obj;
 	}
+	
+	@Override
+	public Vec3 getCenterOfObject() {
+		return this.clone();
+	}
 }

@@ -21,6 +21,8 @@ package model;
 import java.awt.event.InputEvent;
 import java.util.Collection;
 
+import common.Vec3;
+
 public interface Pickable {
 	public Collection<?> getHighlightedObjects();
 	public boolean isHighlightable();
@@ -34,4 +36,11 @@ public interface Pickable {
 	 * @return
 	 */
 	public String printMessage(InputEvent ev, AtomData data);
+	
+	/**
+	 * Returns the centroid or a similiar property of the object that can be focuses on
+	 * May return null if the operation is not supported by this kind of object 
+	 * @return
+	 */
+	public Vec3 getCenterOfObject();
 }

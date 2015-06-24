@@ -460,6 +460,11 @@ public class LoadBalancingData extends DataContainer {
 		public String printMessage(InputEvent ev, AtomData data) {
 			return String.format("CPU %d load: %.6f particles: %d volume: %.6f", cpu, load, particles, volume);
 		}
+		
+		@Override
+		public Vec3 getCenterOfObject() {
+			return new Vec3(cog[0], cog[1], cog[2]);
+		}
 	}
 
 	private static class RedrawChangeListener implements ChangeListener{
