@@ -63,8 +63,6 @@ public final class VacancyDataContainer2 extends ParticleDataContainer<Vacancy>{
 		final NearestNeighborBuilder<Vec3> allNearestNeighbors = 
 				new NearestNeighborBuilder<Vec3>(data.getBox(), 1f*nndSearch, true);
 		
-		final List<Vacancy> possibleVacancyList = new ArrayList<Vacancy>();
-		
 		//Define atom types
 		final int defaultType = cs.getDefaultType();
 		final int surfaceType = cs.getSurfaceType();
@@ -163,18 +161,23 @@ public final class VacancyDataContainer2 extends ParticleDataContainer<Vacancy>{
 							if (valid) {
 								Vec3NoEqual tmp = new Vec3NoEqual();
 								tmp.setTo(absolutePoint);
-
+								Vacancy v = new Vacancy(tmp, minDist);
+								
 								synchronized (possibleVacancies) {
-									List<Tupel<Vacancy,Vec3>> nearest = possibleVacancies.getNeighAndNeighVec(tmp, 1);
-									if (nearest.size() == 0 || nearest.get(0).o2.getLength() > 0.1f*minDistanceToAtom){
-										Vacancy v = new Vacancy(tmp, minDist); 
-										possibleVacancies.add(v);
-										possibleVacancyList.add(v);
-									} else if (nearest.get(0).o1.dist < minDist){
-										//Overwrite the old coordinate, the new one is better
-										nearest.get(0).o1.setTo(tmp); 
-										nearest.get(0).o1.dist = minDist;
+									List<Tupel<Vacancy,Vec3>> nearOnes = possibleVacancies.getNeighAndNeighVec(tmp);
+									Vacancy bestFit = v;
+									
+									for (Tupel<Vacancy,Vec3> t : nearOnes){
+										if (t.o2.getLength()<0.1f*minDistanceToAtom){
+											if (bestFit.dist<t.o1.dist)
+												bestFit = t.o1;
+											possibleVacancies.remove(t.o1);
+										}
 									}
+
+									possibleVacancies.add(bestFit);
+										
+									
 								}
 							}
 						}
@@ -186,6 +189,36 @@ public final class VacancyDataContainer2 extends ParticleDataContainer<Vacancy>{
 		}
 		ThreadPool.executeParallel(parallelTasks);
 		
+		List<Vacancy> possibleVacancyList = possibleVacancies.getAllElements();
+		possibleVacancies.removeAll();
+		
+		Collections.sort(possibleVacancyList, new Comparator<Vacancy>() {
+			@Override
+			public int compare(Vacancy o1, Vacancy o2) {
+				if (o1.dist>o2.dist) return 1;
+				else if (o1.dist<o2.dist) return -1;
+				else return 0;
+			}
+		});
+		
+		
+		for (Vacancy v : possibleVacancyList){
+			List<Tupel<Vacancy,Vec3>> nearOnes = possibleVacancies.getNeighAndNeighVec(v);
+			Vacancy bestFit = v;
+			
+			for (Tupel<Vacancy,Vec3> t : nearOnes){
+				if (t.o2.getLength()<minDistanceToAtom){
+					if (bestFit.dist<t.o1.dist)
+						bestFit = t.o1;
+					possibleVacancies.remove(t.o1);
+				}
+			}
+
+			possibleVacancies.add(bestFit);
+		}
+		
+			
+		possibleVacancyList = possibleVacancies.getAllElements();
 		/**
 		 * Find the unique vacancy sites by selecting a vacancy site, average it with its duplicates
 		 * which may be minimally displaced by the numerical construction.

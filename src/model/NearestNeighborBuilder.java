@@ -187,6 +187,19 @@ public class NearestNeighborBuilder<T extends Vec3> {
 	}
 	
 	/**
+	 * Returns a list containing all currently stored elements
+	 * @return
+	 */
+	public List<T> getAllElements(){
+		ArrayList<T> ele = new ArrayList<T>();
+		for (List<T> c : cells){
+			if (c != null)
+				ele.addAll(c);
+		}
+		return ele;
+	}
+	
+	/**
 	 * Tries to remove a given element from the nearest neighbor builder.
 	 * It will only remove the first element that is equal to the given argument.
 	 * This method is only thread-safe if requested during construction of the NearestNeighborBuilder
@@ -210,6 +223,12 @@ public class NearestNeighborBuilder<T extends Vec3> {
 		if (cells[p] != null)
 			return cells[p].remove(c);
 		return false;
+	}
+	
+	public void removeAll(){
+		for (List<T> c : cells)
+			if (c != null)
+				c.clear();
 	}
 	
 	public float getCutoff() {
