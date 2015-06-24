@@ -333,6 +333,11 @@ public class StressData extends DataContainer {
 		public String printMessage(InputEvent ev, AtomData data) {
 			return toString();
 		}
+		
+		@Override
+		public Vec3 getCenterOfObject() {
+			return this.clone();
+		}
 	}
 
 	@Override

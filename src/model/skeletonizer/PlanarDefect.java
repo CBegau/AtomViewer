@@ -378,6 +378,15 @@ public class PlanarDefect implements Pickable{
 	}
 	
 	@Override
+	public Vec3 getCenterOfObject() {
+		Vec3 centroid = new Vec3();
+		for (Atom a : faces)
+			centroid.add(a);
+		centroid.divide(faces.length);
+		return centroid;
+	}
+	
+	@Override
 	public String printMessage(InputEvent ev, AtomData data) {
 		Vec3 o;
 		String type;

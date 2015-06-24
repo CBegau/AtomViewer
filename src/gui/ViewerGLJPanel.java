@@ -51,7 +51,7 @@ import common.ColorTable.ColorBarScheme;
 import crystalStructures.CrystalStructure;
 
 public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, MouseListener, 
-	MouseWheelListener, GLEventListener, KeyListener, AtomDataChangedListener {
+	MouseWheelListener, GLEventListener, AtomDataChangedListener {
 	
 	public enum RenderOption {
 		INDENTER(false), GRAINS(false), LEGEND(true), COORDINATE_SYSTEM(false), THOMPSON_TETRAEDER(false),
@@ -133,7 +133,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	
 	private boolean updateRenderContent = true;
 	
-	private boolean showRotationSphere = false;
 	private ObjectRenderData<Atom> renderData;
 	
 	public static double openGLVersion = 0.;
@@ -162,7 +161,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		
 		RenderingConfiguration.setViewer(this);
 		
-		addKeyListener(this);
 		addMouseListener(this);
 		addMouseMotionListener(this);
 		addMouseWheelListener(this);
@@ -364,12 +362,15 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		GLMatrix mv = new GLMatrix();
 		
 		mv.translate(-moveX, -moveY, 0);
-		mv.mult(rotMatrix);
-		mv.translate(coordinateCenterOffset.x , coordinateCenterOffset.y, coordinateCenterOffset.z);
+		mv.mult(rotMatrix);	
 		float scale = 1f / globalMaxBounds.maxComponent();
 		mv.scale(scale, scale, scale);
 		Vec3 bounds = atomData.getBox().getHeight();
+		//Shift to the center of the box
 		mv.translate(-bounds.x*0.5f, -bounds.y*0.5f, -bounds.z*0.5f);
+		//Shift again if the focus is placed on some object
+		mv.translate(-coordinateCenterOffset.x, -coordinateCenterOffset.y, -coordinateCenterOffset.z);
+	
 		return mv;
 	}
 
@@ -536,8 +537,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		//Additional objects
 		//Some are placed on top of the scene as 2D objects
 		if (!picking){
-			if (showRotationSphere)
-				drawRotationSphere(gl);
 			drawIndent(gl);
 			drawCoordinateSystem(gl);
 			drawThompsonTetraeder(gl);			
@@ -583,61 +582,61 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		fullScreenQuad.draw(gl, GL.GL_TRIANGLE_STRIP);
 	}
 
-	private void drawRotationSphere(GL3 gl){
-		float thickness = atomData.getBox().getHeight().maxComponent()/300f;
-		
-		Shader s = BuiltInShader.ADS_UNIFORM_COLOR.getShader();
-		int colorUniform = gl.glGetUniformLocation(s.getProgram(), "Color");
-		s.enable(gl);
-		gl.glUniform4f(colorUniform, 0.0f, 0.0f, 0.0f, 1f);
-		gl.glUniform1i(gl.glGetUniformLocation(s.getProgram(), "ads"), 0);
-		
-		Vec3 bounds = atomData.getBox().getHeight();
-		float maxSize = bounds.maxComponent()*0.866f;
-		Vec3 h = coordinateCenterOffset.multiplyClone(-globalMaxBounds.maxComponent()).add(bounds.multiplyClone(0.5f));
-				
-		//three rings, aligned at the x,y,z axes, centered around the coordinate system
-		ArrayList<Vec3> path = new ArrayList<Vec3>();
-		ArrayList<Vec3> path2 = new ArrayList<Vec3>();
-		ArrayList<Vec3> path3 = new ArrayList<Vec3>();
-		for (int i=0; i<=64; i++){
-			double a = 2*Math.PI*(i/64.);
-			float sin = (float)Math.sin(a)*maxSize;
-			float cos = (float)Math.cos(a)*maxSize;
-			path.add(new Vec3(sin+h.x, cos+h.y, h.z));
-			path2.add(new Vec3(sin+h.x, h.y, cos+h.z));
-			path3.add(new Vec3(h.x, sin+h.y, cos+h.z));
-		}
-		
-		TubeRenderer.drawTube(gl, path, thickness);
-		TubeRenderer.drawTube(gl, path2, thickness);
-		TubeRenderer.drawTube(gl, path3, thickness);
-		
-		//Straight lines along x,y,z direction in the center of the coordinate system
-		path.clear();
-		path.add(new Vec3(maxSize+h.x, h.y, h.z)); path.add(new Vec3(-maxSize+h.x, h.y, h.z));
-		TubeRenderer.drawTube(gl, path, thickness);
-		
-		path.clear();
-		path.add(new Vec3(h.x, maxSize+h.y, h.z)); path.add(new Vec3(h.x, -maxSize+h.y, h.z));
-		TubeRenderer.drawTube(gl, path, thickness);
-		
-		path.clear();
-		path.add(new Vec3(h.x, h.y, maxSize+h.z)); path.add(new Vec3(h.x, h.y, -maxSize+h.z));
-		TubeRenderer.drawTube(gl, path, thickness);
-		
-		//Draw a sphere centered on the coordinate system
-		gl.glUniform4f(colorUniform, 0.5f, 0.5f, 1.0f, 0.8f);
-		GLMatrix mvm = modelViewMatrix.clone();
-		mvm.translate(h.x, h.y, h.z);
-		mvm.scale(maxSize, maxSize, maxSize);
-		updateModelViewInShader(gl, s, mvm, projectionMatrix);
-		SimpleGeometriesRenderer.drawSphere(gl);
-		updateModelViewInShader(gl, s, modelViewMatrix, projectionMatrix);
-		
-		gl.glUniform1i(gl.glGetUniformLocation(s.getProgram(), "ads"), 
-				RenderingConfiguration.Options.ADS_SHADING.isEnabled() ? 1 : 0);
-	}
+//	private void drawRotationSphere(GL3 gl){
+//		float thickness = atomData.getBox().getHeight().maxComponent()/300f;
+//		
+//		Shader s = BuiltInShader.ADS_UNIFORM_COLOR.getShader();
+//		int colorUniform = gl.glGetUniformLocation(s.getProgram(), "Color");
+//		s.enable(gl);
+//		gl.glUniform4f(colorUniform, 0.0f, 0.0f, 0.0f, 1f);
+//		gl.glUniform1i(gl.glGetUniformLocation(s.getProgram(), "ads"), 0);
+//		
+//		Vec3 bounds = atomData.getBox().getHeight();
+//		float maxSize = bounds.maxComponent()*0.866f;
+//		Vec3 h = coordinateCenterOffset.multiplyClone(-globalMaxBounds.maxComponent()).add(bounds.multiplyClone(0.5f));
+//				
+//		//three rings, aligned at the x,y,z axes, centered around the coordinate system
+//		ArrayList<Vec3> path = new ArrayList<Vec3>();
+//		ArrayList<Vec3> path2 = new ArrayList<Vec3>();
+//		ArrayList<Vec3> path3 = new ArrayList<Vec3>();
+//		for (int i=0; i<=64; i++){
+//			double a = 2*Math.PI*(i/64.);
+//			float sin = (float)Math.sin(a)*maxSize;
+//			float cos = (float)Math.cos(a)*maxSize;
+//			path.add(new Vec3(sin+h.x, cos+h.y, h.z));
+//			path2.add(new Vec3(sin+h.x, h.y, cos+h.z));
+//			path3.add(new Vec3(h.x, sin+h.y, cos+h.z));
+//		}
+//		
+//		TubeRenderer.drawTube(gl, path, thickness);
+//		TubeRenderer.drawTube(gl, path2, thickness);
+//		TubeRenderer.drawTube(gl, path3, thickness);
+//		
+//		//Straight lines along x,y,z direction in the center of the coordinate system
+//		path.clear();
+//		path.add(new Vec3(maxSize+h.x, h.y, h.z)); path.add(new Vec3(-maxSize+h.x, h.y, h.z));
+//		TubeRenderer.drawTube(gl, path, thickness);
+//		
+//		path.clear();
+//		path.add(new Vec3(h.x, maxSize+h.y, h.z)); path.add(new Vec3(h.x, -maxSize+h.y, h.z));
+//		TubeRenderer.drawTube(gl, path, thickness);
+//		
+//		path.clear();
+//		path.add(new Vec3(h.x, h.y, maxSize+h.z)); path.add(new Vec3(h.x, h.y, -maxSize+h.z));
+//		TubeRenderer.drawTube(gl, path, thickness);
+//		
+//		//Draw a sphere centered on the coordinate system
+//		gl.glUniform4f(colorUniform, 0.5f, 0.5f, 1.0f, 0.8f);
+//		GLMatrix mvm = modelViewMatrix.clone();
+//		mvm.translate(h.x, h.y, h.z);
+//		mvm.scale(maxSize, maxSize, maxSize);
+//		updateModelViewInShader(gl, s, mvm, projectionMatrix);
+//		SimpleGeometriesRenderer.drawSphere(gl);
+//		updateModelViewInShader(gl, s, modelViewMatrix, projectionMatrix);
+//		
+//		gl.glUniform1i(gl.glGetUniformLocation(s.getProgram(), "ads"), 
+//				RenderingConfiguration.Options.ADS_SHADING.isEnabled() ? 1 : 0);
+//	}
 	
 	private void drawSimulationBox(GL3 gl, boolean picking) {
 		if (!RenderOption.BOUNDING_BOX.isEnabled() || picking) return;
@@ -1278,28 +1277,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 				zoom *= 1 + (newDragPosition.y - startDragPosition.y) / 50f;
 				if (zoom>400f) zoom = 400f;
 				if (zoom<0.05f) zoom = 0.05f;
-			}
-			else if ((e.getModifiersEx() & (InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK)) == 
-					(InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK)){
-				
-				float[][] a = rotMatrix.getAsArray();
-				
-				Vec3 x_rot = new Vec3(-a[0][0], -a[1][0], -a[2][0]);
-				Vec3 y_rot = new Vec3(a[0][1], a[1][1], a[2][1]);
-				
-				x_rot.multiply((startDragPosition.x - newDragPosition.x) / (globalMaxBounds.minComponent()*zoom));
-				y_rot.multiply((startDragPosition.y - newDragPosition.y) / (globalMaxBounds.minComponent()*zoom));
-				
-				Vec3 newOffset = coordinateCenterOffset.addClone(x_rot).add(y_rot);
-				Vec3 max = globalMaxBounds.divideClone(globalMaxBounds.maxComponent());
-				
-				if (Math.abs(newOffset.x)>0.5f*max.x) newOffset.x = 0.5f*max.x*Math.signum(newOffset.x);
-				if (Math.abs(newOffset.y)>0.5f*max.y) newOffset.y = 0.5f*max.y*Math.signum(newOffset.y);
-				if (Math.abs(newOffset.z)>0.5f*max.z) newOffset.z = 0.5f*max.z*Math.signum(newOffset.z);
-				coordinateCenterOffset.setTo(newOffset);
-				
-			}
-			else if ((e.getModifiersEx() & InputEvent.CTRL_DOWN_MASK) == InputEvent.CTRL_DOWN_MASK){
+			} else if ((e.getModifiersEx() & InputEvent.CTRL_DOWN_MASK) == InputEvent.CTRL_DOWN_MASK){
 				moveX -= (newDragPosition.x - startDragPosition.x) / (globalMaxBounds.minComponent()*zoom);
 				moveY += (newDragPosition.y - startDragPosition.y) / (globalMaxBounds.minComponent()*zoom);
 			} else {
@@ -1580,6 +1558,12 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		final int picksize = 7;
 		
 		if (atomData==null) return;
+		
+		boolean adjustPOVOnObject = false;
+		if ((e.getModifiersEx() & (InputEvent.SHIFT_DOWN_MASK | InputEvent.CTRL_DOWN_MASK))
+				== (InputEvent.SHIFT_DOWN_MASK | InputEvent.CTRL_DOWN_MASK)){
+			adjustPOVOnObject = true;
+		}
 
 		GL3 gl = this.getGLFromContext();
 		updateIntInAllShader(gl, "picking", 1);
@@ -1628,6 +1612,20 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			if (num == 0x000000) continue; //Pure black > Background
 			
 			Pickable picked = pickList.get(num-1);
+			
+			//Modify the parameters for the modelview matrix to focus on
+			//the picked object
+			if (adjustPOVOnObject){
+				Vec3 pov = picked.getCenterOfObject();
+				if (pov != null){
+					Vec3 bounds = atomData.getBox().getHeight();
+					pov.add(bounds.multiplyClone(-0.5f));
+					coordinateCenterOffset.setTo(pov);
+					repaintRequired = true;
+					break;
+				}
+			}
+			
 			JLogPanel.getJLogPanel().addLog(picked.printMessage(e, atomData));
 			
 			if (picked.isHighlightable()){
@@ -1926,26 +1924,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		if (fboRight != null) 	   fboRight.destroy(gl);
 		if (fboBackground != null) fboBackground.destroy(gl);
 	}
-	
-	@Override
-	public void keyPressed(KeyEvent e) {
-		if ((e.getModifiersEx() & (InputEvent.SHIFT_DOWN_MASK | InputEvent.CTRL_DOWN_MASK))
-				== (InputEvent.SHIFT_DOWN_MASK | InputEvent.CTRL_DOWN_MASK)){		
-			showRotationSphere = true;
-			this.reDraw();
-		}
-	}
-	
-	@Override
-	public void keyReleased(KeyEvent e) {
-		if (e.getKeyCode() == KeyEvent.VK_SHIFT || e.getKeyCode() == KeyEvent.VK_CONTROL){
-			showRotationSphere = false;
-			this.reDraw();
-		}
-	}
-	
-	@Override
-	public void keyTyped(KeyEvent e) {}
 	
 	private interface ColoringFunction{
 		float[] getColor(Atom c);
