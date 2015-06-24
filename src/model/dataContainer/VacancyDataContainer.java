@@ -53,53 +53,53 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 	}
 	
 	private void findVacancies(final AtomData data, final float nnd_tolerance){
-		CrystalStructure cs = data.getCrystalStructure();
+		final CrystalStructure cs = data.getCrystalStructure();
+		
+		//Cutoff-radii
 		final float nnd = cs.getDistanceToNearestNeighbor();
 		final float nndSearch = cs.getNearestNeighborSearchRadius();
-		
-		//Data structure to get all neighbors up to a selected distance
-		final NearestNeighborBuilder<Vec3> defectedNearestNeighbors = 
-				new NearestNeighborBuilder<Vec3>(data.getBox(), 1.5f*nndSearch, true);
-		final NearestNeighborBuilder<Vec3> allNearestNeighbors = 
-				new NearestNeighborBuilder<Vec3>(data.getBox(), 1f*nndSearch, true);
+		final float minDistanceToAtom = nnd_tolerance*nnd;
 		
 		//Define atom types
 		final int defaultType = cs.getDefaultType();
 		final int surfaceType = cs.getSurfaceType();
 		
+		//Data structure to get all neighbors up to a selected distance
+		//Defects are considered up to twice the minimum distance to fit a vacancy into it
+		final NearestNeighborBuilder<Vec3> defectedNearestNeighbors = 
+				new NearestNeighborBuilder<Vec3>(data.getBox(), 2f*minDistanceToAtom, false);
+		final float squaredCutoff = defectedNearestNeighbors.getCutoff()*defectedNearestNeighbors.getCutoff();
+		
+		//The total set of atoms is only considered for the typically search radius
+		final NearestNeighborBuilder<Vec3> allNearestNeighbors = 
+				new NearestNeighborBuilder<Vec3>(data.getBox(), nndSearch, true);
+		//Data structure to get all possible vacancies in small neighborhood
+		final NearestNeighborBuilder<Vacancy> possibleVacancies = new NearestNeighborBuilder<Vacancy>(data.getBox(), nnd, false);
+		
+		//This list is holding candidates that need to be tested for vacancy positions
 		final ArrayList<Atom> nextToVancanyCandidateAtoms = new ArrayList<Atom>();
 		
-		final float minDistanceToAtom = nnd_tolerance*nnd;
-		
+
+		//Insert all atoms in the different lists
 		allNearestNeighbors.addAll(data.getAtoms());
 		
 		for (Atom a : data.getAtoms()){
 			if (a.getType() != defaultType){
-				defectedNearestNeighbors.add(a);
-				
+				defectedNearestNeighbors.add(a);	//<-All defects
 				if (a.getType() != surfaceType)
-					nextToVancanyCandidateAtoms.add(a);
+					nextToVancanyCandidateAtoms.add(a); //<-Defects that are not surface atoms
 			}
 		}
 		
 		ProgressMonitor.getProgressMonitor().start(nextToVancanyCandidateAtoms.size());
 
-		
-		//Data structure to get all possible vacancies in small neighborhood
-		final NearestNeighborBuilder<Vacancy> possibleVacancies = new NearestNeighborBuilder<Vacancy>(data.getBox(), nnd, true);
-		
-		final float squaredCutoff = defectedNearestNeighbors.getCutoff()*defectedNearestNeighbors.getCutoff();
-		
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		
-		ProgressMonitor.getProgressMonitor().start(nextToVancanyCandidateAtoms.size());
-		
 		/*
 		 * Identify possible vacancy sites for each defect atom in parallel.
 		 * In this case, vacancy sites are typically identified multiple times.
 		 * Here, the sites are identified and stored. The reduction of duplicates
 		 * is done in a later step
 		 */
+		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();		
 		for (int i = 0; i < ThreadPool.availProcessors(); i++){
 		
 			final int j = i;
@@ -113,30 +113,37 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 					
 					for (int k = start; k < end; k++) {
 						if (k % 1000 == 0) ProgressMonitor.getProgressMonitor().addToCounter(1000);
-
+						
+						//First get the nearest defect atoms for an atom possibly next to a vacancy
 						Atom a = nextToVancanyCandidateAtoms.get(k);
-
-						// Datastructure to store second nearest neighbors of selected atom
 						ArrayList<Vec3> nnb = defectedNearestNeighbors.getNeighVec(a);
-
+						if (nnb.size() < 4) continue;
 						
-						ArrayList<Tupel<Vec3,Vec3>> convHullPlanes = null;
-						if (nnb.size() < 4) continue;			
 						
-						//get the voronoi cell
-						List<Vec3> voronoi = VoronoiVolume.getVoronoiVertices(nnb);
-						for (Vec3 point : voronoi){
-							//Exclude points that are very close to an atom
-							if (point.getLength() < minDistanceToAtom || point.getLengthSqr() > squaredCutoff)
+						//A convex hull may be required, but is only computed on demand
+						//thus here initialized with null
+						ArrayList<Tupel<Vec3,Vec3>> convexHull = null;
+						
+						//Compute the voronoi diagram around the atom and its neighbors
+						//Vacancies can be positions that are far enough away from any defect atom
+						List<Vec3> voronoiVertices = VoronoiVolume.getVoronoiVertices(nnb);
+						
+						for (Vec3 voro : voronoiVertices){
+							//Exclude points that are either too close to be a vacancy position
+							//or a that far away and are boundary points in the voronoi diagram
+							if (voro.getLength() < minDistanceToAtom || voro.getLengthSqr() > squaredCutoff)
 								continue;
 							
-							//Move point into the global coordinate system
-							Vec3 absolutePoint = point.addClone(a);
+							//The voronoi vertex is in a local coordinate system of a
+							//Move it back into the global coordinate system and correct periodicity if needed
+							Vec3 absolutePoint = voro.addClone(a);
 							data.getBox().backInBox(absolutePoint);
 							
-							float minDist = nndSearch;
-							// Test validity
+							//Compute the distance from the voronoi vertex to all atoms
+							//Test if all of them are further away than the minimal distance to be a
+							//vacancy
 							final List<Vec3> neigh = allNearestNeighbors.getNeighVec(absolutePoint);
+							float minDist = nndSearch;
 							boolean valid = true;
 							for (Vec3 p : neigh) {
 								float d = p.getLength();
@@ -147,26 +154,33 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 								}
 							}
 							
-							//Test if point is inside a convex hull if requested
+							//Test if vertex is inside a convex hull if requested
 							if (testForSurfaces && valid){
-								if (convHullPlanes == null) {
+								if (convexHull == null) {
 									//Compute the convex hull if needed
 									nnb.add(new Vec3(0f, 0f, 0f)); //Add the central atom
-									convHullPlanes = getConvexHullBoundaryPlanes(nnb);
+									convexHull = getConvexHullBoundaryPlanes(nnb);
 								}
-								valid = isInConvexHull(point, convHullPlanes);
+								valid = isInConvexHull(voro, convexHull);
 							}
 							    
-							
+							//The vertex is far enough away from any atom
 							if (valid) {
-								Vec3NoEqual tmp = new Vec3NoEqual();
+								//Vec3 objects with the same coordinates are considered equal
+								//Here it is needed to test if such a point exists and therefore
+								//a special copy is used to get these values as well from the 
+								//NearestNeighborBuilder
+								Vec3NoEqual tmp = new Vec3NoEqual(); 
 								tmp.setTo(absolutePoint);
 								Vacancy v = new Vacancy(tmp, minDist);
 								
+								//Start with the first step in the reduction of points that are found multiple times
 								synchronized (possibleVacancies) {
+									//Get the already identified vacancies close to the new one
 									List<Tupel<Vacancy,Vec3>> nearOnes = possibleVacancies.getNeighAndNeighVec(tmp);
 									Vacancy bestFit = v;
-									
+									//Delete those points that are close to the new vacancy
+									//The one that has the largest distance to an atom will survive
 									for (Tupel<Vacancy,Vec3> t : nearOnes){
 										if (t.o2.getLength()<0.1f*minDistanceToAtom){
 											if (bestFit.dist<t.o1.dist)
@@ -189,6 +203,10 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 		}
 		ThreadPool.executeParallel(parallelTasks);
 		
+		
+		//Start the second part of the reduction part
+		//First get all possible vacancies and sort the with ascending distance to
+		//neighboring atoms
 		List<Vacancy> possibleVacancyList = possibleVacancies.getAllElements();
 		possibleVacancies.removeAll();
 		
@@ -201,11 +219,12 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 			}
 		});
 		
-		
+		//Again, insert vacancies one by one
 		for (Vacancy v : possibleVacancyList){
 			List<Tupel<Vacancy,Vec3>> nearOnes = possibleVacancies.getNeighAndNeighVec(v);
 			Vacancy bestFit = v;
-			
+			//And delete all neighboring ones and keep only that one that is
+			//furthest away from an atom
 			for (Tupel<Vacancy,Vec3> t : nearOnes){
 				if (t.o2.getLength()<minDistanceToAtom){
 					if (bestFit.dist<t.o1.dist)
@@ -217,7 +236,7 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 			possibleVacancies.add(bestFit);
 		}
 		
-		//Add to the final results
+		//Copy data into the final results container
 		this.particles.addAll(possibleVacancies.getAllElements());
 		
 		ProgressMonitor.getProgressMonitor().stop();
