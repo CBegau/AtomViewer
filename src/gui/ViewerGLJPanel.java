@@ -1356,6 +1356,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			
 			//Find global maximum boundaries
 			globalMaxBounds = new Vec3();
+			coordinateCenterOffset.setTo(0f, 0f, 0f);
 			AtomData tmp = atomData;
 			//Iterate over the whole set
 			while (tmp.getPrevious()!=null) tmp = tmp.getPrevious();
@@ -1621,6 +1622,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 					Vec3 bounds = atomData.getBox().getHeight();
 					pov.add(bounds.multiplyClone(-0.5f));
 					coordinateCenterOffset.setTo(pov);
+					moveX = 0f; moveY = 0f;
 					repaintRequired = true;
 					break;
 				}
