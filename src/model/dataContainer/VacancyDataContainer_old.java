@@ -52,10 +52,6 @@ public final class VacancyDataContainer_old extends ParticleDataContainer<Vacanc
 		return "Vacancies";
 	}
 	
-	private void findVacancies(final AtomData data){
-		findVacancies(data, this.nnd_tolerance);
-	}
-	
 	private void findVacancies(final AtomData data, final float nnd_tolerance){
 		CrystalStructure cs = data.getCrystalStructure();
 		final float nnd = cs.getDistanceToNearestNeighbor();

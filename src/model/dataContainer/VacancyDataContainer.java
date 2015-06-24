@@ -217,19 +217,8 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 			possibleVacancies.add(bestFit);
 		}
 		
-			
-		possibleVacancyList = possibleVacancies.getAllElements();
-		/**
-		 * Find the unique vacancy sites by selecting a vacancy site, average it with its duplicates
-		 * which may be minimally displaced by the numerical construction.
-		 * If there has not been a vacancy been created in a small vicinity, 
-		 * place a vacancy at the computed position.
-		 */
-		for(int i = 0; i < possibleVacancyList.size(); i++) {
-			//Add new found to data structures
-			Vacancy v = possibleVacancyList.get(i);
-			this.particles.add(v);
-		}
+		//Add to the final results
+		this.particles.addAll(possibleVacancies.getAllElements());
 		
 		ProgressMonitor.getProgressMonitor().stop();
 	}
@@ -245,7 +234,7 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 	@Override
 	protected JParticleDataControlPanel<?> getParticleDataControlPanel() {
 		if (dataPanel == null)
-			dataPanel = new JParticleDataControlPanel<Vacancy>(this, new float[]{0.7f,0.9f,0.9f}, 1.5f);
+			dataPanel = new JParticleDataControlPanel<Vacancy>(this, new float[]{0.9f,0.9f,0.9f}, 1.5f);
 		return dataPanel;
 	}
 	
@@ -288,7 +277,7 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 		
 		FloatProperty tolerance = dialog.addFloat("nnd_tolerance", 
 				"Fraction of distance to nearest neghbor of a gap to be considered as vacancy"
-				, "", nnd_tolerance, 0.01f, 1000f);
+				, "", nnd_tolerance, 0.01f, 1.1f);
 		BooleanProperty surface = dialog.addBoolean("testSurface", "Test for surfaces", "", testForSurfaces);
 		
 		boolean ok = dialog.showDialog();
