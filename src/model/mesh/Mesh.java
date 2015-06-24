@@ -750,6 +750,30 @@ public class Mesh implements Callable<Void>, Pickable{
 		}
 	}
 	
+	public Vec3 getCentroid(){
+		if (finalMesh != null) return finalMesh.getCentroid();
+		Vec3 centroid = new Vec3();
+		
+		for (Triangle t : triangles){
+			Vec3 n = t.getNormalVector();
+			Vertex[] vert = t.getVertices();
+			centroid.x += n.x * ( (vert[0].x+vert[1].x)*(vert[0].x+vert[1].x) +
+					(vert[1].x+vert[2].x)*(vert[1].x+vert[2].x) +
+					(vert[2].x+vert[0].x)*(vert[2].x+vert[0].x));
+			centroid.y += n.y * ( (vert[0].y+vert[1].y)*(vert[0].y+vert[1].y) +
+					(vert[1].y+vert[2].y)*(vert[1].y+vert[2].y) +
+					(vert[2].y+vert[0].y)*(vert[2].y+vert[0].y));
+			centroid.z += n.z * ( (vert[0].z+vert[1].z)*(vert[0].z+vert[1].z) +
+					(vert[1].z+vert[2].z)*(vert[1].z+vert[2].z) +
+					(vert[2].z+vert[0].z)*(vert[2].z+vert[0].z));
+		}
+		
+		centroid.divide(24f);
+		centroid.divide(2*(float)getVolume());
+		
+		return centroid;
+	}
+	
 	/**
 	 * Finalizes the mesh simplification.
 	 * No more simplification operations are possible, for the benefit of less memory consumption.
@@ -871,6 +895,11 @@ public class Mesh implements Callable<Void>, Pickable{
 	@Override
 	public boolean isHighlightable() {
 		return false;
+	}
+	
+	@Override
+	public Vec3 getCenterOfObject() {
+		return this.getCentroid();
 	}
 
 	@Override

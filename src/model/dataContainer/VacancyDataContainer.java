@@ -430,6 +430,11 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 		public boolean equals(Object obj) {
 			return this == obj;
 		}
+		
+		@Override
+		public Vec3 getCenterOfObject() {
+			return this.clone();
+		}
 	}
 	
 }

@@ -184,4 +184,9 @@ public class DislocationDensityTensor implements Pickable{
 	public String printMessage(InputEvent ev, AtomData data) {
 		return toString();
 	}
+	
+	@Override
+	public Vec3 getCenterOfObject() {
+		return null;
+	}
 }
