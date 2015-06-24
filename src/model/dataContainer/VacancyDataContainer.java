@@ -52,11 +52,11 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 		return "Vacancies";
 	}
 	
-	public void findVacancies(final AtomData data){
+	private void findVacancies(final AtomData data){
 		findVacancies(data, this.nnd_tolerance);
 	}
 	
-	public void findVacancies(final AtomData data, final float nnd_tolerance){
+	private void findVacancies(final AtomData data, final float nnd_tolerance){
 		CrystalStructure cs = data.getCrystalStructure();
 		final float nnd = cs.getDistanceToNearestNeighbor();
 		final float nndSearch = cs.getNearestNeighborSearchRadius();
@@ -223,7 +223,11 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 			
 			if(nvnb.size() == 0) {
 				//Add new found to data structures
-				Vacancy v = new Vacancy(marker);
+				List<Vec3> nnb = allNearestNeighbors.getNeighVec(marker, 1);
+				Vacancy v;
+				if (nnb.isEmpty())
+					v = new Vacancy(marker, allNearestNeighbors.getCutoff());
+				else v = new Vacancy(marker, nnb.get(0).getLength());
 				realVacancies.add(v); 
 				this.particles.add(v);
 			}
@@ -407,8 +411,11 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 	}
 	
 	public static class Vacancy extends Vec3 implements Pickable{
-		public Vacancy(Vec3 v) {
+		private float dist;
+		
+		public Vacancy(Vec3 v, float d) {
 			super(v.x,v.y, v.z);
+			dist = d;
 		}
 		
 		@Override
@@ -423,7 +430,7 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 
 		@Override
 		public String printMessage(InputEvent ev, AtomData data) {
-			return String.format("Vacancy position  ( %.6f, %.6f, %.6f )", x, y, z);
+			return String.format("Vacancy position  ( %.6f, %.6f, %.6f) Dist: %6f", x, y, z, dist);
 		}
 		
 		@Override
