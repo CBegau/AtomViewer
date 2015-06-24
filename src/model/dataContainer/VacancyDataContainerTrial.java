@@ -33,9 +33,9 @@ import quickhull3d.QuickHull3D;
 import common.*;
 import crystalStructures.CrystalStructure;
 import model.*;
-import model.dataContainer.VacancyDataContainer3.Vacancy;
+import model.dataContainer.VacancyDataContainerTrial.Vacancy;
 
-public final class VacancyDataContainer3 extends ParticleDataContainer<Vacancy>{
+public final class VacancyDataContainerTrial extends ParticleDataContainer<Vacancy>{
 
 	private static JParticleDataControlPanel<Vacancy> dataPanel;
 	
@@ -227,7 +227,7 @@ public final class VacancyDataContainer3 extends ParticleDataContainer<Vacancy>{
 
 	@Override
 	public DataContainer deriveNewInstance() {
-		VacancyDataContainer3 clone = new VacancyDataContainer3();
+		VacancyDataContainerTrial clone = new VacancyDataContainerTrial();
 		clone.nnd_tolerance = this.nnd_tolerance;
 		return clone;
 	}
