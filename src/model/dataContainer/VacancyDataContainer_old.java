@@ -33,14 +33,14 @@ import quickhull3d.QuickHull3D;
 import common.*;
 import crystalStructures.CrystalStructure;
 import model.*;
-import model.dataContainer.VacancyDataContainer2.Vacancy;
+import model.dataContainer.VacancyDataContainer_old.Vacancy;
 
-public final class VacancyDataContainer2 extends ParticleDataContainer<Vacancy>{
+public final class VacancyDataContainer_old extends ParticleDataContainer<Vacancy>{
 
 	private static JParticleDataControlPanel<Vacancy> dataPanel;
 	
-	private float nnd_tolerance = 0.75f;
-	private boolean testForSurfaces = false;
+	private float nnd_tolerance = 0.8f;
+	private boolean testForSurfaces = true;
 	
 	@Override
 	public boolean isTransparenceRenderingRequired() {
@@ -49,7 +49,11 @@ public final class VacancyDataContainer2 extends ParticleDataContainer<Vacancy>{
 
 	@Override
 	protected String getLabelForControlPanel() {
-		return "Vacancies2";
+		return "Vacancies";
+	}
+	
+	private void findVacancies(final AtomData data){
+		findVacancies(data, this.nnd_tolerance);
 	}
 	
 	private void findVacancies(final AtomData data, final float nnd_tolerance){
@@ -61,7 +65,9 @@ public final class VacancyDataContainer2 extends ParticleDataContainer<Vacancy>{
 		final NearestNeighborBuilder<Vec3> defectedNearestNeighbors = 
 				new NearestNeighborBuilder<Vec3>(data.getBox(), 1.5f*nndSearch, true);
 		final NearestNeighborBuilder<Vec3> allNearestNeighbors = 
-				new NearestNeighborBuilder<Vec3>(data.getBox(), 1f*nndSearch, true);
+				new NearestNeighborBuilder<Vec3>(data.getBox(), 1.5f*nndSearch, true);
+		
+		final List<Vec3> possibleVacancyList = Collections.synchronizedList(new ArrayList<Vec3>());
 		
 		//Define atom types
 		final int defaultType = cs.getDefaultType();
@@ -71,8 +77,7 @@ public final class VacancyDataContainer2 extends ParticleDataContainer<Vacancy>{
 		
 		final float minDistanceToAtom = nnd_tolerance*nnd;
 		
-		allNearestNeighbors.addAll(data.getAtoms());
-		
+		//Prepare nearest neighbor builders
 		for (Atom a : data.getAtoms()){
 			if (a.getType() != defaultType){
 				defectedNearestNeighbors.add(a);
@@ -82,24 +87,13 @@ public final class VacancyDataContainer2 extends ParticleDataContainer<Vacancy>{
 			}
 		}
 		
-		ProgressMonitor.getProgressMonitor().start(nextToVancanyCandidateAtoms.size());
-
+		allNearestNeighbors.addAll(data.getAtoms());
 		
-		//Data structure to get all possible vacancies in small neighborhood
-		final NearestNeighborBuilder<Vacancy> possibleVacancies = new NearestNeighborBuilder<Vacancy>(data.getBox(), nnd, true);
-		
-		final float squaredCutoff = defectedNearestNeighbors.getCutoff()*defectedNearestNeighbors.getCutoff();
 		
 		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
 		
 		ProgressMonitor.getProgressMonitor().start(nextToVancanyCandidateAtoms.size());
 		
-		/*
-		 * Identify possible vacancy sites for each defect atom in parallel.
-		 * In this case, vacancy sites are typically identified multiple times.
-		 * Here, the sites are identified and stored. The reduction of duplicates
-		 * is done in a later step
-		 */
 		for (int i = 0; i < ThreadPool.availProcessors(); i++){
 		
 			final int j = i;
@@ -110,76 +104,74 @@ public final class VacancyDataContainer2 extends ParticleDataContainer<Vacancy>{
 				
 					final int start = ThreadPool.getSliceStart(nextToVancanyCandidateAtoms.size(), j);
 					final int end = ThreadPool.getSliceEnd(nextToVancanyCandidateAtoms.size(), j);
-					
-					for (int k = start; k < end; k++) {
-						if (k % 1000 == 0) ProgressMonitor.getProgressMonitor().addToCounter(1000);
-
+		
+					/*
+					 * Identify possible vacancy sites for each defect atom in parallel.
+					 * In this case, vacancy sites are typically identified multiple times.
+					 * Here, the sites are identified and stored. The reduction of duplicates
+					 * is done in a later step
+					 */
+					for(int k = start; k < end; k++) {
+						if ((k-start)%1000 == 0)
+							ProgressMonitor.getProgressMonitor().addToCounter(1000);
+				
 						Atom a = nextToVancanyCandidateAtoms.get(k);
-
-						// Datastructure to store second nearest neighbors of selected atom
+						
+						//Datastructure to store second nearest neighbors of selected atom
 						ArrayList<Vec3> nnb = defectedNearestNeighbors.getNeighVec(a);
-
 						
+						if (nnb.size() < 4) continue;
+						
+						//Get Voronoi vertices for an atom a
+						List<Vec3> allVoronoiVertices = VoronoiVolume.getVoronoiVertices(nnb);
+						
+						if(allVoronoiVertices.size() == 0) continue;
+												
+						ArrayList<Vec3> acceptedVoronoiVertices = new ArrayList<Vec3>();
+						ArrayList<Vec3> first = allNearestNeighbors.getNeighVec(a);
+						
+						
+						nnb.add(new Vec3(0f, 0f, 0f)); //Add the central atom for the next steps
 						ArrayList<Tupel<Vec3,Vec3>> convHullPlanes = null;
-						if (nnb.size() < 4) continue;			
+						if (testForSurfaces) convHullPlanes = getConvexHullBoundaryPlanes(nnb);
 						
-						//get the voronoi cell
-						List<Vec3> voronoi = VoronoiVolume.getVoronoiVertices(nnb);
-						for (Vec3 point : voronoi){
-							//Exclude points that are very close to an atom
-							if (point.getLength() < minDistanceToAtom || point.getLengthSqr() > squaredCutoff)
-								continue;
-							
-							//Move point into the global coordinate system
-							Vec3 absolutePoint = point.addClone(a);
-							data.getBox().backInBox(absolutePoint);
-							
-							float minDist = nndSearch;
-							// Test validity
-							final List<Vec3> neigh = allNearestNeighbors.getNeighVec(absolutePoint);
-							boolean valid = true;
-							for (Vec3 p : neigh) {
-								float d = p.getLength();
-								minDist = Math.min(d, minDist);
-								if (minDist < minDistanceToAtom) {
-									valid = false;
+						for(Vec3 point : allVoronoiVertices) {
+							boolean aboveMinDist = true;
+							boolean belowMaxDist = true;
+							for (Vec3 n : first){
+								float d = n.getDistTo(point);
+								if (d < minDistanceToAtom) {
+									//Too close to an atom to be a vacancy
+									aboveMinDist = false;
+									break;
+								}
+								if (d > 2*allNearestNeighbors.getCutoff()) {
+									//Too far away, won't be in convex hull
+									belowMaxDist = false;
 									break;
 								}
 							}
 							
-							//Test if point is inside a convex hull if requested
-							if (testForSurfaces && valid){
-								if (convHullPlanes == null) {
-									//Compute the convex hull if needed
-									nnb.add(new Vec3(0f, 0f, 0f)); //Add the central atom
-									convHullPlanes = getConvexHullBoundaryPlanes(nnb);
-								}
-								valid = isInConvexHull(point, convHullPlanes);
+							if (aboveMinDist && belowMaxDist){
+								if (testForSurfaces){
+									//Test more precisely if the site detected is inside the convex hull of points
+								    if (isInConvexHull(point, convHullPlanes)) 
+								    	acceptedVoronoiVertices.add(point);
+								} else
+									acceptedVoronoiVertices.add(point);								
 							}
-							    
-							
-							if (valid) {
-								Vec3NoEqual tmp = new Vec3NoEqual();
-								tmp.setTo(absolutePoint);
-								Vacancy v = new Vacancy(tmp, minDist);
+						}
+						if (acceptedVoronoiVertices.size() == 0) continue;
+						
+						ArrayList<Vec3> clusterCenter = clusteringAnalysis(acceptedVoronoiVertices, minDistanceToAtom*0.5f);
+						
+						for (Vec3 point : clusterCenter){
+							point.add(a);
+							//Fix periodicity
+							data.getBox().backInBox(point);
 								
-								synchronized (possibleVacancies) {
-									List<Tupel<Vacancy,Vec3>> nearOnes = possibleVacancies.getNeighAndNeighVec(tmp);
-									Vacancy bestFit = v;
-									
-									for (Tupel<Vacancy,Vec3> t : nearOnes){
-										if (t.o2.getLength()<0.1f*minDistanceToAtom){
-											if (bestFit.dist<t.o1.dist)
-												bestFit = t.o1;
-											possibleVacancies.remove(t.o1);
-										}
-									}
-
-									possibleVacancies.add(bestFit);
-										
-									
-								}
-							}
+							//Add Voronoi vertex to the list
+							possibleVacancyList.add(point);
 						}
 					}
 					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
@@ -187,38 +179,34 @@ public final class VacancyDataContainer2 extends ParticleDataContainer<Vacancy>{
 				}
 			});
 		}
-		ThreadPool.executeParallel(parallelTasks);
+		ThreadPool.executeParallel(parallelTasks);	
 		
-		List<Vacancy> possibleVacancyList = possibleVacancies.getAllElements();
-		possibleVacancies.removeAll();
-		
-		Collections.sort(possibleVacancyList, new Comparator<Vacancy>() {
+		/**
+		 * Merge duplicates in the set of possible vacancy sites
+		 * First sort the list to guarantee a same order independently of the way the
+		 * list is created in parallel
+		 */
+		Collections.sort(possibleVacancyList, new Comparator<Vec3>(){
 			@Override
-			public int compare(Vacancy o1, Vacancy o2) {
-				if (o1.dist>o2.dist) return 1;
-				else if (o1.dist<o2.dist) return -1;
-				else return 0;
+			public int compare(Vec3 o1, Vec3 o2) {
+				if (o1.x > o2.x) return 1;
+				if (o1.x < o2.x) return -1;
+				
+				if (o1.y > o2.y) return 1;
+				if (o1.y < o2.y) return -1;
+				
+				if (o1.z > o2.z) return 1;
+				if (o1.z < o2.z) return -1;
+				
+				return 0;
 			}
 		});
 		
 		
-		for (Vacancy v : possibleVacancyList){
-			List<Tupel<Vacancy,Vec3>> nearOnes = possibleVacancies.getNeighAndNeighVec(v);
-			Vacancy bestFit = v;
-			
-			for (Tupel<Vacancy,Vec3> t : nearOnes){
-				if (t.o2.getLength()<minDistanceToAtom){
-					if (bestFit.dist<t.o1.dist)
-						bestFit = t.o1;
-					possibleVacancies.remove(t.o1);
-				}
-			}
-
-			possibleVacancies.add(bestFit);
-		}
-		
-			
-		possibleVacancyList = possibleVacancies.getAllElements();
+		//Data structure to get all possible vacancies in small neighborhood
+		final NearestNeighborBuilder<Vec3> possibleVacancies = new NearestNeighborBuilder<Vec3>(data.getBox(), 0.5f*nnd, true);
+		possibleVacancies.addAll(possibleVacancyList);
+		final NearestNeighborBuilder<Vacancy> realVacancies = new NearestNeighborBuilder<Vacancy>(data.getBox(), 0.707f*nnd);
 		/**
 		 * Find the unique vacancy sites by selecting a vacancy site, average it with its duplicates
 		 * which may be minimally displaced by the numerical construction.
@@ -226,9 +214,23 @@ public final class VacancyDataContainer2 extends ParticleDataContainer<Vacancy>{
 		 * place a vacancy at the computed position.
 		 */
 		for(int i = 0; i < possibleVacancyList.size(); i++) {
-			//Add new found to data structures
-			Vacancy v = possibleVacancyList.get(i);
-			this.particles.add(v);
+			//Find an average position of a possible vacancies in a small neighborhood
+			Vec3 marker = possibleVacancyList.get(i).clone();
+			marker.add(getCenterOfMass(possibleVacancies.getNeighVec(possibleVacancyList.get(i))));
+			
+			//Find all identified vacancies in small neighborhood of potential vacancy
+			ArrayList<Vacancy> nvnb = realVacancies.getNeigh(marker);
+			
+			if(nvnb.size() == 0) {
+				//Add new found to data structures
+				List<Vec3> nnb = allNearestNeighbors.getNeighVec(marker, 1);
+				Vacancy v;
+				if (nnb.isEmpty())
+					v = new Vacancy(marker, allNearestNeighbors.getCutoff());
+				else v = new Vacancy(marker, nnb.get(0).getLength());
+				realVacancies.add(v); 
+				this.particles.add(v);
+			}
 		}
 		
 		ProgressMonitor.getProgressMonitor().stop();
@@ -245,7 +247,7 @@ public final class VacancyDataContainer2 extends ParticleDataContainer<Vacancy>{
 	@Override
 	protected JParticleDataControlPanel<?> getParticleDataControlPanel() {
 		if (dataPanel == null)
-			dataPanel = new JParticleDataControlPanel<Vacancy>(this, new float[]{0.7f,0.9f,0.9f}, 1.5f);
+			dataPanel = new JParticleDataControlPanel<Vacancy>(this, new float[]{0.9f,0.9f,0.9f}, 1.5f);
 		return dataPanel;
 	}
 	
@@ -261,7 +263,7 @@ public final class VacancyDataContainer2 extends ParticleDataContainer<Vacancy>{
 
 	@Override
 	public String getName() {
-		return "Vacancy detector2";
+		return "Vacancy detector (old)";
 	}
 	
 	@Override
@@ -276,7 +278,7 @@ public final class VacancyDataContainer2 extends ParticleDataContainer<Vacancy>{
 
 	@Override
 	public DataContainer deriveNewInstance() {
-		VacancyDataContainer2 clone = new VacancyDataContainer2();
+		VacancyDataContainer_old clone = new VacancyDataContainer_old();
 		clone.nnd_tolerance = this.nnd_tolerance;
 		clone.testForSurfaces = this.testForSurfaces;
 		return clone;
@@ -301,7 +303,7 @@ public final class VacancyDataContainer2 extends ParticleDataContainer<Vacancy>{
 	}
 
 	//Calculate the center of mass for given set of points
-	private Vec3 getCenterOfMass(List<Vec3> list) {
+	private Vec3 getCenterOfMass(ArrayList<Vec3> list) {
 		Vec3 centerOfMass = new Vec3();
 		if (list.size() == 0) return centerOfMass;
 		
@@ -313,30 +315,62 @@ public final class VacancyDataContainer2 extends ParticleDataContainer<Vacancy>{
 		return centerOfMass;
 	}
 	
-
+	
+	private ArrayList<Vec3> clusteringAnalysis(ArrayList<Vec3> inputSites, float clusterRadius){
+		ArrayList<Vec3> clusterCenter = new ArrayList<Vec3>();
+		
+		int[] cluster = new int[inputSites.size()];
+		for (int i=0; i<cluster.length; i++)
+			cluster[i] = -1;
+		
+		int numCluster = 0;
+		
+		for (int i=0; i<cluster.length; i++){
+			if (cluster[i] == -1)
+				cluster[i] = numCluster++;
+			
+			for (int j=i+1; j<cluster.length; j++){
+				if (inputSites.get(i).getDistTo(inputSites.get(j))<clusterRadius){
+					cluster[j] = cluster[i];
+					break;
+				}
+			}
+		}
+		
+		for (int i = 0; i<numCluster; i++){
+			ArrayList<Vec3> c = new ArrayList<Vec3>();
+			for (int j=0; j<cluster.length; j++)
+				if (cluster[j] == 0)
+					c.add(inputSites.get(j));
+			
+			clusterCenter.add(getCenterOfMass(c));
+		}
+		
+		return clusterCenter;
+	}
+	
 	/**
 	 * Computes the convex hull of the given points and returns its boundary planes
 	 * @param list
 	 * @return a list of information about the faces. For each face, the list contains
 	 * a pair of Vec3. The first element is the normal of the face, the second one a vertex
 	 */
-	private ArrayList<Tupel<Vec3, Vec3>> getConvexHullBoundaryPlanes(List<Vec3> list) {
+	private ArrayList<Tupel<Vec3, Vec3>> getConvexHullBoundaryPlanes(ArrayList<Vec3> list) {
 		ArrayList<Tupel<Vec3, Vec3>> convexHull = new ArrayList<Tupel<Vec3, Vec3>>();
 		
 		if (list.size() < 4) return convexHull;
-		
-		Vec3 com = getCenterOfMass(list);
 		
 		Point3d[] points = new Point3d[list.size()];
 		
 		//Convert input from Vec3 to Point3d for quickhull library
 		for(int i = 0; i < points.length; i++){
 			Vec3 v = list.get(i);
-			points[i] = new Point3d(v.x-com.x, v.y-com.y, v.z-com.z);
+			points[i] = new Point3d(v.x, v.y, v.z);
 		}
 		
 		QuickHull3D hull = new QuickHull3D();
-		hull.build(points);
+		hull.build (points);
+		
 		
 		int[][] faces = hull.getFaces();
 		Point3d[] vertices = hull.getVertices();
@@ -352,139 +386,12 @@ public final class VacancyDataContainer2 extends ParticleDataContainer<Vacancy>{
 			
 			Vec3 n = Vec3.makeNormal(x3, x2, x1);
 			//Store for each face the normal and one vertex (here x3)
-			Tupel<Vec3, Vec3> e = new Tupel <Vec3, Vec3> (n, x3.add(com));
+			Tupel<Vec3, Vec3> e = new Tupel <Vec3, Vec3> (n, x3);
 		
 			convexHull.add(e);
 		}	
 			
 		return convexHull;
-	}
-
-	
-	private Vec3 getChebyshevCenter(List<Vec3> list) {
-		Vec3 c = new Vec3(0,0,0);
-		
-		for (int i = 0; i < list.size(); i++) {
-			c.add(list.get(i));
-		}
-		
-		c.divide(list.size());
-		
-		Vec3 res;
-		Vec3 xk = c;
-		Vec3 yk;
-		
-		Vec3 temp;
-		Vec3 temp1;
-		Vec3 temp2;
-		
-		float alpha;
-		float alphaTemp;
-		float d;
-		float epsilon = 1e-4f;
-		
-		while(true) {
-			
-			ArrayList<Vec3> ek = new ArrayList<Vec3>();
-			ArrayList<Vec3> ik =  new ArrayList<Vec3>();
-			ArrayList<Vec3> ikminus = new ArrayList<Vec3>();
-			
-			
-			//calculating the largest distance from xk
-			
-			float maxDist = list.get(0).getDistTo(xk);
-			
-			for (int i = 1; i < list.size(); i++) {
-				
-				d = list.get(i).getDistTo(xk);
-				
-				if (d < maxDist) {
-					
-					maxDist = d;
-				}
-			}
-			
-			for (int i = 0; i < list.size(); i++) {
-				
-				d = list.get(i).getDistTo(xk);
-				
-				if (d >= (maxDist - epsilon)) {
-				
-					ek.add(list.get(i));
-				
-				} else {
-					
-					ik.add(list.get(i));
-				}
-			}
-			
-			if(ek.size() == list.size()) {
-				
-				res = xk;
-				return res;
-				
-			} 
-			
-			yk = getChebyshevCenter(ek);
-			
-			if(yk.getDistTo(xk) < epsilon) {
-				
-				res = xk;
-				return res;
-				
-			}
-			
-			for(int k = 0; k < ik.size(); k++) {
-				
-				temp1 = yk.subClone(xk);
-				temp2 = ik.get(k).subClone(yk);
-				
-				if((temp1.dot(temp2)) < 0) ikminus.add(ik.get(k));
-			
-			}
-			
-			
-			if (ikminus.size() == 0) {
-				
-				alpha = Float.POSITIVE_INFINITY;
-			
-			} else {
-				
-				temp = ikminus.get(0).subClone(xk);
-				temp1 = yk.subClone(xk);
-				temp2 = ikminus.get(0).subClone(yk);
-				
-				alpha = (temp.getLengthSqr() - maxDist*maxDist)/(2.f*(temp1.dot(temp2)));
-				
-				if (ikminus.size() > 1) { 
-					
-					for(int k = 1; k < ikminus.size(); k++) {
-						
-						temp = ikminus.get(k).subClone(xk);
-						temp1 = yk.subClone(xk);
-						temp2 = ikminus.get(k).subClone(yk);
-						
-						alphaTemp = (temp.getLengthSqr() - maxDist*maxDist)/(2.f*(temp1.dot(temp2)));
-						
-						if(alphaTemp < alpha) alpha = alphaTemp;
-	
-					}
-				}
-			}
-			
-			if(alpha >= 1) {
-				
-				res = yk;
-				return res;
-			
-			}
-			
-			temp = yk.subClone(xk);
-			xk = xk.addClone(temp.multiplyClone(alpha));
-			
-			
-		}	
-		
 	}
 	
 	/**
@@ -538,11 +445,4 @@ public final class VacancyDataContainer2 extends ParticleDataContainer<Vacancy>{
 		}
 	}
 	
-	
-	private class Vec3NoEqual extends Vec3{
-		@Override
-		public boolean equals(Object obj) {
-			return obj==this;
-		}
-	}
 }
