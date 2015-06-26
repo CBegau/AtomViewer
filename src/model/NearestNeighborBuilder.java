@@ -48,7 +48,8 @@ public class NearestNeighborBuilder<T extends Vec3> {
 	private final int dimX, dimY, dimZ, dimYZ;
 	private final boolean pbcX, pbcY, pbcZ;
 	private final float sqrCutoff;
-	private final float cutoff; 
+	private final float cutoff;
+	private boolean accessNeverSafe = false;
 	
 	private final List<T>[] cells;
 	private final int[] cellOffsets = new int[27];
@@ -99,6 +100,9 @@ public class NearestNeighborBuilder<T extends Vec3> {
 			for (int j=-1; j<=1; j++)
 				for (int k=-1; k<=1; k++)
 					cellOffsets[l++] = i*dimYZ + j*dimZ + k;
+		
+		if(dimX <= 2 || dimY <= 2 || dimZ<=2)
+			accessNeverSafe = true;
 	}
 	
 	public void addAll(final List<? extends T> c){
@@ -253,7 +257,7 @@ public class NearestNeighborBuilder<T extends Vec3> {
 		if (z < 0) z = 0;
 		else if (z >= dimZ) z = dimZ - 1;
 		
-		boolean safeAccess = (x>0 && y>0 && z>0 && x<dimX-1 && y<dimY-1 && z<dimZ-1);
+		boolean safeAccess = (x>0 && y>0 && z>0 && x<dimX-1 && y<dimY-1 && z<dimZ-1 && !accessNeverSafe);
 		
 		ArrayList<T> neigh = new ArrayList<T>(15);
 		
@@ -329,7 +333,7 @@ public class NearestNeighborBuilder<T extends Vec3> {
 		if (z < 0) z = 0;
 		else if (z >= dimZ) z = dimZ - 1;
 		
-		boolean safeAccess = (x>0 && y>0 && z>0 && x<dimX-1 && y<dimY-1 && z<dimZ-1);
+		boolean safeAccess = (x>0 && y>0 && z>0 && x<dimX-1 && y<dimY-1 && z<dimZ-1 && !accessNeverSafe);
 		
 		ArrayList<Vec3> neigh = new ArrayList<Vec3>(15);
 		
@@ -405,7 +409,7 @@ public class NearestNeighborBuilder<T extends Vec3> {
 		else if (z >= dimZ) z = dimZ - 1;
 		
 		//No need to handle boundary conditions
-		boolean safeAccess = (x>0 && y>0 && z>0 && x<dimX-1 && y<dimY-1 && z<dimZ-1);
+		boolean safeAccess = (x>0 && y>0 && z>0 && x<dimX-1 && y<dimY-1 && z<dimZ-1 && !accessNeverSafe);
 		
 		ArrayList<Tupel<T, Vec3>> neigh = new ArrayList<Tupel<T, Vec3>>(15);
 		
@@ -581,21 +585,19 @@ public class NearestNeighborBuilder<T extends Vec3> {
 		if (pbcX){
 			if (x>=dimX) x -= dimX;
 			else if (x<0) x += dimX;
-		}
+		} else if(x>=dimX || x<0) return null;
 		if (pbcY){
 			if (y>=dimY) y -= dimY;
 			else if (y<0) y += dimY;
-		}
+		} else if(y>=dimY || y<0) return null;
 		if (pbcZ){
 			if (z>=dimZ) z -= dimZ;
 			else if (z<0) z += dimZ;
-		}
+		} else if(z>=dimZ || z<0) return null;
 		
 		int p = x*dimYZ+y*dimZ+z;
-		
-		if (p>=0 && p<cells.length)
-			return cells[p];
-		return null;
+
+		return cells[p];
 	}
 	
 	/**
