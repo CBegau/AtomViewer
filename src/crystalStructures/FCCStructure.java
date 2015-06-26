@@ -222,11 +222,6 @@ public class FCCStructure extends CrystalStructure {
 	}
 	
 	@Override
-	public float getRBVIntegrationRadius() {
-		return 0.707107f*latticeConstant;
-	}
-	
-	@Override
 	public int getNumberOfNearestNeighbors() {
 		return 12;
 	}

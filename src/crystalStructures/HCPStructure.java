@@ -125,17 +125,12 @@ public class HCPStructure extends CrystalStructure {
 
 	@Override
 	public float getPerfectBurgersVectorLength() {
-		return 0.47f;
+		return 0.47f*latticeConstant;
 	}
 
 	@Override
 	public Vec3[] getPerfectNearestNeighborsUnrotated() {
 		return neighPerfHCP.clone();
-	}
-
-	@Override
-	public float getRBVIntegrationRadius() {
-		return latticeConstant;
 	}
 
 	@Override

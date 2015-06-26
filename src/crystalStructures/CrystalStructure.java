@@ -272,14 +272,6 @@ public abstract class CrystalStructure{
 	 */
 	public abstract Vec3[] getPerfectNearestNeighborsUnrotated();
 	
-	
-	/**
-	 * The radius of the integrated sphere during the calculation of RBVs.
-	 * Usually somewhere between the first and second nearest neighbor distance 
-	 * @return
-	 */
-	public abstract float getRBVIntegrationRadius();
-	
 	/**
 	 * Default scaling factor to search nearest neighbors relative to the lattice constant
 	 * @return
@@ -373,6 +365,15 @@ public abstract class CrystalStructure{
 	public final Vec3[] getPerfectNearestNeighbors(Grain g) {
 		return getPerfectNearestNeighbors(g.getCystalRotationTools());
 	}
+	
+	/**
+	 * The radius of the integrated sphere during the calculation of RBVs.
+	 * Usually somewhere between the first and second nearest neighbor distance 
+	 * @return
+	 */
+	public float getRBVIntegrationRadius(){
+		return getDistanceToNearestNeighbor();
+	};
 	
 	/**
 	 * The nearest neighbors bonds (relative to a central atom) in the current crystal rotation

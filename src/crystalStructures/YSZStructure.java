@@ -208,11 +208,6 @@ public class YSZStructure extends CrystalStructure {
 	}
 
 	@Override
-	public float getRBVIntegrationRadius() {
-		return 1f;
-	}
-
-	@Override
 	public float getDefaultNearestNeighborSearchScaleFactor() {
 		return 1f;
 	}

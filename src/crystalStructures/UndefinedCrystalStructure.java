@@ -98,11 +98,6 @@ public class UndefinedCrystalStructure extends CrystalStructure {
 	}
 
 	@Override
-	public float getRBVIntegrationRadius() {
-		return 1f;
-	}
-	
-	@Override
 	public ArrayList<ClassificationPattern> getBurgersVectorClassificationPattern() {
 		return new ArrayList<ClassificationPattern>();
 	}

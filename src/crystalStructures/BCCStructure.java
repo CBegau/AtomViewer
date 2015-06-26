@@ -167,11 +167,6 @@ public class BCCStructure extends CrystalStructure {
 	}
 	
 	@Override
-	public float getRBVIntegrationRadius() {
-		return 0.866025f*latticeConstant;
-	}
-	
-	@Override
 	public int getNumberOfNearestNeighbors() {
 		return 14;
 	}
