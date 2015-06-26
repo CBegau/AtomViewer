@@ -629,19 +629,17 @@ public abstract class CrystalStructure{
 	 * @param data
 	 * @return
 	 */
-	public final List<Atom> getDislocationDefectAtoms(AtomData data, float minRBV){
+	public final List<Atom> getDislocationDefectAtoms(AtomData data){
 		ArrayList<Atom> defectAtoms = new ArrayList<Atom>();
 		if (!data.isRbvAvailable()) return defectAtoms;
 		
-		float minRBVLength = getPerfectBurgersVectorLength()*minRBV;
-		minRBVLength *= minRBVLength;
 		float maxRBVLength = getPerfectBurgersVectorLength()*2.5f;
 		maxRBVLength *= maxRBVLength;
 		
 		for (Atom a : data.getAtoms()) {
 			if (a.getRBV()!=null){
 				float l = a.getRBV().bv.getLengthSqr();
-				if (l>minRBVLength && l<maxRBVLength)
+				if (l<maxRBVLength)
 					defectAtoms.add(a);
 			}
 		}

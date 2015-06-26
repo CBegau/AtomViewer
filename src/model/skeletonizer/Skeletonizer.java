@@ -65,7 +65,6 @@ public class Skeletonizer extends DataContainer {
 	private AtomData data;
 	
 	private float meshingThreshold = -1;
-	private float minRBV = -1;
 	
 	/**
 	 * Creates a dislocation skeleton from dislocation core atoms and planes of stacking faults
@@ -75,7 +74,7 @@ public class Skeletonizer extends DataContainer {
 		
 		this.meshingThreshold *= data.getCrystalStructure().getNearestNeighborSearchRadius();
 
-		List<Atom> defectAtoms = data.getCrystalStructure().getDislocationDefectAtoms(data, minRBV);
+		List<Atom> defectAtoms = data.getCrystalStructure().getDislocationDefectAtoms(data);
 		//create a initial mesh to skeletonize
 		//Each atom becomes a node, edges are derived from nearest neighborhood relationship
 		int id = 0;
@@ -601,19 +600,9 @@ public class Skeletonizer extends DataContainer {
 						+ "only slightly seperated partial dislocation cores"
 						+ "<br> Min: 1.0, Max: 2.0</html>", cs.getDefaultSkeletonizerMeshingThreshold(), 1f, 2f);
 		
-		
-		FloatProperty minRBVLength = dialog.addFloat("minRBVLength", "Minimum RBV factor for dislocation networks",
-						"<html>During creation fo dislocation networks, only atoms with a minimum length of the RBV are included.<br>"
-						+ "This value defines a factor which atoms are to be considered as dislocations."
-						+ "<br> The factor is relative to the length of a perfect burgers vector in the crystal."
-						+ "<br> Larger values filter more noise, but small details may be lost."
-						+ "<br> Min: 0.05, Max: 1.0</html>",
-						cs.getDefaultSkeletonizerRBVThreshold(), 0.05f, 1f);
-		
 		boolean ok = dialog.showDialog();
 		if (ok){
 			this.meshingThreshold = meshThreshold.getValue(); 
-			this.minRBV = minRBVLength.getValue();
 		}
 		return ok;
 	}
@@ -621,7 +610,6 @@ public class Skeletonizer extends DataContainer {
 	@Override
 	public DataContainer deriveNewInstance() {
 		Skeletonizer clone = new Skeletonizer();
-		clone.minRBV = this.minRBV;
 		clone.meshingThreshold = this.meshingThreshold;
 		return clone;
 	}
