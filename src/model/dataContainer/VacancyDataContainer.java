@@ -68,13 +68,13 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 		//Defects are considered up to twice the minimum distance to fit a vacancy into it
 		final NearestNeighborBuilder<Vec3> defectedNearestNeighbors = 
 				new NearestNeighborBuilder<Vec3>(data.getBox(), 2f*minDistanceToAtom, false);
-		final float squaredCutoff = defectedNearestNeighbors.getCutoff()*defectedNearestNeighbors.getCutoff();
+		final float defectCutoff = defectedNearestNeighbors.getCutoff();
 		
 		//The total set of atoms is only considered for the typically search radius
 		final NearestNeighborBuilder<Vec3> allNearestNeighbors = 
 				new NearestNeighborBuilder<Vec3>(data.getBox(), nndSearch, true);
 		//Data structure to get all possible vacancies in small neighborhood
-		final NearestNeighborBuilder<Vacancy> possibleVacancies = new NearestNeighborBuilder<Vacancy>(data.getBox(), nnd, false);
+		final NearestNeighborBuilder<Vacancy> possibleVacancies = new NearestNeighborBuilder<Vacancy>(data.getBox(), minDistanceToAtom, false);
 		
 		//This list is holding candidates that need to be tested for vacancy positions
 		final ArrayList<Atom> nextToVancanyCandidateAtoms = new ArrayList<Atom>();
@@ -130,18 +130,17 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 						
 						for (Vec3 voro : voronoiVertices){
 							//Exclude points that are either too close to be a vacancy position
-							//or a that far away and are boundary points in the voronoi diagram
-							if (voro.getLength() < minDistanceToAtom || voro.getLengthSqr() > squaredCutoff)
+							//or that are too far away and actually are boundary points in the voronoi diagram
+							if (voro.getLength() < minDistanceToAtom || voro.getLength() > defectCutoff)
 								continue;
 							
-							//The voronoi vertex is in a local coordinate system of a
+							//The voronoi vertex is in the local coordinate system of atom a
 							//Move it back into the global coordinate system and correct periodicity if needed
 							Vec3 absolutePoint = voro.addClone(a);
 							data.getBox().backInBox(absolutePoint);
 							
 							//Compute the distance from the voronoi vertex to all atoms
-							//Test if all of them are further away than the minimal distance to be a
-							//vacancy
+							//Test if all of them are further away than the minimal distance
 							final List<Vec3> neigh = allNearestNeighbors.getNeighVec(absolutePoint);
 							float minDist = nndSearch;
 							boolean valid = true;
@@ -166,23 +165,16 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 							    
 							//The vertex is far enough away from any atom
 							if (valid) {
-								//Vec3 objects with the same coordinates are considered equal
-								//Here it is needed to test if such a point exists and therefore
-								//a special copy is used to get these values as well from the 
-								//NearestNeighborBuilder
-								Vec3NoEqual tmp = new Vec3NoEqual(); 
-								tmp.setTo(absolutePoint);
-								Vacancy v = new Vacancy(tmp, minDist);
-								
+								Vacancy v = new Vacancy(absolutePoint, minDist);
 								//Start with the first step in the reduction of points that are found multiple times
 								synchronized (possibleVacancies) {
 									//Get the already identified vacancies close to the new one
-									List<Tupel<Vacancy,Vec3>> nearOnes = possibleVacancies.getNeighAndNeighVec(tmp);
+									List<Tupel<Vacancy,Vec3>> nearOnes = possibleVacancies.getNeighAndNeighVec(v);
 									Vacancy bestFit = v;
 									//Delete those points that are close to the new vacancy
 									//The one that has the largest distance to an atom will survive
 									for (Tupel<Vacancy,Vec3> t : nearOnes){
-										if (t.o2.getLength()<0.1f*minDistanceToAtom){
+										if (t.o2.getLength()<0.01f*minDistanceToAtom){
 											if (bestFit.dist<t.o1.dist)
 												bestFit = t.o1;
 											possibleVacancies.remove(t.o1);
@@ -227,8 +219,8 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 			//furthest away from an atom
 			for (Tupel<Vacancy,Vec3> t : nearOnes){
 				if (t.o2.getLength()<minDistanceToAtom){
-					if (bestFit.dist<t.o1.dist)
-						bestFit = t.o1;
+//					if (bestFit.dist<t.o1.dist)		Vacancies are ordered ascendingly in dist, no need to test here
+//						bestFit = t.o1;
 					possibleVacancies.remove(t.o1);
 				}
 			}
@@ -416,14 +408,6 @@ public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 		@Override
 		public Vec3 getCenterOfObject() {
 			return this.clone();
-		}
-	}
-	
-	
-	private class Vec3NoEqual extends Vec3{
-		@Override
-		public boolean equals(Object obj) {
-			return obj==this;
 		}
 	}
 }

@@ -114,7 +114,7 @@ private final static ArrayList<ProcessingModule> otherModules;
 				}
 			});
 			
-			final JButton applyAllButton = new JButton("Apply on all opened data sets (if possible)");
+			final JButton applyAllButton = new JButton("Apply on all opened data sets");
 			applyAllButton.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
