@@ -18,12 +18,15 @@
 
 package model;
 
+import gui.JPrimitiveVariablesPropertiesDialog;
 import gui.ProgressMonitor;
+import gui.JPrimitiveVariablesPropertiesDialog.FloatProperty;
 
 import java.util.*;
 import java.util.concurrent.*;
 
 import javax.swing.JFrame;
+import javax.swing.JSeparator;
 
 import processingModules.ProcessingModule;
 import processingModules.ProcessingResult;
@@ -73,8 +76,8 @@ public class RbvBuilder implements ProcessingModule{
 		6,1,10, 9,0,11, 9,11,2, 9,2,5,  7,2,11
 	};
 	
+	private float acceptanceThreshold = 0.14f;
 	private float[] pnl;
-	private float integrationRadius;
 	private float perfectBurgersVectorLength, rbvCorrectionFactor;
 	private float nnbDist;
 	
@@ -82,27 +85,14 @@ public class RbvBuilder implements ProcessingModule{
 	
 	private NearestNeighborBuilder<Vec3> nnb;
 	
-	/**
-	 * 
-	 * @param data
-	 * @param nearestneighborDistance nearestNeighborDistance used in simulation
-	 */
-	public static void createRBV(final AtomData data){
-		new RbvBuilder(data, data.getAtoms(), data.getCrystalStructure(), null);
-	}
-	
-	public static void createRBV(final AtomData data, final Grain grain){
-		new RbvBuilder(data, grain.getAtomsInGrain(), grain.getCrystalStructure(), grain);
-	}
-	
 	public RbvBuilder(){
 		icoNormals = null;
 		neighPerf = null;
 		icoVertices = null;
 	}
 	
-	private RbvBuilder(AtomData data, List<Atom> atoms, CrystalStructure s, Grain g) {
-		this.nnb = new NearestNeighborBuilder<Vec3>(data.getBox(), s.getNearestNeighborSearchRadius());
+	private RbvBuilder(AtomData data, List<Atom> atoms, final CrystalStructure s, Grain g, float acceptanceThreshold) {
+		this.nnb = new NearestNeighborBuilder<Vec3>(data.getBox(), s.getNearestNeighborSearchRadius(), true);
 		
 		Vec3[] perfNeighbors;
 		if (g == null)
@@ -110,10 +100,10 @@ public class RbvBuilder implements ProcessingModule{
 		else 
 			perfNeighbors = s.getPerfectNearestNeighbors(g);
 		
-		this.integrationRadius = s.getRBVIntegrationRadius();
 		this.perfectBurgersVectorLength = s.getPerfectBurgersVectorLength();
-		this.rbvCorrectionFactor = 1f/(this.integrationRadius/this.perfectBurgersVectorLength);
+		this.rbvCorrectionFactor = 1f/(s.getRBVIntegrationRadius()/this.perfectBurgersVectorLength);
 		this.nnbDist = s.getNearestNeighborSearchRadius();
+		this.acceptanceThreshold = acceptanceThreshold;
 		
 		//Add vacancy markers as pseudo-particles if existing
 		DataContainer dc = data.getDataContainer(VacancyDataContainer.class);
@@ -122,12 +112,15 @@ public class RbvBuilder implements ProcessingModule{
 			nnb.addAll(vcd.getParticles());
 		}
 		
-		for (int i=0; i<atoms.size(); i++){
-			Atom a = atoms.get(i);
-			if (a.getGrain() != Atom.IGNORED_GRAIN && 
-					s.considerAtomAsNeighborDuringRBVCalculation(a))				
-				nnb.add(a);
-		}
+		nnb.addAll(atoms, new Filter<Vec3>() {
+			@Override
+			public boolean accept(Vec3 v) {
+				Atom a = (Atom)v;
+				return a.getGrain() != Atom.IGNORED_GRAIN && 
+						s.considerAtomAsNeighborDuringRBVCalculation(a);
+			}
+		});
+		
 		
 		this.pnl = new float[perfNeighbors.length];
 		for (int i=0; i<this.pnl.length; i++){
@@ -137,7 +130,7 @@ public class RbvBuilder implements ProcessingModule{
 
 		//Create icoseader vertices to approximate a sphere with a radius of the integration radius
 		//Icosaeder edge length
-		float r = (float)((2*integrationRadius)/Math.sqrt(10+2*Math.sqrt(5)));
+		float r = (float)((2*s.getRBVIntegrationRadius())/Math.sqrt(10+2*Math.sqrt(5)));
 		
 		icoVertices = new Vec3[] {
 			new Vec3(-icoConstX*r, 0f, icoConstZ*r), new Vec3(icoConstX*r, 0f, icoConstZ*r),
@@ -155,12 +148,11 @@ public class RbvBuilder implements ProcessingModule{
 		
 				
 		List<RbvInfo<Atom>> infosList = new ArrayList<RbvInfo<Atom>>();
-		CrystalStructure cs = data.getCrystalStructure();
 		
 		for (int i=0; i<atoms.size(); i++){
 			Atom a = atoms.get(i);
 			
-			if (cs.isRBVToBeCalculated(a)){
+			if (s.isRBVToBeCalculated(a)){
 				RbvInfo<Atom> info = new RbvInfo<Atom>();
 				info.atom = atoms.get(i);
 				atomToRbvInfoMap.put(atoms.get(i), info);
@@ -355,7 +347,7 @@ public class RbvBuilder implements ProcessingModule{
 			bv = calculateBurgersVector(lineDirection);
 			if (bv == null) return null;
 			
-			if (bv.getLengthSqr() > integrationRadius*integrationRadius*0.02f)
+			if (bv.getLength() > perfectBurgersVectorLength*acceptanceThreshold)
 				return new Tupel<Vec3,Vec3>(bv, lineDirection);
 				//atom.setRBV(bv, lineDirection);
 			else return null;
@@ -632,7 +624,7 @@ public class RbvBuilder implements ProcessingModule{
 
 	@Override
 	public String getFunctionDescription() {
-		return "";
+		return "Computes resultant Burgers vectors (RBVs)";
 	}
 
 	@Override
@@ -647,7 +639,23 @@ public class RbvBuilder implements ProcessingModule{
 
 	@Override
 	public boolean showConfigurationDialog(JFrame frame, AtomData data) {
-		return true;
+		JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(null, getShortName());
+		
+		dialog.addLabel(getFunctionDescription());
+		dialog.add(new JSeparator());	
+		
+		FloatProperty acceptanceThreshold = dialog.addFloat("acceptanceThreshold", 
+				"Fraction of a perfect Burgers vector to accept the computed RBV",
+						"<html>If the computed RBV is shorter than this fraction of a perfect Burgers vector, the value is just discarded.<br>"
+						+ "<br> Larger values filter more noise, but small details may be lost."
+						+ "<br> Min: 0.05, Max: 1.0</html>",
+						0.14f, 0.05f, 1f);
+		
+		boolean ok = dialog.showDialog();
+		if (ok){
+			this.acceptanceThreshold = acceptanceThreshold.getValue();
+		}
+		return ok;
 	}
 
 	@Override
@@ -657,11 +665,16 @@ public class RbvBuilder implements ProcessingModule{
 
 	@Override
 	public ProcessingResult process(AtomData data) throws Exception {
+		if (data.isRbvAvailable()){
+			for (Atom a : data.getAtoms())
+				a.setRBV(null, null);
+		}
+		
 		if (data.getGrains() == null || data.getGrains().size() == 0)
-			RbvBuilder.createRBV(data);
+			new RbvBuilder(data, data.getAtoms(), data.getCrystalStructure(), null, acceptanceThreshold);
 		else {
 			for (Grain g : data.getGrains())
-				RbvBuilder.createRBV(data, g);
+				new RbvBuilder(data, g.getAtomsInGrain(), g.getCrystalStructure(), g, acceptanceThreshold);
 		}
 		return null;
 	}
