@@ -36,12 +36,17 @@ import model.Atom;
 import model.AtomData;
 import model.DataColumnInfo;
 import model.NearestNeighborBuilder;
+import processingModules.ProcessingParameterExport.ExportableValue;
+import processingModules.ProcessingParameterExport.ToolchainSupport;
 
+@ToolchainSupport()
 public class FilterSurfaceModule implements ProcessingModule {
 
+	@ExportableValue
 	private int cycles;
+	@ExportableValue
 	private int minSurfaceNeighbors;
-	
+	@ExportableValue
 	private boolean halfSpaceAnalysis = true;
 	
 	public FilterSurfaceModule() {

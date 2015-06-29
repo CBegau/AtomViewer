@@ -21,6 +21,6 @@ public interface ProcessingParameterExport {
 	@interface ExportableValue{}
 	
 	void exportParameters(XMLStreamWriter xmlOut) throws XMLStreamException, IllegalArgumentException, IllegalAccessException;
-	void importParameters(XMLStreamReader reader);
+	void importParameters(XMLStreamReader reader) throws XMLStreamException;
 	
 }

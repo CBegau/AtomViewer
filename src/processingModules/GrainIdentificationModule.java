@@ -28,11 +28,17 @@ import javax.swing.JFrame;
 
 import model.*;
 import model.polygrain.Grain;
+import processingModules.ProcessingParameterExport.ExportableValue;
+import processingModules.ProcessingParameterExport.ToolchainSupport;
 
+@ToolchainSupport()
 public class GrainIdentificationModule implements ProcessingModule {
 
+	@ExportableValue
 	private boolean orderGrainsBySize = false;
+	@ExportableValue
 	private float meshSize;
+	@ExportableValue
 	private float filterGrainsDistance;
 	
 	@Override

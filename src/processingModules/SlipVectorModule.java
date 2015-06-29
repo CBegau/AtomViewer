@@ -22,6 +22,7 @@ import model.AtomData;
 import model.DataColumnInfo;
 import model.NearestNeighborBuilder;
 
+//TODO Implement XML IO
 public class SlipVectorModule implements ProcessingModule{
 	
 	private static DataColumnInfo[] cci = { new DataColumnInfo("Slip-Vector", "slip_x", ""),

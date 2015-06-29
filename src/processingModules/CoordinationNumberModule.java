@@ -33,18 +33,22 @@ import model.Atom;
 import model.AtomData;
 import model.DataColumnInfo;
 import model.NearestNeighborBuilder;
+import processingModules.ProcessingParameterExport.ExportableValue;
+import processingModules.ProcessingParameterExport.ToolchainSupport;
 import common.ThreadPool;
 
-
+@ToolchainSupport()
 public class CoordinationNumberModule implements ProcessingModule {
 
 	private static DataColumnInfo coordNumColumn = 
 			new DataColumnInfo("Coordination" , "coordNum" ,"");
 	private static DataColumnInfo densityColumn = 
 			new DataColumnInfo("Particle density" , "partDens" ,"");
-	
+	@ExportableValue
 	private float radius = 5f;
+	@ExportableValue
 	private float scalingFactor = 1f;
+	@ExportableValue
 	private boolean density = false;
 	
 	@Override

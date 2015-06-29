@@ -24,6 +24,7 @@ import java.util.concurrent.Callable;
 import javax.swing.JFrame;
 
 import processingModules.ProcessingModule;
+import processingModules.ProcessingParameterExport.ToolchainSupport;
 import processingModules.ProcessingResult;
 import Jama.Matrix;
 import model.Atom;
@@ -34,6 +35,7 @@ import common.ThreadPool;
 import common.Vec3;
 import common.ColorTable.ColorBarScheme;
 
+@ToolchainSupport
 public final class MonoclinicNiTi extends B2NiTi implements ProcessingModule{
 	public static final int IGNORED_VARIANT = -1;
 	public static final int UNKNOWN_VARIANT = 13;

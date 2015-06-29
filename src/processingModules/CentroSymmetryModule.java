@@ -32,20 +32,25 @@ import javax.swing.JFrame;
 
 import model.Atom;
 import model.AtomData;
-import model.Filter;
 import model.DataColumnInfo;
 import model.NearestNeighborBuilder;
+import processingModules.ProcessingParameterExport.ExportableValue;
+import processingModules.ProcessingParameterExport.ToolchainSupport;
 import common.ThreadPool;
 import common.Vec3;
 
-
+@ToolchainSupport()
 public class CentroSymmetryModule implements ProcessingModule {
 
 	private static DataColumnInfo centroSymmetryColumn = new DataColumnInfo("Centrosymmetry" , "CSD" ,"");
-	private Filter<Atom> filter;
+	
+	@ExportableValue
 	private float radius = 0f;
+	@ExportableValue
 	private int maxBonds = 0;
+	@ExportableValue
 	private boolean adaptiveCentroSymmetry = false;
+	@ExportableValue
 	private float scaling = 1f;
 	
 	@Override
@@ -87,13 +92,13 @@ public class CentroSymmetryModule implements ProcessingModule {
 
 	@Override
 	public ProcessingResult process(final AtomData data) throws Exception {
-		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), radius, filter==null);
+		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), radius, true);
 		
 		final int v = data.getIndexForCustomColumn(centroSymmetryColumn);
 		
 		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
 
-		nnb.addAll(data.getAtoms(), filter);		
+		nnb.addAll(data.getAtoms());		
 		
 		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
 		for (int i=0; i<ThreadPool.availProcessors(); i++){
@@ -110,7 +115,6 @@ public class CentroSymmetryModule implements ProcessingModule {
 							ProgressMonitor.getProgressMonitor().addToCounter(1000);
 						
 						Atom a = data.getAtoms().get(i);
-						if (filter != null && !filter.accept(a)) continue;
 
 						float csd = 0f;
 						

@@ -24,21 +24,27 @@ import gui.JPrimitiveVariablesPropertiesDialog.FloatProperty;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.Callable;
 
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JSeparator;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
+import javax.xml.stream.XMLStreamWriter;
 
 import model.Atom;
 import model.AtomData;
+import model.Configuration;
 import model.DataColumnInfo;
 import model.NearestNeighborBuilder;
+import processingModules.ProcessingParameterExport.ToolchainSupport;
 import common.ThreadPool;
 
-
-public class SpatialAveragingVectorModule implements ProcessingModule {
+@ToolchainSupport()
+public class SpatialAveragingVectorModule implements ProcessingModule, ProcessingParameterExport {
 
 	private static HashMap<DataColumnInfo, DataColumnInfo> existingAverageColumns 
 		= new HashMap<DataColumnInfo, DataColumnInfo>();
@@ -46,6 +52,7 @@ public class SpatialAveragingVectorModule implements ProcessingModule {
 	private DataColumnInfo toAverageColumn;
 	private DataColumnInfo averageColumn;
 	
+	@ExportableValue
 	private float averageRadius = 0f;
 
 	public SpatialAveragingVectorModule() {}
@@ -184,5 +191,29 @@ public class SpatialAveragingVectorModule implements ProcessingModule {
 			this.toAverageColumn = ((DataColumnInfo.VectorDataColumnInfo)averageComponentsComboBox.getSelectedItem()).getDci(); 
 		}
 		return ok;
+	}
+	
+	@Override
+	public void exportParameters(XMLStreamWriter xmlOut)
+			throws XMLStreamException, IllegalArgumentException, IllegalAccessException {
+		xmlOut.writeStartElement("toAverageColumn");
+		xmlOut.writeAttribute("id", toAverageColumn.getId());
+		xmlOut.writeEndElement();
+		
+	}
+	
+	@Override
+	public void importParameters(XMLStreamReader reader) throws XMLStreamException {
+		if (!reader.getElementText().equals("toAverageColumn")) throw new XMLStreamException("Illegal element detected");
+		String id = reader.getAttributeValue(null, "id");
+		
+		
+		List<DataColumnInfo> dci = Configuration.getCurrentAtomData().getDataColumnInfos();
+		for (DataColumnInfo d : dci){
+			if (d.getId().equals(id)){
+				this.toAverageColumn = d;
+				break;
+			}
+		}
 	}
 }

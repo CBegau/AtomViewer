@@ -35,6 +35,7 @@ import model.Atom;
 import model.AtomData;
 import model.DataColumnInfo;
 
+//TODO implement XML IO
 public class DisplacementModule implements ProcessingModule{
 	
 	private static DataColumnInfo[] cci = { new DataColumnInfo("Displacement", "displ_x", ""),

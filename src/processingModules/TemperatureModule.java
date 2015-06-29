@@ -40,7 +40,7 @@ import processingModules.ProcessingParameterExport.ExportableValue;
 import processingModules.ProcessingParameterExport.ToolchainSupport;
 
 @ToolchainSupport()
-public class ComputeTemperatureModule implements ProcessingModule {
+public class TemperatureModule implements ProcessingModule {
 
 	private static DataColumnInfo temperatureColumn = new DataColumnInfo("Temperature", "temp", "");
 	@ExportableValue

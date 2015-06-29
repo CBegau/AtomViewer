@@ -33,10 +33,12 @@ import model.Atom;
 import model.AtomData;
 import model.DataColumnInfo;
 import model.NearestNeighborBuilder;
+import processingModules.ProcessingParameterExport.ExportableValue;
+import processingModules.ProcessingParameterExport.ToolchainSupport;
 import common.ThreadPool;
 import common.VoronoiVolume;
 
-
+@ToolchainSupport()
 public class AtomicVolumeModule implements ProcessingModule {
 
 	private static DataColumnInfo volumeColumn = 
@@ -44,8 +46,11 @@ public class AtomicVolumeModule implements ProcessingModule {
 	private static DataColumnInfo densityColumn = 
 			new DataColumnInfo("Atomic density" , "atomDens" ,"");
 	
+	@ExportableValue
 	private float radius = 5f;
+	@ExportableValue
 	private float scalingFactor = 1f;
+	@ExportableValue
 	private boolean computeDensity = false;
 	
 	@Override

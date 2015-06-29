@@ -37,8 +37,10 @@ public class ProcessingModuleIO {
 			
 			//Exporting the attributes that uses custom implementations
 			if (ProcessingParameterExport.class.isAssignableFrom(clz)) {
+				out.writeStartElement("CustomParameter");
 				ProcessingParameterExport ex = (ProcessingParameterExport)pm;
 				ex.exportParameters(out);
+				out.writeEndElement();
 			}
 
 			//Exporting primitive fields
