@@ -44,7 +44,7 @@ private final static ArrayList<ProcessingModule> otherModules;
 		atomicScaleModules = new ArrayList<ProcessingModule>();
 		otherModules = new ArrayList<ProcessingModule>();
 		atomicScaleModules.add(new CentroSymmetryModule());
-		atomicScaleModules.add(new ComputeTemperatureModule());
+		atomicScaleModules.add(new TemperatureModule());
 		atomicScaleModules.add(new LatticeRotationModule());
 		atomicScaleModules.add(new SpatialAveragingModule());
 		atomicScaleModules.add(new SlipVectorModule());
