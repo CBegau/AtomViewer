@@ -209,7 +209,7 @@ public class YSZStructure extends CrystalStructure {
 
 	@Override
 	public float getDefaultNearestNeighborSearchScaleFactor() {
-		return 1f;
+		return 0.7071067f*1.2f;
 	}
 	
 	@Override
