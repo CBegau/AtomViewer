@@ -5,9 +5,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
-
-import org.xml.sax.XMLReader;
 
 public interface ProcessingParameterExport {
 
@@ -22,6 +21,6 @@ public interface ProcessingParameterExport {
 	@interface ExportableValue{}
 	
 	void exportParameters(XMLStreamWriter xmlOut) throws XMLStreamException, IllegalArgumentException, IllegalAccessException;
-	void importParameters(XMLReader reader);
+	void importParameters(XMLStreamReader reader);
 	
 }
