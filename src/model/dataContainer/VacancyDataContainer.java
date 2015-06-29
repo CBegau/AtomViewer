@@ -34,12 +34,17 @@ import common.*;
 import crystalStructures.CrystalStructure;
 import model.*;
 import model.dataContainer.VacancyDataContainer.Vacancy;
+import processingModules.ProcessingParameterExport.ToolchainSupport;
+import processingModules.ProcessingParameterExport.ExportableValue;
 
+@ToolchainSupport
 public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{
 
 	private static JParticleDataControlPanel<Vacancy> dataPanel;
 	
+	@ExportableValue
 	private float nnd_tolerance = 0.75f;
+	@ExportableValue
 	private boolean testForSurfaces = false;
 	
 	@Override

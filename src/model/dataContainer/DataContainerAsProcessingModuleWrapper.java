@@ -17,14 +17,24 @@
 // with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
 package model.dataContainer;
 
+import java.lang.reflect.Field;
+
 import javax.swing.JFrame;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
+import javax.xml.stream.XMLStreamWriter;
 
 import model.AtomData;
 import model.DataColumnInfo;
 import processingModules.ProcessingModule;
+import processingModules.ProcessingModuleIO;
+import processingModules.ProcessingParameterExport;
+import processingModules.ProcessingParameterExport.ToolchainSupport;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 import processingModules.ProcessingResult;
 
-public class DataContainerAsProcessingModuleWrapper implements ProcessingModule{
+@ToolchainSupport
+public class DataContainerAsProcessingModuleWrapper implements ProcessingModule, ProcessingParameterExport{
 
 	private DataContainer dc;
 	private boolean applicableToMultipleFiles;
@@ -89,6 +99,41 @@ public class DataContainerAsProcessingModuleWrapper implements ProcessingModule{
 		};
 		
 		return pr;
+	}
+	
+	@Override
+	public void exportParameters(XMLStreamWriter xmlOut)
+			throws XMLStreamException, IllegalArgumentException, IllegalAccessException {
+		Class<?> clz = dc.getClass();
+
+		if (!clz.isAnnotationPresent(ToolchainSupport.class)) return;
+		
+		xmlOut.writeStartElement("DataContainer");
+		xmlOut.writeAttribute("name", clz.getName());
+		xmlOut.writeAttribute("version", Integer.toString(clz.getAnnotation(ToolchainSupport.class).version()));
+		
+		//Exporting the attributes that uses custom implementations
+		if (ProcessingParameterExport.class.isAssignableFrom(clz)) {
+			xmlOut.writeStartElement("CustomParameter");
+			ProcessingParameterExport ex = (ProcessingParameterExport)dc;
+			ex.exportParameters(xmlOut);
+			xmlOut.writeEndElement();
+		}
+
+		//Exporting primitive fields
+		Field[] fields = clz.getDeclaredFields();
+		for (Field f : fields) {
+			if (f.isAnnotationPresent(ExportableValue.class) && f.getType().isPrimitive()) {
+				ProcessingModuleIO.exportPrimitiveField(f, xmlOut, dc);
+			}
+		}
+		xmlOut.writeEndElement();
+	}
+	
+	@Override
+	public void importParameters(XMLStreamReader reader) throws XMLStreamException {
+		//TODO implement
+		throw new NotImplementedException();
 	}
 
 }

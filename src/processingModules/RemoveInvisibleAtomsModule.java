@@ -2,7 +2,9 @@ package processingModules;
 
 import model.AtomData;
 import model.RenderingConfiguration;
+import processingModules.ProcessingParameterExport.ToolchainSupport;
 
+@ToolchainSupport
 public class RemoveInvisibleAtomsModule extends FilteringModule {	
 	public RemoveInvisibleAtomsModule() {
 		super(RenderingConfiguration.getViewer().getCurrentAtomFilter());

@@ -7,7 +7,11 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
 
+import model.dataContainer.DataContainerAsProcessingModuleWrapper;
+
 import java.lang.reflect.Field;
+import java.util.List;
+
 import processingModules.ProcessingParameterExport.ExportableValue;
 import processingModules.ProcessingParameterExport.ToolchainSupport;
 
@@ -15,7 +19,7 @@ public class ProcessingModuleIO {
 	
 	
 	
-	public void exportProcessingModule(ProcessingModule pm){
+	public void exportProcessingModule(List<ProcessingModule> procs){
 		OutputStream outputStream = null;
 		XMLStreamWriter out = null;
 		
@@ -24,36 +28,42 @@ public class ProcessingModuleIO {
 			out = XMLOutputFactory.newInstance().createXMLStreamWriter(new OutputStreamWriter(outputStream, "utf-8"));
 			
 			out.writeStartDocument();
-
-
-			Class<?> clz = pm.getClass();
-
-			if (!clz.isAnnotationPresent(ToolchainSupport.class)) return;
-
 			out.writeStartElement("AtomViewerToolchain");
-			out.writeStartElement("Module");
-			out.writeAttribute("name", clz.getName());
-			out.writeAttribute("version", Integer.toString(clz.getAnnotation(ToolchainSupport.class).version()));
 			
-			//Exporting the attributes that uses custom implementations
-			if (ProcessingParameterExport.class.isAssignableFrom(clz)) {
-				out.writeStartElement("CustomParameter");
-				ProcessingParameterExport ex = (ProcessingParameterExport)pm;
-				ex.exportParameters(out);
-				out.writeEndElement();
-			}
-
-			//Exporting primitive fields
-			Field[] fields = clz.getDeclaredFields();
-			for (Field f : fields) {
-				if (f.isAnnotationPresent(ExportableValue.class) && f.getType().isPrimitive()) {
-					exportPrimitiveField(f, out, pm);
-				}
-			}
+			for (ProcessingModule pm : procs){
+				Class<?> clz = pm.getClass();
+				if (!clz.isAnnotationPresent(ToolchainSupport.class)) return;
+				
+				//Wrapped DataContainer have their own IO-Routines
+				if (DataContainerAsProcessingModuleWrapper.class.isAssignableFrom(clz)){
+					ProcessingParameterExport ex = (ProcessingParameterExport)pm;
+					ex.exportParameters(out);
+				} else {
+					out.writeStartElement("Module");
+					out.writeAttribute("name", clz.getName());
+					out.writeAttribute("version", Integer.toString(clz.getAnnotation(ToolchainSupport.class).version()));
+					
+					//Exporting the attributes that uses custom implementations
+					if (ProcessingParameterExport.class.isAssignableFrom(clz)) {
+						out.writeStartElement("CustomParameter");
+						ProcessingParameterExport ex = (ProcessingParameterExport)pm;
+						ex.exportParameters(out);
+						out.writeEndElement();
+					}
 		
-			out.writeEndElement();
-			out.writeEndElement();
+					//Exporting primitive fields
+					Field[] fields = clz.getDeclaredFields();
+					for (Field f : fields) {
+						if (f.isAnnotationPresent(ExportableValue.class) && f.getType().isPrimitive()) {
+							exportPrimitiveField(f, out, pm);
+						}
+					}
+					out.writeEndElement();
+				}	
+				
+			}
 			
+			out.writeEndElement();
 			out.writeEndDocument();
 			
 		} catch (Exception e){
@@ -67,32 +77,33 @@ public class ProcessingModuleIO {
 		}
 	}
 	
-	private void exportPrimitiveField(Field f, XMLStreamWriter out, ProcessingModule pm) throws XMLStreamException, IllegalArgumentException, IllegalAccessException{
+	public static void exportPrimitiveField(Field f, XMLStreamWriter out, Object module)
+			throws XMLStreamException, IllegalArgumentException, IllegalAccessException{
 		out.writeStartElement("Parameter");
 		out.writeAttribute("name",f.getName());
 		out.writeAttribute("type",f.getType().getName());
 		f.setAccessible(true);
 		if (f.getType().equals(Float.TYPE)){
-			out.writeAttribute("value", Float.toString(f.getFloat(pm)));
+			out.writeAttribute("value", Float.toString(f.getFloat(module)));
 		} else if (f.getType().equals(Double.TYPE)){
-			out.writeAttribute("value", Double.toString(f.getDouble(pm)));
+			out.writeAttribute("value", Double.toString(f.getDouble(module)));
 		} else if (f.getType().equals(Integer.TYPE)){
-			out.writeAttribute("value", Integer.toString(f.getInt(pm)));
+			out.writeAttribute("value", Integer.toString(f.getInt(module)));
 		} else if (f.getType().equals(Short.TYPE)){
-			out.writeAttribute("value", Short.toString(f.getShort(pm)));
+			out.writeAttribute("value", Short.toString(f.getShort(module)));
 		} else if (f.getType().equals(Long.TYPE)){
-			out.writeAttribute("value", Long.toString(f.getLong(pm)));
+			out.writeAttribute("value", Long.toString(f.getLong(module)));
 		} else if (f.getType().equals(Byte.TYPE)){
-			out.writeAttribute("value", Byte.toString(f.getByte(pm)));
+			out.writeAttribute("value", Byte.toString(f.getByte(module)));
 		} else if (f.getType().equals(Character.TYPE)){
-			out.writeAttribute("value", Character.toString(f.getChar(pm)));
+			out.writeAttribute("value", Character.toString(f.getChar(module)));
 		} else if (f.getType().equals(Boolean.TYPE)){
-			out.writeAttribute("value", Boolean.toString(f.getBoolean(pm)));
+			out.writeAttribute("value", Boolean.toString(f.getBoolean(module)));
 		}
 		out.writeEndElement();
 	}
 	
-	private void importPrimitiveField(XMLStreamReader xmlReader, ProcessingModule pm) 
+	public static void importPrimitiveField(XMLStreamReader xmlReader, Object module) 
 			throws XMLStreamException, NumberFormatException, IllegalArgumentException, 
 			IllegalAccessException, SecurityException, NoSuchFieldException{
 		if (!xmlReader.getElementText().equals("Parameter")) throw new XMLStreamException("Illegal element detected");
@@ -101,7 +112,7 @@ public class ProcessingModuleIO {
 		String type = xmlReader.getAttributeValue(null, "type");
 		String value = xmlReader.getAttributeValue(null, "value");
 		
-		Field f = pm.getClass().getField(name);
+		Field f = module.getClass().getField(name);
 		f.setAccessible(true);
 		
 		if (type.equals(Float.TYPE.toString())){

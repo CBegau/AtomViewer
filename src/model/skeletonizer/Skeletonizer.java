@@ -47,11 +47,15 @@ import model.dataContainer.DataContainer;
 import model.dataContainer.JDataPanel;
 import model.skeletonizer.Dislocation.BurgersVectorInformation;
 import model.skeletonizer.processors.*;
+import processingModules.ProcessingParameterExport.ToolchainSupport;
+import processingModules.ProcessingParameterExport.ExportableValue;
 
 /**
  * Creates a dislocation skeleton from given set of dislocation core atoms 
  * and additionally, if possible, a set of stacking fault planes 
  */
+
+@ToolchainSupport
 public class Skeletonizer extends DataContainer {
 	private static JDislocationMenuPanel dataPanel;
 	private static final float CORE_THICKNESS = 5f;
@@ -64,6 +68,7 @@ public class Skeletonizer extends DataContainer {
 	
 	private AtomData data;
 	
+	@ExportableValue
 	private float meshingThreshold = -1;
 	
 	/**

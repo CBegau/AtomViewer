@@ -30,6 +30,8 @@ import javax.swing.JSeparator;
 
 import processingModules.ProcessingModule;
 import processingModules.ProcessingResult;
+import processingModules.ProcessingParameterExport.ToolchainSupport;
+import processingModules.ProcessingParameterExport.ExportableValue;
 import model.dataContainer.DataContainer;
 import model.dataContainer.VacancyDataContainer;
 import model.polygrain.Grain;
@@ -53,6 +55,8 @@ import crystalStructures.CrystalStructure;
  * @author Christoph Begau
  *
  */
+
+@ToolchainSupport
 public class RbvBuilder implements ProcessingModule{
 	
 	/**
@@ -76,6 +80,7 @@ public class RbvBuilder implements ProcessingModule{
 		6,1,10, 9,0,11, 9,11,2, 9,2,5,  7,2,11
 	};
 	
+	@ExportableValue
 	private float acceptanceThreshold = 0.14f;
 	private float[] pnl;
 	private float perfectBurgersVectorLength, rbvCorrectionFactor;
