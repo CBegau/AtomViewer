@@ -36,11 +36,16 @@ import model.AtomData;
 import model.DataColumnInfo;
 import model.DataColumnInfo.Component;
 import model.NearestNeighborBuilder;
+import processingModules.ProcessingParameterExport.ExportableValue;
+import processingModules.ProcessingParameterExport.ToolchainSupport;
 
+@ToolchainSupport()
 public class ComputeTemperatureModule implements ProcessingModule {
 
 	private static DataColumnInfo temperatureColumn = new DataColumnInfo("Temperature", "temp", "");
+	@ExportableValue
 	private float centerOfMassVelocityRadius = 0f;
+	@ExportableValue
 	private float scalingFactor = 11605f;
 	
 	@Override
