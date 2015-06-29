@@ -295,12 +295,21 @@ public class AtomData {
 	 * @param atomsToPlot
 	 * @return
 	 */
-	public StringBuilder plotNeighborsGraph(Atom... atomsToPlot){
+	public StringBuilder plotNeighborsGraph(final Atom... atomsToPlot){
 		StringBuilder sb = new StringBuilder();
 		final float d = defaultCrystalStructure.getNearestNeighborSearchRadius();
 		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(box, d, true);
-		
-		nnb.addAll(atoms);
+		Filter<Atom> filter = new Filter<Atom>() {
+			@Override
+			public boolean accept(Atom a) {
+				for (Atom b : atomsToPlot){
+					if (box.getPbcCorrectedDirection(a, b).getLength()<=d)
+						return true;
+				}
+				return false;
+			}
+		};
+		nnb.addAll(atoms, filter);
 		
 		for (Atom a : atomsToPlot){
 			ArrayList<Tupel<Atom, Vec3>> t =nnb.getNeighAndNeighVec(a);
