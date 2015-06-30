@@ -137,7 +137,7 @@ public class JMDFileChooser extends JFileChooser{
 			}
 		});
 
-		this.setFileFilter(Configuration.currentFileLoader.getDefaultFileFilter());
+		this.setFileFilter(Configuration.getCurrentFileLoader().getDefaultFileFilter());
 	}
 	
 	@Override
@@ -188,14 +188,14 @@ public class JMDFileChooser extends JFileChooser{
 			for (final MDFileLoader loader : fileLoader){
 				JRadioButton b = new JRadioButton(loader.getName());
 				p.add(b, gbc); gbc.gridy++;
-				if (Configuration.currentFileLoader == null) Configuration.currentFileLoader = loader;
-				b.setSelected(loader.equals(Configuration.currentFileLoader));
+				if (Configuration.getCurrentFileLoader() == null) Configuration.setCurrentFileLoader(loader);
+				b.setSelected(loader.equals(Configuration.getCurrentFileLoader()));
 				fileLoaderButtonGroup.add(b);
 				b.addActionListener(new ActionListener() {
 					@Override
 					public void actionPerformed(ActionEvent e) {
-						Configuration.currentFileLoader = loader;
-						JMDFileChooser.this.setFileFilter(Configuration.currentFileLoader.getDefaultFileFilter());
+						Configuration.setCurrentFileLoader(loader);
+						JMDFileChooser.this.setFileFilter(loader.getDefaultFileFilter());
 						
 						//TODO implement this option properly
 						boolean showExtendedOptions = loader instanceof ImdFileLoader;
@@ -249,7 +249,7 @@ public class JMDFileChooser extends JFileChooser{
 			p.add(identifyGrainsCheckBox, gbc); gbc.gridy++;
 			
 			//TODO implement this option properly
-			boolean showExtendedOptions = Configuration.currentFileLoader instanceof ImdFileLoader;
+			boolean showExtendedOptions = Configuration.getCurrentFileLoader() instanceof ImdFileLoader;
 			importedAtomTypeCheckbox.setVisible(showExtendedOptions);
 			disposeDefaultAtomsCheckBox.setVisible(showExtendedOptions);
 			calculateRBVcheckBox.setVisible(showExtendedOptions);

@@ -873,7 +873,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 					System.out.println("*************************************************");
 					System.exit(1);
 				}
-				Configuration.currentFileLoader = fileLoader;
+				Configuration.setCurrentFileLoader(fileLoader);
 				
 				fileLoader.addPropertyChangeListener(new PropertyChangeListener() {
 					@Override
@@ -1019,7 +1019,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 			}
 			int result = chooser.showOpenDialog(JMainWindow.this);
 			if (result == JFileChooser.APPROVE_OPTION){	
-				final MDFileLoader fileLoader = Configuration.currentFileLoader;
+				final MDFileLoader fileLoader = Configuration.getCurrentFileLoader();
 				
 				if (Configuration.getCurrentAtomData() != null && !ImportStates.APPEND_FILES.isActive()) {
 					Configuration.getCurrentAtomData().clear();

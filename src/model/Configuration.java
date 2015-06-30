@@ -33,7 +33,7 @@ public class Configuration {
 	
 	private static File lastOpenedFolder = null;
 	private static File lastOpenedExportFolder = null;
-	public static MDFileLoader currentFileLoader = null;
+	private static MDFileLoader currentFileLoader = null;
 	
 	private static AtomData currentAtomData;
 	
@@ -69,6 +69,14 @@ public class Configuration {
 	
 	public static File getLastOpenedFolder() {
 		return lastOpenedFolder;
+	}
+	
+	public static MDFileLoader getCurrentFileLoader() {
+		return currentFileLoader;
+	}
+	
+	public static void setCurrentFileLoader(MDFileLoader currentFileLoader) {
+		Configuration.currentFileLoader = currentFileLoader;
 	}
 	
 	public static void setLastOpenedExportFolder(File lastOpenedExportFolder) {

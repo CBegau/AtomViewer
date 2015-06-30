@@ -200,7 +200,7 @@ public class JCrystalConfigurationDialog extends JDialog{
 		boolean headerReadable = false;
 		if (selectedFile != null){
 			try {
-				h = Configuration.currentFileLoader.getColumnsNamesFromHeader(selectedFile);
+				h = Configuration.getCurrentFileLoader().getColumnsNamesFromHeader(selectedFile);
 				headerReadable = true;
 			} catch (IOException e1) {
 				h = new String[0];
@@ -294,7 +294,7 @@ public class JCrystalConfigurationDialog extends JDialog{
 		
 		boolean[] inHeader = new boolean[values.size()];
 		
-		Map<String, Component> nameToComponentMap = Configuration.currentFileLoader.getDefaultNamesForComponents();
+		Map<String, Component> nameToComponentMap = Configuration.getCurrentFileLoader().getDefaultNamesForComponents();
 		
 		for (int i=0; i<t.dataColumns.size(); i++){
 			int index = values.indexOf(t.dataColumns.get(i).getId());
