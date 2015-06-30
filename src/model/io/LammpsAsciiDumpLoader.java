@@ -35,6 +35,11 @@ import model.ImportConfiguration.ImportStates;
 public class LammpsAsciiDumpLoader extends MDFileLoader {
 	
 	@Override
+	public String getName() {
+		return "Lammps dump (ascii)";
+	}
+	
+	@Override
 	public AtomData readInputData(File f, AtomData previous) throws IOException{
 		return readFile(f, previous);
 	}

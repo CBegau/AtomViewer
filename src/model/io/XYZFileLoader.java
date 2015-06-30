@@ -37,6 +37,11 @@ import model.DataColumnInfo.Component;
 public class XYZFileLoader extends MDFileLoader {
 
 	@Override
+	public String getName() {
+		return "(ext.) xyz";
+	}
+	
+	@Override
 	public AtomData readInputData(File f, AtomData previous) throws Exception {
 		LineNumberReader lnr = null;
 		String line = null;
