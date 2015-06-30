@@ -52,9 +52,10 @@ public class Configuration {
 		atomDataListeners.remove(l);
 	}
 	
-	private static void fireAtomDataChangedEvent(AtomData atomData, boolean updateGUI, boolean resetGUI){
+	private static void fireAtomDataChangedEvent(AtomData newAtomData, AtomData oldAtomData, boolean updateGUI, boolean resetGUI){
 		AtomDataChangedEvent e = new AtomDataChangedEvent();
-		e.newAtomData = atomData;
+		e.newAtomData = newAtomData;
+		e.oldAtomData = oldAtomData;
 		e.resetGUI = resetGUI;
 		e.updateGUI = updateGUI;
 		for (AtomDataChangedListener l : atomDataListeners)
@@ -89,10 +90,12 @@ public class Configuration {
 	}
 	
 	public static void setCurrentToolchain(Toolchain currentToolchain) {
-		if(!Configuration.currentToolchain.isClosed()) try {
-			Configuration.currentToolchain.closeToolChain();
-		} catch (XMLStreamException e) {
-			e.printStackTrace();
+		if(Configuration.currentToolchain!=null && !Configuration.currentToolchain.isClosed()){
+			try {
+				Configuration.currentToolchain.closeToolChain();
+			} catch (XMLStreamException e) {
+				e.printStackTrace();
+			}
 		}
 		Configuration.currentToolchain = currentToolchain;
 	}
@@ -110,9 +113,10 @@ public class Configuration {
 	}
 	
 	public static void setCurrentAtomData(AtomData currentAtomData, boolean updateGUI, boolean resetGUI) {
+		AtomData old = Configuration.currentAtomData; 
 		Configuration.currentAtomData = currentAtomData;
 		if (updateGUI)
-			fireAtomDataChangedEvent(currentAtomData, updateGUI, resetGUI);
+			fireAtomDataChangedEvent(currentAtomData, old, updateGUI, resetGUI);
 	}
 	
 	public interface AtomDataChangedListener{
@@ -121,11 +125,16 @@ public class Configuration {
 	
 	public static class AtomDataChangedEvent {
 		AtomData newAtomData;
+		AtomData oldAtomData;
 		boolean resetGUI;
 		boolean updateGUI;
 		
 		public AtomData getNewAtomData() {
 			return newAtomData;
+		}
+		
+		public AtomData getOldAtomData() {
+			return oldAtomData;
 		}
 		
 		public boolean isUpdateGUI(){

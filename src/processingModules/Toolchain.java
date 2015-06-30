@@ -41,8 +41,6 @@ public class Toolchain implements AtomDataChangedListener{
 		
 		xmlout.close();
 		toolchainOpen = false;
-		
-		Configuration.removeAtomDataListener(this);
 	}
 	
 	public boolean isClosed(){
@@ -84,8 +82,9 @@ public class Toolchain implements AtomDataChangedListener{
 	
 	@Override
 	public void atomDataChanged(AtomDataChangedEvent e) {
-		JLogPanel.getJLogPanel().addLog("Changing the data stopped recording of toolchain");
-		if (!isClosed()){
+		if (!isClosed() && (e.getNewAtomData() == null || e.getOldAtomData() == null || 
+				!e.getNewAtomData().equals(e.getOldAtomData()))){
+			JLogPanel.getJLogPanel().addLog("Changing the data stopped recording of toolchain");
 			try {
 				closeToolChain();
 			} catch (XMLStreamException ex) {
