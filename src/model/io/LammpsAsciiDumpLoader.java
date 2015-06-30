@@ -32,7 +32,7 @@ import model.*;
 import model.DataColumnInfo.Component;
 import model.ImportConfiguration.ImportStates;
 
-public class LammpsFileLoader extends MDFileLoader {
+public class LammpsAsciiDumpLoader extends MDFileLoader {
 	
 	@Override
 	public AtomData readInputData(File f, AtomData previous) throws IOException{

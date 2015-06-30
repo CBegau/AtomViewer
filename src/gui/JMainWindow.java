@@ -1027,7 +1027,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 			if (e.getActionCommand().equals(InputFormat.IMD.name()))
 				fileLoader = new ImdFileLoader();
 			else if (e.getActionCommand().equals(InputFormat.LAMMPS.name()))
-				fileLoader = new LammpsFileLoader();
+				fileLoader = new LammpsAsciiDumpLoader();
 			else if (e.getActionCommand().equals(InputFormat.XYZ.name()))
 				fileLoader = new XYZFileLoader();
 			else return;
