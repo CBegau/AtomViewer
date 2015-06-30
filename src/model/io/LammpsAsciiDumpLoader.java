@@ -44,7 +44,7 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 		FileFilter lammpsFileFilterBasic = new FileFilter() {
 			@Override
 			public String getDescription() {
-				return "Lammps file (*.dump)";
+				return "Lammps ASCII dump file (*.dump)";
 			}
 			
 			@Override

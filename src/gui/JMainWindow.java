@@ -150,7 +150,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		openIMDMenuItem.setActionCommand(InputFormat.IMD.name());
 		openIMDMenuItem.addActionListener(CursorController.createListener(this, oml));
 		fileMenu.add(openIMDMenuItem);
-		JMenuItem openLammpsMenuItem = new JMenuItem("Open Lammps file");
+		JMenuItem openLammpsMenuItem = new JMenuItem("Open Lammps dump file");
 		openLammpsMenuItem.setActionCommand(InputFormat.LAMMPS.name());
 		openLammpsMenuItem.addActionListener(CursorController.createListener(this, oml));
 		fileMenu.add(openLammpsMenuItem);
