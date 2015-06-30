@@ -1371,9 +1371,9 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		
 		if (atomData.isPolyCrystalline()){
 			ignoreGrain.clear();
-			if (Configuration.getGrainIndices().size()!=0){
-				for (int g : Configuration.getGrainIndices()){
-					ignoreGrain.put(g, false);
+			if (atomData.getGrains().size()!=0){
+				for (Grain g : atomData.getGrains()){
+					ignoreGrain.put(g.getGrainNumber(), false);
 				}
 				ignoreGrain.put(Atom.IGNORED_GRAIN, false);
 				ignoreGrain.put(Atom.DEFAULT_GRAIN, false);
@@ -1384,7 +1384,11 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 
 	private void createGrainColorTable() {
 		grainColorTable.clear();
-		ArrayList<Integer> sortGrainIndices = new ArrayList<Integer>(Configuration.getGrainIndices());
+		if (atomData == null) return;
+		
+		ArrayList<Integer> sortGrainIndices = new ArrayList<Integer>(atomData.getGrains().size());
+		for (Grain g : atomData.getGrains())
+			sortGrainIndices.add(g.getGrainNumber());
 		Collections.sort(sortGrainIndices);
 		float[][] colors = ColorTable.createColorTable(sortGrainIndices.size()+2, 0.5f);
 		int j=0;

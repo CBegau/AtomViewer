@@ -105,10 +105,7 @@ public class GrainIdentificationModule implements ProcessingModule {
 		
 		ProgressMonitor.getProgressMonitor().setActivityName("Processing grains");
 		
-		if (!orderGrainsBySize){
-			for (Grain g : gr)
-				Configuration.addGrainIndex(g.getGrainNumber());
-		} else {
+		if (orderGrainsBySize){
 			ArrayList<Grain> sortedGrains = new ArrayList<Grain>(gr);
 			for (Grain g : sortedGrains)
 				g.getMesh();
