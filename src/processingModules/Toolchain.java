@@ -2,6 +2,7 @@ package processingModules;
 
 import java.io.*;
 
+import javax.xml.stream.FactoryConfigurationError;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
@@ -10,71 +11,71 @@ import javax.xml.stream.XMLStreamWriter;
 import model.dataContainer.DataContainerAsProcessingModuleWrapper;
 
 import java.lang.reflect.Field;
-import java.util.List;
 
 import processingModules.Toolchainable.ExportableValue;
 import processingModules.Toolchainable.ToolchainSupport;
 
 public class Toolchain {
 	
+	private XMLStreamWriter xmlout = null;
+	private boolean toolchainOpen = true;
 	
+	public Toolchain(OutputStream os) throws UnsupportedEncodingException, XMLStreamException, FactoryConfigurationError{
+		xmlout = XMLOutputFactory.newInstance().createXMLStreamWriter(new OutputStreamWriter(os, "utf-8"));
+		
+		xmlout.writeStartDocument();
+		xmlout.writeStartElement("AtomViewerToolchain");
+	}
 	
-	public void exportProcessingModule(List<ProcessingModule> procs){
-		OutputStream outputStream = null;
-		XMLStreamWriter out = null;
+	public void closeToolChain() throws XMLStreamException{
+		if(!toolchainOpen) throw new RuntimeException("Toolchain is already closed");
 		
-		try{
-			outputStream = new FileOutputStream(new File("doc.xml"));
-			out = XMLOutputFactory.newInstance().createXMLStreamWriter(new OutputStreamWriter(outputStream, "utf-8"));
-			
-			out.writeStartDocument();
-			out.writeStartElement("AtomViewerToolchain");
-			
-			for (ProcessingModule pm : procs){
-				Class<?> clz = pm.getClass();
-				if (!clz.isAnnotationPresent(ToolchainSupport.class)) return;
-				
-				//Wrapped DataContainer have their own IO-Routines
-				if (DataContainerAsProcessingModuleWrapper.class.isAssignableFrom(clz)){
-					Toolchainable ex = (Toolchainable)pm;
-					ex.exportParameters(out);
-				} else {
-					out.writeStartElement("Module");
-					out.writeAttribute("name", clz.getName());
-					out.writeAttribute("version", Integer.toString(clz.getAnnotation(ToolchainSupport.class).version()));
-					
-					//Exporting the attributes that uses custom implementations
-					if (Toolchainable.class.isAssignableFrom(clz)) {
-						out.writeStartElement("CustomParameter");
-						Toolchainable ex = (Toolchainable)pm;
-						ex.exportParameters(out);
-						out.writeEndElement();
-					}
+		xmlout.writeEndElement();
+		xmlout.writeEndDocument();
 		
-					//Exporting primitive fields
-					Field[] fields = clz.getDeclaredFields();
-					for (Field f : fields) {
-						if (f.isAnnotationPresent(ExportableValue.class) && f.getType().isPrimitive()) {
-							exportPrimitiveField(f, out, pm);
-						}
-					}
-					out.writeEndElement();
-				}	
-				
+		xmlout.close();
+		toolchainOpen = false;
+	}
+	
+	public boolean isClosed(){
+		return !toolchainOpen;
+	}
+	
+	public void exportProcessingModule(ProcessingModule pm)
+			throws IllegalArgumentException, XMLStreamException, IllegalAccessException{
+		if(!toolchainOpen) throw new RuntimeException("Toolchain is already closed");
+		
+		Class<?> clz = pm.getClass();
+		if (!clz.isAnnotationPresent(ToolchainSupport.class)) return;
+
+		// Wrapped DataContainer have their own IO-Routines
+		if (DataContainerAsProcessingModuleWrapper.class.isAssignableFrom(clz)) {
+			((Toolchainable) pm).exportParameters(xmlout);
+		} else {
+			xmlout.writeStartElement("Module");
+			xmlout.writeAttribute("name", clz.getName());
+			xmlout.writeAttribute("version", Integer.toString(clz.getAnnotation(ToolchainSupport.class).version()));
+
+			// Exporting the attributes that uses custom implementations
+			if (Toolchainable.class.isAssignableFrom(clz)) {
+				xmlout.writeStartElement("CustomParameter");
+				((Toolchainable) pm).exportParameters(xmlout);
+				xmlout.writeEndElement();
 			}
-			
-			out.writeEndElement();
-			out.writeEndDocument();
-			
-		} catch (Exception e){
-			e.printStackTrace();
-		} finally {
-			if (out!=null) try {
-				out.close();
-			} catch (XMLStreamException e) {
-				e.printStackTrace();
+
+			// Exporting primitive fields
+			Field[] fields = clz.getDeclaredFields();
+			for (Field f : fields) {
+				if (f.isAnnotationPresent(ExportableValue.class) && f.getType().isPrimitive()) {
+					exportPrimitiveField(f, xmlout, pm);
+				}
 			}
-		}
+			xmlout.writeEndElement();
+		}	
+	}
+	
+	public static boolean applyToolChain(InputStream is){
+		return false;
 	}
 	
 	public static void exportPrimitiveField(Field f, XMLStreamWriter out, Object module)
