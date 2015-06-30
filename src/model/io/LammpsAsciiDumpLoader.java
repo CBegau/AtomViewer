@@ -32,7 +32,12 @@ import model.*;
 import model.DataColumnInfo.Component;
 import model.ImportConfiguration.ImportStates;
 
-public class LammpsFileLoader extends MDFileLoader {
+public class LammpsAsciiDumpLoader extends MDFileLoader {
+	
+	@Override
+	public String getName() {
+		return "Lammps dump (ascii)";
+	}
 	
 	@Override
 	public AtomData readInputData(File f, AtomData previous) throws IOException{
@@ -44,7 +49,7 @@ public class LammpsFileLoader extends MDFileLoader {
 		FileFilter lammpsFileFilterBasic = new FileFilter() {
 			@Override
 			public String getDescription() {
-				return "Lammps file (*.dump)";
+				return "Lammps ASCII dump file (*.dump)";
 			}
 			
 			@Override

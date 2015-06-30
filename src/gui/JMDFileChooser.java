@@ -22,11 +22,15 @@ import java.awt.event.*;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.*;
 
 import model.io.ImdFileLoader;
+import model.io.LammpsAsciiDumpLoader;
 import model.io.MDFileLoader;
+import model.io.XYZFileLoader;
 import model.Configuration;
 import model.ImportConfiguration;
 import model.RenderingConfiguration;
@@ -34,6 +38,9 @@ import model.ImportConfiguration.ImportStates;
 
 public class JMDFileChooser extends JFileChooser{
 	private static final String CONF_FILE = "crystal.conf";
+	
+	private static List<MDFileLoader> fileLoader = new ArrayList<MDFileLoader>();
+	
 	private Window owner;
 	
 	private File propertiesFile;
@@ -45,7 +52,13 @@ public class JMDFileChooser extends JFileChooser{
 	
 	private boolean confFileFound = false;
 	
-	public JMDFileChooser(MDFileLoader loader){
+	static {
+		fileLoader.add(new ImdFileLoader());
+		fileLoader.add(new LammpsAsciiDumpLoader());
+		fileLoader.add(new XYZFileLoader());
+	}
+	
+	public JMDFileChooser(){
 		importConfig = ImportConfiguration.getNewInstance();
 		
 		if (Configuration.RUN_AS_STICKWARE){
@@ -64,14 +77,14 @@ public class JMDFileChooser extends JFileChooser{
 			e.printStackTrace();
 		}
 		
-		this.setFileFilter(loader.getDefaultFileFilter());
+		
 		
 		this.setMultiSelectionEnabled(true);
 		
 		this.setFileHidingEnabled(true);
 		
 		//TODO Remove this ugly workaround in a future user interface
-		this.components = new JOpenOptionComponent(loader instanceof ImdFileLoader);
+		this.components = new JOpenOptionComponent();
 		JPanel panel = new JPanel();
 		panel.setLayout(new GridLayout(1, 1));
 		panel.add(this.components);
@@ -124,6 +137,7 @@ public class JMDFileChooser extends JFileChooser{
 			}
 		});
 
+		this.setFileFilter(Configuration.currentFileLoader.getDefaultFileFilter());
 	}
 	
 	@Override
@@ -150,24 +164,53 @@ public class JMDFileChooser extends JFileChooser{
 		private static final long serialVersionUID = 1L;
 		private final JButton editCrystalConfButton = new JButton("Edit crystal.conf");
 		
-		public JOpenOptionComponent(boolean showExtendedImportOptions) {
-			JPanel p = new JPanel();
-			JScrollPane sp = new JScrollPane(p);
-			this.setLayout(new GridLayout(1,1));
-			p.setLayout(new GridBagLayout());
-			this.add(sp);
-			GridBagConstraints gbc = new GridBagConstraints();
-			gbc.fill = GridBagConstraints.HORIZONTAL;
-			gbc.weightx = 0.33;
-			gbc.gridx = 0; gbc.gridy = 0;
-			
-			final JCheckBox appendFilesCheckbox = new JCheckBox("<html>Append files</html>", false);
-			ImportConfiguration.ImportStates.APPEND_FILES.setState(false);
-			
+		public JOpenOptionComponent() {
 			final JCheckBox importedAtomTypeCheckbox = new JCheckBox("<html>Import atom types<br> from file</html>", ImportStates.IMPORT_ATOMTYPE.isActive());
 			final JCheckBox disposeDefaultAtomsCheckBox = new JCheckBox("<html>Dispose perfect<br>lattice atoms</html>", ImportStates.DISPOSE_DEFAULT.isActive());
 			final JCheckBox calculateRBVcheckBox = new JCheckBox("<html>Import<br>Burgers Vectors</html>", ImportStates.IMPORT_BURGERS_VECTORS.isActive());
 			final JCheckBox identifyGrainsCheckBox = new JCheckBox("Import Grains", ImportStates.IMPORT_GRAINS.isActive());
+			
+			JPanel p = new JPanel();
+			JScrollPane sp = new JScrollPane(p);
+			this.setLayout(new GridLayout(1,1));
+			sp.setAlignmentY(Component.TOP_ALIGNMENT);
+			this.add(sp);
+			
+			p.setLayout(new GridBagLayout());
+			GridBagConstraints gbc = new GridBagConstraints();
+			gbc.fill = GridBagConstraints.HORIZONTAL;
+			gbc.weightx = 0.33;
+			gbc.gridx = 0; gbc.gridy = 0;
+			gbc.gridwidth = 3;
+			p.add(new JLabel("Format"), gbc); gbc.gridy++;
+			
+			ButtonGroup fileLoaderButtonGroup = new ButtonGroup();
+			for (final MDFileLoader loader : fileLoader){
+				JRadioButton b = new JRadioButton(loader.getName());
+				p.add(b, gbc); gbc.gridy++;
+				if (Configuration.currentFileLoader == null) Configuration.currentFileLoader = loader;
+				b.setSelected(loader.equals(Configuration.currentFileLoader));
+				fileLoaderButtonGroup.add(b);
+				b.addActionListener(new ActionListener() {
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						Configuration.currentFileLoader = loader;
+						JMDFileChooser.this.setFileFilter(Configuration.currentFileLoader.getDefaultFileFilter());
+						
+						//TODO implement this option properly
+						boolean showExtendedOptions = loader instanceof ImdFileLoader;
+						importedAtomTypeCheckbox.setVisible(showExtendedOptions);
+						disposeDefaultAtomsCheckBox.setVisible(showExtendedOptions);
+						calculateRBVcheckBox.setVisible(showExtendedOptions);
+						identifyGrainsCheckBox.setVisible(showExtendedOptions);
+					}
+				});
+			}
+			p.add(new JSeparator(), gbc); gbc.gridy++;
+			gbc.gridwidth = 1;
+			
+			final JCheckBox appendFilesCheckbox = new JCheckBox("<html>Append files</html>", false);
+			ImportConfiguration.ImportStates.APPEND_FILES.setState(false);
 			
 			importedAtomTypeCheckbox.setToolTipText("If enable, atomic classification are read from file, if available.");
 			disposeDefaultAtomsCheckBox.setToolTipText("Atoms at perfect lattice sites are not ignored to save memory.");
@@ -200,12 +243,17 @@ public class JMDFileChooser extends JFileChooser{
 			gbc.gridwidth = 3;
 			p.add(new JSeparator(), gbc); gbc.gridy++;
 			
-			if (showExtendedImportOptions){
-				p.add(importedAtomTypeCheckbox, gbc); gbc.gridy++;
-				p.add(disposeDefaultAtomsCheckBox, gbc); gbc.gridy++;
-				p.add(calculateRBVcheckBox, gbc); gbc.gridy++;
-				p.add(identifyGrainsCheckBox, gbc); gbc.gridy++;
-			}
+			p.add(importedAtomTypeCheckbox, gbc); gbc.gridy++;
+			p.add(disposeDefaultAtomsCheckBox, gbc); gbc.gridy++;
+			p.add(calculateRBVcheckBox, gbc); gbc.gridy++;
+			p.add(identifyGrainsCheckBox, gbc); gbc.gridy++;
+			
+			//TODO implement this option properly
+			boolean showExtendedOptions = Configuration.currentFileLoader instanceof ImdFileLoader;
+			importedAtomTypeCheckbox.setVisible(showExtendedOptions);
+			disposeDefaultAtomsCheckBox.setVisible(showExtendedOptions);
+			calculateRBVcheckBox.setVisible(showExtendedOptions);
+			identifyGrainsCheckBox.setVisible(showExtendedOptions);
 			
 			ActionListener simpleCheckBoxListener = new ActionListener() {
 				@Override

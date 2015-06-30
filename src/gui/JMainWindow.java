@@ -49,7 +49,6 @@ import common.ColorTable.ColorBarScheme;
 import crystalStructures.CrystalStructure;
 import model.*;
 import model.io.*;
-import model.io.MDFileLoader.InputFormat;
 import model.skeletonizer.Skeletonizer;
 import model.Configuration.AtomDataChangedEvent;
 import model.Configuration.AtomDataChangedListener;
@@ -146,18 +145,9 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		
 		JMenuBar menu = new JMenuBar();
 		JMenu fileMenu = new JMenu("File");
-		JMenuItem openIMDMenuItem = new JMenuItem("Open IMD file");
-		openIMDMenuItem.setActionCommand(InputFormat.IMD.name());
-		openIMDMenuItem.addActionListener(CursorController.createListener(this, oml));
-		fileMenu.add(openIMDMenuItem);
-		JMenuItem openLammpsMenuItem = new JMenuItem("Open Lammps file");
-		openLammpsMenuItem.setActionCommand(InputFormat.LAMMPS.name());
-		openLammpsMenuItem.addActionListener(CursorController.createListener(this, oml));
-		fileMenu.add(openLammpsMenuItem);
-		JMenuItem openXYZMenuItem = new JMenuItem("Open XYZ file");
-		openXYZMenuItem.setActionCommand(InputFormat.XYZ.name());
-		openXYZMenuItem.addActionListener(CursorController.createListener(this, oml));
-		fileMenu.add(openXYZMenuItem);
+		JMenuItem openFileMenuItem = new JMenuItem("Open file");
+		openFileMenuItem.addActionListener(CursorController.createListener(this, oml));
+		fileMenu.add(openFileMenuItem);
 		
 		JMenuItem exportScreenShotMenuItem = new JMenuItem("Save Screenshot");
 		exportScreenShotMenuItem.setActionCommand("Screenshot");
@@ -549,7 +539,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				String message = "<html><body>" +
-						"AtomViewer  Copyright (C) 2014, ICAMS, Ruhr-Universtät Bochum <br>" +
+						"AtomViewer  Copyright (C) 2015, ICAMS, Ruhr-Universtät Bochum <br>" +
 						"AtomViewer is a tool to display and analyse atomistic simulations<br><br>" +
 						"AtomViewer Version "+JMainWindow.VERSION+"-"+JMainWindow.buildVersion+"<br>"+
 						"Available OpenGL version on this machine: "+ViewerGLJPanel.openGLVersion +"<br><br>" +
@@ -1022,25 +1012,15 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 	private class OpenMenuListener implements ActionListener{
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			
-			final MDFileLoader fileLoader;			
-			if (e.getActionCommand().equals(InputFormat.IMD.name()))
-				fileLoader = new ImdFileLoader();
-			else if (e.getActionCommand().equals(InputFormat.LAMMPS.name()))
-				fileLoader = new LammpsFileLoader();
-			else if (e.getActionCommand().equals(InputFormat.XYZ.name()))
-				fileLoader = new XYZFileLoader();
-			else return;
-			
-			JMDFileChooser chooser = new JMDFileChooser(fileLoader);
-			
-			Configuration.currentFileLoader = fileLoader;
-			
+			JMDFileChooser chooser = new JMDFileChooser();
+					
 			if (Configuration.getLastOpenedFolder() != null) {
 				chooser.setCurrentDirectory(Configuration.getLastOpenedFolder());
 			}
 			int result = chooser.showOpenDialog(JMainWindow.this);
 			if (result == JFileChooser.APPROVE_OPTION){	
+				final MDFileLoader fileLoader = Configuration.currentFileLoader;
+				
 				if (Configuration.getCurrentAtomData() != null && !ImportStates.APPEND_FILES.isActive()) {
 					Configuration.getCurrentAtomData().clear();
 					RenderingConfiguration.getViewer().getRenderRange().reset();

@@ -42,6 +42,11 @@ import model.ImportConfiguration.ImportStates;
 public class ImdFileLoader extends MDFileLoader{
 
 	@Override
+	public String getName() {
+		return "IMD";
+	}
+	
+	@Override
 	public String[] getColumnsNamesFromHeader(File f) throws IOException {
 		LineNumberReader lnr = null;
 		GZIPInputStream gzipis = null;

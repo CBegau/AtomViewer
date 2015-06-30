@@ -95,6 +95,12 @@ public abstract class MDFileLoader extends SwingWorker<AtomData, String> {
 	 */
 	public abstract String[] getColumnsNamesFromHeader(File f) throws IOException;
 	
+	/**
+	 * Provides a name for this type of file reader
+	 * @return
+	 */
+	public abstract String getName();
+	
 	public abstract Map<String, DataColumnInfo.Component> getDefaultNamesForComponents();
 	
 	/**
