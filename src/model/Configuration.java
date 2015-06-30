@@ -20,7 +20,6 @@ package model;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.HashSet;
 
 import model.io.MDFileLoader;
 
@@ -37,10 +36,6 @@ public class Configuration {
 	public static MDFileLoader currentFileLoader = null;
 	
 	private static AtomData currentAtomData;
-	
-	//TODO Find better solution for handling poly-crystals
-	private static HashSet<Integer> grainIndices = new HashSet<Integer>();
-	
 	
 	private static ArrayList<AtomDataChangedListener> atomDataListeners = new ArrayList<AtomDataChangedListener>();
 	
@@ -63,10 +58,6 @@ public class Configuration {
 	
 	
 	public static boolean create(){
-		grainIndices.clear();
-		grainIndices.add(Atom.IGNORED_GRAIN);
-		grainIndices.add(Atom.DEFAULT_GRAIN);
-		
 		ImportConfiguration.getInstance().createVectorDataColumn();
 		
 		return true;
@@ -90,18 +81,6 @@ public class Configuration {
 	
 	public static AtomData getCurrentAtomData() {
 		return currentAtomData;
-	}
-	
-	public static boolean addGrainIndex(int index){
-		return grainIndices.add(index);
-	}
-	
-	/**
-	 * Returns a copy of the grainIndices Set 
-	 * @return
-	 */
-	public static HashSet<Integer> getGrainIndices(){
-		return new HashSet<Integer>(grainIndices);
 	}
 	
 	public static void setCurrentAtomData(AtomData currentAtomData, boolean updateGUI, boolean resetGUI) {

@@ -41,6 +41,7 @@ import model.*;
 import model.Configuration.AtomDataChangedEvent;
 import model.Configuration.AtomDataChangedListener;
 import model.dataContainer.DataContainer;
+import model.polygrain.Grain;
 
 public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 	private static final long serialVersionUID = 1L;
@@ -460,7 +461,10 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		c.gridx = 0;
 		c.gridy = 0;
 		c.anchor = GridBagConstraints.NORTHWEST;
-		ArrayList<Integer> sortedList = new ArrayList<Integer>(Configuration.getGrainIndices());
+		ArrayList<Integer> sortedList = new ArrayList<Integer>(atomData.getGrains().size());
+		for (Grain g : atomData.getGrains())
+			sortedList.add(g.getGrainNumber());
+			
 		Collections.sort(sortedList);
 		for (int i : sortedList){
 			grainIgnoreContainer.add(new JIgnoreGrainCheckbox(i), c);
