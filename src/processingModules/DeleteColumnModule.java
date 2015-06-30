@@ -78,7 +78,6 @@ public class DeleteColumnModule implements ProcessingModule, Toolchainable{
 		if (!reader.getElementText().equals("toRemoveColumn")) throw new XMLStreamException("Illegal element detected");
 		String id = reader.getAttributeValue(null, "id");
 		
-		
 		List<DataColumnInfo> dci = Configuration.getCurrentAtomData().getDataColumnInfos();
 		for (DataColumnInfo d : dci){
 			if (d.getId().equals(id)){

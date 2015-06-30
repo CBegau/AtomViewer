@@ -42,6 +42,7 @@ import model.Configuration.AtomDataChangedEvent;
 import model.Configuration.AtomDataChangedListener;
 import model.dataContainer.DataContainer;
 import model.polygrain.Grain;
+import processingModules.DeleteColumnModule;
 
 public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 	private static final long serialVersionUID = 1L;
@@ -774,7 +775,9 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 					int result = JOptionPane.showConfirmDialog(JDataColumnControlPanel.this.parentPanel,
 							text, "Delete "+selectedColumn.getName(), JOptionPane.OK_CANCEL_OPTION);
 					if (result == JOptionPane.OK_OPTION){
-						atomData.removeDataColumnInfo(selectedColumn);
+						try {
+							atomData.applyProcessingModule(new DeleteColumnModule(selectedColumn));
+						} catch (Exception e1) { e1.printStackTrace(); }
 						Configuration.setCurrentAtomData(atomData, true, false);
 					}
 				}

@@ -163,6 +163,10 @@ public class AtomData {
 	
 	/**
 	 * Removes a DataColumnInfo
+	 * This method should only be called internally
+	 * For public access an instance of {@link DeleteColumnModule} should be created
+	 * and passed to {@link #applyProcessingModule(ProcessingModule) applyProcessingModule} method.
+	 * This way it will be correctly recorded in a toolchain is needed 
 	 * @param dci
 	 */
 	public void removeDataColumnInfo(DataColumnInfo dci){
@@ -187,11 +191,21 @@ public class AtomData {
 	
 	/**
 	 * Apply a processing module
+	 * If a toolchain is currently recording, this step will automatically being added
 	 * @param pm
 	 * @throws Exception
 	 */
 	public void applyProcessingModule(ProcessingModule pm) throws Exception{
 		this.addDataColumnInfo(pm.getDataColumnsInfo());
+
+		//Save the configuration of the module in the toolchain if one is currently
+		//actively recording
+		if (Configuration.getCurrentToolchain() != null 
+				&& !Configuration.getCurrentToolchain().isClosed()){
+			Configuration.getCurrentToolchain().exportProcessingModule(pm);
+		}
+		
+		
 		ProcessingResult pr = pm.process(this);
 		if (pr != null && pr.getDataContainer() != null){
 			this.addAdditionalData(pr.getDataContainer());
@@ -447,7 +461,6 @@ public class AtomData {
 	
 	public void addGrain(Grain g) {
 		grains.put(g.getGrainNumber(), g);
-		Configuration.addGrainIndex(g.getGrainNumber());
 	}
 	
 	public Grain getGrains(int grain) {

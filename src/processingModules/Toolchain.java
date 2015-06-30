@@ -8,6 +8,10 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
 
+import gui.JLogPanel;
+import model.Configuration;
+import model.Configuration.AtomDataChangedEvent;
+import model.Configuration.AtomDataChangedListener;
 import model.dataContainer.DataContainerAsProcessingModuleWrapper;
 
 import java.lang.reflect.Field;
@@ -15,7 +19,7 @@ import java.lang.reflect.Field;
 import processingModules.Toolchainable.ExportableValue;
 import processingModules.Toolchainable.ToolchainSupport;
 
-public class Toolchain {
+public class Toolchain implements AtomDataChangedListener{
 	
 	private XMLStreamWriter xmlout = null;
 	private boolean toolchainOpen = true;
@@ -25,6 +29,8 @@ public class Toolchain {
 		
 		xmlout.writeStartDocument();
 		xmlout.writeStartElement("AtomViewerToolchain");
+		
+		Configuration.addAtomDataListener(this);
 	}
 	
 	public void closeToolChain() throws XMLStreamException{
@@ -35,6 +41,8 @@ public class Toolchain {
 		
 		xmlout.close();
 		toolchainOpen = false;
+		
+		Configuration.removeAtomDataListener(this);
 	}
 	
 	public boolean isClosed(){
@@ -72,6 +80,18 @@ public class Toolchain {
 			}
 			xmlout.writeEndElement();
 		}	
+	}
+	
+	@Override
+	public void atomDataChanged(AtomDataChangedEvent e) {
+		JLogPanel.getJLogPanel().addLog("Changing the data stopped recording of toolchain");
+		if (!isClosed()){
+			try {
+				closeToolChain();
+			} catch (XMLStreamException ex) {
+				ex.printStackTrace();
+			}
+		};
 	}
 	
 	public static boolean applyToolChain(InputStream is){
