@@ -874,8 +874,9 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 					System.exit(1);
 				}
 				Configuration.currentFileLoader = fileLoader;
+				final SwingWorker<AtomData, String> worker = fileLoader.getNewSwingWorker();
 				
-				fileLoader.addPropertyChangeListener(new PropertyChangeListener() {
+				worker.addPropertyChangeListener(new PropertyChangeListener() {
 					@Override
 					public void propertyChange(PropertyChangeEvent evt) {
 						if ("progress" == evt.getPropertyName()) {
@@ -1030,35 +1031,37 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 				Configuration.setLastOpenedFolder(chooser.getSelectedFile().getParentFile());
 				typeColorMenu.setEnabled(true);
 
-				final JProgressDisplayDialog progressDisplay = new JProgressDisplayDialog(fileLoader, JMainWindow.this);
+				fileLoader.setFilesToRead(chooser.getSelectedFiles());
+				final SwingWorker<AtomData, String> worker = fileLoader.getNewSwingWorker();
+				
+				final JProgressDisplayDialog progressDisplay = new JProgressDisplayDialog(worker, JMainWindow.this);
 				progressDisplay.setTitle("Opening files...");
 				
 				PropertyChangeListener pcl = new PropertyChangeListener() {
 					@Override
 					public void propertyChange(PropertyChangeEvent arg0) {
-						if ( fileLoader.isDone() || fileLoader.isCancelled()){
+						if ( worker.isDone() || worker.isCancelled()){
 							try {
 								//Retrieve the results from the background worker
-								if (!fileLoader.isCancelled())
-									Configuration.setCurrentAtomData(fileLoader.get(), true, true);
+								if (!worker.isCancelled())
+									Configuration.setCurrentAtomData(worker.get(), true, true);
 							} catch (Exception e) {
 								progressDisplay.dispose();
 								JOptionPane.showMessageDialog(null, e.toString());
 								e.printStackTrace();
 							} finally {
-								fileLoader.removePropertyChangeListener(this);
+								worker.removePropertyChangeListener(this);
 								progressDisplay.dispose();
 							}
 						}
 					}
 				};
-				fileLoader.addPropertyChangeListener(pcl);
+				worker.addPropertyChangeListener(pcl);
 				
 				if (!ImportStates.APPEND_FILES.isActive())
 					Configuration.setCurrentAtomData(null, true, true);
-				
-				fileLoader.setFilesToRead(chooser.getSelectedFiles());
-				fileLoader.execute();
+			
+				worker.execute();
 				
 				progressDisplay.setVisible(true);
 			} 

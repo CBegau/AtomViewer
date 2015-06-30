@@ -35,41 +35,47 @@ import common.Vec3;
 import model.*;
 import model.ImportConfiguration.ImportStates;
 
-public abstract class MDFileLoader extends SwingWorker<AtomData, String> {
-	public enum InputFormat {IMD, LAMMPS, XYZ};
-	
+public abstract class MDFileLoader{
 	protected File[] filesToRead;
 	
-	@Override
-	protected final AtomData doInBackground() throws Exception{
-		ProgressMonitor progressMonitor = ProgressMonitor.createNewProgressMonitor(this);
-		
-		progressMonitor.setActivityName("Reading file");
-		
-		AtomData toReturn = null;
-		
-		AtomData previous = null;
-		//If new files are to be appended on the current file set, get the
-		//last in the set of currently opened files
-		if (ImportStates.APPEND_FILES.isActive()){
-			previous = Configuration.getCurrentAtomData();
-			while (previous.getNext()!=null) previous = previous.getNext();
-		}
-		
-		for (File f : filesToRead){
-			ProgressMonitor.getProgressMonitor().setCurrentFilename(f.getName());
-			toReturn = readInputData(f, previous);
-			previous = toReturn;
-		}
-				
-		//Set ranges for customColums
-		for (DataColumnInfo cci : toReturn.getDataColumnInfos())
-			if (!cci.isInitialRangeGiven()) cci.findRange(toReturn, true);
-		
-		progressMonitor.destroy();
-		filesToRead = null;
-		return toReturn;
+	public SwingWorker<AtomData, String> getNewSwingWorker(){
+		return new Worker();
 	}
+	
+	private class Worker extends  SwingWorker<AtomData, String>{
+		@Override
+		protected final AtomData doInBackground() throws Exception{
+			ProgressMonitor progressMonitor = ProgressMonitor.createNewProgressMonitor(this);
+			
+			progressMonitor.setActivityName("Reading file");
+			
+			AtomData toReturn = null;
+			
+			AtomData previous = null;
+			//If new files are to be appended on the current file set, get the
+			//last in the set of currently opened files
+			if (ImportStates.APPEND_FILES.isActive()){
+				previous = Configuration.getCurrentAtomData();
+				while (previous.getNext()!=null) previous = previous.getNext();
+			}
+			
+			for (File f : filesToRead){
+				ProgressMonitor.getProgressMonitor().setCurrentFilename(f.getName());
+				toReturn = readInputData(f, previous);
+				previous = toReturn;
+			}
+					
+			//Set ranges for customColums
+			for (DataColumnInfo cci : toReturn.getDataColumnInfos())
+				if (!cci.isInitialRangeGiven()) cci.findRange(toReturn, true);
+			
+			progressMonitor.destroy();
+			filesToRead = null;
+			return toReturn;
+		}
+	}
+	
+	
 	
 	public void setFilesToRead(File[] files){
 		this.filesToRead = files;
