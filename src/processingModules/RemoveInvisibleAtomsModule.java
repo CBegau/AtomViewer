@@ -2,7 +2,7 @@ package processingModules;
 
 import model.AtomData;
 import model.RenderingConfiguration;
-import processingModules.ProcessingParameterExport.ToolchainSupport;
+import processingModules.Toolchainable.ToolchainSupport;
 
 @ToolchainSupport
 public class RemoveInvisibleAtomsModule extends FilteringModule {	

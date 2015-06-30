@@ -40,11 +40,11 @@ import model.AtomData;
 import model.Configuration;
 import model.DataColumnInfo;
 import model.NearestNeighborBuilder;
-import processingModules.ProcessingParameterExport.ToolchainSupport;
+import processingModules.Toolchainable.ToolchainSupport;
 import common.ThreadPool;
 
 @ToolchainSupport()
-public class SpatialAveragingVectorModule implements ProcessingModule, ProcessingParameterExport {
+public class SpatialAveragingVectorModule implements ProcessingModule, Toolchainable {
 
 	private static HashMap<DataColumnInfo, DataColumnInfo> existingAverageColumns 
 		= new HashMap<DataColumnInfo, DataColumnInfo>();

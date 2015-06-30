@@ -27,14 +27,14 @@ import javax.xml.stream.XMLStreamWriter;
 import model.AtomData;
 import model.DataColumnInfo;
 import processingModules.ProcessingModule;
-import processingModules.ProcessingModuleIO;
-import processingModules.ProcessingParameterExport;
-import processingModules.ProcessingParameterExport.ToolchainSupport;
+import processingModules.Toolchain;
+import processingModules.Toolchainable;
+import processingModules.Toolchainable.ToolchainSupport;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 import processingModules.ProcessingResult;
 
 @ToolchainSupport
-public class DataContainerAsProcessingModuleWrapper implements ProcessingModule, ProcessingParameterExport{
+public class DataContainerAsProcessingModuleWrapper implements ProcessingModule, Toolchainable{
 
 	private DataContainer dc;
 	private boolean applicableToMultipleFiles;
@@ -113,9 +113,9 @@ public class DataContainerAsProcessingModuleWrapper implements ProcessingModule,
 		xmlOut.writeAttribute("version", Integer.toString(clz.getAnnotation(ToolchainSupport.class).version()));
 		
 		//Exporting the attributes that uses custom implementations
-		if (ProcessingParameterExport.class.isAssignableFrom(clz)) {
+		if (Toolchainable.class.isAssignableFrom(clz)) {
 			xmlOut.writeStartElement("CustomParameter");
-			ProcessingParameterExport ex = (ProcessingParameterExport)dc;
+			Toolchainable ex = (Toolchainable)dc;
 			ex.exportParameters(xmlOut);
 			xmlOut.writeEndElement();
 		}
@@ -124,7 +124,7 @@ public class DataContainerAsProcessingModuleWrapper implements ProcessingModule,
 		Field[] fields = clz.getDeclaredFields();
 		for (Field f : fields) {
 			if (f.isAnnotationPresent(ExportableValue.class) && f.getType().isPrimitive()) {
-				ProcessingModuleIO.exportPrimitiveField(f, xmlOut, dc);
+				Toolchain.exportPrimitiveField(f, xmlOut, dc);
 			}
 		}
 		xmlOut.writeEndElement();

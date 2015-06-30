@@ -36,8 +36,8 @@ import model.AtomData;
 import model.DataColumnInfo;
 import model.DataColumnInfo.Component;
 import model.NearestNeighborBuilder;
-import processingModules.ProcessingParameterExport.ExportableValue;
-import processingModules.ProcessingParameterExport.ToolchainSupport;
+import processingModules.Toolchainable.ExportableValue;
+import processingModules.Toolchainable.ToolchainSupport;
 
 @ToolchainSupport()
 public class TemperatureModule implements ProcessingModule {

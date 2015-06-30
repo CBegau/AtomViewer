@@ -12,10 +12,10 @@ import model.dataContainer.DataContainerAsProcessingModuleWrapper;
 import java.lang.reflect.Field;
 import java.util.List;
 
-import processingModules.ProcessingParameterExport.ExportableValue;
-import processingModules.ProcessingParameterExport.ToolchainSupport;
+import processingModules.Toolchainable.ExportableValue;
+import processingModules.Toolchainable.ToolchainSupport;
 
-public class ProcessingModuleIO {
+public class Toolchain {
 	
 	
 	
@@ -36,7 +36,7 @@ public class ProcessingModuleIO {
 				
 				//Wrapped DataContainer have their own IO-Routines
 				if (DataContainerAsProcessingModuleWrapper.class.isAssignableFrom(clz)){
-					ProcessingParameterExport ex = (ProcessingParameterExport)pm;
+					Toolchainable ex = (Toolchainable)pm;
 					ex.exportParameters(out);
 				} else {
 					out.writeStartElement("Module");
@@ -44,9 +44,9 @@ public class ProcessingModuleIO {
 					out.writeAttribute("version", Integer.toString(clz.getAnnotation(ToolchainSupport.class).version()));
 					
 					//Exporting the attributes that uses custom implementations
-					if (ProcessingParameterExport.class.isAssignableFrom(clz)) {
+					if (Toolchainable.class.isAssignableFrom(clz)) {
 						out.writeStartElement("CustomParameter");
-						ProcessingParameterExport ex = (ProcessingParameterExport)pm;
+						Toolchainable ex = (Toolchainable)pm;
 						ex.exportParameters(out);
 						out.writeEndElement();
 					}

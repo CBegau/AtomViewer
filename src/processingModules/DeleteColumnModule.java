@@ -10,10 +10,10 @@ import javax.xml.stream.XMLStreamWriter;
 import model.AtomData;
 import model.Configuration;
 import model.DataColumnInfo;
-import processingModules.ProcessingParameterExport.ToolchainSupport;
+import processingModules.Toolchainable.ToolchainSupport;
 
 @ToolchainSupport
-public class DeleteColumnModule implements ProcessingModule, ProcessingParameterExport{
+public class DeleteColumnModule implements ProcessingModule, Toolchainable{
 	
 	DataColumnInfo toRemove;
 	

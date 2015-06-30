@@ -28,8 +28,8 @@ import javax.swing.JFrame;
 
 import model.*;
 import model.polygrain.Grain;
-import processingModules.ProcessingParameterExport.ExportableValue;
-import processingModules.ProcessingParameterExport.ToolchainSupport;
+import processingModules.Toolchainable.ExportableValue;
+import processingModules.Toolchainable.ToolchainSupport;
 
 @ToolchainSupport()
 public class GrainIdentificationModule implements ProcessingModule {

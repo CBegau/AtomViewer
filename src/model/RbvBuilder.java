@@ -30,8 +30,8 @@ import javax.swing.JSeparator;
 
 import processingModules.ProcessingModule;
 import processingModules.ProcessingResult;
-import processingModules.ProcessingParameterExport.ToolchainSupport;
-import processingModules.ProcessingParameterExport.ExportableValue;
+import processingModules.Toolchainable.ToolchainSupport;
+import processingModules.Toolchainable.ExportableValue;
 import model.dataContainer.DataContainer;
 import model.dataContainer.VacancyDataContainer;
 import model.polygrain.Grain;

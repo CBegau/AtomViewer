@@ -8,7 +8,7 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
 
-public interface ProcessingParameterExport {
+public interface Toolchainable {
 
 	@Retention(RetentionPolicy.RUNTIME)
 	@Target( {java.lang.annotation.ElementType.TYPE}) 

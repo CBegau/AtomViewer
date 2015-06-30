@@ -34,8 +34,8 @@ import common.*;
 import crystalStructures.CrystalStructure;
 import model.*;
 import model.dataContainer.VacancyDataContainer.Vacancy;
-import processingModules.ProcessingParameterExport.ToolchainSupport;
-import processingModules.ProcessingParameterExport.ExportableValue;
+import processingModules.Toolchainable.ToolchainSupport;
+import processingModules.Toolchainable.ExportableValue;
 
 @ToolchainSupport
 public final class VacancyDataContainer extends ParticleDataContainer<Vacancy>{

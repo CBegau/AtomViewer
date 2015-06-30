@@ -47,8 +47,8 @@ import model.dataContainer.DataContainer;
 import model.dataContainer.JDataPanel;
 import model.skeletonizer.Dislocation.BurgersVectorInformation;
 import model.skeletonizer.processors.*;
-import processingModules.ProcessingParameterExport.ToolchainSupport;
-import processingModules.ProcessingParameterExport.ExportableValue;
+import processingModules.Toolchainable.ToolchainSupport;
+import processingModules.Toolchainable.ExportableValue;
 
 /**
  * Creates a dislocation skeleton from given set of dislocation core atoms 
