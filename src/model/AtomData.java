@@ -447,7 +447,6 @@ public class AtomData {
 	
 	public void addGrain(Grain g) {
 		grains.put(g.getGrainNumber(), g);
-		Configuration.addGrainIndex(g.getGrainNumber());
 	}
 	
 	public Grain getGrains(int grain) {
