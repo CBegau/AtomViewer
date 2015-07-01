@@ -42,6 +42,7 @@ import processingModules.AvailableProcessingModules;
 import processingModules.AvailableProcessingModules.JProcessingModuleDialog;
 import processingModules.ProcessingModule;
 import processingModules.Toolchain;
+import processingModules.ToolchainReader;
 
 import com.jogamp.opengl.JoglVersion;
 
@@ -555,8 +556,24 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 			}
 		});
 		
+		JMenuItem applyToolchainMenuItem = new JMenuItem("Apply");
+		applyToolchainMenuItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					JLogPanel.getJLogPanel().addLog("Applied toolchain");
+					FileInputStream f = new FileInputStream(new File("test.xml"));
+					new ToolchainReader().applyToolChain(f, Configuration.getCurrentAtomData());
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
+				
+			}
+		});
+		
 		toolchainMenu.add(startToolchainMenuItem);
 		toolchainMenu.add(stopToolchainMenuItem);
+		toolchainMenu.add(applyToolchainMenuItem);
 		menu.add(toolchainMenu);
 		
 		
