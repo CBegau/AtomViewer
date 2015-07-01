@@ -41,7 +41,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import processingModules.AvailableProcessingModules;
 import processingModules.AvailableProcessingModules.JProcessingModuleDialog;
 import processingModules.ProcessingModule;
-import processingModules.Toolchain;
+import processingModules.ToolchainWriter;
 import processingModules.ToolchainReader;
 
 import com.jogamp.opengl.JoglVersion;
@@ -532,7 +532,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 					JLogPanel.getJLogPanel().addLog("Started toolchain recording");
 					Configuration.removeAtomDataListener(Configuration.getCurrentToolchain());
 					
-					Toolchain tc = new Toolchain(new FileOutputStream(new File("doc.xml")));
+					ToolchainWriter tc = new ToolchainWriter(new FileOutputStream(new File("doc.xml")));
 					Configuration.setCurrentToolchain(tc);
 				} catch (Exception ex) {
 					ex.printStackTrace();

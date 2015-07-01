@@ -27,7 +27,7 @@ import javax.xml.stream.XMLStreamWriter;
 import model.AtomData;
 import model.DataColumnInfo;
 import processingModules.ProcessingModule;
-import processingModules.Toolchain;
+import processingModules.ToolchainWriter;
 import processingModules.ToolchainReader;
 import processingModules.Toolchainable;
 import processingModules.Toolchainable.ToolchainSupport;
@@ -124,7 +124,7 @@ public class DataContainerAsProcessingModuleWrapper implements ProcessingModule,
 		Field[] fields = clz.getDeclaredFields();
 		for (Field f : fields) {
 			if (f.isAnnotationPresent(ExportableValue.class) && f.getType().isPrimitive()) {
-				Toolchain.exportPrimitiveField(f, xmlOut, dc);
+				ToolchainWriter.exportPrimitiveField(f, xmlOut, dc);
 			}
 		}
 		xmlOut.writeEndElement();

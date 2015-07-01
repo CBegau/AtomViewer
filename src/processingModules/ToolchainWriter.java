@@ -18,12 +18,12 @@ import java.lang.reflect.Field;
 import processingModules.Toolchainable.ExportableValue;
 import processingModules.Toolchainable.ToolchainSupport;
 
-public class Toolchain implements AtomDataChangedListener{
+public class ToolchainWriter implements AtomDataChangedListener{
 	
 	private XMLStreamWriter xmlout = null;
 	private boolean toolchainOpen = true;
 	
-	public Toolchain(OutputStream os) throws UnsupportedEncodingException, XMLStreamException, FactoryConfigurationError{
+	public ToolchainWriter(OutputStream os) throws UnsupportedEncodingException, XMLStreamException, FactoryConfigurationError{
 		xmlout = XMLOutputFactory.newInstance().createXMLStreamWriter(new OutputStreamWriter(os, "utf-8"));
 		
 		xmlout.writeStartDocument();
@@ -114,7 +114,7 @@ public class Toolchain implements AtomDataChangedListener{
 			out.writeAttribute("value", Character.toString(f.getChar(module)));
 		} else if (f.getType().equals(Boolean.TYPE)){
 			out.writeAttribute("value", Boolean.toString(f.getBoolean(module)));
-		}
+		} else throw new IllegalArgumentException("Field is not a primitive type");
 		out.writeEndElement();
 	}
 }

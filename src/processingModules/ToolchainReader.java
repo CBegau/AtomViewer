@@ -121,6 +121,6 @@ public class ToolchainReader {
 			f.setChar(module, (value.isEmpty())?' ':value.charAt(0));
 		} else if (f.getType().equals(Boolean.TYPE)){
 			f.setBoolean(module, Boolean.parseBoolean(value));
-		}
+		} else throw new IllegalArgumentException("Field is not a primitive type");
 	}
 }
