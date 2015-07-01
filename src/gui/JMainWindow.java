@@ -46,6 +46,8 @@ import com.jogamp.opengl.JoglVersion;
 
 import common.ColorTable;
 import common.ColorTable.ColorBarScheme;
+import common.CommonUtils;
+import common.Vec3;
 import crystalStructures.CrystalStructure;
 import model.*;
 import model.io.*;
@@ -117,14 +119,13 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		splitPane.add(renderPane);
 		
 		//Combine view buttons and the log panel into a container 
-		Container cont = new Container();
+		JPanel cont = new JPanel();
 		cont.setLayout(new GridBagLayout());
-		GridBagConstraints gbc = new GridBagConstraints();
-		gbc.gridx = 0; gbc.gridy = 0;
-		gbc.fill = GridBagConstraints.BOTH; gbc.weightx = 10; gbc.weighty = 1;
+		GridBagConstraints gbc = CommonUtils.getBasicGridBagConstraint();
+		gbc.weightx = 10;
 		cont.add(JLogPanel.getJLogPanel(),gbc);
 		gbc.gridx++; gbc.weightx = 1;
-		cont.add(new DefaultPerspectivesButtonContainer(),gbc);;
+		cont.add(new DefaultPerspectivesButtonPanel(),gbc);
 		
 		splitPane.add(cont);
 		splitPane.setDividerLocation(0.9);
@@ -661,46 +662,40 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		}
 	}
 	
-	private class DefaultPerspectivesButtonContainer extends Container{
+	private class DefaultPerspectivesButtonPanel extends JPanel{
 		private static final long serialVersionUID = 1L;
 
-		DefaultPerspectivesButtonContainer() {
-			this.setLayout(new GridLayout(4,1));
-			final JButton topViewButton = new JButton("Top");
-			final JButton frontViewButton = new JButton("Front");
-			final JButton sideViewButton = new JButton("Side");
-			final JButton resetZoomViewButton = new JButton("Reset zoom");
+		class ViewButton extends JButton implements ActionListener{
+			private static final long serialVersionUID = 1L;
+			Vec3 pov;
+			boolean resetZoom;
 			
-			ActionListener al = new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent arg0) {
-					ViewerGLJPanel viewer = RenderingConfiguration.getViewer();
-					if (viewer != null) {
-						if (arg0.getSource() == topViewButton) {
-							if ((arg0.getModifiers() & ActionEvent.SHIFT_MASK) != 0) viewer.setPOV(180f, 0f, 0f);
-							else viewer.setPOV(0f, 0f, 0f);
-						} else if (arg0.getSource() == frontViewButton) {
-							if ((arg0.getModifiers() & ActionEvent.SHIFT_MASK) != 0) viewer.setPOV(-90f, 0f, 180f);
-							else viewer.setPOV(-90f, 0f, 0f);
-						} else if (arg0.getSource() == sideViewButton){
-							if ((arg0.getModifiers() & ActionEvent.SHIFT_MASK) != 0) viewer.setPOV(-90f, 0f, -90f);
-							else viewer.setPOV(-90f, 0f, 90f);
-						} else if (arg0.getSource() == resetZoomViewButton){
-							viewer.resetZoom();
-						}
-					}
-				}
-			};
+			ViewButton(String text, float x, float y, float z, boolean resetZoom){
+				super(text);
+				this.pov = new Vec3(x,y,z);
+				this.resetZoom = resetZoom;
+				this.addActionListener(this);
+			}
 			
-			topViewButton.addActionListener(al);
-			frontViewButton.addActionListener(al);
-			sideViewButton.addActionListener(al);
-			resetZoomViewButton.addActionListener(al);
-			
-			this.add(topViewButton);
-			this.add(frontViewButton);
-			this.add(sideViewButton);
-			this.add(resetZoomViewButton);
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				ViewerGLJPanel viewer = RenderingConfiguration.getViewer();
+				if (resetZoom) viewer.resetZoom();
+				else viewer.setPOV(pov.x, pov.y, pov.z);
+			}
+		}
+		
+		DefaultPerspectivesButtonPanel() {
+			this.setLayout(new GridBagLayout());
+			GridBagConstraints gbc = CommonUtils.getBasicGridBagConstraint();
+			this.add(new ViewButton("+Z", 0f, 0f, 0f, false),gbc);     gbc.gridx++;
+			this.add(new ViewButton("-Z", 180f, 0f, 0f, false),gbc);   gbc.gridx = 0; gbc.gridy++;
+			this.add(new ViewButton("+Y", -90f, 0f, 180f, false),gbc); gbc.gridx++;
+			this.add(new ViewButton("-Y", -90f, 0f, 0f, false),gbc);   gbc.gridx = 0; gbc.gridy++;
+			this.add(new ViewButton("+X", -90f, 0f, -90f, false),gbc); gbc.gridx++;
+			this.add(new ViewButton("-X", -90f, 0f, 90f, false),gbc);  gbc.gridx = 0; gbc.gridy++;
+			gbc.gridwidth = 2;
+			this.add(new ViewButton("Reset zoom and focus", 0f, 0f, 0f, true),gbc);
 		}
 	}
 	
@@ -790,10 +785,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 				chooser.setSelectedFile(new File(Configuration.getCurrentAtomData().getName()));
 				
 				JPanel imageSizeDialogExtension = new JPanel(new GridBagLayout());
-				GridBagConstraints gbc = new GridBagConstraints();
-				gbc.anchor = GridBagConstraints.SOUTHWEST;
-				gbc.weightx = 0.5; gbc.weighty = 0;
-				gbc.gridx = 0; gbc.gridy = 0;
+				GridBagConstraints gbc = CommonUtils.getBasicGridBagConstraint();
 				
 				gbc.gridwidth = 2;
 				final JCheckBox exportAll = new JCheckBox("Export all");

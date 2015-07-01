@@ -18,6 +18,7 @@
 
 package common;
 
+import java.awt.GridBagConstraints;
 import java.text.DecimalFormat;
 
 public class CommonUtils {
@@ -73,8 +74,13 @@ public class CommonUtils {
 		
 		public double getSum() {
 			return sum;
-		}
-		
-		 
+		}	 
+	}
+	
+	public final static GridBagConstraints getBasicGridBagConstraint(){
+		GridBagConstraints gbc = new GridBagConstraints();
+		gbc.fill = GridBagConstraints.BOTH; gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 1; gbc.weighty = 1;
+		gbc.anchor = GridBagConstraints.SOUTHWEST;
+		return gbc;
 	}
 }
