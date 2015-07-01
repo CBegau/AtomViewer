@@ -83,7 +83,6 @@ public class JMDFileChooser extends JFileChooser{
 		
 		this.setFileHidingEnabled(true);
 		
-		//TODO Remove this ugly workaround in a future user interface
 		this.components = new JOpenOptionComponent();
 		JPanel panel = new JPanel();
 		panel.setLayout(new GridLayout(1, 1));
