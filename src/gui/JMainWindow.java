@@ -37,8 +37,6 @@ import javax.media.opengl.GLCapabilities;
 import javax.media.opengl.GLProfile;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import javax.xml.stream.FactoryConfigurationError;
-import javax.xml.stream.XMLStreamException;
 
 import processingModules.AvailableProcessingModules;
 import processingModules.AvailableProcessingModules.JProcessingModuleDialog;
@@ -522,6 +520,46 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		settingsMenu.add(selectFontMenuItem);
 		menu.add(settingsMenu);
 		
+		
+		final JMenuItem toolchainMenu = new JMenu("Toolchain recording");
+		
+		JMenuItem startToolchainMenuItem = new JMenuItem("Start");
+		startToolchainMenuItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					JLogPanel.getJLogPanel().addLog("Started toolchain recording");
+					Configuration.removeAtomDataListener(Configuration.getCurrentToolchain());
+					
+					Toolchain tc = new Toolchain(new FileOutputStream(new File("doc.xml")));
+					Configuration.setCurrentToolchain(tc);
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
+				
+			}
+		});
+
+		JMenuItem stopToolchainMenuItem = new JMenuItem("Stop");
+		stopToolchainMenuItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					JLogPanel.getJLogPanel().addLog("Stopped toolchain recording");
+					if(Configuration.getCurrentToolchain()!=null)
+						Configuration.getCurrentToolchain().closeToolChain();
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
+				
+			}
+		});
+		
+		toolchainMenu.add(startToolchainMenuItem);
+		toolchainMenu.add(stopToolchainMenuItem);
+		menu.add(toolchainMenu);
+		
+		
 		final JMenuItem helpMenu = new JMenu("Help");
 		final JMenuItem helpMenuItem = new JMenuItem("Help");
 		helpMenuItem.addActionListener(new ActionListener() {
@@ -532,7 +570,8 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 				"Press mouse button -> Rotate <br>"+
 				"Press mouse button + Shift-> Rotate around axis<br>"+
 				"Press mouse button + Ctrl -> Move<br>"+
-				"Press mouse button + Alt -> Zoom in/out"+
+				"Press mouse button + Alt+Ctrl -> Zoom in/out<br>"+
+				"Hold Shift+Ctrl+Click on object -> Focus on this object"+
 				"</body></html>";
 				JOptionPane.showMessageDialog(JMainWindow.this, message, "AtomViewer", JOptionPane.INFORMATION_MESSAGE);
 			}
@@ -594,13 +633,6 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
 			    KeyStroke.getKeyStroke(KeyEvent.VK_F4,0), "f4");
 		
-		//////////////////////////////////////////////////////////////////
-		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-			    KeyStroke.getKeyStroke(KeyEvent.VK_F5,0), "f5");
-		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-			    KeyStroke.getKeyStroke(KeyEvent.VK_F9,0), "f9");
-		////////////////////////////////////////////////////////////////
-		
 		rp.getActionMap().put("keypressed", keyAction);
 		rp.getActionMap().put("f3", new AbstractAction() {
 			private static final long serialVersionUID = 1L;
@@ -624,41 +656,6 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 					for (int i=0; i<split.length; i++)
 						m[i] = Float.parseFloat(split[i]);
 					RenderingConfiguration.getViewer().setPOV(m);
-				}
-			}
-		});
-		
-		
-		
-		
-		
-		rp.getActionMap().put("f5", new AbstractAction() {
-			private static final long serialVersionUID = 1L;
-			@Override
-			public void actionPerformed(ActionEvent arg0) {
-				
-				try {
-					JLogPanel.getJLogPanel().addLog("Started toolchain recording");
-					Configuration.removeAtomDataListener(Configuration.getCurrentToolchain());
-					
-					Toolchain tc = new Toolchain(new FileOutputStream(new File("doc.xml")));
-					Configuration.setCurrentToolchain(tc);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-		});
-		
-		rp.getActionMap().put("f9", new AbstractAction() {
-			private static final long serialVersionUID = 1L;
-			@Override
-			public void actionPerformed(ActionEvent arg0) {
-				try {
-					JLogPanel.getJLogPanel().addLog("Stopped toolchain recording");
-					if(Configuration.getCurrentToolchain()!=null)
-						Configuration.getCurrentToolchain().closeToolChain();
-				} catch (Exception e) {
-					e.printStackTrace();
 				}
 			}
 		});
