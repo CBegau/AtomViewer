@@ -3,14 +3,11 @@ package processingModules;
 import java.io.*;
 
 import javax.xml.stream.FactoryConfigurationError;
-import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
 
 import gui.JLogPanel;
-import model.AtomData;
 import model.Configuration;
 import model.Configuration.AtomDataChangedEvent;
 import model.Configuration.AtomDataChangedListener;

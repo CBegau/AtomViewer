@@ -28,9 +28,9 @@ import model.AtomData;
 import model.DataColumnInfo;
 import processingModules.ProcessingModule;
 import processingModules.Toolchain;
+import processingModules.ToolchainReader;
 import processingModules.Toolchainable;
 import processingModules.Toolchainable.ToolchainSupport;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 import processingModules.ProcessingResult;
 
 @ToolchainSupport
@@ -131,9 +131,42 @@ public class DataContainerAsProcessingModuleWrapper implements ProcessingModule,
 	}
 	
 	@Override
-	public void importParameters(XMLStreamReader reader) throws XMLStreamException {
-		//TODO implement
-		throw new NotImplementedException();
+	public void importParameters(XMLStreamReader reader) throws Exception {
+		String module = reader.getAttributeValue(null, "name");
+		
+		Class<?> clz = Class.forName(module);
+		DataContainer dc = (DataContainer)clz.newInstance();
+		this.dc = dc;
+		
+		int version = Integer.parseInt(reader.getAttributeValue(null, "version"));
+		int requiredVersion = clz.getAnnotation(ToolchainSupport.class).version();
+		if (version != requiredVersion) 
+			throw new IllegalArgumentException(
+					String.format("Version differ for module %s: required %i existing %i"
+							, module, requiredVersion, version)); 
+		
+		while (reader.hasNext()){
+			reader.next();
+			switch (reader.getEventType()){
+				case XMLStreamReader.START_ELEMENT:{
+					if (reader.getLocalName().equals("Parameter"))
+						ToolchainReader.importPrimitiveField(reader, dc);
+					else if (reader.getLocalName().equals("CustomParameter"))
+						((Toolchainable)dc).importParameters(reader);
+					break;
+				}
+				case XMLStreamReader.END_ELEMENT:{
+					if (reader.getLocalName().equals("DataContainer")){
+						return;
+					}
+					break;
+				}
+					
+				default: break;
+			}
+		}
+		
+		
 	}
 
 }

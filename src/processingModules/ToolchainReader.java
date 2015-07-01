@@ -10,12 +10,11 @@ import javax.xml.stream.XMLStreamReader;
 
 import model.AtomData;
 import model.Configuration;
+import model.dataContainer.DataContainerAsProcessingModuleWrapper;
 import processingModules.Toolchainable.ToolchainSupport;
 
 public class ToolchainReader {
 
-	
-	
 	public boolean applyToolChain(InputStream is, AtomData data) throws XMLStreamException, FactoryConfigurationError{
 		try {
 		
@@ -28,8 +27,8 @@ public class ToolchainReader {
 						case XMLStreamReader.START_ELEMENT:{
 							if (reader.getLocalName().equals("Module")) 
 								processModule(reader, data);
-							
-							
+							else if (reader.getLocalName().equals("DataContainer")) 
+								processDataContainer(reader, data);
 							break;
 						}
 							
@@ -37,6 +36,7 @@ public class ToolchainReader {
 					}
 				}
 			} catch (Exception e){
+				e.printStackTrace();
 				return false;
 			} finally {
 				reader.close();
@@ -54,8 +54,6 @@ public class ToolchainReader {
 	private void processModule(XMLStreamReader reader, AtomData data) throws Exception{
 		String module = reader.getAttributeValue(null, "name");
 		
-		
-		
 		Class<?> clz = Class.forName(module);
 		ProcessingModule pm = (ProcessingModule)clz.newInstance();
 		
@@ -65,7 +63,6 @@ public class ToolchainReader {
 			throw new IllegalArgumentException(
 					String.format("Version differ for module %s: required %i existing %i"
 							, module, requiredVersion, version)); 
-		
 		
 		while (reader.hasNext()){
 			reader.next();
@@ -88,8 +85,12 @@ public class ToolchainReader {
 				default: break;
 			}
 		}
-		
-		
+	}
+	
+	private void processDataContainer(XMLStreamReader reader, AtomData data) throws Exception{
+		DataContainerAsProcessingModuleWrapper pm = new DataContainerAsProcessingModuleWrapper(null, false);
+		pm.importParameters(reader);
+		data.applyProcessingModule(pm);
 	}
 	
 	public static void importPrimitiveField(XMLStreamReader xmlReader, Object module) 
