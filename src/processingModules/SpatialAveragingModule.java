@@ -177,7 +177,8 @@ public class SpatialAveragingModule implements ProcessingModule, Toolchainable {
 	
 	@Override
 	public void importParameters(XMLStreamReader reader) throws XMLStreamException {
-		if (!reader.getElementText().equals("toAverageColumn")) throw new XMLStreamException("Illegal element detected");
+		reader.next();
+		if (!reader.getLocalName().equals("toAverageColumn")) throw new XMLStreamException("Illegal element detected");
 		String id = reader.getAttributeValue(null, "id");
 		
 		

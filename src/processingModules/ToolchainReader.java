@@ -10,6 +10,7 @@ import javax.xml.stream.XMLStreamReader;
 
 import model.AtomData;
 import model.Configuration;
+import processingModules.Toolchainable.ToolchainSupport;
 
 public class ToolchainReader {
 
@@ -53,8 +54,17 @@ public class ToolchainReader {
 	private void processModule(XMLStreamReader reader, AtomData data) throws Exception{
 		String module = reader.getAttributeValue(null, "name");
 		
+		
+		
 		Class<?> clz = Class.forName(module);
 		ProcessingModule pm = (ProcessingModule)clz.newInstance();
+		
+		int version = Integer.parseInt(reader.getAttributeValue(null, "version"));
+		int requiredVersion = clz.getAnnotation(ToolchainSupport.class).version();
+		if (version != requiredVersion) 
+			throw new IllegalArgumentException(
+					String.format("Version differ for module %s: required %i existing %i"
+							, module, requiredVersion, version)); 
 		
 		
 		while (reader.hasNext()){
@@ -63,6 +73,8 @@ public class ToolchainReader {
 				case XMLStreamReader.START_ELEMENT:{
 					if (reader.getLocalName().equals("Parameter"))
 						importPrimitiveField(reader, pm);
+					else if (reader.getLocalName().equals("CustomParameter"))
+						((Toolchainable)pm).importParameters(reader);
 					break;
 				}
 				case XMLStreamReader.END_ELEMENT:{
