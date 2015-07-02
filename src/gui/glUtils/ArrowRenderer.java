@@ -218,7 +218,7 @@ public class ArrowRenderer {
 			
 			cbr = cellRenderRingBuffer.getNext();
 		}
-		gl.glBindVertexArray(viewer.defaultVAO);
+		gl.glBindVertexArray(viewer.getDefaultVAO());
 		
 		viewer.updateModelViewInShader(gl, shader, viewer.getModelViewMatrix(), viewer.getProjectionMatrix());
 		
@@ -284,7 +284,7 @@ public class ArrowRenderer {
 			cbr = cellRenderRingBuffer.getNext();
 		}
 		
-		gl.glBindVertexArray(viewer.defaultVAO);
+		gl.glBindVertexArray(viewer.getDefaultVAO());
 		VertexDataStorage.unbindAll(gl);
 		gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
 		gl.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, 0);

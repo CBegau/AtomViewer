@@ -153,8 +153,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	// Time it took to render the last frame in nanoseconds
 	private long timeToRenderFrame = 0l;
 	
-	//TODO make private?
-	public int defaultVAO = -1;
+	private int defaultVAO = -1;
 	
 	public ViewerGLJPanel(int width, int height, GLCapabilities caps) {
 		super(caps);
@@ -1484,6 +1483,10 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	
 	public GLMatrix getRotationMatrix() {
 		return rotMatrix;
+	}
+	
+	public int getDefaultVAO(){
+		return defaultVAO;
 	}
 	
 	public ArrayList<Object> getHighLightObjects() {

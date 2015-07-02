@@ -283,7 +283,7 @@ public class SphereRenderer {
 				ObjectRenderData<?>.Cell futureCell = ard.getRenderableCells().get(j+cellRenderRingBuffer.size());
 	
 				if (hasRenderedCell){
-					gl.glBindVertexArray(viewer.defaultVAO);
+					gl.glBindVertexArray(viewer.getDefaultVAO());
 					gl.glColorMask(false, false, false, false);
 					gl.glDepthMask(false);
 					visTestShader.enable(gl);
@@ -313,7 +313,7 @@ public class SphereRenderer {
 
 		gl.glDeleteQueries(queries.length, queries, 0);
 		
-		gl.glBindVertexArray(viewer.defaultVAO);
+		gl.glBindVertexArray(viewer.getDefaultVAO());
 		VertexDataStorage.unbindAll(gl);
 		gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
 		gl.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, 0);
