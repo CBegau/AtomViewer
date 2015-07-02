@@ -59,11 +59,11 @@ private final static ArrayList<ProcessingModule> otherModules;
 		otherModules.add(new FilterSurfaceModule());
 		otherModules.add(new RbvBuilder());
 		otherModules.add(new SkeletonizerModule());
-		otherModules.add(new VacancyDetectionModule());//geht
-		otherModules.add(new SurfaceApproximationModule());	//geht
+		otherModules.add(new VacancyDetectionModule());
+		otherModules.add(new SurfaceApproximationModule());
 		otherModules.add(new DislocationDensityTensorModule());
-		otherModules.add(new StressDataModule());	//geht
-		otherModules.add(new LoadBalancingProcessingModule());	//geht
+		otherModules.add(new StressDataModule());
+		otherModules.add(new LoadBalancingProcessingModule());
 		otherModules.add(new GrainIdentificationModule());
 		otherModules.add(new RemoveInvisibleAtomsModule());
 	}
