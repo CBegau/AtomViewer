@@ -86,6 +86,7 @@ public abstract class CrystalStructure{
 		structures.add(new L10_Structure());
 		structures.add(new L12_Ni3AlStructure());
 		structures.add(new FeCStructure());
+		structures.add(new FeC_virtStructure());
 		structures.add(new DiamondCubicStructure());
 		structures.add(new SiliconStructure());
 		structures.add(new UndefinedCrystalStructure());
