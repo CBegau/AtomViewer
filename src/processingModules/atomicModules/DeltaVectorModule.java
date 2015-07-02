@@ -33,16 +33,23 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JSeparator;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
+import javax.xml.stream.XMLStreamWriter;
 
 import common.ThreadPool;
 import model.Atom;
 import model.AtomData;
+import model.Configuration;
 import model.DataColumnInfo;
 import processingModules.ProcessingModule;
 import processingModules.ProcessingResult;
+import processingModules.toolchain.Toolchainable;
+import processingModules.toolchain.Toolchainable.ToolchainSupport;
 
-//TODO implement XML IO
-public class DeltaVectorModule implements ProcessingModule{
+//TODO handle reference in Toolchain
+@ToolchainSupport()
+public class DeltaVectorModule implements ProcessingModule, Toolchainable{
 	
 	private static HashMap<DataColumnInfo, DataColumnInfo> existingDeltaColumns 
 		= new HashMap<DataColumnInfo, DataColumnInfo>();
@@ -241,5 +248,28 @@ public class DeltaVectorModule implements ProcessingModule{
 		ProgressMonitor.getProgressMonitor().stop();
 		
 		return null;
+	}
+	
+	@Override
+	public void exportParameters(XMLStreamWriter xmlOut)
+			throws XMLStreamException, IllegalArgumentException, IllegalAccessException {
+		xmlOut.writeStartElement("toDeltaColumn");
+		xmlOut.writeAttribute("id", toDeltaColumn.getId());
+		xmlOut.writeEndElement();
+	}
+	
+	@Override
+	public void importParameters(XMLStreamReader reader) throws Exception {
+		reader.next();
+		if (!reader.getLocalName().equals("toDeltaColumn")) throw new XMLStreamException("Illegal element detected");
+		String id = reader.getAttributeValue(null, "id");
+		
+		List<DataColumnInfo> dci = Configuration.getCurrentAtomData().getDataColumnInfos();
+		for (DataColumnInfo d : dci){
+			if (d.getId().equals(id)){
+				this.toDeltaColumn = d;
+				break;
+			}
+		}
 	}
 }

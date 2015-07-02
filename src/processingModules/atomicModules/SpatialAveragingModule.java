@@ -175,7 +175,6 @@ public class SpatialAveragingModule implements ProcessingModule, Toolchainable {
 		xmlOut.writeStartElement("toAverageColumn");
 		xmlOut.writeAttribute("id", toAverageColumn.getId());
 		xmlOut.writeEndElement();
-		
 	}
 	
 	@Override
@@ -183,7 +182,6 @@ public class SpatialAveragingModule implements ProcessingModule, Toolchainable {
 		reader.next();
 		if (!reader.getLocalName().equals("toAverageColumn")) throw new XMLStreamException("Illegal element detected");
 		String id = reader.getAttributeValue(null, "id");
-		
 		
 		List<DataColumnInfo> dci = Configuration.getCurrentAtomData().getDataColumnInfos();
 		for (DataColumnInfo d : dci){

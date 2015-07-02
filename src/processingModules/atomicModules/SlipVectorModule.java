@@ -23,8 +23,11 @@ import model.DataColumnInfo;
 import model.NearestNeighborBuilder;
 import processingModules.ProcessingModule;
 import processingModules.ProcessingResult;
+import processingModules.toolchain.Toolchainable.ExportableValue;
+import processingModules.toolchain.Toolchainable.ToolchainSupport;
 
-//TODO Implement XML IO
+//TODO handle reference in Toolchain
+@ToolchainSupport()
 public class SlipVectorModule implements ProcessingModule{
 	
 	private static DataColumnInfo[] cci = { new DataColumnInfo("Slip-Vector", "slip_x", ""),
@@ -38,7 +41,9 @@ public class SlipVectorModule implements ProcessingModule{
 	}
 	
 	private AtomData referenceAtomData = null;
+	@ExportableValue
 	private float cutoffRadius = 3f;
+	@ExportableValue
 	private float slipThreshold = 0.5f;
 	
 	@Override

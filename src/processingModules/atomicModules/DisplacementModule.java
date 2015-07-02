@@ -37,8 +37,10 @@ import model.AtomData;
 import model.DataColumnInfo;
 import processingModules.ProcessingModule;
 import processingModules.ProcessingResult;
+import processingModules.toolchain.Toolchainable.ToolchainSupport;
 
-//TODO implement XML IO
+//TODO handle reference in Toolchain
+@ToolchainSupport()
 public class DisplacementModule implements ProcessingModule{
 	
 	private static DataColumnInfo[] cci = { new DataColumnInfo("Displacement", "displ_x", ""),
