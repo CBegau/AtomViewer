@@ -23,7 +23,7 @@ import javax.swing.JFrame;
 import model.AtomData;
 import model.DataColumnInfo;
 
-public interface ProcessingModule {
+public interface ProcessingModule extends Cloneable {
 	
 	/**
 	 * A short name for the module that can be displayed in a list
