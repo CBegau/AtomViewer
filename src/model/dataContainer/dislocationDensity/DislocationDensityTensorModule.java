@@ -128,7 +128,7 @@ public class DislocationDensityTensorModule implements ProcessingModule {
 		
 		@Override
 		public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
-			if (!dataPanel.isDataVisible()) return;
+			if (!getDataControlPanel().isDataVisible()) return;
 			
 			DislocationDensityTensor[][][] ddt;
 			if (dataPanel.lattOrDis) ddt = this.ddtFromDis;
