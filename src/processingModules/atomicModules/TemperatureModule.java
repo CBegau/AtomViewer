@@ -18,7 +18,6 @@
 
 package processingModules.atomicModules;
 
-import gui.JLogPanel;
 import gui.JPrimitiveVariablesPropertiesDialog;
 import gui.ProgressMonitor;
 import gui.JPrimitiveVariablesPropertiesDialog.FloatProperty;
@@ -35,6 +34,7 @@ import model.Atom;
 import model.AtomData;
 import model.DataColumnInfo;
 import model.DataColumnInfo.Component;
+import processingModules.DataContainer;
 import processingModules.ProcessingModule;
 import processingModules.ProcessingResult;
 import processingModules.toolchain.Toolchainable.ExportableValue;
@@ -205,16 +205,14 @@ public class TemperatureModule implements ProcessingModule {
 			numPerElement[a.getElement()]++;
 		}
 		
-		for (int i=tempPerElement.length-1; i>=0; i--){
-			JLogPanel.getJLogPanel().addLog(String.format("Element %d: %.6f", i, numPerElement[i]==0 ? 0. : 
-					tempPerElement[i]/numPerElement[i]));
-		}
-		JLogPanel.getJLogPanel().addLog("Average temperatures for elements in "+data.getName());
-		
+		StringBuilder s = new StringBuilder();
+		s.append("Average temperatures for elements in "+data.getName()+"\n");
+		for (int i=0; i<tempPerElement.length; i++)
+			s.append(String.format("Element %d: %.6f\n", i, numPerElement[i]==0 ? 0. : tempPerElement[i]/numPerElement[i]));
+				
 		ProgressMonitor.getProgressMonitor().stop();
-		
-		//TODO: Store average temperatures in a ProcessingResults
-		return null;
+
+		return new DataContainer.DefaultDataContainerProcessingResult(null, s.toString());
 	}
 
 	@Override

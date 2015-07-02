@@ -22,11 +22,8 @@ import gui.ViewerGLJPanel;
 import gui.glUtils.GLMatrix;
 import gui.glUtils.Shader;
 import gui.glUtils.SimpleGeometriesRenderer;
-import gui.glUtils.VertexDataStorageLocal;
-import gui.glUtils.Shader.BuiltInShader;
 import model.RenderingConfiguration;
 
-import javax.media.opengl.GL;
 import javax.media.opengl.GL3;
 
 import common.Vec3;
