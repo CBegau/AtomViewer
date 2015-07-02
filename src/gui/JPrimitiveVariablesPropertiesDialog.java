@@ -13,6 +13,8 @@ import javax.swing.border.TitledBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import common.CommonUtils;
+
 public class JPrimitiveVariablesPropertiesDialog extends JDialog {
 
 	private static final long serialVersionUID = 1L;
@@ -29,10 +31,7 @@ public class JPrimitiveVariablesPropertiesDialog extends JDialog {
 	public boolean showDialog(){
 		GraphicsDevice gd = this.getOwner().getGraphicsConfiguration().getDevice();
 		JPanel propertyPanel = new JPanel(new GridBagLayout());
-		GridBagConstraints gbc = new GridBagConstraints();
-		gbc.fill = GridBagConstraints.BOTH;
-		gbc.gridx = 0; gbc.gridy = 0;
-		gbc.weightx = 1;
+		GridBagConstraints gbc = CommonUtils.getBasicGridBagConstraint();
 		
 		gbc.gridwidth = 2;
 		for (JComponent c : components){
