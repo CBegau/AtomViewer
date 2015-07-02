@@ -46,6 +46,7 @@ import model.DataColumnInfo;
 import processingModules.DataContainer;
 import processingModules.ProcessingModule;
 import processingModules.ProcessingResult;
+import processingModules.toolchain.Toolchain;
 import processingModules.toolchain.Toolchainable;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 
@@ -235,7 +236,7 @@ public class DeltaValueModule implements ProcessingModule, Toolchainable{
 	}
 	
 	@Override
-	public void importParameters(XMLStreamReader reader) throws Exception {
+	public void importParameters(XMLStreamReader reader, Toolchain toolchain) throws Exception {
 		reader.next();
 		if (!reader.getLocalName().equals("toDeltaColumn")) throw new XMLStreamException("Illegal element detected");
 		String id = reader.getAttributeValue(null, "id");

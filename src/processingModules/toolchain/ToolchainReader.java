@@ -69,7 +69,7 @@ public class ToolchainReader {
 					if (reader.getLocalName().equals("Parameter"))
 						importPrimitiveField(reader, pm);
 					else if (reader.getLocalName().equals("CustomParameter"))
-						((Toolchainable)pm).importParameters(reader);
+						((Toolchainable)pm).importParameters(reader, null);
 					break;
 				}
 				case XMLStreamReader.END_ELEMENT:{

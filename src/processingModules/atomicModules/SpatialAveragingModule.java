@@ -42,6 +42,7 @@ import model.DataColumnInfo;
 import model.NearestNeighborBuilder;
 import processingModules.ProcessingModule;
 import processingModules.ProcessingResult;
+import processingModules.toolchain.Toolchain;
 import processingModules.toolchain.Toolchainable;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 import common.ThreadPool;
@@ -178,7 +179,7 @@ public class SpatialAveragingModule implements ProcessingModule, Toolchainable {
 	}
 	
 	@Override
-	public void importParameters(XMLStreamReader reader) throws XMLStreamException {
+	public void importParameters(XMLStreamReader reader, Toolchain toolchain) throws XMLStreamException {
 		reader.next();
 		if (!reader.getLocalName().equals("toAverageColumn")) throw new XMLStreamException("Illegal element detected");
 		String id = reader.getAttributeValue(null, "id");

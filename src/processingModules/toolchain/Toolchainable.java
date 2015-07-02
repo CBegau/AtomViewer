@@ -21,6 +21,6 @@ public interface Toolchainable {
 	@interface ExportableValue{}
 	
 	void exportParameters(XMLStreamWriter xmlOut) throws XMLStreamException, IllegalArgumentException, IllegalAccessException;
-	void importParameters(XMLStreamReader reader) throws Exception;
+	void importParameters(XMLStreamReader reader, Toolchain toolchain) throws Exception;
 	
 }
