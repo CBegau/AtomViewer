@@ -18,8 +18,13 @@
 
 package processingModules.otherModules.dislocationDensity;
 
+import gui.ViewerGLJPanel;
+import gui.glUtils.GLMatrix;
 import gui.glUtils.Shader;
+import gui.glUtils.SimpleGeometriesRenderer;
 import gui.glUtils.VertexDataStorageLocal;
+import gui.glUtils.Shader.BuiltInShader;
+import model.RenderingConfiguration;
 
 import javax.media.opengl.GL;
 import javax.media.opengl.GL3;
@@ -62,42 +67,20 @@ public class CuboidVolumeElement implements VolumeElement{
 		Vec3 u = upperBound;
 		Vec3 l = lowerBound;
 		
+		ViewerGLJPanel viewer = RenderingConfiguration.getViewer();
+		
 		Shader s = Shader.BuiltInShader.ADS_UNIFORM_COLOR.getShader();
 		s.enable(gl);
 		int col = gl.glGetUniformLocation(s.getProgram(),"Color");
-		
-		//TODO: Irgendwie an die ModelView Matrize rankommen und den Cube aus SimpleGeometries nutzen 
-		
 		gl.glUniform4f(col, color4[0], color4[1], color4[2], color4[3]);
-		VertexDataStorageLocal vds = new VertexDataStorageLocal(gl, 36, 3, 3, 0, 0, 0, 0, 0, 0);
-		vds.beginFillBuffer(gl);
 		
-		vds.setNormal(0, 0, -1);
-		vds.setVertex(l.x, l.y, l.z); vds.setVertex(l.x, u.y, l.z); vds.setVertex(u.x, u.y, l.z);
-		vds.setVertex(u.x, u.y, l.z); vds.setVertex(u.x, l.y, l.z); vds.setVertex(l.x, l.y, l.z); 
+		GLMatrix p = viewer.getProjectionMatrix();
+		GLMatrix m = viewer.getModelViewMatrix().clone();
+		m.translate(l.x, l.y, l.z);
+		m.scale(u.x-l.x, u.y-l.y, u.z-l.z);
 		
-		vds.setNormal(0, 0, 1);
-		vds.setVertex(l.x, l.y, u.z); vds.setVertex(u.x, l.y, u.z); vds.setVertex(u.x, u.y, u.z);
-		vds.setVertex(u.x, u.y, u.z); vds.setVertex(l.x, u.y, u.z); vds.setVertex(l.x, l.y, u.z);
-		
-		vds.setNormal(0, -1, 0);
-		vds.setVertex(l.x, l.y, l.z); vds.setVertex(u.x, l.y, l.z); vds.setVertex(u.x, l.y, u.z);
-		vds.setVertex(u.x, l.y, u.z); vds.setVertex(l.x, l.y, u.z); vds.setVertex(l.x, l.y, l.z);
-		
-		vds.setNormal(0, 1, 0);
-		vds.setVertex(l.x, u.y, l.z); vds.setVertex(l.x, u.y, u.z); vds.setVertex(u.x, u.y, u.z);
-		vds.setVertex(u.x, u.y, u.z); vds.setVertex(u.x, u.y, l.z); vds.setVertex(l.x, u.y, l.z);
-		
-		vds.setNormal(-1, 0, 0);
-		vds.setVertex(l.x, l.y, l.z); vds.setVertex(l.x, l.y, u.z); vds.setVertex(l.x, u.y, u.z);
-		vds.setVertex(l.x, u.y, u.z); vds.setVertex(l.x, u.y, l.z); vds.setVertex(l.x, l.y, l.z);
-		
-		vds.setNormal(1, 0, 0);
-		vds.setVertex(u.x, l.y, l.z); vds.setVertex(u.x, u.y, l.z); vds.setVertex(u.x, u.y, u.z);
-		vds.setVertex(u.x, u.y, u.z); vds.setVertex(u.x, l.y, u.z); vds.setVertex(u.x, l.y, l.z);
-		
-		vds.endFillBuffer(gl);
-		vds.draw(gl, GL.GL_TRIANGLES);
-		vds.dispose(gl);
+		viewer.updateModelViewInShader(gl, s, m, p);
+		SimpleGeometriesRenderer.drawCube(gl);
+		viewer.updateModelViewInShader(gl, s, viewer.getModelViewMatrix(), p);
 	}
 }
