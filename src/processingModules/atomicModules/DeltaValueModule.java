@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
@@ -38,6 +39,7 @@ import common.CommonUtils.KahanSum;
 import model.Atom;
 import model.AtomData;
 import model.DataColumnInfo;
+import processingModules.DataContainer;
 import processingModules.ProcessingModule;
 import processingModules.ProcessingResult;
 
@@ -49,9 +51,7 @@ public class DeltaValueModule implements ProcessingModule{
 	
 	private AtomData referenceAtomData = null;
 	private DataColumnInfo toDeltaColumn;
-	private DataColumnInfo deltaColumn;
-	private boolean mismatchWarningShown = false;
-	private double sumOfAllDeltas = 0.;
+	
 	
 	@Override
 	public String getShortName() {
@@ -133,21 +133,20 @@ public class DeltaValueModule implements ProcessingModule{
 	@Override
 	public DataColumnInfo[] getDataColumnsInfo() {
 		if (existingDeltaColumns.containsKey(toDeltaColumn)){
-			this.deltaColumn = existingDeltaColumns.get(toDeltaColumn);
+			return new DataColumnInfo[]{existingDeltaColumns.get(toDeltaColumn)};
 		} else {
 			String name = toDeltaColumn.getName()+"(delta)";
 			String id = toDeltaColumn.getId()+"_delta";
-			this.deltaColumn = new DataColumnInfo(name, id, toDeltaColumn.getUnit());
+			DataColumnInfo deltaColumn = new DataColumnInfo(name, id, toDeltaColumn.getUnit());
 			existingDeltaColumns.put(toDeltaColumn, deltaColumn);
+			return new DataColumnInfo[]{deltaColumn};
 		}
-		
-		return new DataColumnInfo[]{deltaColumn};
 	}
 
 	@Override
 	public ProcessingResult process(final AtomData data) throws Exception {
-		mismatchWarningShown = false;
-		sumOfAllDeltas = 0.;
+		final AtomicBoolean mismatchWarningShown = new AtomicBoolean(false);
+		final KahanSum sumOfAllDeltas = new KahanSum();
 		
 		if (data == referenceAtomData) return null;
 		
@@ -168,7 +167,7 @@ public class DeltaValueModule implements ProcessingModule{
 		
 		final int colValue = data.getIndexForCustomColumn(toDeltaColumn);
 		final int colValueRef = data.getIndexForCustomColumn(toDeltaColumn);
-		final int deltaCol = data.getIndexForCustomColumn(deltaColumn);
+		final int deltaCol = data.getIndexForCustomColumn(existingDeltaColumns.get(toDeltaColumn));
 		
 		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
 		final Object mutex = new Object();
@@ -196,8 +195,7 @@ public class DeltaValueModule implements ProcessingModule{
 							a.setData(value, deltaCol);
 							sum.add(value);
 						} else {
-							if (!mismatchWarningShown){
-								mismatchWarningShown = true;
+							if (!mismatchWarningShown.getAndSet(true)){
 								JLogPanel.getJLogPanel().addLog(String.format("Warning: Some differences are inaccurate. "
 										+ "Some atoms could not be found in reference file %s.", referenceAtomData.getName()));
 							}
@@ -207,7 +205,7 @@ public class DeltaValueModule implements ProcessingModule{
 					
 					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
 					synchronized (mutex) {
-						sumOfAllDeltas+=sum.getSum();
+						sumOfAllDeltas.add(sum.getSum());
 					}
 					return null;
 				}
@@ -216,12 +214,9 @@ public class DeltaValueModule implements ProcessingModule{
 		ThreadPool.executeParallel(parallelTasks);	
 		
 		ProgressMonitor.getProgressMonitor().stop();
-		
-		//TODO replace by an instance of Processing Results
-		JLogPanel.getJLogPanel().addLog(String.format("Total difference between file %s and %s in the value %s: %f"
-				, referenceAtomData.getName(), data.getName(), toDeltaColumn.getName(), sumOfAllDeltas));
-		
-		return null;
+		String s = String.format("Total difference between file %s and %s in the value %s: %f", 
+				referenceAtomData.getName(), data.getName(), toDeltaColumn.getName(), sumOfAllDeltas.getSum());
+		return new DataContainer.DefaultDataContainerProcessingResult(null, s);
 	}
 
 }

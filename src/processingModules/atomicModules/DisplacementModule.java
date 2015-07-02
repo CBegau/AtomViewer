@@ -24,6 +24,7 @@ import gui.ProgressMonitor;
 import java.util.HashMap;
 import java.util.Vector;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
@@ -51,7 +52,7 @@ public class DisplacementModule implements ProcessingModule{
 	}
 	
 	private AtomData referenceAtomData = null;
-	private boolean mismatchWarningShown = false;
+	
 	
 	@Override
 	public String getShortName() {
@@ -112,7 +113,7 @@ public class DisplacementModule implements ProcessingModule{
 
 	@Override
 	public ProcessingResult process(final AtomData data) throws Exception {
-		mismatchWarningShown = false;
+		final AtomicBoolean mismatchWarningShown = new AtomicBoolean(false);
 		
 		if (data == referenceAtomData) return null;
 		
@@ -168,15 +169,11 @@ public class DisplacementModule implements ProcessingModule{
 							a.setData(displ.z, dz);
 							a.setData(displ.getLength(), da);
 						} else {
-							if (!mismatchWarningShown){
-								mismatchWarningShown = true;
+							if (!mismatchWarningShown.getAndSet(true)){
 								JLogPanel.getJLogPanel().addLog(String.format("WARNING: Some displacement vectors are inaccurate. "
 										+ "Some atoms could not be found in reference file %s.", referenceAtomData.getName()));
 							}
-							a.setData(0f, dx);
-							a.setData(0f, dy);
-							a.setData(0f, dz);
-							a.setData(0f, da);
+							a.setData(0f, dx); a.setData(0f, dy); a.setData(0f, dz); a.setData(0f, da);
 						}
 					}
 					

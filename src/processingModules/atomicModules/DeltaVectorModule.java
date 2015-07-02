@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
@@ -48,8 +49,6 @@ public class DeltaVectorModule implements ProcessingModule{
 	
 	private AtomData referenceAtomData = null;
 	private DataColumnInfo toDeltaColumn;
-	private DataColumnInfo deltaColumn;
-	private boolean mismatchWarningShown = false;
 	
 	@Override
 	public String getShortName() {
@@ -141,7 +140,7 @@ public class DeltaVectorModule implements ProcessingModule{
 	@Override
 	public DataColumnInfo[] getDataColumnsInfo() {
 		if (existingDeltaColumns.containsKey(toDeltaColumn)){
-			this.deltaColumn = existingDeltaColumns.get(toDeltaColumn);
+			return existingDeltaColumns.get(toDeltaColumn).getVectorComponents();
 		} else {
 			String name = toDeltaColumn.getVectorName()+"(delta)";
 			DataColumnInfo[] vec = toDeltaColumn.getVectorComponents();
@@ -152,16 +151,14 @@ public class DeltaVectorModule implements ProcessingModule{
 			
 			deltaX.setAsFirstVectorComponent(deltaY, deltaZ, deltaA, name);
 			
-			this.deltaColumn = deltaX;
-			existingDeltaColumns.put(toDeltaColumn, deltaColumn);
+			DataColumnInfo deltaColumn = deltaX;
+			return existingDeltaColumns.put(toDeltaColumn, deltaColumn).getVectorComponents();
 		}
-		
-		return deltaColumn.getVectorComponents();
 	}
 
 	@Override
 	public ProcessingResult process(final AtomData data) throws Exception {
-		mismatchWarningShown = false;
+		final AtomicBoolean mismatchWarningShown = new AtomicBoolean(false);
 		
 		if (data == referenceAtomData) return null;
 		
@@ -188,10 +185,11 @@ public class DeltaVectorModule implements ProcessingModule{
 		final int colValueRefY = data.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[1]);
 		final int colValueRefZ = data.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[2]);
 		
-		final int deltaColX = data.getIndexForCustomColumn(deltaColumn.getVectorComponents()[0]);
-		final int deltaColY = data.getIndexForCustomColumn(deltaColumn.getVectorComponents()[1]);
-		final int deltaColZ = data.getIndexForCustomColumn(deltaColumn.getVectorComponents()[2]);
-		final int deltaColA = data.getIndexForCustomColumn(deltaColumn.getVectorComponents()[3]);
+		DataColumnInfo d = existingDeltaColumns.get(toDeltaColumn);
+		final int deltaColX = data.getIndexForCustomColumn(d.getVectorComponents()[0]);
+		final int deltaColY = data.getIndexForCustomColumn(d.getVectorComponents()[1]);
+		final int deltaColZ = data.getIndexForCustomColumn(d.getVectorComponents()[2]);
+		final int deltaColA = data.getIndexForCustomColumn(d.getVectorComponents()[3]);
 		
 		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
 		
@@ -222,8 +220,7 @@ public class DeltaVectorModule implements ProcessingModule{
 							a.setData(z, deltaColZ);
 							a.setData((float)Math.sqrt(x*x + y*y +z*z), deltaColA);
 						} else {
-							if (!mismatchWarningShown){
-								mismatchWarningShown = true;
+							if (!mismatchWarningShown.getAndSet(true)){
 								JLogPanel.getJLogPanel().addLog(String.format("Warning: Some differences are inaccurate. "
 										+ "Some atoms could not be found in reference file %s.", referenceAtomData.getName()));
 							}

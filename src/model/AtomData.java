@@ -209,8 +209,13 @@ public class AtomData {
 		
 		
 		ProcessingResult pr = pm.process(this);
-		if (pr != null && pr.getDataContainer() != null){
-			this.addAdditionalData(pr.getDataContainer());
+		if (pr != null){
+			if (pr.getDataContainer() != null)
+				this.addAdditionalData(pr.getDataContainer());
+			
+			if (pr.getResultInfoString()!=null && !pr.getResultInfoString().isEmpty())
+				JLogPanel.getJLogPanel().addLog(String.format("Results from %s\n%s",
+					pm.getShortName(), pr.getResultInfoString()));
 		}
 		if (pm.getDataColumnsInfo() != null){
 			for (DataColumnInfo dci : pm.getDataColumnsInfo())
