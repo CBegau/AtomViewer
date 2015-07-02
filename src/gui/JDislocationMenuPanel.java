@@ -26,8 +26,8 @@ import javax.swing.border.EtchedBorder;
 import javax.swing.border.TitledBorder;
 
 import model.RenderingConfiguration;
-import model.dataContainer.DataContainer;
-import model.dataContainer.JDataPanel;
+import processingModules.DataContainer;
+import processingModules.JDataPanel;
 
 
 public class JDislocationMenuPanel extends JDataPanel{

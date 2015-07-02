@@ -26,8 +26,10 @@ import java.util.*;
 import java.util.zip.GZIPOutputStream;
 
 import processingModules.*;
+import processingModules.otherModules.DeleteColumnModule;
+import processingModules.otherModules.FilteringModule;
+import processingModules.otherModules.VectorNormModule;
 import model.ImportConfiguration.ImportStates;
-import model.dataContainer.*;
 import model.io.MDFileLoader;
 import model.polygrain.*;
 import common.*;
@@ -61,7 +63,7 @@ public class AtomData {
 	private List<DataColumnInfo> dataColumns = new ArrayList<DataColumnInfo>();
 	
 	//Some flags for imported or calculated values
-	boolean rbvAvailable = false;
+	private boolean rbvAvailable = false;
 	private boolean grainsImported = false;
 	
 	/**
@@ -499,6 +501,10 @@ public class AtomData {
 		this.additionalData.clear();
 		this.next = null;
 		this.previous = null;
+	}
+	
+	public void setRbvAvailable(boolean rbvAvailable) {
+		this.rbvAvailable = rbvAvailable;
 	}
 	
 	public boolean isRbvAvailable() {

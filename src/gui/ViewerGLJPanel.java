@@ -21,9 +21,9 @@ package gui;
 import model.*;
 import model.Configuration.AtomDataChangedEvent;
 import model.Configuration.AtomDataChangedListener;
-import model.dataContainer.DataContainer;
 import model.mesh.Mesh;
 import model.polygrain.Grain;
+import processingModules.DataContainer;
 import gui.glUtils.*;
 import gui.glUtils.Shader.BuiltInShader;
 

@@ -39,10 +39,10 @@ import common.UniqueIDCounter;
 import common.Vec3;
 import model.*;
 import model.BurgersVector.BurgersVectorType;
-import model.dataContainer.DataContainer;
-import model.dataContainer.JDataPanel;
 import model.skeletonizer.Dislocation.BurgersVectorInformation;
 import model.skeletonizer.processors.*;
+import processingModules.DataContainer;
+import processingModules.JDataPanel;
 
 /**
  * Creates a dislocation skeleton from given set of dislocation core atoms 

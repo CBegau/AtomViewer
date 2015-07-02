@@ -24,8 +24,8 @@ import java.util.concurrent.Callable;
 import javax.swing.JFrame;
 
 import processingModules.ProcessingModule;
-import processingModules.Toolchainable.ToolchainSupport;
 import processingModules.ProcessingResult;
+import processingModules.toolchain.Toolchainable.ToolchainSupport;
 import Jama.Matrix;
 import model.Atom;
 import model.AtomData;

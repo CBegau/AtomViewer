@@ -3,8 +3,6 @@ package processingModules;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 
-import model.dataContainer.DataContainer;
-
 public abstract class ProcessingResult {
 
 	public JPanel getResultInJPanel(){

@@ -40,9 +40,9 @@ import common.Vec3;
 import model.*;
 import model.Configuration.AtomDataChangedEvent;
 import model.Configuration.AtomDataChangedListener;
-import model.dataContainer.DataContainer;
 import model.polygrain.Grain;
-import processingModules.DeleteColumnModule;
+import processingModules.DataContainer;
+import processingModules.otherModules.DeleteColumnModule;
 
 public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 	private static final long serialVersionUID = 1L;

@@ -29,10 +29,9 @@ import javax.swing.event.ListSelectionListener;
 
 import model.AtomData;
 import model.Configuration;
-import model.RbvBuilder;
-import model.dataContainer.*;
-import model.dataContainer.dislocationDensity.DislocationDensityTensorModule;
-import model.skeletonizer.SkeletonizerModule;
+import processingModules.atomicModules.*;
+import processingModules.otherModules.*;
+import processingModules.otherModules.dislocationDensity.DislocationDensityTensorModule;
 import crystalStructures.MonoclinicNiTi;
 
 public class AvailableProcessingModules {

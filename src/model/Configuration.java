@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import javax.xml.stream.XMLStreamException;
 
 import model.io.MDFileLoader;
-import processingModules.ToolchainWriter;
+import processingModules.toolchain.ToolchainWriter;
 
 public class Configuration {	
 	

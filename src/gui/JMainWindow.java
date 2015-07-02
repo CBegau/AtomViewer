@@ -39,10 +39,11 @@ import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 import processingModules.AvailableProcessingModules;
+import processingModules.DataContainer;
 import processingModules.AvailableProcessingModules.JProcessingModuleDialog;
+import processingModules.toolchain.ToolchainReader;
+import processingModules.toolchain.ToolchainWriter;
 import processingModules.ProcessingModule;
-import processingModules.ToolchainWriter;
-import processingModules.ToolchainReader;
 
 import com.jogamp.opengl.JoglVersion;
 
@@ -56,7 +57,6 @@ import model.Configuration.AtomDataChangedEvent;
 import model.Configuration.AtomDataChangedListener;
 import model.ImportConfiguration.ImportStates;
 import model.RenderingConfiguration.Options;
-import model.dataContainer.DataContainer;
 
 public class JMainWindow extends JFrame implements WindowListener, AtomDataChangedListener {
 

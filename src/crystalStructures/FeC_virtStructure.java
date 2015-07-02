@@ -41,11 +41,11 @@ import model.RenderingConfiguration;
 import model.ImportConfiguration;
 import model.DataColumnInfo;
 import model.NearestNeighborBuilder;
-import model.dataContainer.DataContainer;
-import model.dataContainer.JDataPanel;
-import model.dataContainer.ParticleDataContainer;
+import processingModules.DataContainer;
+import processingModules.JDataPanel;
 import processingModules.ProcessingModule;
 import processingModules.ProcessingResult;
+import processingModules.otherModules.ParticleDataContainer;
 
 public class FeC_virtStructure extends BCCStructure {
 	
