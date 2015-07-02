@@ -27,6 +27,7 @@ import common.Vec3;
 import model.BoxParameter;
 import model.DataColumnInfo;
 import model.Pickable;
+import model.RenderingConfiguration;
 
 public abstract class ParticleDataContainer<T extends Vec3 & Pickable> extends DataContainer{
 	protected ArrayList<T> particles = new ArrayList<T>();
@@ -39,6 +40,7 @@ public abstract class ParticleDataContainer<T extends Vec3 & Pickable> extends D
 	}
 	
 	protected void updateRenderData(BoxParameter box){
+		if (RenderingConfiguration.isHeadless());
 		ord = new ObjectRenderData<T>(particles, true, box);
 		float size = getParticleDataControlPanel().getParticleSize();
 		float[] col = getParticleDataControlPanel().getColor();

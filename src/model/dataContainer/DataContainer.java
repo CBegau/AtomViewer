@@ -23,8 +23,8 @@ import gui.ViewerGLJPanel;
 
 import javax.media.opengl.GL3;
 
-import model.AtomData;
 import model.BoxParameter;
+import processingModules.ProcessingResult;
 
 public abstract class DataContainer {
 	
@@ -43,40 +43,24 @@ public abstract class DataContainer {
 	public abstract void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, 
 			RenderRange renderRange, boolean picking, BoxParameter box);
 	
-	public abstract boolean processData(AtomData atomData) throws Exception;
 	public abstract JDataPanel getDataControlPanel();
 	
-	public abstract String getDescription();
+	public static class DefaultDataContainerProcessingResult extends ProcessingResult{
+		private DataContainer dc;
+		private String s;
+		
+		public DefaultDataContainerProcessingResult(DataContainer dc, String s) {
+			this.dc = dc;
+			this.s = s;
+		}
+		@Override
+		public DataContainer getDataContainer() {
+			return dc;
+		}
+		@Override
+		public String getResultInfoString() {
+			return s;
+		}
+	}
 	
-	/**
-	 * A user friendly name for the data container
-	 * @return
-	 */
-	public abstract String getName();
-	
-	/**
-	 * Show an dialog with options for this DataContainer
-	 * If there are no options, nothing happens
-	 * @returns true if all parameters are valid
-	 */
-	public abstract boolean showOptionsDialog();
-	
-	/**
-	 * Creates a new instance of the DataContainer
-	 * State variables of the instance are copied as well if needed
-	 * @return
-	 */
-	public abstract DataContainer deriveNewInstance();
-	
-	/**
-	 * Test if the module can be applied in an instance of AtomData
-	 * @return
-	 */
-	public abstract boolean isApplicable(final AtomData data);
-	
-	/**
-	 * Describes what the processing module requires to work
-	 * @return
-	 */
-	public abstract String getRequirementDescription();
 }

@@ -33,7 +33,7 @@ import processingModules.ProcessingResult;
 import processingModules.Toolchainable.ToolchainSupport;
 import processingModules.Toolchainable.ExportableValue;
 import model.dataContainer.DataContainer;
-import model.dataContainer.VacancyDataContainer;
+import model.dataContainer.VacancyDetectionModule.VacancyDataContainer;
 import model.polygrain.Grain;
 import common.*;
 import crystalStructures.CrystalStructure;

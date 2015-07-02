@@ -11,7 +11,6 @@ import gui.JLogPanel;
 import model.Configuration;
 import model.Configuration.AtomDataChangedEvent;
 import model.Configuration.AtomDataChangedListener;
-import model.dataContainer.DataContainerAsProcessingModuleWrapper;
 
 import java.lang.reflect.Field;
 
@@ -53,30 +52,26 @@ public class ToolchainWriter implements AtomDataChangedListener{
 		Class<?> clz = pm.getClass();
 		if (!clz.isAnnotationPresent(ToolchainSupport.class)) return;
 
-		// Wrapped DataContainer have their own IO-Routines
-		if (DataContainerAsProcessingModuleWrapper.class.isAssignableFrom(clz)) {
+		xmlout.writeStartElement("Module");
+		xmlout.writeAttribute("name", clz.getName());
+		xmlout.writeAttribute("version", Integer.toString(clz.getAnnotation(ToolchainSupport.class).version()));
+
+		// Exporting the attributes that uses custom implementations
+		if (Toolchainable.class.isAssignableFrom(clz)) {
+			xmlout.writeStartElement("CustomParameter");
 			((Toolchainable) pm).exportParameters(xmlout);
-		} else {
-			xmlout.writeStartElement("Module");
-			xmlout.writeAttribute("name", clz.getName());
-			xmlout.writeAttribute("version", Integer.toString(clz.getAnnotation(ToolchainSupport.class).version()));
-
-			// Exporting the attributes that uses custom implementations
-			if (Toolchainable.class.isAssignableFrom(clz)) {
-				xmlout.writeStartElement("CustomParameter");
-				((Toolchainable) pm).exportParameters(xmlout);
-				xmlout.writeEndElement();
-			}
-
-			// Exporting primitive fields
-			Field[] fields = clz.getDeclaredFields();
-			for (Field f : fields) {
-				if (f.isAnnotationPresent(ExportableValue.class) && f.getType().isPrimitive()) {
-					exportPrimitiveField(f, xmlout, pm);
-				}
-			}
 			xmlout.writeEndElement();
-		}	
+		}
+
+		// Exporting primitive fields
+		Field[] fields = clz.getDeclaredFields();
+		for (Field f : fields) {
+			if (f.isAnnotationPresent(ExportableValue.class) && f.getType().isPrimitive()) {
+				exportPrimitiveField(f, xmlout, pm);
+			}
+		}
+		xmlout.writeEndElement();
+		
 	}
 	
 	@Override

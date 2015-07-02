@@ -39,7 +39,6 @@ import crystalStructures.CrystalStructureProperties.*;
 import model.*;
 import model.BurgersVector.BurgersVectorType;
 import model.ImportConfiguration.ImportStates;
-import model.dataContainer.DataContainer;
 import model.io.MDFileLoader.ImportDataContainer;
 import model.polygrain.Grain;
 import model.polygrain.grainDetection.*;
@@ -48,6 +47,7 @@ import model.skeletonizer.Skeletonizer;
 import model.skeletonizer.processors.BurgersVectorAnalyzer;
 import model.skeletonizer.processors.BurgersVectorAnalyzer.ClassificationPattern;
 import model.skeletonizer.processors.SkeletonPreprocessor;
+import processingModules.ProcessingModule;
 
 /**
  * All crystal structure depended subroutines are collected here
@@ -289,11 +289,11 @@ public abstract class CrystalStructure{
 	}
 	
 	/**
-	 * A set of data container operations to be applied at the end of the analysis process
+	 * A set of processing modules to be applied at the end of the analysis process
 	 * TODO: Will be replaced by a more advanced toolchain mechanism one day 
 	 * @return
 	 */
-	public List<DataContainer> getDataContainerToApplyAtBeginningOfAnalysis(){
+	public List<ProcessingModule> getProcessingModuleToApplyAtBeginningOfAnalysis(){
 		return null;
 	}
 	

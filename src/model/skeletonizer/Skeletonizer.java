@@ -20,8 +20,6 @@ package model.skeletonizer;
 
 import gui.JDislocationMenuPanel;
 import gui.JDislocationMenuPanel.Option;
-import gui.JPrimitiveVariablesPropertiesDialog.FloatProperty;
-import gui.JPrimitiveVariablesPropertiesDialog;
 import gui.RenderRange;
 import gui.ViewerGLJPanel;
 import gui.ViewerGLJPanel.RenderOption;
@@ -34,28 +32,22 @@ import java.util.concurrent.*;
 
 import javax.media.opengl.GL;
 import javax.media.opengl.GL3;
-import javax.swing.JSeparator;
 
 import common.FastDeletableArrayList;
 import common.ThreadPool;
 import common.UniqueIDCounter;
 import common.Vec3;
-import crystalStructures.CrystalStructure;
 import model.*;
 import model.BurgersVector.BurgersVectorType;
 import model.dataContainer.DataContainer;
 import model.dataContainer.JDataPanel;
 import model.skeletonizer.Dislocation.BurgersVectorInformation;
 import model.skeletonizer.processors.*;
-import processingModules.Toolchainable.ToolchainSupport;
-import processingModules.Toolchainable.ExportableValue;
 
 /**
  * Creates a dislocation skeleton from given set of dislocation core atoms 
  * and additionally, if possible, a set of stacking fault planes 
  */
-
-@ToolchainSupport
 public class Skeletonizer extends DataContainer {
 	private static JDislocationMenuPanel dataPanel;
 	private static final float CORE_THICKNESS = 5f;
@@ -68,16 +60,18 @@ public class Skeletonizer extends DataContainer {
 	
 	private AtomData data;
 	
-	@ExportableValue
 	private float meshingThreshold = -1;
+	
+	public Skeletonizer(float meshingThreshold){
+		this.meshingThreshold = meshingThreshold;
+	}
 	
 	/**
 	 * Creates a dislocation skeleton from dislocation core atoms and planes of stacking faults
 	 */
 	public boolean processData(final AtomData data) {
 		this.data = data;
-		
-		this.meshingThreshold *= data.getCrystalStructure().getNearestNeighborSearchRadius();
+		this.meshingThreshold *= data.getCrystalStructure().getNearestNeighborSearchRadius(); 
 
 		List<Atom> defectAtoms = data.getCrystalStructure().getDislocationDefectAtoms(data);
 		//create a initial mesh to skeletonize
@@ -164,9 +158,7 @@ public class Skeletonizer extends DataContainer {
 		dislocationPostProcessors.add(new DislocationFixingPostprocessor(meshingThreshold));
 		dislocationPostProcessors.add(new DislocationSmootherPostprocessor());
 		
-		if (dislocations.size()==0){
-			transform(preprocessors, meshPostprocessors, dislocationPostProcessors, data);
-		}
+		transform(preprocessors, meshPostprocessors, dislocationPostProcessors, data);
 	}
 	
 	/**
@@ -578,46 +570,6 @@ public class Skeletonizer extends DataContainer {
 			dataPanel = new JDislocationMenuPanel();
 		return dataPanel;
 	}
-
-	@Override
-	public String getDescription() {
-		return "Creates a dislocation network from defects";
-	}
-
-	@Override
-	public String getName() {
-		return "Dislocation skeletonizer";
-	}
-
-	@Override
-	public boolean showOptionsDialog() {
-		JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(null, getName());
-		
-		dialog.addLabel(getDescription());
-		dialog.add(new JSeparator());	
-		
-		CrystalStructure cs = Configuration.getCurrentAtomData().getCrystalStructure();
-		
-		FloatProperty meshThreshold = dialog.addFloat("meshThreshold", "Meshing distance factor for dislocation networks"
-				, "<html>During creation fo dislocation networks, a mesh between defect atoms is created.<br>"
-						+ "<br> A factor of one usually is equal to the nearest neighbor distance."
-						+ "<br> Larger values create smoother dislcoations curves, but can suppress fine details like stair-rods or"
-						+ "only slightly seperated partial dislocation cores"
-						+ "<br> Min: 1.0, Max: 2.0</html>", cs.getDefaultSkeletonizerMeshingThreshold(), 1f, 2f);
-		
-		boolean ok = dialog.showDialog();
-		if (ok){
-			this.meshingThreshold = meshThreshold.getValue(); 
-		}
-		return ok;
-	}
-
-	@Override
-	public DataContainer deriveNewInstance() {
-		Skeletonizer clone = new Skeletonizer();
-		clone.meshingThreshold = this.meshingThreshold;
-		return clone;
-	}
 	
 	private void drawSurfaces(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box){
 		Shader shader = BuiltInShader.VERTEX_ARRAY_COLOR_UNIFORM.getShader();
@@ -791,15 +743,5 @@ public class Skeletonizer extends DataContainer {
 	
 	public UniqueIDCounter getDislocationIDSource() {
 		return dislocationIDSource;
-	}
-
-	@Override
-	public String getRequirementDescription(){
-		return "Resultant Burgers vectors must be computed for skeletonization";
-	}	
-	
-	@Override
-	public boolean isApplicable(AtomData data) {
-		return data.isRbvAvailable();
 	}
 }

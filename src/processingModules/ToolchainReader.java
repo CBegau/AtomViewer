@@ -10,7 +10,6 @@ import javax.xml.stream.XMLStreamReader;
 
 import model.AtomData;
 import model.Configuration;
-import model.dataContainer.DataContainerAsProcessingModuleWrapper;
 import processingModules.Toolchainable.ToolchainSupport;
 
 public class ToolchainReader {
@@ -27,8 +26,6 @@ public class ToolchainReader {
 						case XMLStreamReader.START_ELEMENT:{
 							if (reader.getLocalName().equals("Module")) 
 								processModule(reader, data);
-							else if (reader.getLocalName().equals("DataContainer")) 
-								processDataContainer(reader, data);
 							break;
 						}
 							
@@ -85,12 +82,6 @@ public class ToolchainReader {
 				default: break;
 			}
 		}
-	}
-	
-	private void processDataContainer(XMLStreamReader reader, AtomData data) throws Exception{
-		DataContainerAsProcessingModuleWrapper pm = new DataContainerAsProcessingModuleWrapper(null, false);
-		pm.importParameters(reader);
-		data.applyProcessingModule(pm);
 	}
 	
 	public static void importPrimitiveField(XMLStreamReader xmlReader, Object module) 

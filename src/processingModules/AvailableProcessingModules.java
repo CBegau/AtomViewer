@@ -31,8 +31,8 @@ import model.AtomData;
 import model.Configuration;
 import model.RbvBuilder;
 import model.dataContainer.*;
-import model.dataContainer.dislocationDensity.DislocationDensityTensorData;
-import model.skeletonizer.Skeletonizer;
+import model.dataContainer.dislocationDensity.DislocationDensityTensorModule;
+import model.skeletonizer.SkeletonizerModule;
 import crystalStructures.MonoclinicNiTi;
 
 public class AvailableProcessingModules {
@@ -58,13 +58,12 @@ private final static ArrayList<ProcessingModule> otherModules;
 		
 		otherModules.add(new FilterSurfaceModule());
 		otherModules.add(new RbvBuilder());
-		otherModules.add(new DataContainerAsProcessingModuleWrapper(new Skeletonizer(), true));
-		otherModules.add(new DataContainerAsProcessingModuleWrapper(new VacancyDataContainer(), true));
-//		otherModules.add(new DataContainerAsProcessingModuleWrapper(new VacancyDataContainer_old(), true));
-		otherModules.add(new DataContainerAsProcessingModuleWrapper(new SurfaceApproximationDataContainer(), true));
-		otherModules.add(new DataContainerAsProcessingModuleWrapper(new DislocationDensityTensorData(), true));
-		otherModules.add(new DataContainerAsProcessingModuleWrapper(new StressData(), false));
-		otherModules.add(new DataContainerAsProcessingModuleWrapper(new LoadBalancingData(), false));
+		otherModules.add(new SkeletonizerModule());
+		otherModules.add(new VacancyDetectionModule());//geht
+		otherModules.add(new SurfaceApproximationModule());	//geht
+		otherModules.add(new DislocationDensityTensorModule());
+		otherModules.add(new StressDataModule());	//geht
+		otherModules.add(new LoadBalancingProcessingModule());	//geht
 		otherModules.add(new GrainIdentificationModule());
 		otherModules.add(new RemoveInvisibleAtomsModule());
 	}

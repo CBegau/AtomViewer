@@ -222,10 +222,10 @@ public class AtomData {
 		if (this.atoms.size() == 0) return;
 		
 		{
-			List<DataContainer> data = defaultCrystalStructure.getDataContainerToApplyAtBeginningOfAnalysis();
+			List<ProcessingModule> data = defaultCrystalStructure.getProcessingModuleToApplyAtBeginningOfAnalysis();
 			if (data != null){
-				for (DataContainer dc : data)
-					this.applyProcessingModule(new DataContainerAsProcessingModuleWrapper(dc.deriveNewInstance(), true));
+				for (ProcessingModule pm : data)
+					this.applyProcessingModule(pm);
 			}
 		}
 		
