@@ -28,19 +28,28 @@ import common.ThreadPool;
 import model.*;
 import model.mesh.Mesh;
 import model.polygrain.grainDetection.*;
+import processingModules.Toolchainable.ExportableValue;
+import processingModules.Toolchainable.ToolchainSupport;
 
+@ToolchainSupport
 public class SurfaceApproximationDataContainer extends DataContainer {
 
 	private static JSurfaceMeshControlPanel dataPanel = null;
 	
 	private ArrayList<Mesh> meshes = new ArrayList<Mesh>();
+	@ExportableValue
 	private float cellSize = 5f;
+	@ExportableValue
 	private float simplification = 3f;
+	@ExportableValue
 	private float offset = 3f;
+	@ExportableValue
 	private boolean smooth = true;
-	
+	@ExportableValue
 	private boolean clusterAnalysis = false;
+	@ExportableValue
 	private int minAtomsPerCluster = 20;
+	@ExportableValue
 	private float clusterSearchRadius = 3;
 	
 	private Filter<Atom> filter = null;
@@ -127,8 +136,8 @@ public class SurfaceApproximationDataContainer extends DataContainer {
 		
 		boolean ok = dialog.showDialog();
 		if (ok){
-			//TODO: This will cause havoc in headless mode
-			this.filter = allAtoms.getValue() ? RenderingConfiguration.getViewer().getCurrentAtomFilter() : null;
+			if (RenderingConfiguration.isHeadless()) this.filter = null;
+			else this.filter = allAtoms.getValue() ? RenderingConfiguration.getViewer().getCurrentAtomFilter() : null;
 			this.smooth = smooth.getValue();
 			this.offset = meshOffset.getValue();
 			this.cellSize = initCellSize.getValue();
