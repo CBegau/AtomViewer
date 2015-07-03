@@ -13,10 +13,10 @@ import model.BurgersVector.BurgersVectorType;
 import model.skeletonizer.Dislocation;
 import model.skeletonizer.SkeletonNode;
 import model.skeletonizer.Skeletonizer;
-import processingModules.ProcessingModule;
+import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
 
-public class EnergyAnalysisProcessingModule implements ProcessingModule {
+public class EnergyAnalysisProcessingModule extends ClonableProcessingModule {
 	
 	@Override
 	public ProcessingResult process(AtomData atomData) throws IOException {	

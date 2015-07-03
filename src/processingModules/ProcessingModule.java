@@ -83,4 +83,10 @@ public interface ProcessingModule extends Cloneable {
 	 * @throws Exception
 	 */
 	public ProcessingResult process(final AtomData data) throws Exception;
+	
+	/**
+	 * Creates a clone of this module
+	 * @return
+	 */
+	public ProcessingModule clone();
 }

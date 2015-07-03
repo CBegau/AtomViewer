@@ -28,15 +28,15 @@ import common.ThreadPool;
 import model.*;
 import model.mesh.Mesh;
 import model.polygrain.grainDetection.*;
+import processingModules.ClonableProcessingModule;
 import processingModules.DataContainer;
 import processingModules.JDataPanel;
-import processingModules.ProcessingModule;
 import processingModules.ProcessingResult;
 import processingModules.toolchain.Toolchainable.ExportableValue;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 
 @ToolchainSupport
-public class SurfaceApproximationModule implements ProcessingModule {
+public class SurfaceApproximationModule extends ClonableProcessingModule {
 
 	private static JSurfaceMeshControlPanel dataPanel = null;	
 	

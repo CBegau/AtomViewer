@@ -7,11 +7,11 @@ import javax.swing.JFrame;
 import model.Atom;
 import model.AtomData;
 import model.Filter;
-import processingModules.ProcessingModule;
+import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
 import model.DataColumnInfo;
 
-public class FilteringModule implements ProcessingModule {
+public class FilteringModule extends ClonableProcessingModule {
 
 	private Filter<Atom> filter;
 	

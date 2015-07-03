@@ -30,12 +30,12 @@ import model.BoxParameter;
 import model.Configuration;
 import model.DataColumnInfo;
 import model.Pickable;
+import processingModules.ClonableProcessingModule;
 import processingModules.DataContainer;
 import processingModules.JDataPanel;
-import processingModules.ProcessingModule;
 import processingModules.ProcessingResult;
 
-public class LoadBalancingProcessingModule implements ProcessingModule {
+public class LoadBalancingProcessingModule extends ClonableProcessingModule {
 	
 	private static final int[] triangleIndices = new int[]{0,5,4, 0,1,5, 1,7,5, 1,3,7, 3,2,7, 
 			2,6,7, 2,0,6, 0,4,6, 4,7,6, 4,5,7, 0,2,3, 3,1,0};

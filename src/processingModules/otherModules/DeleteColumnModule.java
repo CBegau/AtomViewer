@@ -10,14 +10,14 @@ import javax.xml.stream.XMLStreamWriter;
 import model.AtomData;
 import model.Configuration;
 import model.DataColumnInfo;
-import processingModules.ProcessingModule;
+import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
 import processingModules.toolchain.Toolchain;
 import processingModules.toolchain.Toolchainable;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 
 @ToolchainSupport
-public class DeleteColumnModule implements ProcessingModule, Toolchainable{
+public class DeleteColumnModule extends ClonableProcessingModule implements Toolchainable{
 	
 	DataColumnInfo toRemove;
 	

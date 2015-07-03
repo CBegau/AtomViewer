@@ -36,13 +36,13 @@ import model.Atom;
 import model.AtomData;
 import model.DataColumnInfo;
 import model.NearestNeighborBuilder;
-import processingModules.ProcessingModule;
+import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
 import processingModules.toolchain.Toolchainable.ExportableValue;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 
 @ToolchainSupport()
-public class FilterSurfaceModule implements ProcessingModule {
+public class FilterSurfaceModule extends ClonableProcessingModule {
 
 	@ExportableValue
 	private int cycles;

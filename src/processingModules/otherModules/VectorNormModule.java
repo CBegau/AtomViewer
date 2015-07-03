@@ -28,7 +28,7 @@ import common.ThreadPool;
 import model.Atom;
 import model.AtomData;
 import model.DataColumnInfo;
-import processingModules.ProcessingModule;
+import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
 
 /**
@@ -36,7 +36,7 @@ import processingModules.ProcessingResult;
  * This should not be accessible by the user, since every vector is either defined during import or by
  * other processing modules. In each case the vector should be prepared accordingly 
  */
-public class VectorNormModule implements ProcessingModule{
+public class VectorNormModule extends ClonableProcessingModule {
 	private DataColumnInfo firstVectorComponent;	
 	
 	public VectorNormModule(DataColumnInfo firstVectorComponent) {

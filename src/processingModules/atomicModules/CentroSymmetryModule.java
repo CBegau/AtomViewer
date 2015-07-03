@@ -34,15 +34,15 @@ import model.Atom;
 import model.AtomData;
 import model.DataColumnInfo;
 import model.NearestNeighborBuilder;
-import processingModules.ProcessingModule;
 import processingModules.ProcessingResult;
+import processingModules.ClonableProcessingModule;
 import processingModules.toolchain.Toolchainable.ExportableValue;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 import common.ThreadPool;
 import common.Vec3;
 
 @ToolchainSupport()
-public class CentroSymmetryModule implements ProcessingModule {
+public class CentroSymmetryModule extends ClonableProcessingModule {
 
 	private static DataColumnInfo centroSymmetryColumn = new DataColumnInfo("Centrosymmetry" , "CSD" ,"");
 	

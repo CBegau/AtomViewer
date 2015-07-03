@@ -41,15 +41,15 @@ import model.BoxParameter;
 import model.Configuration;
 import model.DataColumnInfo;
 import model.Pickable;
+import processingModules.ClonableProcessingModule;
 import processingModules.DataContainer;
 import processingModules.JDataPanel;
-import processingModules.ProcessingModule;
 import processingModules.ProcessingResult;
 import Jama.EigenvalueDecomposition;
 import Jama.Matrix;
 import common.*;
 
-public class StressDataModule implements ProcessingModule {
+public class StressDataModule extends ClonableProcessingModule {
 
 	private static JStressControlPanel dataPanel;
 	private File stressFile = null;

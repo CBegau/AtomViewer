@@ -43,8 +43,8 @@ import model.Atom;
 import model.AtomData;
 import model.Configuration;
 import model.DataColumnInfo;
+import processingModules.ClonableProcessingModule;
 import processingModules.DataContainer;
-import processingModules.ProcessingModule;
 import processingModules.ProcessingResult;
 import processingModules.toolchain.Toolchain;
 import processingModules.toolchain.Toolchainable;
@@ -52,7 +52,7 @@ import processingModules.toolchain.Toolchainable.ToolchainSupport;
 
 //TODO handle reference in Toolchain
 @ToolchainSupport()
-public class DeltaValueModule implements ProcessingModule, Toolchainable{
+public class DeltaValueModule extends ClonableProcessingModule implements Toolchainable{
 	
 	private static HashMap<DataColumnInfo, DataColumnInfo> existingDeltaColumns 
 		= new HashMap<DataColumnInfo, DataColumnInfo>();

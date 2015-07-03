@@ -34,16 +34,16 @@ import quickhull3d.QuickHull3D;
 import common.*;
 import crystalStructures.CrystalStructure;
 import model.*;
+import processingModules.ClonableProcessingModule;
 import processingModules.DataContainer;
 import processingModules.JDataPanel;
-import processingModules.ProcessingModule;
 import processingModules.ProcessingResult;
 import processingModules.otherModules.ParticleDataContainer.JParticleDataControlPanel;
 import processingModules.toolchain.Toolchainable.ExportableValue;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 
 @ToolchainSupport
-public final class VacancyDetectionModule implements ProcessingModule{
+public final class VacancyDetectionModule extends ClonableProcessingModule {
 
 	private static JParticleDataControlPanel<Vacancy> dataPanel;
 	

@@ -29,7 +29,7 @@ import javax.swing.JFrame;
 import javax.swing.JSeparator;
 
 import processingModules.DataContainer;
-import processingModules.ProcessingModule;
+import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
 import processingModules.otherModules.VacancyDetectionModule.VacancyDataContainer;
 import processingModules.toolchain.Toolchainable.ExportableValue;
@@ -62,7 +62,7 @@ import crystalStructures.CrystalStructure;
  */
 
 @ToolchainSupport
-public class RbvBuilder implements ProcessingModule{
+public class RbvBuilder extends ClonableProcessingModule{
 	
 	/**
 	 * Maximum deviation allowed to detect matching bonds (=20°)

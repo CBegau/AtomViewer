@@ -38,9 +38,9 @@ import javax.swing.*;
 import javax.swing.border.EtchedBorder;
 import javax.swing.border.TitledBorder;
 
+import processingModules.ClonableProcessingModule;
 import processingModules.DataContainer;
 import processingModules.JDataPanel;
-import processingModules.ProcessingModule;
 import processingModules.ProcessingResult;
 import processingModules.atomicModules.LatticeRotationModule;
 import processingModules.toolchain.Toolchainable.ExportableValue;
@@ -51,7 +51,7 @@ import model.*;
 import model.skeletonizer.Skeletonizer;
 
 @ToolchainSupport
-public class DislocationDensityTensorModule implements ProcessingModule {
+public class DislocationDensityTensorModule extends ClonableProcessingModule {
 	private static JDislocationDensityTensorControls dataPanel = null;
 	
 	@ExportableValue

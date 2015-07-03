@@ -21,14 +21,14 @@ import model.Atom;
 import model.AtomData;
 import model.DataColumnInfo;
 import model.NearestNeighborBuilder;
-import processingModules.ProcessingModule;
+import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
 import processingModules.toolchain.Toolchainable.ExportableValue;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 
 //TODO handle reference in Toolchain
 @ToolchainSupport()
-public class SlipVectorModule implements ProcessingModule{
+public class SlipVectorModule extends ClonableProcessingModule{
 	
 	private static DataColumnInfo[] cci = { new DataColumnInfo("Slip-Vector", "slip_x", ""),
 			new DataColumnInfo("Slip-Vector", "slip_y", ""),

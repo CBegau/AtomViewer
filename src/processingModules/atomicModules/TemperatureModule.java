@@ -35,14 +35,14 @@ import model.AtomData;
 import model.DataColumnInfo;
 import model.DataColumnInfo.Component;
 import processingModules.DataContainer;
-import processingModules.ProcessingModule;
+import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
 import processingModules.toolchain.Toolchainable.ExportableValue;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 import model.NearestNeighborBuilder;
 
 @ToolchainSupport()
-public class TemperatureModule implements ProcessingModule {
+public class TemperatureModule extends ClonableProcessingModule{
 
 	private static DataColumnInfo temperatureColumn = new DataColumnInfo("Temperature", "temp", "");
 	@ExportableValue

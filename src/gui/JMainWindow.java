@@ -41,9 +41,8 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import processingModules.AvailableProcessingModules;
 import processingModules.DataContainer;
 import processingModules.AvailableProcessingModules.JProcessingModuleDialog;
-import processingModules.toolchain.ToolchainReader;
-import processingModules.toolchain.ToolchainWriter;
 import processingModules.ProcessingModule;
+import processingModules.toolchain.Toolchain;
 
 import com.jogamp.opengl.JoglVersion;
 
@@ -525,38 +524,6 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		
 		final JMenuItem toolchainMenu = new JMenu("Toolchain recording");
 		
-		JMenuItem startToolchainMenuItem = new JMenuItem("Start");
-		startToolchainMenuItem.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				try {
-					JLogPanel.getJLogPanel().addLog("Started toolchain recording");
-					Configuration.removeAtomDataListener(Configuration.getCurrentToolchain());
-					
-					ToolchainWriter tc = new ToolchainWriter(new FileOutputStream(new File("doc.xml")));
-					Configuration.setCurrentToolchain(tc);
-				} catch (Exception ex) {
-					ex.printStackTrace();
-				}
-				
-			}
-		});
-
-		JMenuItem stopToolchainMenuItem = new JMenuItem("Stop");
-		stopToolchainMenuItem.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				try {
-					JLogPanel.getJLogPanel().addLog("Stopped toolchain recording");
-					if(Configuration.getCurrentToolchain()!=null)
-						Configuration.getCurrentToolchain().closeToolChain();
-				} catch (Exception ex) {
-					ex.printStackTrace();
-				}
-				
-			}
-		});
-		
 		JMenuItem applyToolchainMenuItem = new JMenuItem("Apply");
 		applyToolchainMenuItem.addActionListener(new ActionListener() {
 			@Override
@@ -564,7 +531,10 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 				try {
 					JLogPanel.getJLogPanel().addLog("Applied toolchain");
 					FileInputStream f = new FileInputStream(new File("test.xml"));
-					new ToolchainReader().applyToolChain(f, Configuration.getCurrentAtomData());
+					Toolchain tc = Toolchain.readToolchain(f);
+					for (ProcessingModule pm : tc.getProcessingModules())
+						Configuration.getCurrentAtomData().applyProcessingModule(pm.clone());
+					
 				} catch (Exception ex) {
 					ex.printStackTrace();
 				}
@@ -572,8 +542,6 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 			}
 		});
 		
-		toolchainMenu.add(startToolchainMenuItem);
-		toolchainMenu.add(stopToolchainMenuItem);
 		toolchainMenu.add(applyToolchainMenuItem);
 		menu.add(toolchainMenu);
 		

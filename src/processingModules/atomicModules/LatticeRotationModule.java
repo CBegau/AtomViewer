@@ -30,7 +30,7 @@ import model.AtomData;
 import model.DataColumnInfo;
 import model.NearestNeighborBuilder;
 import model.polygrain.Grain;
-import processingModules.ProcessingModule;
+import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 import Jama.Matrix;
@@ -41,7 +41,7 @@ import common.Vec3;
 import crystalStructures.CrystalStructure;
 
 @ToolchainSupport()
-public class LatticeRotationModule implements ProcessingModule {
+public class LatticeRotationModule extends ClonableProcessingModule {
 	
 	private static DataColumnInfo[] cci = new DataColumnInfo[]{
 		new DataColumnInfo("Rotation_X-Axis", "rotX", "", -8f, +8f, false),

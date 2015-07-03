@@ -35,13 +35,13 @@ import common.Vec3;
 import model.Atom;
 import model.AtomData;
 import model.DataColumnInfo;
-import processingModules.ProcessingModule;
+import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 
 //TODO handle reference in Toolchain
 @ToolchainSupport()
-public class DisplacementModule implements ProcessingModule{
+public class DisplacementModule extends ClonableProcessingModule {
 	
 	private static DataColumnInfo[] cci = { new DataColumnInfo("Displacement", "displ_x", ""),
 			new DataColumnInfo("Displacement", "displ_y", ""),

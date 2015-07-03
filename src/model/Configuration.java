@@ -21,10 +21,7 @@ package model;
 import java.io.File;
 import java.util.ArrayList;
 
-import javax.xml.stream.XMLStreamException;
-
 import model.io.MDFileLoader;
-import processingModules.toolchain.ToolchainWriter;
 
 public class Configuration {	
 	
@@ -37,8 +34,6 @@ public class Configuration {
 	private static File lastOpenedFolder = null;
 	private static File lastOpenedExportFolder = null;
 	private static MDFileLoader currentFileLoader = null;
-	
-	private static ToolchainWriter currentToolchain = null;
 	
 	private static AtomData currentAtomData;
 	
@@ -83,21 +78,6 @@ public class Configuration {
 	
 	public static void setCurrentFileLoader(MDFileLoader currentFileLoader) {
 		Configuration.currentFileLoader = currentFileLoader;
-	}
-	
-	public static ToolchainWriter getCurrentToolchain() {
-		return currentToolchain;
-	}
-	
-	public static void setCurrentToolchain(ToolchainWriter currentToolchain) {
-		if(Configuration.currentToolchain!=null && !Configuration.currentToolchain.isClosed()){
-			try {
-				Configuration.currentToolchain.closeToolChain();
-			} catch (XMLStreamException e) {
-				e.printStackTrace();
-			}
-		}
-		Configuration.currentToolchain = currentToolchain;
 	}
 	
 	public static void setLastOpenedExportFolder(File lastOpenedExportFolder) {

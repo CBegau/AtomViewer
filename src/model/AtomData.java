@@ -29,6 +29,7 @@ import processingModules.*;
 import processingModules.otherModules.DeleteColumnModule;
 import processingModules.otherModules.FilteringModule;
 import processingModules.otherModules.VectorNormModule;
+import processingModules.toolchain.Toolchain;
 import model.ImportConfiguration.ImportStates;
 import model.io.MDFileLoader;
 import model.polygrain.*;
@@ -92,6 +93,8 @@ public class AtomData {
 	
 	private CrystalStructure defaultCrystalStructure;
 	private CrystalRotationTools crystalRotation;
+
+	private Toolchain toolchain = new Toolchain();
 	
 	public AtomData(AtomData previous, MDFileLoader.ImportDataContainer idc){
 		this.defaultCrystalStructure = ImportConfiguration.getInstance().getCrystalStructure();
@@ -199,16 +202,9 @@ public class AtomData {
 	 */
 	public void applyProcessingModule(ProcessingModule pm) throws Exception{
 		this.addDataColumnInfo(pm.getDataColumnsInfo());
-
-		//Save the configuration of the module in the toolchain if one is currently
-		//actively recording
-		if (Configuration.getCurrentToolchain() != null 
-				&& !Configuration.getCurrentToolchain().isClosed()){
-			Configuration.getCurrentToolchain().exportProcessingModule(pm);
-		}
-		
 		
 		ProcessingResult pr = pm.process(this);
+		
 		if (pr != null){
 			if (pr.getDataContainer() != null)
 				this.addAdditionalData(pr.getDataContainer());
@@ -222,6 +218,8 @@ public class AtomData {
 				if (!dci.isInitialized())
 					dci.findRange(this, false);
 		}
+		//Store sucessful step in Toolchain
+		this.toolchain.addModule(pm);
 	}
 	
 	private void processInputData(MDFileLoader.ImportDataContainer idc) throws Exception{
@@ -424,6 +422,10 @@ public class AtomData {
 	
 	public CrystalRotationTools getCrystalRotation() {
 		return crystalRotation;
+	}
+	
+	public Toolchain getToolchain() {
+		return toolchain;
 	}
 	
 	/**

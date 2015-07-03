@@ -41,6 +41,7 @@ import model.RenderingConfiguration;
 import model.ImportConfiguration;
 import model.DataColumnInfo;
 import model.NearestNeighborBuilder;
+import processingModules.ClonableProcessingModule;
 import processingModules.DataContainer;
 import processingModules.JDataPanel;
 import processingModules.ProcessingModule;
@@ -196,7 +197,7 @@ public class FeC_virtStructure extends BCCStructure {
 		return pm;
 	}
 	
-	private static final class PlaceholderModule implements ProcessingModule{
+	private static final class PlaceholderModule extends ClonableProcessingModule{
 		@Override
 		public String getFunctionDescription() {
 			return "Extract placeholder";

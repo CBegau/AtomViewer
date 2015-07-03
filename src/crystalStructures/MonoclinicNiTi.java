@@ -300,4 +300,12 @@ public final class MonoclinicNiTi extends B2NiTi implements ProcessingModule{
 	public boolean canBeAppliedToMultipleFilesAtOnce() {
 		return true;
 	}
+	
+	@Override
+	public ProcessingModule clone() {
+		try {
+			return (ProcessingModule)(super.clone());
+		} catch (CloneNotSupportedException e) {}
+		return null;
+	}
 }

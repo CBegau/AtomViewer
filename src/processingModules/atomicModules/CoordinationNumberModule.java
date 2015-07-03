@@ -33,14 +33,14 @@ import model.Atom;
 import model.AtomData;
 import model.DataColumnInfo;
 import model.NearestNeighborBuilder;
-import processingModules.ProcessingModule;
+import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
 import processingModules.toolchain.Toolchainable.ExportableValue;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 import common.ThreadPool;
 
 @ToolchainSupport()
-public class CoordinationNumberModule implements ProcessingModule {
+public class CoordinationNumberModule extends ClonableProcessingModule {
 
 	private static DataColumnInfo coordNumColumn = 
 			new DataColumnInfo("Coordination" , "coordNum" ,"");

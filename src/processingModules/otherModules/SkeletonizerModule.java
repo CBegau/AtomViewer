@@ -10,14 +10,14 @@ import model.AtomData;
 import model.Configuration;
 import model.DataColumnInfo;
 import model.skeletonizer.Skeletonizer;
+import processingModules.ClonableProcessingModule;
 import processingModules.DataContainer;
-import processingModules.ProcessingModule;
 import processingModules.ProcessingResult;
 import processingModules.toolchain.Toolchainable.ExportableValue;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 
 @ToolchainSupport
-public class SkeletonizerModule implements ProcessingModule {
+public class SkeletonizerModule extends ClonableProcessingModule {
 
 	@ExportableValue
 	private float meshingThreshold = -1;

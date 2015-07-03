@@ -28,13 +28,13 @@ import javax.swing.JFrame;
 
 import model.*;
 import model.polygrain.Grain;
-import processingModules.ProcessingModule;
+import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
 import processingModules.toolchain.Toolchainable.ExportableValue;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 
 @ToolchainSupport()
-public class GrainIdentificationModule implements ProcessingModule {
+public class GrainIdentificationModule extends ClonableProcessingModule {
 
 	@ExportableValue
 	private boolean orderGrainsBySize = false;
