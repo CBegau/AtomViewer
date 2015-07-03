@@ -522,18 +522,45 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		menu.add(settingsMenu);
 		
 		
-		final JMenuItem toolchainMenu = new JMenu("Toolchain recording");
+		final JMenuItem toolchainMenu = new JMenu("Toolchain");
+		
+		JMenuItem saveToolchainMenuItem = new JMenuItem("Save");
+		saveToolchainMenuItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				JFileChooser chooser = new JFileChooser();
+				chooser.setFileFilter(new FileNameExtensionFilter("Toolchainfile (*.tcf)","tcf"));
+				int result = chooser.showSaveDialog(JMainWindow.this);
+				if (result == JFileChooser.APPROVE_OPTION){
+					File file = chooser.getSelectedFile();
+					try {
+						FileOutputStream f = new FileOutputStream(file);
+						Configuration.getCurrentAtomData().getToolchain().saveToolchain(f);
+					} catch (Exception e1) {
+						e1.printStackTrace();
+					}
+				}
+			}
+		});
 		
 		JMenuItem applyToolchainMenuItem = new JMenuItem("Apply");
 		applyToolchainMenuItem.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				try {
-					JLogPanel.getJLogPanel().addLog("Applied toolchain");
-					FileInputStream f = new FileInputStream(new File("test.xml"));
-					Toolchain tc = Toolchain.readToolchain(f);
-					for (ProcessingModule pm : tc.getProcessingModules())
-						Configuration.getCurrentAtomData().applyProcessingModule(pm.clone());
+					JFileChooser chooser = new JFileChooser();
+					chooser.setFileFilter(new FileNameExtensionFilter("Toolchainfile (*.tcf)","tcf"));
+					int result = chooser.showOpenDialog(JMainWindow.this);
+					if (result == JFileChooser.APPROVE_OPTION){
+						File file = chooser.getSelectedFile();
+						FileInputStream f = new FileInputStream(file);
+						Toolchain tc = Toolchain.readToolchain(f);
+						for (ProcessingModule pm : tc.getProcessingModules())
+							Configuration.getCurrentAtomData().applyProcessingModule(pm.clone());
+						Configuration.setCurrentAtomData(Configuration.getCurrentAtomData(), true, false);
+						JLogPanel.getJLogPanel().addLog("Applied toolchain");
+					}
+					
 					
 				} catch (Exception ex) {
 					ex.printStackTrace();
@@ -542,6 +569,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 			}
 		});
 		
+		toolchainMenu.add(saveToolchainMenuItem);
 		toolchainMenu.add(applyToolchainMenuItem);
 		menu.add(toolchainMenu);
 		
