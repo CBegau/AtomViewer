@@ -3,9 +3,8 @@ package processingModules.otherModules;
 import model.AtomData;
 import model.RenderingConfiguration;
 import processingModules.ProcessingResult;
-import processingModules.toolchain.Toolchainable.ToolchainSupport;
 
-@ToolchainSupport
+//TODO Add toolchain support once the handling of filters is properly implemented
 public class RemoveInvisibleAtomsModule extends FilteringModule {	
 	public RemoveInvisibleAtomsModule() {
 		super(RenderingConfiguration.getViewer().getCurrentAtomFilter());
