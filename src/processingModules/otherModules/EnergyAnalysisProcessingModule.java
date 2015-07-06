@@ -10,11 +10,11 @@ import javax.swing.JFrame;
 import common.Vec3;
 import model.*;
 import model.BurgersVector.BurgersVectorType;
-import model.skeletonizer.Dislocation;
-import model.skeletonizer.SkeletonNode;
-import model.skeletonizer.Skeletonizer;
 import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
+import processingModules.skeletonizer.Dislocation;
+import processingModules.skeletonizer.SkeletonNode;
+import processingModules.skeletonizer.Skeletonizer;
 
 public class EnergyAnalysisProcessingModule extends ClonableProcessingModule {
 	

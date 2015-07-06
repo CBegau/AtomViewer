@@ -25,8 +25,8 @@ import common.Vec3;
 import model.AtomData;
 import model.BurgersVector;
 import model.Pickable;
-import model.skeletonizer.Skeletonizer;
-import model.skeletonizer.Dislocation;
+import processingModules.skeletonizer.Dislocation;
+import processingModules.skeletonizer.Skeletonizer;
 
 public class DislocationDensityTensor implements Pickable{
 

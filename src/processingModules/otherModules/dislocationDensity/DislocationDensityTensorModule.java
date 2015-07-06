@@ -43,12 +43,12 @@ import processingModules.DataContainer;
 import processingModules.JDataPanel;
 import processingModules.ProcessingResult;
 import processingModules.atomicModules.LatticeRotationModule;
+import processingModules.skeletonizer.Skeletonizer;
 import processingModules.toolchain.Toolchainable.ExportableValue;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 import common.ColorTable;
 import common.Vec3;
 import model.*;
-import model.skeletonizer.Skeletonizer;
 
 @ToolchainSupport
 public class DislocationDensityTensorModule extends ClonableProcessingModule {

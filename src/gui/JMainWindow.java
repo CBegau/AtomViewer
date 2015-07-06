@@ -41,6 +41,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import processingModules.AvailableProcessingModules;
 import processingModules.DataContainer;
 import processingModules.AvailableProcessingModules.JProcessingModuleDialog;
+import processingModules.skeletonizer.Skeletonizer;
 import processingModules.ProcessingModule;
 import processingModules.toolchain.Toolchain;
 
@@ -53,7 +54,6 @@ import common.Vec3;
 import crystalStructures.CrystalStructure;
 import model.*;
 import model.io.*;
-import model.skeletonizer.Skeletonizer;
 import model.Configuration.AtomDataChangedEvent;
 import model.Configuration.AtomDataChangedListener;
 import model.ImportConfiguration.ImportStates;

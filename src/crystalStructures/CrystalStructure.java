@@ -43,11 +43,11 @@ import model.io.MDFileLoader.ImportDataContainer;
 import model.polygrain.Grain;
 import model.polygrain.grainDetection.*;
 import model.mesh.Mesh;
-import model.skeletonizer.Skeletonizer;
-import model.skeletonizer.processors.BurgersVectorAnalyzer;
-import model.skeletonizer.processors.BurgersVectorAnalyzer.ClassificationPattern;
-import model.skeletonizer.processors.SkeletonPreprocessor;
 import processingModules.ProcessingModule;
+import processingModules.skeletonizer.Skeletonizer;
+import processingModules.skeletonizer.processors.BurgersVectorAnalyzer;
+import processingModules.skeletonizer.processors.SkeletonPreprocessor;
+import processingModules.skeletonizer.processors.BurgersVectorAnalyzer.ClassificationPattern;
 
 /**
  * All crystal structure depended subroutines are collected here

@@ -16,20 +16,19 @@
 // You should have received a copy of the GNU General Public License along
 // with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
 
-package model.skeletonizer.processors;
+package processingModules.skeletonizer.processors;
 
-import model.skeletonizer.Skeletonizer;
+import processingModules.skeletonizer.Skeletonizer;
 
 /**
- * An instance of  SkeletonDislocationPostprocessor is supposed to modify the final dislocation
- * skeleton created by the skeleton algorithm
+ * An instance of  SkeletonMeshPostprocessor is supposed to modify the final mesh
+ * created by the skeleton algorithm before it is transformed to a set of dislocations
  * @author begauc9f
  */
-public interface SkeletonDislocationPostprocessor {
-
+public interface SkeletonMeshPostprocessor {
 	/**
-	 * Perform a postprocessing operation on the dislocation skeleton
+	 * Perform a postprocessing operation on the skeletonized mesh
 	 * @param skel
 	 */
-	public void postProcessDislocations(Skeletonizer skel);
+	public void postProcessMesh(Skeletonizer skel);
 }

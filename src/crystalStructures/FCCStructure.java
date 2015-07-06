@@ -26,8 +26,8 @@ import model.*;
 import model.BurgersVector.BurgersVectorType;
 import model.polygrain.grainDetection.AtomToGrainObject;
 import model.polygrain.grainDetection.GrainDetectionCriteria;
-import model.skeletonizer.processors.*;
-import model.skeletonizer.processors.BurgersVectorAnalyzer.ClassificationPattern;
+import processingModules.skeletonizer.processors.*;
+import processingModules.skeletonizer.processors.BurgersVectorAnalyzer.ClassificationPattern;
 
 public class FCCStructure extends CrystalStructure {
 

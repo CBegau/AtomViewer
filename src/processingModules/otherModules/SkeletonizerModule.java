@@ -9,10 +9,10 @@ import gui.JPrimitiveVariablesPropertiesDialog.FloatProperty;
 import model.AtomData;
 import model.Configuration;
 import model.DataColumnInfo;
-import model.skeletonizer.Skeletonizer;
 import processingModules.ClonableProcessingModule;
 import processingModules.DataContainer;
 import processingModules.ProcessingResult;
+import processingModules.skeletonizer.Skeletonizer;
 import processingModules.toolchain.Toolchainable.ExportableValue;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 

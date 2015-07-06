@@ -16,14 +16,14 @@
 // You should have received a copy of the GNU General Public License along
 // with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
 
-package model.skeletonizer.processors;
+package processingModules.skeletonizer.processors;
 
 import java.util.*;
 
 import common.Vec3;
 import model.Atom;
 import model.NearestNeighborBuilder;
-import model.skeletonizer.*;
+import processingModules.skeletonizer.*;
 
 /**
  * Broken dislocations ending inside a crystal are fixed with a heuristic algorithm. These intersections are typically caused by 

@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License along
 // with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
 
-package model.skeletonizer.processors;
+package processingModules.skeletonizer.processors;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,8 +27,8 @@ import common.Vec3;
 import crystalStructures.CrystalStructure;
 import model.*;
 import model.BurgersVector.BurgersVectorType;
-import model.skeletonizer.*;
-import model.skeletonizer.Dislocation.BurgersVectorInformation;
+import processingModules.skeletonizer.*;
+import processingModules.skeletonizer.Dislocation.BurgersVectorInformation;
 
 public class BurgersVectorAnalyzer {
 

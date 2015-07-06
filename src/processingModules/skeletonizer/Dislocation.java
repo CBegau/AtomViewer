@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License along
 // with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
 
-package model.skeletonizer;
+package processingModules.skeletonizer;
 
 import java.awt.event.InputEvent;
 import java.util.*;

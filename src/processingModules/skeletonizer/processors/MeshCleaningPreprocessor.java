@@ -16,11 +16,12 @@
 // You should have received a copy of the GNU General Public License along
 // with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
 
-package model.skeletonizer.processors;
+package processingModules.skeletonizer.processors;
 
 
 import java.util.List;
-import model.skeletonizer.*;
+
+import processingModules.skeletonizer.*;
 
 /**
  * MeshCleaningPreprocessor simplifies common structures in an initial mesh directly before the skeleton algorithm is applied.

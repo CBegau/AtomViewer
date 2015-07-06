@@ -15,7 +15,7 @@
 //
 // You should have received a copy of the GNU General Public License along
 // with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
-package model.skeletonizer.processors;
+package processingModules.skeletonizer.processors;
 
 import java.util.ArrayList;
 import java.util.Vector;
@@ -24,9 +24,9 @@ import java.util.concurrent.Callable;
 import common.ThreadPool;
 import common.Vec3;
 import model.BoxParameter;
-import model.skeletonizer.Dislocation;
-import model.skeletonizer.SkeletonNode;
-import model.skeletonizer.Skeletonizer;
+import processingModules.skeletonizer.Dislocation;
+import processingModules.skeletonizer.SkeletonNode;
+import processingModules.skeletonizer.Skeletonizer;
 
 /**
  * Smoothing the shape of dislocation lines using simple laplacian smoothing

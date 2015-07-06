@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License along
 // with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
 
-package model.skeletonizer.processors;
+package processingModules.skeletonizer.processors;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,8 +26,8 @@ import java.util.concurrent.Callable;
 import common.ThreadPool;
 import common.Tupel;
 import model.RBV;
-import model.skeletonizer.SkeletonNode;
-import model.skeletonizer.Skeletonizer;
+import processingModules.skeletonizer.SkeletonNode;
+import processingModules.skeletonizer.Skeletonizer;
 
 public class RBVAngleFilterPreprocessor implements SkeletonPreprocessor {
 

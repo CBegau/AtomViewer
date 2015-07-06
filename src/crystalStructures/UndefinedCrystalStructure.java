@@ -25,7 +25,7 @@ import common.Vec3;
 import model.Atom;
 import model.AtomData;
 import model.NearestNeighborBuilder;
-import model.skeletonizer.processors.BurgersVectorAnalyzer.ClassificationPattern;
+import processingModules.skeletonizer.processors.BurgersVectorAnalyzer.ClassificationPattern;
 
 public class UndefinedCrystalStructure extends CrystalStructure {
 	

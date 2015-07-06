@@ -25,8 +25,8 @@ import common.Vec3;
 import model.*;
 import model.BurgersVector.BurgersVectorType;
 import model.polygrain.grainDetection.*;
-import model.skeletonizer.processors.*;
-import model.skeletonizer.processors.BurgersVectorAnalyzer.ClassificationPattern;
+import processingModules.skeletonizer.processors.*;
+import processingModules.skeletonizer.processors.BurgersVectorAnalyzer.ClassificationPattern;
 
 public class B2NiTi extends BCCStructure{
 

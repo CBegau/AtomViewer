@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License along
 // with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
 
-package model.skeletonizer;
+package processingModules.skeletonizer;
 
 import gui.JDislocationMenuPanel;
 import gui.JDislocationMenuPanel.Option;
@@ -39,10 +39,10 @@ import common.UniqueIDCounter;
 import common.Vec3;
 import model.*;
 import model.BurgersVector.BurgersVectorType;
-import model.skeletonizer.Dislocation.BurgersVectorInformation;
-import model.skeletonizer.processors.*;
 import processingModules.DataContainer;
 import processingModules.JDataPanel;
+import processingModules.skeletonizer.Dislocation.BurgersVectorInformation;
+import processingModules.skeletonizer.processors.*;
 
 /**
  * Creates a dislocation skeleton from given set of dislocation core atoms 

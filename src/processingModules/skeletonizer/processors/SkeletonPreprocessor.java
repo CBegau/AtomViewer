@@ -16,9 +16,9 @@
 // You should have received a copy of the GNU General Public License along
 // with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
 
-package model.skeletonizer.processors;
+package processingModules.skeletonizer.processors;
 
-import model.skeletonizer.Skeletonizer;
+import processingModules.skeletonizer.Skeletonizer;
 
 /**
  * An instance of  SkeletonPreprocessor is supposed to modify the initial mesh

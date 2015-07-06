@@ -21,8 +21,8 @@ package crystalStructures;
 import java.util.*;
 
 import model.BurgersVector.BurgersVectorType;
-import model.skeletonizer.processors.*;
-import model.skeletonizer.processors.BurgersVectorAnalyzer.ClassificationPattern;
+import processingModules.skeletonizer.processors.*;
+import processingModules.skeletonizer.processors.BurgersVectorAnalyzer.ClassificationPattern;
 
 public class B2 extends BCCStructure{
 	

@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License along
 // with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
 
-package model.skeletonizer.processors;
+package processingModules.skeletonizer.processors;
 
 import java.util.List;
 import java.util.Vector;
@@ -26,7 +26,7 @@ import Jama.Matrix;
 import common.ThreadPool;
 import common.Vec3;
 import model.Atom;
-import model.skeletonizer.*;
+import processingModules.skeletonizer.*;
 
 /**
  * Mesh contraction that is based on the derived line sense of the RBV data

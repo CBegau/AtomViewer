@@ -23,7 +23,7 @@ import java.util.*;
 import common.Vec3;
 import model.*;
 import model.BurgersVector.BurgersVectorType;
-import model.skeletonizer.processors.BurgersVectorAnalyzer.ClassificationPattern;
+import processingModules.skeletonizer.processors.BurgersVectorAnalyzer.ClassificationPattern;
 
 /**
  * Not fully implemented! And not tested!
