@@ -18,8 +18,6 @@
 
 package processingModules.skeletonizer;
 
-import gui.JDislocationMenuPanel;
-import gui.JDislocationMenuPanel.Option;
 import gui.RenderRange;
 import gui.ViewerGLJPanel;
 import gui.ViewerGLJPanel.RenderOption;
@@ -42,6 +40,7 @@ import model.BurgersVector.BurgersVectorType;
 import processingModules.DataContainer;
 import processingModules.JDataPanel;
 import processingModules.skeletonizer.Dislocation.BurgersVectorInformation;
+import processingModules.skeletonizer.JDislocationMenuPanel.Option;
 import processingModules.skeletonizer.processors.*;
 
 /**

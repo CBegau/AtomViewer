@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License along
 // with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
 
-package gui;
+package processingModules.skeletonizer;
 
 import java.awt.GridLayout;
 import java.awt.event.*;
@@ -25,6 +25,7 @@ import javax.swing.*;
 import javax.swing.border.EtchedBorder;
 import javax.swing.border.TitledBorder;
 
+import gui.ViewerGLJPanel;
 import model.RenderingConfiguration;
 import processingModules.DataContainer;
 import processingModules.JDataPanel;
