@@ -398,15 +398,9 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		
 		if (e.isResetGUI()){
 			fillIgnoreBoxPanel();
-			int def = atomData.getCrystalStructure().getDefaultType();
 			atomsVisibleToggleButton.setSelected(false);
 			RenderingConfiguration.getViewer().setRenderingAtomsAsRBV(false);
 			this.rbvVisibleToogleButton.setSelected(false);
-			if (atomData.getNumberOfAtomsWithType(def)*4>atomData.getAtoms().size() 
-					&& (atomData.getNumberOfAtomsWithType(def)!=atomData.getAtoms().size())){
-				ignoreTypeCheckbox[def].setSelected(false);
-				RenderingConfiguration.getViewer().setTypeIgnored(def, true);
-			}
 		}
 		
 		
