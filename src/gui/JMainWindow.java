@@ -137,6 +137,9 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 			}
 		});
 		
+		splitPane.getActionMap().setParent(this.getRootPane().getActionMap());
+		splitPane.getInputMap().setParent(this.getRootPane().getInputMap());
+		
 		this.atomicMenu = new JAtomicMenuPanel(keyAction, this);
 		this.add(atomicMenu, BorderLayout.WEST);
 		
