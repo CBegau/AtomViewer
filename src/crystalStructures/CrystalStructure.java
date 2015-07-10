@@ -415,14 +415,6 @@ public abstract class CrystalStructure{
 		return BurgersVectorType.OTHER;
 	}
 	
-	public float getDefaultSkeletonizerMeshingThreshold(){
-		return 1.1f;
-	}
-	
-	public float getDefaultSkeletonizerRBVThreshold(){
-		return 0.1f;
-	}
-	
 	/**
 	 * Distance in which nearest neighbors are to be searched.
 	 * Usually slightly larger than the nearest neighbor distance in a perfect crystals

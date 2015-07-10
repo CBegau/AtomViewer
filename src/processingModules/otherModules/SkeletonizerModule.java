@@ -3,11 +3,9 @@ package processingModules.otherModules;
 import javax.swing.JFrame;
 import javax.swing.JSeparator;
 
-import crystalStructures.CrystalStructure;
 import gui.JPrimitiveVariablesPropertiesDialog;
 import gui.JPrimitiveVariablesPropertiesDialog.FloatProperty;
 import model.AtomData;
-import model.Configuration;
 import model.DataColumnInfo;
 import processingModules.ClonableProcessingModule;
 import processingModules.DataContainer;
@@ -46,14 +44,12 @@ public class SkeletonizerModule extends ClonableProcessingModule {
 		dialog.addLabel(getFunctionDescription());
 		dialog.add(new JSeparator());	
 		
-		CrystalStructure cs = Configuration.getCurrentAtomData().getCrystalStructure();
-		
 		FloatProperty meshThreshold = dialog.addFloat("meshThreshold", "Meshing distance factor for dislocation networks"
 				, "<html>During creation fo dislocation networks, a mesh between defect atoms is created.<br>"
 						+ "<br> A factor of one usually is equal to the nearest neighbor distance."
 						+ "<br> Larger values create smoother dislcoations curves, but can suppress fine details like stair-rods or"
 						+ "only slightly seperated partial dislocation cores"
-						+ "<br> Min: 1.0, Max: 2.0</html>", cs.getDefaultSkeletonizerMeshingThreshold(), 1f, 2f);
+						+ "<br> Min: 1.0, Max: 2.0</html>", 1.1f, 1f, 2f);
 		
 		boolean ok = dialog.showDialog();
 		if (ok){
