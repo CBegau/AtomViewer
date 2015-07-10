@@ -798,7 +798,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 							//Check if only visible atoms are to be exported
 							Filter<Atom> atomFilter = null;
 							if (exportVisible.isSelected()) 
-								atomFilter = RenderingConfiguration.getViewer().getCurrentAtomFilter();
+								atomFilter = RenderingConfiguration.getAtomFilterset();
 							
 							current.printToFile(new File(path, newName), binary, binary, atomFilter);
 							current = current.getNext(); 
@@ -815,7 +815,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 						} else if (!filename.endsWith(".ada")) filename += ".ada";
 						Filter<Atom> atomFilter = null;
 						if (exportVisible.isSelected()) 
-							atomFilter = RenderingConfiguration.getViewer().getCurrentAtomFilter();
+							atomFilter = RenderingConfiguration.getAtomFilterset();
 						Configuration.getCurrentAtomData().printToFile(new File(filename), binary, binary, atomFilter);
 					} catch (IOException e1) {
 						e1.printStackTrace();

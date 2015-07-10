@@ -54,8 +54,8 @@ public class SurfaceApproximationModule extends ClonableProcessingModule {
 	private int minAtomsPerCluster = 20;
 	@ExportableValue
 	private float clusterSearchRadius = 3;
-	
-	private Filter<Atom> filter = null;
+	@ExportableValue
+	private boolean filter = false;
 	
 	@Override
 	public ProcessingResult process(AtomData data) throws Exception {
@@ -99,8 +99,8 @@ public class SurfaceApproximationModule extends ClonableProcessingModule {
 		
 		boolean ok = dialog.showDialog();
 		if (ok){
-			if (RenderingConfiguration.isHeadless()) this.filter = null;
-			else this.filter = allAtoms.getValue() ? RenderingConfiguration.getViewer().getCurrentAtomFilter() : null;
+			if (RenderingConfiguration.isHeadless()) this.filter = false;
+			else this.filter = allAtoms.getValue();
 			this.smooth = smooth.getValue();
 			this.offset = meshOffset.getValue();
 			this.cellSize = initCellSize.getValue();
@@ -271,12 +271,13 @@ public class SurfaceApproximationModule extends ClonableProcessingModule {
 		
 		
 		public boolean processData(AtomData atomData) throws Exception {
+			AtomFilterSet afs = null;
+			if (filter) afs = RenderingConfiguration.getAtomFilterset();
 			List<Atom> atoms = atomData.getAtoms();
-			if (filter != null){
+			if (afs != null){
 				ArrayList<Atom> filteredAtoms = new ArrayList<Atom>();
-				Filter<Atom> fm = RenderingConfiguration.getViewer().getCurrentAtomFilter();
 				for (Atom a : atomData.getAtoms()){
-					if (fm.accept(a))
+					if (afs.accept(a))
 						filteredAtoms.add(a);
 				}
 				atoms = filteredAtoms;

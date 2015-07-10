@@ -7,7 +7,7 @@ import processingModules.ProcessingResult;
 //TODO Add toolchain support once the handling of filters is properly implemented
 public class RemoveInvisibleAtomsModule extends FilteringModule {	
 	public RemoveInvisibleAtomsModule() {
-		super(RenderingConfiguration.getViewer().getCurrentAtomFilter());
+		super(RenderingConfiguration.getAtomFilterset());
 	}
 	
 	@Override

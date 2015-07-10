@@ -148,8 +148,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	private DataColoringAndFilter dataAtomFilter = new DataColoringAndFilter();
 	private VectorDataColoringAndFilter vectorDataAtomFilter = new VectorDataColoringAndFilter();
 	
-	//TODO Move this filter to a different place
-	private final AtomFilterSet atomFilterSet = new AtomFilterSet();
 	// Time it took to render the last frame in nanoseconds
 	private long timeToRenderFrame = 0l;
 	
@@ -753,6 +751,8 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		final CrystalStructure cs = atomData.getCrystalStructure();
 		final int numEle = cs.getNumberOfElements();
 
+		final AtomFilterSet atomFilterSet = RenderingConfiguration.getAtomFilterset();
+		
 		final float[] sphereSize = cs.getSphereSizeScalings();
 		float maxSphereSize = 0f;
 		for (int i=0; i<sphereSize.length; i++){
@@ -1552,10 +1552,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		m[20] = coordinateCenterOffset.y;
 		m[21] = coordinateCenterOffset.z;
 		return m;
-	}
-	
-	public Filter<Atom> getCurrentAtomFilter(){
-		return atomFilterSet;
 	}
 	
 	/**

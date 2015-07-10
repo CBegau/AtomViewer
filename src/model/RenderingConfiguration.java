@@ -180,6 +180,8 @@ public class RenderingConfiguration {
 	private static DataColumnInfo selectedColumn = null;
 	private static DataColumnInfo selectedVectorColumn = null;
 	
+	private static final AtomFilterSet atomFilterSet = new AtomFilterSet();
+	
 	private static ViewerGLJPanel viewer;
 	
 	public static void setViewer(ViewerGLJPanel viewer){
@@ -265,5 +267,9 @@ public class RenderingConfiguration {
 	
 	public static float getGUIScalingFactor(){
 		return defaultFontSize/12f;
+	}
+	
+	public static AtomFilterSet getAtomFilterset() {
+		return atomFilterSet;
 	}
 }
