@@ -26,6 +26,7 @@ import java.util.*;
 import java.util.zip.GZIPOutputStream;
 
 import processingModules.*;
+import processingModules.atomicModules.AtomClassificationModule;
 import processingModules.otherModules.DeleteColumnModule;
 import processingModules.otherModules.FilteringModule;
 import processingModules.otherModules.VectorNormModule;
@@ -236,8 +237,7 @@ public class AtomData {
 		
 		//Bond Angle Analysis
 		if (!idc.atomTypesAvailable){
-			ProgressMonitor.getProgressMonitor().setActivityName("Classifying atoms");
-			StructuralAnalysisBuilder.performStructureAnalysis(this);
+			this.applyProcessingModule(new AtomClassificationModule());
 		}
 		
 		if (ImportStates.IMPORT_GRAINS.isActive() && isGrainsImported()){

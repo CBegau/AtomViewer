@@ -16,42 +16,84 @@
 // You should have received a copy of the GNU General Public License along
 // with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
 
-package model;
+package processingModules.atomicModules;
 
 import gui.ProgressMonitor;
+import model.Atom;
+import model.AtomData;
+import model.DataColumnInfo;
+import model.NearestNeighborBuilder;
+import processingModules.ClonableProcessingModule;
+import processingModules.ProcessingResult;
 
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CyclicBarrier;
 
+import javax.swing.JFrame;
+
 import common.ThreadPool;
 import crystalStructures.CrystalStructure;
 
-public class StructuralAnalysisBuilder {
-	private StructuralAnalysisBuilder(){}
-	
-	public static void performStructureAnalysis(AtomData atomData){
-		NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(atomData.getBox(), 
-				atomData.getCrystalStructure().getStructuralAnalysisSearchRadius(), true);
-		List<Atom> atoms = atomData.getAtoms();
+public class AtomClassificationModule extends ClonableProcessingModule {
+
+	@Override
+	public String getShortName() {
+		return "Classify atoms";
+	}
+
+	@Override
+	public String getFunctionDescription() {
+		return "Performs a classification for atoms";
+	}
+
+	@Override
+	public String getRequirementDescription() {
+		return "";
+	}
+
+	@Override
+	public boolean isApplicable(AtomData data) {
+		return true;
+	}
+
+	@Override
+	public boolean canBeAppliedToMultipleFilesAtOnce() {
+		return true;
+	}
+
+	@Override
+	public boolean showConfigurationDialog(JFrame frame, AtomData data) {
+		return true;
+	}
+
+	@Override
+	public DataColumnInfo[] getDataColumnsInfo() {
+		return null;
+	}
+
+	@Override
+	public ProcessingResult process(AtomData data) throws Exception {
+		NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), 
+				data.getCrystalStructure().getStructuralAnalysisSearchRadius(), true);
+		List<Atom> atoms = data.getAtoms();
 		
 		nnb.addAll(atoms);
 		
 		Vector<AnalyseCallable> tasks = new Vector<AnalyseCallable>();
-		StructuralAnalysisBuilder sab = new StructuralAnalysisBuilder();
 		CyclicBarrier barrier = new CyclicBarrier(ThreadPool.availProcessors());
-		
 		ProgressMonitor.getProgressMonitor().start(atoms.size());
 		
 		for (int i=0; i<ThreadPool.availProcessors(); i++){
 			int start = (int)(((long)atoms.size() * i)/ThreadPool.availProcessors());
 			int end = (int)(((long)atoms.size() * (i+1))/ThreadPool.availProcessors());
-			tasks.add(sab.new AnalyseCallable(start, end, atoms, nnb, barrier, atomData.getCrystalStructure()));
+			tasks.add(this.new AnalyseCallable(start, end, atoms, nnb, barrier, data.getCrystalStructure()));
 		}
 		
 		ThreadPool.executeParallel(tasks);
 		
 		ProgressMonitor.getProgressMonitor().stop();
+		return null;
 	}
 	
 	private class AnalyseCallable implements Callable<Void> {
