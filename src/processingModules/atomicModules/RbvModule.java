@@ -62,7 +62,7 @@ import crystalStructures.CrystalStructure;
  */
 
 @ToolchainSupport
-public class RbvBuilder extends ClonableProcessingModule{
+public class RbvModule extends ClonableProcessingModule{
 	
 	/**
 	 * Maximum deviation allowed to detect matching bonds (=20°)
@@ -95,13 +95,13 @@ public class RbvBuilder extends ClonableProcessingModule{
 	
 	private NearestNeighborBuilder<Vec3> nnb;
 	
-	public RbvBuilder(){
+	public RbvModule(){
 		icoNormals = null;
 		neighPerf = null;
 		icoVertices = null;
 	}
 	
-	private RbvBuilder(AtomData data, List<Atom> atoms, final CrystalStructure s, Grain g, float acceptanceThreshold) {
+	private RbvModule(AtomData data, List<Atom> atoms, final CrystalStructure s, Grain g, float acceptanceThreshold) {
 		this.nnb = new NearestNeighborBuilder<Vec3>(data.getBox(), s.getNearestNeighborSearchRadius(), true);
 		
 		Vec3[] perfNeighbors;
@@ -681,10 +681,10 @@ public class RbvBuilder extends ClonableProcessingModule{
 		}
 		
 		if (data.getGrains() == null || data.getGrains().size() == 0)
-			new RbvBuilder(data, data.getAtoms(), data.getCrystalStructure(), null, acceptanceThreshold);
+			new RbvModule(data, data.getAtoms(), data.getCrystalStructure(), null, acceptanceThreshold);
 		else {
 			for (Grain g : data.getGrains())
-				new RbvBuilder(data, g.getAtomsInGrain(), g.getCrystalStructure(), g, acceptanceThreshold);
+				new RbvModule(data, g.getAtomsInGrain(), g.getCrystalStructure(), g, acceptanceThreshold);
 		}
 		return null;
 	}

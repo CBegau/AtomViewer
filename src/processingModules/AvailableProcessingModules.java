@@ -56,7 +56,7 @@ private final static ArrayList<ProcessingModule> otherModules;
 		atomicScaleModules.add(new MonoclinicNiTi());
 		
 		otherModules.add(new FilterSurfaceModule());
-		otherModules.add(new RbvBuilder());
+		otherModules.add(new RbvModule());
 		otherModules.add(new SkeletonizerModule());
 		otherModules.add(new VacancyDetectionModule());
 		otherModules.add(new SurfaceApproximationModule());
