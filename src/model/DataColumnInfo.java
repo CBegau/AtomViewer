@@ -301,5 +301,20 @@ public class DataColumnInfo {
 		public String toString() {
 			return dci.getVectorName();
 		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (obj == this) return true;
+			if (obj instanceof DataColumnInfo){
+				DataColumnInfo d = (DataColumnInfo)obj;
+				return dci.equals(d);
+			}
+			return false;
+		}
+		
+		@Override
+		public int hashCode() {
+			return dci.id.hashCode()+1;
+		}
 	}
 }

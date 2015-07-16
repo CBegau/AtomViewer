@@ -905,7 +905,6 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 			this.add(vectorThicknessSpinner, gbc);
 			
 			this.validate();
-			
 			valueComboBox.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent arg0) {
@@ -1040,10 +1039,15 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 			DataColumnInfo s = selectedColumn; //Save from overwriting during switching which triggers actionListeners
 			this.isResetActive = true;
 			valueComboBox.removeAllItems();
+			int selectedIndex = 0;
+			
 			List<DataColumnInfo> dci = atomData.getDataColumnInfos();
 			for (int i = 0; i<dci.size(); i++)
-				if (dci.get(i).isFirstVectorComponent())
+				if (dci.get(i).isFirstVectorComponent()){
+					if (dci.get(i).equals(s))
+						selectedIndex = valueComboBox.getItemCount();
 					valueComboBox.addItem(new DataColumnInfo.VectorDataColumnInfo(dci.get(i)));
+				}
 			
 			if (valueComboBox.getModel().getSize() == 0) return;
 			
@@ -1052,7 +1056,7 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 				setSpinner();
 			}
 			else if (dci.size()>0){
-				valueComboBox.setSelectedItem(s);
+				valueComboBox.setSelectedIndex(selectedIndex);
 				setSpinner();
 			}
 			this.isResetActive = false;
