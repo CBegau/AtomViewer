@@ -19,6 +19,8 @@
 package common;
 
 import java.awt.GridBagConstraints;
+import java.io.File;
+import java.io.RandomAccessFile;
 import java.text.DecimalFormat;
 
 public class CommonUtils {
@@ -82,5 +84,24 @@ public class CommonUtils {
 		gbc.fill = GridBagConstraints.BOTH; gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 1; gbc.weighty = 1;
 		gbc.anchor = GridBagConstraints.SOUTHWEST;
 		return gbc;
+	}
+	
+	public final static boolean isFileGzipped(File f){
+		final int GZIP_MAGIC = 0x8b1f;
+		try {
+			RandomAccessFile raf = null;
+			try {
+				raf = new RandomAccessFile(f, "r");
+				int byte1 = raf.read();
+				if (byte1==-1) return false;
+				int byte2 = raf.read();
+				if (byte2==-1) return false;
+				if (((byte2 << 8) | byte1) == GZIP_MAGIC) return true;
+			} finally {
+				if (raf != null) raf.close();
+			}
+		} catch (Exception e) {}
+
+		return false;
 	}
 }

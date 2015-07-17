@@ -27,6 +27,7 @@ import java.util.zip.GZIPInputStream;
 
 import javax.swing.filechooser.FileFilter;
 
+import common.CommonUtils;
 import common.Vec3;
 import model.*;
 import model.DataColumnInfo.Component;
@@ -68,7 +69,7 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 	@Override
 	public String[] getColumnsNamesFromHeader(File f) throws IOException {
 		LineNumberReader lnr = null;
-		if (f.getName().endsWith(".gz")) {
+		if (CommonUtils.isFileGzipped(f)) {
 			// Directly read gzip-compressed files
 			lnr = new LineNumberReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(f))));
 		} else lnr = new LineNumberReader(new FileReader(f));
@@ -119,7 +120,7 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 	 */
 	private AtomData readFile(File f, AtomData previous) throws IOException {
 		LineNumberReader lnr = null;
-		if (f.getName().endsWith(".gz")) {
+		if (CommonUtils.isFileGzipped(f)) {
 			// Directly read gzip-compressed files
 			lnr = new LineNumberReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(f))));
 		} else lnr = new LineNumberReader(new FileReader(f));

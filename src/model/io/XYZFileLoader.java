@@ -25,9 +25,11 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.GZIPInputStream;
 
 import javax.swing.filechooser.FileFilter;
 
+import common.CommonUtils;
 import common.Vec3;
 import model.Atom;
 import model.AtomData;
@@ -55,8 +57,9 @@ public class XYZFileLoader extends MDFileLoader {
 		
 		try {
 			boolean extendedFormat = false;
-			
-			lnr = new LineNumberReader(new FileReader(f));
+			if (CommonUtils.isFileGzipped(f)){
+				lnr = new LineNumberReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(f))));
+			} else lnr = new LineNumberReader(new FileReader(f));
 			line = lnr.readLine(); // Number of atoms -> don't care
 			line = lnr.readLine(); // Actual header
 			
@@ -188,7 +191,9 @@ public class XYZFileLoader extends MDFileLoader {
 		String header = null;
 		
 		try {
-			lnr = new LineNumberReader(new FileReader(f));
+			if (CommonUtils.isFileGzipped(f)){
+				lnr = new LineNumberReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(f))));
+			} else lnr = new LineNumberReader(new FileReader(f));
 			header = lnr.readLine(); // Number of atoms -> don't care
 			header = lnr.readLine(); // Actual header
 		} catch (IOException e){

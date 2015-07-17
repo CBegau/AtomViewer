@@ -32,6 +32,7 @@ import java.util.zip.GZIPInputStream;
 
 import javax.swing.filechooser.FileFilter;
 
+import common.CommonUtils;
 import common.DataInputStreamWrapper;
 import common.ThreadPool;
 import common.Vec3;
@@ -49,14 +50,13 @@ public class ImdFileLoader extends MDFileLoader{
 	@Override
 	public String[] getColumnsNamesFromHeader(File f) throws IOException {
 		LineNumberReader lnr = null;
-		GZIPInputStream gzipis = null;
 		FileInputStream fis;
 		
-		final boolean gzipped = f.getName().endsWith(".gz");
+		final boolean gzipped = CommonUtils.isFileGzipped(f);
 		fis = new FileInputStream(f);
 		if (gzipped){
 			//Directly read gzip-compressed files
-			gzipis = new GZIPInputStream(fis);
+			GZIPInputStream gzipis = new GZIPInputStream(fis);
 			lnr = new LineNumberReader(new InputStreamReader(gzipis));
 		} else 
 			lnr = new LineNumberReader(new InputStreamReader(fis));
@@ -101,7 +101,7 @@ public class ImdFileLoader extends MDFileLoader{
 		GZIPInputStream gzipis = null;
 		FileInputStream fis;
 		
-		final boolean gzipped = f.getName().endsWith(".gz");
+		final boolean gzipped = CommonUtils.isFileGzipped(f);
 		fis = new FileInputStream(f);
 		if (gzipped){
 			//Directly read gzip-compressed files
