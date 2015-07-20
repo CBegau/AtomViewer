@@ -27,6 +27,7 @@ import java.util.List;
 
 import javax.swing.*;
 
+import model.io.CfgFileLoader;
 import model.io.ImdFileLoader;
 import model.io.LammpsAsciiDumpLoader;
 import model.io.MDFileLoader;
@@ -56,6 +57,7 @@ public class JMDFileChooser extends JFileChooser{
 		fileLoader.add(new ImdFileLoader());
 		fileLoader.add(new LammpsAsciiDumpLoader());
 		fileLoader.add(new XYZFileLoader());
+		fileLoader.add(new CfgFileLoader());
 	}
 	
 	public JMDFileChooser(){
