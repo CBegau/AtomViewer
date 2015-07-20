@@ -14,8 +14,6 @@ import java.util.zip.GZIPInputStream;
 
 import javax.swing.filechooser.FileFilter;
 
-import com.sun.corba.se.spi.servicecontext.MaxStreamFormatVersionServiceContext;
-
 import Jama.EigenvalueDecomposition;
 import Jama.Matrix;
 import common.CommonUtils;
@@ -125,7 +123,7 @@ public class CfgFileLoader extends MDFileLoader {
 						
 						idc.box.backInBox(xyzPos);
 						
-						Atom a = new Atom(xyzPos, (byte)currentType, 0, (byte)currentType);
+						Atom a = new Atom(xyzPos, (byte)0, 0, (byte)currentType);
 						atomsRead++;
 						//Custom columns
 						for (int j = 0; j<dataColumns.length; j++){
@@ -166,7 +164,7 @@ public class CfgFileLoader extends MDFileLoader {
 					//Put atoms back into the simulation box, they might be slightly outside
 					idc.box.backInBox(xyzPos);
 					
-					Atom a = new Atom(xyzPos, (byte)type, 0, (byte)type);
+					Atom a = new Atom(xyzPos, (byte)0, 0, (byte)type);
 					atomsRead++;
 					//Custom columns
 					for (int j = 0; j<dataColumns.length; j++){
@@ -189,6 +187,7 @@ public class CfgFileLoader extends MDFileLoader {
 			for (String st : typeMap.keySet()){
 				idc.elementNames.put(typeMap.get(st), st);
 			}
+			idc.maxElementNumber = (byte)typeMap.size();
 			
 			if (totalAtoms != atomsRead){
 				throw new Exception("File broken: Number of atoms read is not equal to the number of atoms defined in the header.");
