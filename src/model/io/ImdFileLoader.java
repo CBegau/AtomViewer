@@ -48,7 +48,7 @@ public class ImdFileLoader extends MDFileLoader{
 	}
 	
 	@Override
-	public String[] getColumnsNamesFromHeader(File f) throws IOException {
+	public String[][] getColumnNamesUnitsFromHeader(File f) throws IOException {
 		LineNumberReader lnr = null;
 		FileInputStream fis;
 		
@@ -61,17 +61,18 @@ public class ImdFileLoader extends MDFileLoader{
 		} else 
 			lnr = new LineNumberReader(new InputStreamReader(fis));
 		
-		ArrayList<String> filteredValues = new ArrayList<String>();
+		ArrayList<String[]> filteredValues = new ArrayList<String[]>();
 		try{
-			ArrayList<String> values = IMD_Header.readValuesFromHeader(lnr);
+			ArrayList<String[]> values = IMD_Header.readValuesFromHeader(lnr);
 			
-			for (String s : values){
+			for (String[] v : values){
+				String s = v[0];
 				if (!s.equals("number") && !s.equals("type") && !s.equals("rbv_data")
 						&& !s.equals("rbv_x") && !s.equals("rbv_y") && !s.equals("rbv_z")
 						&& !s.equals("ls_x") && !s.equals("ls_y") && !s.equals("ls_z")
 						&& !s.equals("x") && !s.equals("y") && !s.equals("z")
 						&& !s.equals("grain") && !s.equals("ada_type"))
-					filteredValues.add(s);
+					filteredValues.add(v);
 			}
 		} catch (IOException e){
 			filteredValues.clear();
@@ -79,7 +80,7 @@ public class ImdFileLoader extends MDFileLoader{
 		} finally{
 			lnr.close();
 		}
-		return filteredValues.toArray(new String[filteredValues.size()]);
+		return filteredValues.toArray(new String[filteredValues.size()][]);
 	}
 	
 	@Override
@@ -503,8 +504,8 @@ public class ImdFileLoader extends MDFileLoader{
 		boolean[] columnToBeRead;
 		int[] columnToCustomIndex;
 		
-		private static ArrayList<String> readValuesFromHeader(LineNumberReader lnr) throws IOException{
-			ArrayList<String> values = new ArrayList<String>();
+		private static ArrayList<String[]> readValuesFromHeader(LineNumberReader lnr) throws IOException{
+			ArrayList<String[]> values = new ArrayList<String[]>();
 			Pattern p = Pattern.compile("\\s+");
 
 			String s = lnr.readLine();
@@ -512,7 +513,7 @@ public class ImdFileLoader extends MDFileLoader{
 				if (s.startsWith("#C")) {
 					String[] parts = p.split(s);
 					for (int i = 1; i < parts.length; i++) {
-						values.add(parts [i]);
+						values.add(new String[]{parts [i],""});
 					}
 					return values;
 				}

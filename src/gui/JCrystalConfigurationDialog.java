@@ -28,7 +28,6 @@ import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -196,19 +195,19 @@ public class JCrystalConfigurationDialog extends JDialog{
 		}
 		
 		
-		String[] h;
+		String[][] h;
 		boolean headerReadable = false;
 		if (selectedFile != null){
 			try {
-				h = Configuration.getCurrentFileLoader().getColumnsNamesFromHeader(selectedFile);
+				h = Configuration.getCurrentFileLoader().getColumnNamesUnitsFromHeader(selectedFile);
 				headerReadable = true;
 			} catch (IOException e1) {
-				h = new String[0];
+				h = new String[0][];
 			}
 		} else {
-			h = new String[0];
+			h = new String[0][];
 		}
-		final String[] valuesInHeader = h;
+		final String[][] valuesUnitsInHeader = h;
 		
 		String warningMessage = "";
 		if (!headerReadable){
@@ -219,7 +218,7 @@ public class JCrystalConfigurationDialog extends JDialog{
 		}
 		final String warning = warningMessage; 
 		
-		createTable(valuesInHeader, warning);
+		createTable(valuesUnitsInHeader, warning);
 		JScrollPane sp = new JScrollPane(tableContainer);
 		sp.setMinimumSize(new Dimension(600,300));
 		sp.setPreferredSize(new Dimension(600,300));
@@ -255,7 +254,7 @@ public class JCrystalConfigurationDialog extends JDialog{
 		this.setVisible(true);
 	}
 	
-	private void createTable(String[] valuesFromHeader, String warning){
+	private void createTable(String[][] valuesUnitsFromHeader, String warning){
 		ArrayList<JTextField> nameTextFieldsList = new ArrayList<JTextField>();
 		ArrayList<JTextField> idTextFieldsList =  new ArrayList<JTextField>();
 		ArrayList<JTextField> unitTextFieldsList =  new ArrayList<JTextField>();
@@ -289,8 +288,13 @@ public class JCrystalConfigurationDialog extends JDialog{
 		gbc.gridy++; gbc.gridx = 0;
 		
 		List<String> values = new ArrayList<String>();
-		if (valuesFromHeader.length != 0)
-			values = Arrays.asList(valuesFromHeader);
+		List<String> units = new ArrayList<String>();
+		if (valuesUnitsFromHeader.length != 0){
+			for (String[] vu : valuesUnitsFromHeader){
+				values.add(vu[0]);
+				units.add(vu[1]);
+			}
+		}
 		
 		boolean[] inHeader = new boolean[values.size()];
 		
@@ -329,7 +333,7 @@ public class JCrystalConfigurationDialog extends JDialog{
 			JTextField id = new JTextField(values.get(i));
 			id.setEditable(false);
 			idTextFieldsList.add(id);
-			unitTextFieldsList.add(new JTextField(""));
+			unitTextFieldsList.add(new JTextField(units.get(i)));
 			JFormattedTextField ftf = new JFormattedTextField(NumberFormat.getNumberInstance());
 			ftf.setValue(1);
 			scalingFactorFieldsList.add(ftf);

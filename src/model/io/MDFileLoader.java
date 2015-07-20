@@ -94,12 +94,12 @@ public abstract class MDFileLoader{
 	
 	/**
 	 * Reads the header from a file and returns an array containing the
-	 * names of all optionally importable values
+	 * names of all optionally importable values and their units (if available)
 	 * @param f The file to read the header from
-	 * @return array with Strings of optional values
+	 * @return array with Strings of optional values first entry is the value name, second the unit
 	 * @throws IOException
 	 */
-	public abstract String[] getColumnsNamesFromHeader(File f) throws IOException;
+	public abstract String[][] getColumnNamesUnitsFromHeader(File f) throws IOException;
 	
 	/**
 	 * Provides a name for this type of file reader

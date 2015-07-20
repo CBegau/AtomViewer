@@ -67,14 +67,14 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 	}
 	
 	@Override
-	public String[] getColumnsNamesFromHeader(File f) throws IOException {
+	public String[][] getColumnNamesUnitsFromHeader(File f) throws IOException {
 		LineNumberReader lnr = null;
 		if (CommonUtils.isFileGzipped(f)) {
 			// Directly read gzip-compressed files
 			lnr = new LineNumberReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(f))));
 		} else lnr = new LineNumberReader(new FileReader(f));
 		
-		ArrayList<String> values = new ArrayList<String>();
+		ArrayList<String[]> values = new ArrayList<String[]>();
 		try{
 			Pattern p = Pattern.compile("\\s+");
 			String s = lnr.readLine();
@@ -86,7 +86,7 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 					headerRead = true;
 					String[] parts = p.split(s);
 					for (int i = 2; i < parts.length; i++) {
-						values.add(parts[i]);
+						values.add(new String[]{parts[i],""});
 					}
 				}
 				s = lnr.readLine();
@@ -98,17 +98,18 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 			lnr.close();
 		}
 		
-		ArrayList<String> filteredValues = new ArrayList<String>();
-		for (String s : values){
+		ArrayList<String[]> filteredValues = new ArrayList<String[]>();
+		for (String[] v : values){
+			String s = v[0];
 			if (!s.equals("id") && !s.equals("type")
 					&& !s.equals("x") && !s.equals("y") && !s.equals("z")
 					&& !s.equals("xu") && !s.equals("yu") && !s.equals("zu")
 					&& !s.equals("xs") && !s.equals("ys") && !s.equals("zs")
 					&& !s.equals("xsu") && !s.equals("ysu") && !s.equals("zsu"))
-				filteredValues.add(s);
+				filteredValues.add(v);
 		}
 		
-		return filteredValues.toArray(new String[filteredValues.size()]);
+		return filteredValues.toArray(new String[filteredValues.size()][]);
 	}
 	
 	

@@ -22,6 +22,7 @@ import java.awt.GridBagConstraints;
 import java.io.File;
 import java.io.RandomAccessFile;
 import java.text.DecimalFormat;
+import java.util.regex.Pattern;
 
 public class CommonUtils {
 	
@@ -104,4 +105,17 @@ public class CommonUtils {
 
 		return false;
 	}
+	
+	/**
+	 * Checks if a string is a numeric value or not
+	 * Handles negative numbers and decimal separators (. or ,) as well
+	 * Does not handle non-latin numbers
+	 * @param str String to test
+	 * @return true if the string can be parsed 
+	 */
+	public final static boolean isStringNumeric(String str) {
+		final Pattern p = Pattern.compile("^[+-]?\\d+([,\\.]\\d+)?([eE]-?\\d+)?$");
+		return p.matcher(str).matches();
+	}
+	
 }

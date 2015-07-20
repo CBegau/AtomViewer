@@ -86,11 +86,11 @@ public class XYZFileLoader extends MDFileLoader {
 				
 				idc.makeBox();
 				
-				String[] properties = splitProperties(map.get("Properties"));
+				String[][] properties = splitProperties(map.get("Properties"));
 				
 				for (int j = 0; j<properties.length; j++){
 					for (int i = 0; i<ImportConfiguration.getInstance().getDataColumns().size(); i++){
-					if (properties[j].equals(ImportConfiguration.getInstance().getDataColumns().get(i).getId()))
+					if (properties[j][0].equals(ImportConfiguration.getInstance().getDataColumns().get(i).getId()))
 						dataColumns[i] = j + 4;
 					}
 				}
@@ -186,7 +186,7 @@ public class XYZFileLoader extends MDFileLoader {
 	}
 
 	@Override
-	public String[] getColumnsNamesFromHeader(File f) throws IOException {
+	public String[][] getColumnNamesUnitsFromHeader(File f) throws IOException {
 		LineNumberReader lnr = null;
 		String header = null;
 		
@@ -203,9 +203,9 @@ public class XYZFileLoader extends MDFileLoader {
 		}
 		
 		Map<String, String> map = readKeyValuesFromHeader(header);
-		if (map == null) return new String[0];
+		if (map == null) return new String[0][];
 		
-		String[] components = splitProperties(map.get("Properties"));
+		String[][] components = splitProperties(map.get("Properties"));
 		
 		return components;
 	}
@@ -247,8 +247,8 @@ public class XYZFileLoader extends MDFileLoader {
 		else return null;	
 	}
 	
-	private String[] splitProperties(String properties){
-		ArrayList<String> components = new ArrayList<String>();
+	private String[][] splitProperties(String properties){
+		ArrayList<String[]> components = new ArrayList<String[]>();
 		Pattern p = Pattern.compile(":");
 		
 		String parts[] = p.split(properties);
@@ -261,14 +261,14 @@ public class XYZFileLoader extends MDFileLoader {
 				int num = Integer.parseInt(parts[i+2]); 
 				if (num>1){
 					for (int j=0; j<num; j++)
-						components.add(parts[i]+"_"+j);
+						components.add(new String[]{parts[i]+"_"+j, ""});
 				} else {
-					components.add(parts[i]);
+					components.add(new String[]{parts[i], ""});
 				}
 			}
 		}
 		
-		return components.toArray(new String[components.size()]);
+		return components.toArray(new String[components.size()][]);
 	}
 	
 	private Vec3[] splitLattice(String lattice){
