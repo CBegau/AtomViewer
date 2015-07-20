@@ -31,6 +31,7 @@ import processingModules.otherModules.DeleteColumnModule;
 import processingModules.otherModules.FilteringModule;
 import processingModules.otherModules.VectorNormModule;
 import processingModules.toolchain.Toolchain;
+import model.DataColumnInfo.Component;
 import model.ImportConfiguration.ImportStates;
 import model.io.MDFileLoader;
 import model.polygrain.*;
@@ -543,26 +544,56 @@ public class AtomData {
 		}
 		else dos = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(out), 4096*1024));
 		
-		int numData = 1 + dataColumns.size() + (isPolyCrystalline() ? 1 : 0);
+		int massColumn = -1;
+		int vxColumn = -1, vyColumn = -1, vzColumn = -1;
+		for (int i=0; i<this.getDataColumnInfos().size(); i++){
+			if (this.getDataColumnInfos().get(i).getComponent() == Component.MASS)
+				massColumn = i;
+			if (this.getDataColumnInfos().get(i).getComponent() == Component.VELOCITY_X)
+				vxColumn = i;
+		}
+
+		//Tag which data need not to be exported in the end of each line
+		boolean[] skipData = new boolean[dataColumns.size()];
 		
-		if (binary){
-			dos.writeBytes(String.format("#F b 1 1 0 3 0 %d\n", numData));
-		} else dos.writeBytes(String.format("#F A 1 1 0 3 0 %d\n", numData));
-		dos.writeBytes("#C number type x y z ada_type");
+		boolean hasMass = massColumn!=-1;
+		if (hasMass)
+			skipData[massColumn] = true;
 		
-		if (dataColumns.size() != 0){
-			for (int i=0; i<dataColumns.size(); i++){
+		boolean hasVelocity = false;
+		if (vxColumn != -1 && this.getDataColumnInfos().get(vxColumn).isVectorComponent()){
+			hasVelocity = true;
+			vyColumn = this.getIndexForCustomColumn(this.getDataColumnInfos().get(vxColumn).getVectorComponents()[1]);
+			vzColumn = this.getIndexForCustomColumn(this.getDataColumnInfos().get(vxColumn).getVectorComponents()[2]);
+			skipData[vxColumn] = true; skipData[vyColumn] = true; skipData[vzColumn] = true;
+			skipData[this.getIndexForCustomColumn(this.getDataColumnInfos().get(vxColumn).getVectorComponents()[3])] = true;
+		} else {
+			vxColumn = -1; //Ignore incomplete vectors
+		}
+		int countExport = 0;
+		for (int i=0; i<skipData.length;i++)
+			if (!skipData[i]) countExport++;
+		
+		countExport += (isPolyCrystalline() ? 1 : 0) + 1;
+		
+		//Write header 
+		if (binary) dos.writeBytes("#F b ");
+		else dos.writeBytes("#F A ");
+		dos.writeBytes(String.format("1 1 %d 3 %d %d\n", (hasMass?1:0), (hasVelocity?3:0), countExport ));
+		dos.writeBytes(String.format("#C number %stype x y z %sada_type", hasMass?"mass ":"", hasVelocity?"vx vy vz ":""));
+
+		for (int i=0; i<dataColumns.size(); i++){
+			if (!skipData[i]){
 				String id = " "+dataColumns.get(i).getId();
 				dos.writeBytes(id);
 			}
 		}
-		if (isPolyCrystalline())
-			dos.writeBytes(" grain");
 		
+		if (isPolyCrystalline()) dos.writeBytes(" grain");
 		//rbv always at the end
-		if (rbvAvailable)
-			dos.writeBytes(" rbv_data");
+		if (rbvAvailable) dos.writeBytes(" rbv_data");
 		dos.writeBytes("\n");
+
 		
 		Vec3[] b = box.getBoxSize();
 		dos.writeBytes(String.format("#X %.8f %.8f %.8f\n", b[0].x, b[0].y, b[0].z));
@@ -598,17 +629,27 @@ public class AtomData {
 		dos.writeBytes("##METAEND\n");
 		dos.writeBytes("#E\n");
 		
+		//Finished header
+		
 		if (binary){
 			for (Atom a : atoms){
 				//Test and apply filtering
 				if (filter!=null && !filter.accept(a)) continue;
 				
 				dos.writeInt(a.getNumber()); dos.writeInt(a.getElement());
+				if (hasMass) dos.writeFloat(a.getData(massColumn));
 				dos.writeFloat(a.x); dos.writeFloat(a.y); dos.writeFloat(a.z);
+				if (hasVelocity){
+					dos.writeFloat(a.getData(vxColumn));
+					dos.writeFloat(a.getData(vyColumn));
+					dos.writeFloat(a.getData(vzColumn));
+				}
 				dos.writeInt(a.getType());
 				
 				for (int i = 0; i < dataColumns.size(); i++)
-					dos.writeFloat(a.getData(i));
+					if (!skipData[i])
+						dos.writeFloat(a.getData(i));
+				
 				if (isPolyCrystalline())
 					dos.writeInt(a.getGrain());
 				
@@ -629,12 +670,18 @@ public class AtomData {
 				//Test and apply filtering
 				if (filter!=null && !filter.accept(a)) continue;
 				
-				dos.writeBytes(String.format("%d %d %.8f %.8f %.8f %d", a.getNumber(), a.getElement(), 
-						a.x, a.y, a.z, a.getType()));
+				dos.writeBytes(String.format("%d %d", a.getNumber(), a.getElement()));
+				if (hasMass)
+					dos.writeBytes(String.format(" %.8f", a.getData(massColumn)));
+				dos.writeBytes(String.format(" %.8f %.8f %.8f", a.x, a.y, a.z));
+				if (hasVelocity)
+					dos.writeBytes(String.format(" %.8f %.8f %.8f", a.getData(vxColumn), a.getData(vyColumn), a.getData(vzColumn)));
+				dos.writeBytes(String.format(" %d", a.getType()));
 				
 				if (dataColumns.size()!=0)
 					for (int i = 0; i < dataColumns.size(); i++)
-						dos.writeBytes(String.format(" %.8f",a.getData(i)));
+						if (!skipData[i])
+							dos.writeBytes(String.format(" %.8f",a.getData(i)));
 				
 				if (isPolyCrystalline())
 					dos.writeBytes(" "+Integer.toString(a.getGrain()));
