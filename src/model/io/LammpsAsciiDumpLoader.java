@@ -160,16 +160,28 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 						s = lnr.readLine();
 					} else if (s.contains("ITEM: BOX BOUNDS")) {
 						String[] parts = p.split(s);
+						boolean triclinic = false;
+						float xy = 0f, xz = 0f, yz = 0f; 
 						if (parts.length >= 6){
-							idc.pbc[0] = parts[3].equals("pp");
-							idc.pbc[1] = parts[4].equals("pp");
-							idc.pbc[2] = parts[5].equals("pp");
+							if (parts.length >= 9){
+								//Triclinic box
+								if (parts[3].equals("xy"))
+									triclinic = true;
+								idc.pbc[0] = parts[6].startsWith("p");
+								idc.pbc[1] = parts[7].startsWith("p");
+								idc.pbc[2] = parts[8].startsWith("p");
+							} else {
+								idc.pbc[0] = parts[3].startsWith("p");
+								idc.pbc[1] = parts[4].startsWith("p");
+								idc.pbc[2] = parts[5].startsWith("p");
+							}
 						}
 						
 						s = lnr.readLine();
 						parts = p.split(s);
 						float min = Float.parseFloat(parts[0]);
 						float max = Float.parseFloat(parts[1]);
+						if(triclinic) xy = Float.parseFloat(parts[2]);
 						idc.offset.x = min;
 						idc.boxSizeX.x = max - min;
 
@@ -177,14 +189,19 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 						parts = p.split(s);
 						min = Float.parseFloat(parts[0]);
 						max = Float.parseFloat(parts[1]);
+						if(triclinic) xz = Float.parseFloat(parts[2]);
 						idc.offset.y = min;
+						idc.boxSizeY.x = xy;
 						idc.boxSizeY.y = max - min;
-
+						
 						s = lnr.readLine();
 						parts = p.split(s);
 						min = Float.parseFloat(parts[0]);
 						max = Float.parseFloat(parts[1]);
+						if(triclinic) yz = Float.parseFloat(parts[2]);
 						idc.offset.z = min;
+						idc.boxSizeZ.x = xz;
+						idc.boxSizeZ.y = yz;
 						idc.boxSizeZ.z = max - min;
 						s = lnr.readLine();
 						
