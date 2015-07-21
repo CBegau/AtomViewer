@@ -104,6 +104,12 @@ public class JPrimitiveVariablesPropertiesDialog extends JDialog {
 		return bp;
 	}
 	
+	public StringProperty addString(String id, String label, String tooltip, String defaultValue){
+		StringProperty sp = new StringProperty(id, label, tooltip, defaultValue);
+		this.addComponent(getControlPanelForProperty(sp, true));
+		return sp;
+	}
+	
 	public void addLabel(String s){
 		this.addComponent(getWordWrappedJLabel(s));
 	}
@@ -195,6 +201,32 @@ public class JPrimitiveVariablesPropertiesDialog extends JDialog {
 		
 		public void setEnabled(boolean enabled){
 			this.getEditor().setEnabled(enabled);
+		}
+	}
+	
+	public static class StringProperty extends PrimitiveProperty{
+		JTextField textField;
+		String defaultText;
+		
+		public StringProperty(String id, String label, String tooltip, String defaultString) {
+			super(id, label, tooltip);
+			textField.setText(defaultString);
+			textField.setEditable(true);
+			this.defaultText = defaultString;
+		}
+
+		@Override
+		public JComponent getEditor() {
+			return textField;
+		}
+
+		@Override
+		protected void setToDefault() {
+			this.textField.setText(defaultText);
+		}
+
+		public String getValue() {
+			return textField.getText();
 		}
 	}
 	
