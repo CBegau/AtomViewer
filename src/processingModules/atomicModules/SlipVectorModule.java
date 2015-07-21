@@ -3,7 +3,7 @@ package processingModules.atomicModules;
 import gui.JLogPanel;
 import gui.JPrimitiveVariablesPropertiesDialog;
 import gui.ProgressMonitor;
-import gui.JPrimitiveVariablesPropertiesDialog.FloatProperty;
+import gui.PrimitiveProperty.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;

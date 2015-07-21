@@ -20,9 +20,7 @@ package processingModules.atomicModules;
 
 import gui.JPrimitiveVariablesPropertiesDialog;
 import gui.ProgressMonitor;
-import gui.JPrimitiveVariablesPropertiesDialog.BooleanProperty;
-import gui.JPrimitiveVariablesPropertiesDialog.FloatProperty;
-import gui.JPrimitiveVariablesPropertiesDialog.IntegerProperty;
+import gui.PrimitiveProperty.*;
 
 import java.util.ArrayList;
 import java.util.Vector;

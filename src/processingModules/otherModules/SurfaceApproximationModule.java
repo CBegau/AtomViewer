@@ -1,6 +1,6 @@
 package processingModules.otherModules;
 
-import gui.JPrimitiveVariablesPropertiesDialog.*;
+import gui.PrimitiveProperty.*;
 import gui.glUtils.Shader.BuiltInShader;
 import gui.glUtils.Shader;
 import gui.JColorSelectPanel;

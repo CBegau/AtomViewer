@@ -20,8 +20,7 @@ package processingModules.otherModules;
 
 import gui.JPrimitiveVariablesPropertiesDialog;
 import gui.ProgressMonitor;
-import gui.JPrimitiveVariablesPropertiesDialog.BooleanProperty;
-import gui.JPrimitiveVariablesPropertiesDialog.FloatProperty;
+import gui.PrimitiveProperty.*;
 
 import java.awt.event.InputEvent;
 import java.util.*;

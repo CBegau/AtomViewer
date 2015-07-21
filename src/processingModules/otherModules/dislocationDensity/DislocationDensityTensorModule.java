@@ -22,7 +22,7 @@ import gui.JLogPanel;
 import gui.JPrimitiveVariablesPropertiesDialog;
 import gui.RenderRange;
 import gui.ViewerGLJPanel;
-import gui.JPrimitiveVariablesPropertiesDialog.IntegerProperty;
+import gui.PrimitiveProperty.*;
 
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;

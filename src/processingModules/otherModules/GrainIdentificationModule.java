@@ -20,7 +20,7 @@ package processingModules.otherModules;
 
 import gui.JPrimitiveVariablesPropertiesDialog;
 import gui.ProgressMonitor;
-import gui.JPrimitiveVariablesPropertiesDialog.*;
+import gui.PrimitiveProperty.*;
 
 import java.util.*;
 

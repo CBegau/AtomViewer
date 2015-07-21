@@ -4,7 +4,7 @@ import javax.swing.JFrame;
 import javax.swing.JSeparator;
 
 import gui.JPrimitiveVariablesPropertiesDialog;
-import gui.JPrimitiveVariablesPropertiesDialog.FloatProperty;
+import gui.PrimitiveProperty.*;
 import model.AtomData;
 import model.DataColumnInfo;
 import processingModules.ClonableProcessingModule;
