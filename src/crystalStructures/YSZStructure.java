@@ -23,7 +23,7 @@ import java.util.*;
 import common.ColorTable;
 import common.Tupel;
 import common.Vec3;
-import crystalStructures.CrystalStructureProperties.BooleanCrystalProperty;
+import gui.PrimitiveProperty.BooleanProperty;
 import model.Atom;
 import model.AtomData;
 import model.Filter;
@@ -31,12 +31,12 @@ import model.NearestNeighborBuilder;
 
 public class YSZStructure extends CrystalStructure {
 	
-	protected BooleanCrystalProperty dontImportOxygen = 
-			new BooleanCrystalProperty("dontImportOxygen", "Do not import oxygen",
+	protected BooleanProperty dontImportOxygen = 
+			new BooleanProperty("dontImportOxygen", "Do not import oxygen",
 					"Ignores all oxygen atoms during import",false);
 	
-	protected BooleanCrystalProperty hasArtificialPlaceHolderAtoms = 
-			new BooleanCrystalProperty("hasArtificialPlaceholder", "Has artificial placeholder particles",
+	protected BooleanProperty hasArtificialPlaceHolderAtoms = 
+			new BooleanProperty("hasArtificialPlaceholder", "Has artificial placeholder particles",
 					"<html>The file contains artificial placeholders and thus<br>"
 					+ "consists of four types, not three.</html>",
 					true);
@@ -81,12 +81,12 @@ public class YSZStructure extends CrystalStructure {
 	
 	@Override
 	public int getNumberOfElements() {
-		return hasArtificialPlaceHolderAtoms.value ? 4 : 3;
+		return hasArtificialPlaceHolderAtoms.getValue() ? 4 : 3;
 	}
 	
 	@Override
 	public String[] getNamesOfElements(){
-		if (hasArtificialPlaceHolderAtoms.value)
+		if (hasArtificialPlaceHolderAtoms.getValue())
 			return new String[]{"Zr", "O", "Y", "-"};
 		return new String[]{"Zr", "O", "Y"};
 	}
@@ -177,7 +177,7 @@ public class YSZStructure extends CrystalStructure {
 	
 	@Override
 	public float[] getSphereSizeScalings() {
-		if (hasArtificialPlaceHolderAtoms.value)
+		if (hasArtificialPlaceHolderAtoms.getValue())
 			return new float[]{1f, 0.49f, 1.095f, 0.1f};
 		else return new float[]{1f, 0.49f, 1.095f};
 	}
@@ -214,7 +214,7 @@ public class YSZStructure extends CrystalStructure {
 	
 	@Override
 	public Filter<Atom> getIgnoreAtomsDuringImportFilter() {
-		if (dontImportOxygen.value == true){
+		if (dontImportOxygen.getValue() == true){
 			return new Filter<Atom>() {
 				@Override
 				public boolean accept(Atom a) {

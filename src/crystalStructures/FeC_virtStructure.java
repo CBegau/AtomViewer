@@ -20,6 +20,7 @@ package crystalStructures;
 
 import gui.RenderRange;
 import gui.ViewerGLJPanel;
+import gui.PrimitiveProperty.BooleanProperty;
 import gui.ViewerGLJPanel.AtomRenderType;
 import gui.glUtils.ObjectRenderData;
 
@@ -33,7 +34,6 @@ import javax.swing.JFrame;
 import common.ColorTable;
 import common.Tupel;
 import common.Vec3;
-import crystalStructures.CrystalStructureProperties.BooleanCrystalProperty;
 import model.Atom;
 import model.AtomData;
 import model.BoxParameter;
@@ -50,8 +50,8 @@ import processingModules.otherModules.ParticleDataContainer;
 
 public class FeC_virtStructure extends BCCStructure {
 	
-	protected BooleanCrystalProperty placeholderProperty = 
-			new BooleanCrystalProperty("placeholders", "handle Placeholders separately","", true);
+	protected BooleanProperty placeholderProperty = 
+			new BooleanProperty("placeholders", "handle Placeholders separately","", true);
 	
 	
 	public FeC_virtStructure() {

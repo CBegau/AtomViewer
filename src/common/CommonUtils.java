@@ -18,11 +18,17 @@
 
 package common;
 
+import java.awt.Component;
+import java.awt.GraphicsDevice;
 import java.awt.GridBagConstraints;
+import java.awt.Window;
 import java.io.File;
 import java.io.RandomAccessFile;
 import java.text.DecimalFormat;
 import java.util.regex.Pattern;
+
+import javax.swing.JComponent;
+import javax.swing.JLabel;
 
 public class CommonUtils {
 	
@@ -118,4 +124,18 @@ public class CommonUtils {
 		return p.matcher(str).matches();
 	}
 	
+	public static String getWordWrappedString(String s, JComponent c, Window w){
+		GraphicsDevice gd = w.getOwner().getGraphicsConfiguration().getDevice();
+		int maxSizeString = gd.getDisplayMode().getWidth()/3;
+		if (c.getFontMetrics(c.getFont()).stringWidth(s) > maxSizeString)
+			return "<html><table><tr><td width='"+maxSizeString+"'>"+ s +"</td></tr></table></html>";
+		else return s;
+	}
+	
+	public static JLabel getWordWrappedJLabel(String s, Window w){
+		JLabel l = new JLabel();
+		l.setText(getWordWrappedString(s, l, w));
+		l.setAlignmentX(Component.LEFT_ALIGNMENT);
+		return l;
+	}
 }

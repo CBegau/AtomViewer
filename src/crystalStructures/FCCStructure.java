@@ -21,7 +21,7 @@ package crystalStructures;
 import java.util.*;
 
 import common.Vec3;
-import crystalStructures.CrystalStructureProperties.BooleanCrystalProperty;
+import gui.PrimitiveProperty.BooleanProperty;
 import model.*;
 import model.BurgersVector.BurgersVectorType;
 import model.polygrain.grainDetection.AtomToGrainObject;
@@ -83,8 +83,8 @@ public class FCCStructure extends CrystalStructure {
 		bvClassifcationPattern.add(new ClassificationPattern(111, 3, 3, 111, 3, 0, 4, BurgersVectorType.FRANK_PARTIAL));
 	}
 	
-	protected BooleanCrystalProperty highTempProperty = 
-			new BooleanCrystalProperty("highTempADA", "optimize defect classification for >150K",
+	protected BooleanProperty highTempProperty = 
+			new BooleanProperty("highTempADA", "optimize defect classification for >150K",
 					"<html>Modifies the thresholds to classify atoms.<br>"
 					+ "Typically reduces the number of false classifications.</html>",
 					false);

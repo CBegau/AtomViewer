@@ -19,6 +19,7 @@
 package crystalStructures;
 
 import gui.JLogPanel;
+import gui.PrimitiveProperty;
 import gui.ProgressMonitor;
 
 import java.awt.Color;
@@ -35,7 +36,6 @@ import javax.tools.ToolProvider;
 
 import common.ColorTable;
 import common.Vec3;
-import crystalStructures.CrystalStructureProperties.*;
 import model.*;
 import model.BurgersVector.BurgersVectorType;
 import model.ImportConfiguration.ImportStates;
@@ -69,7 +69,7 @@ public abstract class CrystalStructure{
 	
 	float latticeConstant;
 	float nearestNeighborSearchRadius;
-	ArrayList<CrystalProperty> crystalProperties = new ArrayList<CrystalStructureProperties.CrystalProperty>();
+	ArrayList<PrimitiveProperty> crystalProperties = new ArrayList<PrimitiveProperty>();
 	float[][] currentColors;
 	
 	private static final ArrayList<CrystalStructure> structures = new ArrayList<CrystalStructure>();
@@ -462,7 +462,7 @@ public abstract class CrystalStructure{
 	 * Handle via CrystalStructureProperties 
 	 * @return
 	 */
-	public ArrayList<CrystalProperty> getCrystalProperties() {
+	public ArrayList<PrimitiveProperty> getCrystalProperties() {
 		return crystalProperties;
 	}
 	

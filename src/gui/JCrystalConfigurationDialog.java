@@ -378,7 +378,8 @@ public class JCrystalConfigurationDialog extends JDialog{
 	private void createCrystalPropertiesContainer(){
 		crystalPropertiesContainer.removeAll();
 		crystalPropertiesContainer.setLayout(new GridLayout(1,1));
-		crystalPropertiesContainer.add(CrystalStructureProperties.createPropertyContainer(crystalStructure.getCrystalProperties()));
+		crystalPropertiesContainer.add(
+				CrystalStructureProperties.createPropertyContainer(crystalStructure.getCrystalProperties(), this));
 		crystalPropertiesContainer.invalidate();
 		this.validate();
 	}

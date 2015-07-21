@@ -1,21 +1,80 @@
 package gui;
 
+import java.awt.Component;
+import java.awt.GridLayout;
+import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
+import java.util.Properties;
 
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
 import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import common.CommonUtils;
+
 public abstract class PrimitiveProperty{
 	protected String id, label, tooltip;
 	
-	PrimitiveProperty(String id, String label, String tooltip) {
+	public static JPanel getControlPanelForProperty(final PrimitiveProperty p, boolean addGlue, Window w){		
+		JPanel propertyPanel = new JPanel();
+		
+		JLabel label1 = null;
+		if (p.label != null && !p.label.isEmpty()){
+			label1 = CommonUtils.getWordWrappedJLabel(p.label, w);
+			label1.setToolTipText(p.tooltip);
+			propertyPanel.setLayout(new GridLayout(2, 1));
+			propertyPanel.add(label1);
+		} else {
+			propertyPanel.setLayout(new GridLayout(1, 1));
+		}
+		
+		final JLabel label = label1;
+		
+		JPanel editorPanel = new JPanel();
+		editorPanel.setLayout(new BoxLayout(editorPanel, BoxLayout.LINE_AXIS));
+		
+		editorPanel.add(p.getEditor());
+		if (addGlue) editorPanel.add(Box.createHorizontalGlue());
+		
+		final JButton reset = new JButton("default");
+		reset.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				p.setToDefault();
+			}
+		});
+		
+		reset.setAlignmentX(Component.RIGHT_ALIGNMENT);
+		
+		editorPanel.add(reset);
+		propertyPanel.add(editorPanel);
+		
+		p.getEditor().addPropertyChangeListener(new PropertyChangeListener() {
+			@Override
+			public void propertyChange(PropertyChangeEvent evt) {
+				boolean e = p.getEditor().isEnabled();
+				reset.setEnabled(e);
+				if (label!=null) label.setEnabled(e);
+			}
+		});
+		
+		return propertyPanel;
+	}
+		
+	protected PrimitiveProperty(String id, String label, String tooltip) {
 		this.id = id;
 		this.label = label;
 		this.tooltip = tooltip;
@@ -23,14 +82,21 @@ public abstract class PrimitiveProperty{
 	
 	public abstract JComponent getEditor();
 	
+	public abstract void save(Properties prop);
+	public abstract void load(Properties prop);
+	
 	public String getLabel(){
 		return label;
 	}
 	
-	protected abstract void setToDefault();
+	public abstract void setToDefault();
 	
 	public void setEnabled(boolean enabled){
 		this.getEditor().setEnabled(enabled);
+	}
+	
+	public String getTooltip() {
+		return tooltip;
 	}
 	
 	public static class StringProperty extends PrimitiveProperty{
@@ -50,12 +116,28 @@ public abstract class PrimitiveProperty{
 		}
 
 		@Override
-		protected void setToDefault() {
+		public void setToDefault() {
 			this.textField.setText(defaultText);
 		}
 
 		public String getValue() {
 			return textField.getText();
+		}
+		
+		@Override
+		public void save(Properties prop) {
+			prop.setProperty(id, this.textField.getText());
+		}
+		
+		public void setDefaultValue(String defaultValue) {
+			this.defaultText = defaultValue;
+		}
+		
+		@Override
+		public void load(Properties prop) {
+			String s = prop.getProperty(id, this.textField.getText());
+			this.setDefaultValue(s);
+			this.setToDefault();
 		}
 	}
 
@@ -88,7 +170,7 @@ public abstract class PrimitiveProperty{
 		
 		
 		@Override
-		protected void setToDefault() {
+		public void setToDefault() {
 			this.value = defaultValue;
 			if (valueSpinner!=null){
 				valueSpinner.setValue(this.value);
@@ -101,6 +183,18 @@ public abstract class PrimitiveProperty{
 		
 		public int getValue() {
 			return value;
+		}
+		
+		@Override
+		public void save(Properties prop) {
+			prop.setProperty(id, Integer.toString(this.getValue()));
+		}
+		
+		@Override
+		public void load(Properties prop) {
+			String s = prop.getProperty(id, Integer.toString(this.getValue()));
+			this.setDefaultValue(Integer.parseInt(s));
+			this.setToDefault();
 		}
 	}
 
@@ -136,7 +230,7 @@ public abstract class PrimitiveProperty{
 		}
 		
 		@Override
-		protected void setToDefault() {
+		public  void setToDefault() {
 			this.value = defaultValue;
 			if (valueSpinner!=null){
 				valueSpinner.setValue(new Double((double)this.value));
@@ -146,6 +240,18 @@ public abstract class PrimitiveProperty{
 		public void setDefaultValue(float defaultValue) {
 			this.defaultValue = defaultValue;
 		}
+		
+		@Override
+		public void save(Properties prop) {
+			prop.setProperty(id, Float.toString(getValue()));
+		}
+		
+		@Override
+		public void load(Properties prop) {
+			String s = prop.getProperty(id, Float.toString(this.getValue()));
+			this.setDefaultValue(Float.parseFloat(s));
+			this.setToDefault();
+		}
 	}
 
 	public static class BooleanProperty extends PrimitiveProperty{
@@ -154,13 +260,13 @@ public abstract class PrimitiveProperty{
 		
 		ArrayList<PrimitiveProperty> dependentProperties = new ArrayList<PrimitiveProperty>();
 		
-		public BooleanProperty(String id, String label, String tooltip, boolean defaultValue, JPrimitiveVariablesPropertiesDialog dialog) {
+		public BooleanProperty(String id, String label, String tooltip, boolean defaultValue) {
 			super(id, "", "");
 			this.value = defaultValue;
 			this.defaultValue = defaultValue;
 			
 			valueCheckbox = new JCheckBox();
-			valueCheckbox.setText(dialog.getWordWrappedString(label, valueCheckbox));
+			valueCheckbox.setText(label);
 			valueCheckbox.setToolTipText(tooltip);
 			valueCheckbox.setSelected(value);
 			valueCheckbox.addActionListener(new ActionListener() {
@@ -184,7 +290,7 @@ public abstract class PrimitiveProperty{
 		}
 		
 		@Override
-		protected void setToDefault() {
+		public  void setToDefault() {
 			this.value = this.defaultValue;
 			valueCheckbox.setSelected(this.value);
 			for (PrimitiveProperty p: dependentProperties)
@@ -204,6 +310,18 @@ public abstract class PrimitiveProperty{
 			super.setEnabled(enabled);
 			for (PrimitiveProperty p: dependentProperties)
 				p.setEnabled(enabled);
+		}
+		
+		@Override
+		public void save(Properties prop) {
+			prop.setProperty(id, Boolean.toString(this.getValue()));
+		}
+		
+		@Override
+		public void load(Properties prop) {
+			String s = prop.getProperty(id, Boolean.toString(this.getValue()));
+			this.setDefaultValue(Boolean.parseBoolean(s));
+			this.setToDefault();
 		}
 	}
 }

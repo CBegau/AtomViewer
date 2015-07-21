@@ -238,7 +238,9 @@ public class AtomData {
 		
 		//Bond Angle Analysis
 		if (!idc.atomTypesAvailable){
-			this.applyProcessingModule(new AtomClassificationModule());
+			ProcessingModule pm = new AtomClassificationModule();
+			ProgressMonitor.getProgressMonitor().setActivityName(pm.getShortName());
+			this.applyProcessingModule(pm);
 		}
 		
 		if (ImportStates.IMPORT_GRAINS.isActive() && isGrainsImported()){

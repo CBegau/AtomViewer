@@ -3,8 +3,6 @@ package gui;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 
 import javax.swing.*;
@@ -87,49 +85,36 @@ public class JPrimitiveVariablesPropertiesDialog extends JDialog {
 	
 	public IntegerProperty addInteger(String id, String label, String tooltip, int defaultValue, int min, int max){
 		IntegerProperty ip = new IntegerProperty(id, label, tooltip, defaultValue, min, max);
-		this.addComponent(getControlPanelForProperty(ip, false));
+		this.addComponent(PrimitiveProperty.getControlPanelForProperty(ip, false, this));
 		return ip;
 	}
 	
 	public FloatProperty addFloat(String id, String label, String tooltip, float defaultValue, float min, float max){
 		FloatProperty fp = new FloatProperty(id, label, tooltip, defaultValue, min, max);
-		this.addComponent(getControlPanelForProperty(fp, false));
+		this.addComponent(PrimitiveProperty.getControlPanelForProperty(fp, false, this));
 		return fp;
 	}
 
 	public BooleanProperty addBoolean(String id, String label, String tooltip, boolean defaultValue){
-		BooleanProperty bp = new BooleanProperty(id, label, tooltip, defaultValue, this);
-		this.addComponent(getControlPanelForProperty(bp, true));
+		String wrappedLabel = CommonUtils.getWordWrappedString(label, new JCheckBox(), this);
+		
+		BooleanProperty bp = new BooleanProperty(id, wrappedLabel, tooltip, defaultValue);
+		this.addComponent(PrimitiveProperty.getControlPanelForProperty(bp, true, this));
 		return bp;
 	}
 	
 	public StringProperty addString(String id, String label, String tooltip, String defaultValue){
 		StringProperty sp = new StringProperty(id, label, tooltip, defaultValue);
-		this.addComponent(getControlPanelForProperty(sp, false));
+		this.addComponent(PrimitiveProperty.getControlPanelForProperty(sp, false, this));
 		return sp;
 	}
 	
 	public void addProperty(PrimitiveProperty property, boolean addGlue){
-		this.addComponent(getControlPanelForProperty(property, addGlue));
+		this.addComponent(PrimitiveProperty.getControlPanelForProperty(property, addGlue, this));
 	}
 	
 	public void addLabel(String s){
-		this.addComponent(getWordWrappedJLabel(s));
-	}
-	
-	private JLabel getWordWrappedJLabel(String s){
-		JLabel l = new JLabel();
-		l.setText(getWordWrappedString(s, l));
-		l.setAlignmentX(Component.LEFT_ALIGNMENT);
-		return l;
-	}
-	
-	String getWordWrappedString(String s, JComponent c){
-		GraphicsDevice gd = this.getOwner().getGraphicsConfiguration().getDevice();
-		int maxSizeString = gd.getDisplayMode().getWidth()/3;
-		if (c.getFontMetrics(c.getFont()).stringWidth(s) > maxSizeString)
-			return "<html><table><tr><td width='"+maxSizeString+"'>"+ s +"</td></tr></table></html>";
-		else return s;
+		this.addComponent(CommonUtils.getWordWrappedJLabel(s, this));
 	}
 	
 	public void addComponent(JComponent c){
@@ -138,52 +123,4 @@ public class JPrimitiveVariablesPropertiesDialog extends JDialog {
 		else 
 			components.add(c);
 	}
-	
-	private JPanel getControlPanelForProperty(final PrimitiveProperty p, boolean addGlue){		
-		JPanel propertyPanel = new JPanel();
-		
-		JLabel label1 = null;
-		if (p.label != null && !p.label.isEmpty()){
-			label1 = getWordWrappedJLabel(p.label);
-			label1.setToolTipText(p.tooltip);
-			propertyPanel.setLayout(new GridLayout(2, 1));
-			propertyPanel.add(label1);
-		} else {
-			propertyPanel.setLayout(new GridLayout(1, 1));
-		}
-		
-		final JLabel label = label1;
-		
-		JPanel editorPanel = new JPanel();
-		editorPanel.setLayout(new BoxLayout(editorPanel, BoxLayout.LINE_AXIS));
-		
-		editorPanel.add(p.getEditor());
-		if (addGlue) editorPanel.add(Box.createHorizontalGlue());
-		
-		final JButton reset = new JButton("default");
-		reset.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent arg0) {
-				p.setToDefault();
-			}
-		});
-		
-		reset.setAlignmentX(Component.RIGHT_ALIGNMENT);
-		
-		editorPanel.add(reset);
-		propertyPanel.add(editorPanel);
-		
-		p.getEditor().addPropertyChangeListener(new PropertyChangeListener() {
-			@Override
-			public void propertyChange(PropertyChangeEvent evt) {
-				boolean e = p.getEditor().isEnabled();
-				reset.setEnabled(e);
-				if (label!=null) label.setEnabled(e);
-			}
-		});
-		
-		return propertyPanel;
-	}
-	
-	
 }
