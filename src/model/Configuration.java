@@ -20,6 +20,7 @@ package model;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Iterator;
 
 import model.io.MDFileLoader;
 
@@ -57,7 +58,6 @@ public class Configuration {
 			l.atomDataChanged(e);
 	}
 	
-	
 	public static boolean create(){
 		ImportConfiguration.getInstance().createVectorDataColumn();
 		
@@ -90,6 +90,50 @@ public class Configuration {
 	
 	public static AtomData getCurrentAtomData() {
 		return currentAtomData;
+	}
+	
+	public static Iterable<AtomData> getAtomDataIterable(){
+		return new Iterable<AtomData>() {
+			
+			@Override
+			public Iterator<AtomData> iterator() {
+				return new Iterator<AtomData>() {
+					private AtomData current = null;
+					private boolean done = false;
+					
+					private void getFirst(){
+						current = getCurrentAtomData();
+						if (current == null) return;
+						while (current.getPrevious() != null)
+							current = current.getPrevious();
+					}
+					
+					@Override
+					public boolean hasNext() {
+						if (current == null && !done)
+							getFirst();
+						
+						return current != null;
+					}
+					
+					@Override
+					public AtomData next() {
+						AtomData r = current;
+						if (r!=null){
+							current = current.getNext();
+							if(current == null) done = true;
+						}
+						return r;
+					}
+
+					@Override
+					public void remove() {
+						throw new RuntimeException("Remove is not supported");
+						
+					}
+				};
+			}
+		};
 	}
 	
 	public static void setCurrentAtomData(AtomData currentAtomData, boolean updateGUI, boolean resetGUI) {

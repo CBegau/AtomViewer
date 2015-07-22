@@ -18,6 +18,7 @@
 
 package gui;
 
+import gui.PrimitiveProperty.BooleanProperty;
 import gui.ViewerGLJPanel.RenderOption;
 
 import java.awt.*;
@@ -27,6 +28,7 @@ import java.beans.PropertyChangeListener;
 import java.io.*;
 import java.text.DecimalFormat;
 import java.util.Locale;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -161,15 +163,9 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		
 		ExportFileActionListener exportFileListener = new ExportFileActionListener();
 		
-		JMenuItem exportAsciiFile = new JMenuItem("Export Data as ada-file (ASCII)");
+		JMenuItem exportAsciiFile = new JMenuItem("Export as IMD-Checkpoint");
 		exportAsciiFile.addActionListener(CursorController.createListener(this, exportFileListener));
-		exportAsciiFile.setActionCommand("ascii");
 		fileMenu.add(exportAsciiFile);
-		
-		JMenuItem exportBinaryFile = new JMenuItem("Export Data as ada-file (Binary)");
-		exportBinaryFile.addActionListener(CursorController.createListener(this, exportFileListener));
-		exportBinaryFile.setActionCommand("binary");
-		fileMenu.add(exportBinaryFile);
 		
 		exportSkeletonFileMenuItem = new JMenuItem("Export dislocation network");
 		exportSkeletonFileMenuItem.addActionListener(CursorController.createListener(this, new ActionListener() {
@@ -762,65 +758,91 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		public void actionPerformed(ActionEvent e) {
 			assert Configuration.getCurrentAtomData()!=null : "current AtomData is null";
 			
-			boolean binary = e.getActionCommand().equals("binary");
 			JFileChooser chooser = new JFileChooser();
 			JPanel optionPanel = new JPanel();
 			optionPanel.setLayout(new BoxLayout(optionPanel, BoxLayout.Y_AXIS));
 			final JCheckBox exportAll = new JCheckBox("Export all files at once");
-			final JCheckBox exportVisible = new JCheckBox("Export visible atoms only");
 			optionPanel.add(exportAll);
-			optionPanel.add(exportVisible);
 			chooser.setAccessory(optionPanel);
+			
+			MDFileWriter writer = new ImdFileWriter();
 			
 			int result = chooser.showSaveDialog(JMainWindow.this);
 			if (result == JFileChooser.APPROVE_OPTION){
+				
+				AtomData current = Configuration.getCurrentAtomData();
+				
+				JPrimitiveVariablesPropertiesDialog configDialog = 
+						new JPrimitiveVariablesPropertiesDialog(JMainWindow.this, "Configure export");
+				List<PrimitiveProperty<?>> options = 
+						writer.getAdditionalProperties(current, exportAll.isSelected()); 
+				if (options != null && options.size()>0){
+					configDialog.startGroup("Options");
+					for (PrimitiveProperty<?> p : options) configDialog.addProperty(p);
+					configDialog.endGroup();
+				}
+				
+				boolean exportGrain = current.isPolyCrystalline();
+				boolean exportRBV = current.isRbvAvailable();
+				List<DataColumnInfo> dci = current.getDataColumnInfos();
+				//Identify which entries are common in all AtomData
 				if (exportAll.isSelected()){
-					try {
-						AtomData current = Configuration.getCurrentAtomData();
-						while (current.getPrevious() != null)
-							current = current.getPrevious();
-						
-						int num=0;
-						String path = chooser.getSelectedFile().getParent();
-						String prefix = chooser.getSelectedFile().getName();
-						
-						
-						do {
-							String newName = current.getName();
-							if (newName.endsWith(".ada")) newName = newName.substring(0, newName.length()-4);
-							if (newName.endsWith(".ada.gz")) newName = newName.substring(0, newName.length()-7);
-								
-							if (newName.endsWith(".chkpt")) newName = newName.substring(0, newName.length()-6);
-							if (newName.endsWith(".chkpt.gz")) newName = newName.substring(0, newName.length()-9);
-							
-							newName = String.format("%s%s.ada", prefix, newName, num++);
-							if (binary) newName += ".gz";
-							//Check if only visible atoms are to be exported
-							Filter<Atom> atomFilter = null;
-							if (exportVisible.isSelected()) 
-								atomFilter = RenderingConfiguration.getViewer().getCurrentAtomFilter();
-							
-							current.printToFile(new File(path, newName), binary, binary, atomFilter);
-							current = current.getNext(); 
-						} while (current != null);
-					} catch (IOException e1) {
-						e1.printStackTrace();
-					}
-				} else {
-					try {
-						String filename = chooser.getSelectedFile().getAbsolutePath();
-						if (binary){
-							if (filename.endsWith(".ada")) filename += ".gz";
-							if (!filename.endsWith(".ada.gz")) filename += ".ada.gz";
-						} else if (!filename.endsWith(".ada")) filename += ".ada";
-						Filter<Atom> atomFilter = null;
-						if (exportVisible.isSelected()) 
-							atomFilter = RenderingConfiguration.getViewer().getCurrentAtomFilter();
-						Configuration.getCurrentAtomData().printToFile(new File(filename), binary, binary, atomFilter);
-					} catch (IOException e1) {
-						e1.printStackTrace();
+					for (AtomData d : Configuration.getAtomDataIterable()){
+						dci.retainAll(d.getDataColumnInfos());
+						if (exportGrain) exportGrain = d.isPolyCrystalline();
+						if (exportRBV) exportRBV = d.isRbvAvailable();
 					}
 				}
+				
+				BooleanProperty eNum = new BooleanProperty("num", "Atom number", "Export atom number", true);
+				BooleanProperty eEle = new BooleanProperty("ele", "Element", "Export atom element", true);
+				BooleanProperty eg = new BooleanProperty("grains", "Grain number", "Export Grain number per atom", true);
+				BooleanProperty erbv = new BooleanProperty("rbv", "RBV", "Export RBV per atom", true);
+				BooleanProperty etype = new BooleanProperty("Type", "Structure type", "Export classified type", true);
+				BooleanProperty[] dciEnabled = new BooleanProperty[dci.size()];
+				
+				configDialog.startGroup("Include values in output");
+				configDialog.addProperty(eNum);
+				configDialog.addProperty(eEle);
+				configDialog.addProperty(etype);
+				if (exportGrain) configDialog.addProperty(eg);
+				if (exportRBV) configDialog.addProperty(erbv);
+				
+				for (int i=0; i<dci.size(); i++){
+					DataColumnInfo d = dci.get(i);
+					BooleanProperty bp = configDialog.addBoolean(d.getId(), d.getName(), "", true);
+					dciEnabled[i] = bp;
+				}
+				configDialog.endGroup();
+				
+				boolean ok = configDialog.showDialog();
+				if (!ok) return;
+				
+				List<DataColumnInfo> toExport = new ArrayList<DataColumnInfo>();
+				for (int i=0; i<dciEnabled.length; i++)
+					if (dciEnabled[i].getValue()) toExport.add(dci.get(i));
+				
+				writer.setDataToExport(eNum.getValue(), eEle.getValue(), etype.getValue(),
+						erbv.getValue(), eg.getValue(), toExport.toArray(new DataColumnInfo[toExport.size()]));
+				try {
+					if (exportAll.isSelected()){
+						File path = chooser.getSelectedFile().getParentFile();
+						String prefix = chooser.getSelectedFile().getName();
+						int num = 0;
+						for (AtomData d : Configuration.getAtomDataIterable()){
+							String newName = current.getName();
+							newName = String.format("%s%s", prefix, num++);
+							
+							writer.writeFile(path, newName, d, null);
+						}
+					} else {
+						String filename = chooser.getSelectedFile().getAbsolutePath();
+						writer.writeFile(null, filename, current, null);
+					}
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+				
 			}
 		}
 	}
@@ -986,10 +1008,9 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 //					e.printStackTrace();
 //				}
 				
-				String outfile = args[4]+".ada";
-				if (binaryFormat)
-					outfile+=".gz";
-				data.printToFile(new File(outfile), binaryFormat, binaryFormat);
+				String outfile = args[4];
+				ImdFileWriter writer = new ImdFileWriter(binaryFormat, binaryFormat);
+				writer.writeFile(null, outfile, data, null);
 				
 				DataContainer dc = Configuration.getCurrentAtomData().getDataContainer(Skeletonizer.class);
 				Skeletonizer skel = null;

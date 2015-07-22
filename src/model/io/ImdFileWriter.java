@@ -37,6 +37,20 @@ public class ImdFileWriter extends MDFileWriter {
 	
 	private DataColumnInfo[] toExportColumns;
 	
+	public ImdFileWriter(){}
+	
+	public ImdFileWriter(boolean binary, boolean gzipped) {
+		this.exportNumber  = true;    
+		this.exportElement = true;  
+		this.exportType    = true;
+		this.exportRBV     = true;
+		this.exportGrain   = true;
+		
+		compressedRBV.setValue(true);
+		binaryExport.setValue(binary);
+		gzippedExport.setValue(true);
+	}
+	
 	@Override
 	public void setDataToExport(boolean number, boolean element, boolean type, boolean rbv, boolean grain,
 			DataColumnInfo... dci) {
@@ -49,7 +63,7 @@ public class ImdFileWriter extends MDFileWriter {
 	}
 
 	@Override
-	public void writeFile(File path, String filenamePrefix, AtomData data, Filter<Atom> filter) throws Exception {
+	public void writeFile(File path, String filenamePrefix, AtomData data, Filter<Atom> filter) throws IOException {
 		//Construct the file to export, based on options
 		String fullFilename = filenamePrefix;
 		if (gzippedExport.getValue()){
@@ -231,8 +245,9 @@ public class ImdFileWriter extends MDFileWriter {
 				for (Atom a : data.getAtoms()){
 					//Test and apply filtering
 					if (filter!=null && !filter.accept(a)) continue;
+					if (exportNumber) dos.writeBytes(String.format(" %d", a.getNumber()));
+					if (exportElement) dos.writeBytes(String.format(" %d", a.getElement()));
 					
-					dos.writeBytes(String.format("%d %d", a.getNumber(), a.getElement()));
 					if (hasMass)
 						dos.writeBytes(String.format(" %.8f", a.getData(massColumn)));
 					dos.writeBytes(String.format(" %.8f %.8f %.8f", a.x, a.y, a.z));

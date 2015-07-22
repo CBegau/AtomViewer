@@ -1,6 +1,7 @@
 package model.io;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 import gui.PrimitiveProperty;
@@ -22,7 +23,7 @@ public abstract class MDFileWriter {
 	 * @param filter
 	 * @throws Exception
 	 */
-	public abstract void writeFile(File path, String filenamePrefix, AtomData data, Filter<Atom> filter) throws Exception;
+	public abstract void writeFile(File path, String filenamePrefix, AtomData data, Filter<Atom> filter) throws IOException;
 	
 	/**
 	 * Returns a list of advanced properties supported by this FileWriter
