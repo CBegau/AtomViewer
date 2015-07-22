@@ -69,7 +69,7 @@ public abstract class CrystalStructure{
 	
 	float latticeConstant;
 	float nearestNeighborSearchRadius;
-	ArrayList<PrimitiveProperty> crystalProperties = new ArrayList<PrimitiveProperty>();
+	ArrayList<PrimitiveProperty<?>> crystalProperties = new ArrayList<PrimitiveProperty<?>>();
 	float[][] currentColors;
 	
 	private static final ArrayList<CrystalStructure> structures = new ArrayList<CrystalStructure>();
@@ -462,7 +462,7 @@ public abstract class CrystalStructure{
 	 * Handle via CrystalStructureProperties 
 	 * @return
 	 */
-	public ArrayList<PrimitiveProperty> getCrystalProperties() {
+	public ArrayList<PrimitiveProperty<?>> getCrystalProperties() {
 		return crystalProperties;
 	}
 	

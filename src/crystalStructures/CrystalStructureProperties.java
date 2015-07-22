@@ -35,27 +35,27 @@ import gui.PrimitiveProperty;
 
 public class CrystalStructureProperties {
 	
-	public static JPanel createPropertyContainer(Collection<PrimitiveProperty> properties, Window w){
+	public static JPanel createPropertyContainer(Collection<PrimitiveProperty<?>> properties, Window w){
 		JPanel configPanel = new JPanel(new GridLayout(properties.size(), 1));
 		
 		configPanel.setBorder(new TitledBorder(new EtchedBorder(1), "Crystal structure options"));
-		for (final PrimitiveProperty c : properties)
+		for (final PrimitiveProperty<?> c : properties)
 			configPanel.add(PrimitiveProperty.getControlPanelForProperty(c, true, w));
 		
 		return configPanel;
 	}
 	
-	public static void readProperties(Collection<PrimitiveProperty> properties, Reader r) throws IOException{
+	public static void readProperties(Collection<PrimitiveProperty<?>> properties, Reader r) throws IOException{
 		Properties prop = new Properties();
 		prop.load(r);
-		for (PrimitiveProperty p : properties){
+		for (PrimitiveProperty<?> p : properties){
 			p.load(prop);
 		}
 	}
 	
-	public static void storeProperties(Collection<PrimitiveProperty> properties, Writer w) throws IOException{
+	public static void storeProperties(Collection<PrimitiveProperty<?>> properties, Writer w) throws IOException{
 		Properties prop = new Properties();
-		for (PrimitiveProperty p : properties){
+		for (PrimitiveProperty<?> p : properties){
 			p.save(prop);
 		}
 		prop.store(w, "CrystalStructureOptions");

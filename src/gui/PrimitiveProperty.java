@@ -25,10 +25,10 @@ import javax.swing.event.ChangeListener;
 
 import common.CommonUtils;
 
-public abstract class PrimitiveProperty{
+public abstract class PrimitiveProperty<T>{
 	protected String id, label, tooltip;
 	
-	public static JPanel getControlPanelForProperty(final PrimitiveProperty p, boolean addGlue, Window w){		
+	public static JPanel getControlPanelForProperty(final PrimitiveProperty<?> p, boolean addGlue, Window w){		
 		JPanel propertyPanel = new JPanel();
 		
 		JLabel label1 = null;
@@ -91,6 +91,8 @@ public abstract class PrimitiveProperty{
 	
 	public abstract void setToDefault();
 	
+	public abstract T getValue();
+	
 	public void setEnabled(boolean enabled){
 		this.getEditor().setEnabled(enabled);
 	}
@@ -99,7 +101,7 @@ public abstract class PrimitiveProperty{
 		return tooltip;
 	}
 	
-	public static class StringProperty extends PrimitiveProperty{
+	public static class StringProperty extends PrimitiveProperty<String>{
 		JTextField textField;
 		String defaultText;
 		
@@ -141,7 +143,7 @@ public abstract class PrimitiveProperty{
 		}
 	}
 
-	public static class IntegerProperty extends PrimitiveProperty{
+	public static class IntegerProperty extends PrimitiveProperty<Integer>{
 		int value, defaultValue;
 		int max, min;
 		JSpinner valueSpinner;
@@ -181,7 +183,7 @@ public abstract class PrimitiveProperty{
 			this.defaultValue = defaultValue;
 		}
 		
-		public int getValue() {
+		public Integer getValue() {
 			return value;
 		}
 		
@@ -198,7 +200,7 @@ public abstract class PrimitiveProperty{
 		}
 	}
 
-	public static class FloatProperty extends PrimitiveProperty{
+	public static class FloatProperty extends PrimitiveProperty<Float>{
 		float value, defaultValue;
 		float max, min;
 		JSpinner valueSpinner;
@@ -220,7 +222,7 @@ public abstract class PrimitiveProperty{
 			});
 		}
 		
-		public float getValue() {
+		public Float getValue() {
 			return value;
 		}
 		
@@ -254,11 +256,11 @@ public abstract class PrimitiveProperty{
 		}
 	}
 
-	public static class BooleanProperty extends PrimitiveProperty{
+	public static class BooleanProperty extends PrimitiveProperty<Boolean>{
 		boolean value, defaultValue;
 		JCheckBox valueCheckbox;
 		
-		ArrayList<PrimitiveProperty> dependentProperties = new ArrayList<PrimitiveProperty>();
+		ArrayList<PrimitiveProperty<?>> dependentProperties = new ArrayList<PrimitiveProperty<?>>();
 		
 		public BooleanProperty(String id, String label, String tooltip, boolean defaultValue) {
 			super(id, "", "");
@@ -274,13 +276,13 @@ public abstract class PrimitiveProperty{
 				public void actionPerformed(ActionEvent arg0) {
 					value = valueCheckbox.isSelected();
 					
-					for (PrimitiveProperty p: dependentProperties)
+					for (PrimitiveProperty<?> p: dependentProperties)
 						p.setEnabled(value);
 				}
 			});
 		}
 		
-		public boolean getValue(){
+		public Boolean getValue(){
 			return value;
 		}
 		
@@ -293,7 +295,7 @@ public abstract class PrimitiveProperty{
 		public  void setToDefault() {
 			this.value = this.defaultValue;
 			valueCheckbox.setSelected(this.value);
-			for (PrimitiveProperty p: dependentProperties)
+			for (PrimitiveProperty<?> p: dependentProperties)
 				p.setEnabled(this.value);
 		}
 		
@@ -301,14 +303,14 @@ public abstract class PrimitiveProperty{
 			this.defaultValue = defaultValue;
 		}
 		
-		public void addDependentProperty(PrimitiveProperty p){
+		public void addDependentProperty(PrimitiveProperty<?> p){
 			dependentProperties.add(p);
 			p.setEnabled(valueCheckbox.isSelected());
 		}
 		
 		public void setEnabled(boolean enabled){
 			super.setEnabled(enabled);
-			for (PrimitiveProperty p: dependentProperties)
+			for (PrimitiveProperty<?> p: dependentProperties)
 				p.setEnabled(enabled);
 		}
 		

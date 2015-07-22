@@ -109,7 +109,7 @@ public class JPrimitiveVariablesPropertiesDialog extends JDialog {
 		return sp;
 	}
 	
-	public void addProperty(PrimitiveProperty property, boolean addGlue){
+	public void addProperty(PrimitiveProperty<?> property, boolean addGlue){
 		this.addComponent(PrimitiveProperty.getControlPanelForProperty(property, addGlue, this));
 	}
 	
