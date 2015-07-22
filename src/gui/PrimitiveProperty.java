@@ -28,7 +28,7 @@ import common.CommonUtils;
 public abstract class PrimitiveProperty<T>{
 	protected String id, label, tooltip;
 	
-	public static JPanel getControlPanelForProperty(final PrimitiveProperty<?> p, boolean addGlue, Window w){		
+	public static JPanel getControlPanelForProperty(final PrimitiveProperty<?> p, Window w){		
 		JPanel propertyPanel = new JPanel();
 		
 		JLabel label1 = null;
@@ -47,7 +47,7 @@ public abstract class PrimitiveProperty<T>{
 		editorPanel.setLayout(new BoxLayout(editorPanel, BoxLayout.LINE_AXIS));
 		
 		editorPanel.add(p.getEditor());
-		if (addGlue) editorPanel.add(Box.createHorizontalGlue());
+		if (p.editorNeedsGlue()) editorPanel.add(Box.createHorizontalGlue());
 		
 		final JButton reset = new JButton("default");
 		reset.addActionListener(new ActionListener() {
@@ -84,6 +84,10 @@ public abstract class PrimitiveProperty<T>{
 	
 	public abstract void save(Properties prop);
 	public abstract void load(Properties prop);
+	
+	boolean editorNeedsGlue(){
+		return false;
+	}
 	
 	public String getLabel(){
 		return label;
@@ -315,6 +319,10 @@ public abstract class PrimitiveProperty<T>{
 		@Override
 		public JComponent getEditor() {
 			return valueCheckbox;
+		}
+		
+		boolean editorNeedsGlue(){
+			return true;
 		}
 		
 		@Override
