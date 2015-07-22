@@ -71,7 +71,8 @@ public class ImdFileLoader extends MDFileLoader{
 						&& !s.equals("rbv_x") && !s.equals("rbv_y") && !s.equals("rbv_z")
 						&& !s.equals("ls_x") && !s.equals("ls_y") && !s.equals("ls_z")
 						&& !s.equals("x") && !s.equals("y") && !s.equals("z")
-						&& !s.equals("grain") && !s.equals("ada_type"))
+						&& !s.equals("grain") && !s.equals("ada_type")
+						&& !s.equals("grainID") && !s.equals("struct_type"))
 					filteredValues.add(v);
 			}
 		} catch (IOException e){
@@ -320,7 +321,9 @@ public class ImdFileLoader extends MDFileLoader{
 						if (header.columnToCustomIndex[read] != -1) {
 							dataColumnValues[header.columnToCustomIndex[read]] = dis.readFloat();
 						} else if (read == header.atomTypeColumn) {
-							type = (byte) dis.readInt();
+							if (header.atomTypeAsInt)
+								type = (byte) dis.readInt();
+							else type = (byte) dis.readFloat();
 						} else if (read == header.rbv_data) {
 							rbv_read = false;
 							if (dis.readInt() == 1) {
@@ -333,7 +336,9 @@ public class ImdFileLoader extends MDFileLoader{
 								rbv_read = true;
 							}
 						} else if (read == header.grainColumn) {
-							grain = dis.readInt();
+							if (header.grainAsInt)
+								grain = dis.readInt();
+							else grain = (int)dis.readFloat();
 						}
 					}
 					read++;
@@ -416,7 +421,10 @@ public class ImdFileLoader extends MDFileLoader{
 			
 			if (header.atomTypeColumn!=-1) type = (byte)Integer.parseInt(parts[header.atomTypeColumn]);
 			if (header.grainColumn!=-1) {
-				grain = Integer.parseInt(parts[header.grainColumn]);
+				//Parse as float and cast to int used for backwards compatibility.
+				//Old formats stored value as ints, new implementation do support float
+				//Although in ASCII it does not matter, this implementation is more safe
+				grain = (int)Float.parseFloat(parts[header.grainColumn]);	
 			}
 			if (header.elementColumn!=-1) {
 				element = (byte)Integer.parseInt(parts[header.elementColumn]);
@@ -486,12 +494,13 @@ public class ImdFileLoader extends MDFileLoader{
 	}
 	
 	private static class IMD_Header{
-		int atomTypeColumn = -1; int elementColumn = -1;
+		int atomTypeColumn = -1; boolean atomTypeAsInt = false;
+		int elementColumn = -1;
 		int xColumn = -1;
 		int rbvX_Column = -1;
 		int lsX_Column = -1;
 		int rbv_data = -1;
-		int grainColumn = -1;
+		int grainColumn = -1;	boolean grainAsInt = false;
 		int numberColumn = -1;
 		int numColumns = 0;
 		int massColumn = -1; 
@@ -535,8 +544,6 @@ public class ImdFileLoader extends MDFileLoader{
 				header.dataColumns[i] = -1;
 			}
 			
-			String defectTypeID = ImportConfiguration.getInstance().getCrystalStructure().getAtomTypeKeyword();
-			
 			String s = lnr.readLine();
 			while (s != null && !s.startsWith("#E")) {
 				if (s.startsWith("#F")){
@@ -554,9 +561,14 @@ public class ImdFileLoader extends MDFileLoader{
 						if (parts[i].equals("number")) {
 							header.numberColumn = i - 1;
 							header.columnToBeRead[i-1] = true;
-						} else if (ImportStates.IMPORT_ATOMTYPE.isActive() && parts[i].equals(defectTypeID)){
+						} else if (ImportStates.IMPORT_ATOMTYPE.isActive() && parts[i].equals("ada_type")){
 							header.atomTypeColumn = i - 1;
 							header.columnToBeRead[i-1] = true;
+							header.atomTypeAsInt = true;
+						} else if (ImportStates.IMPORT_ATOMTYPE.isActive() && parts[i].equals("struct_type")){
+							header.atomTypeColumn = i - 1;
+							header.columnToBeRead[i-1] = true;
+							header.atomTypeAsInt = false;
 						} else if (parts[i].equals("type")){
 							header.elementColumn = i - 1;
 							header.columnToBeRead[i-1] = true;
@@ -598,6 +610,11 @@ public class ImdFileLoader extends MDFileLoader{
 							header.columnToBeRead[i-1] = true;
 							header.columnToCustomIndex[i-1] = dataColumns.size()+2;
 						} else if (!ImportStates.IMPORT_BURGERS_VECTORS.isActive() && parts[i].equals("grain")) {
+							header.grainAsInt = true;
+							header.grainColumn = i - 1;
+							header.columnToBeRead[i-1] = true;
+						} else if (!ImportStates.IMPORT_BURGERS_VECTORS.isActive() && parts[i].equals("grainID")) {
+							header.grainAsInt = false;
 							header.grainColumn = i - 1;
 							header.columnToBeRead[i-1] = true;
 						} else {

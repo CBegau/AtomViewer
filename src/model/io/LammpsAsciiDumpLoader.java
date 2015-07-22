@@ -31,7 +31,6 @@ import common.CommonUtils;
 import common.Vec3;
 import model.*;
 import model.DataColumnInfo.Component;
-import model.ImportConfiguration.ImportStates;
 
 public class LammpsAsciiDumpLoader extends MDFileLoader {
 	
@@ -138,8 +137,6 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 
 		Pattern p = Pattern.compile("\\s+");
 		Filter<Atom> atomFilter = ImportConfiguration.getInstance().getCrystalStructure().getIgnoreAtomsDuringImportFilter();
-		
-		String atomTypeID = ImportConfiguration.getInstance().getCrystalStructure().getAtomTypeKeyword();
 
 		ImportDataContainer idc = new ImportDataContainer();
 		try {
@@ -217,7 +214,6 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 								scaledCoords = true;
 							}
 							if (parts[i].equals("type")) elementColumn = i - 2;
-							if (ImportStates.IMPORT_ATOMTYPE.isActive() && parts[i].equals(atomTypeID)) atomTypeColumn = i - 2;
 							
 							for (int j = 0; j<ImportConfiguration.getInstance().getDataColumns().size(); j++){
 								if (parts[i].equals(ImportConfiguration.getInstance().getDataColumns().get(j).getId()))

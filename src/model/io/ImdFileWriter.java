@@ -144,7 +144,7 @@ public class ImdFileWriter extends MDFileWriter {
 				}
 			}
 			
-			if (exportType) dos.writeBytes(" type");
+			if (exportType) dos.writeBytes(" struct_type");
 			if (data.isPolyCrystalline() && exportGrain) dos.writeBytes(" grainID");
 			//rbv always at the end
 			if (exportRBV && data.isRbvAvailable()){

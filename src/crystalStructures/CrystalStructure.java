@@ -567,17 +567,6 @@ public abstract class CrystalStructure{
 	}
 	
 	/**
-	 * If the atom types are given in the imported files, the returned string identifies the label under which
-	 * the values are found
-	 * if the label is found during import "identifyAtomType(Atom atom, NearestNeighborBuilder<Atom> nnb)" is not 
-	 * going to be used
-	 * @return ID identifying the atom type during import
-	 */
-	public String getAtomTypeKeyword(){
-		return "ada_type";
-	}
-	
-	/**
 	 * Process a single line in the meta data field
 	 * If it can be processed, the result is to be stored into the metaContainer
 	 * @param s
