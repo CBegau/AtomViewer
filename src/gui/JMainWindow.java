@@ -778,7 +778,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 						writer.getAdditionalProperties(current, exportAll.isSelected()); 
 				if (options != null && options.size()>0){
 					configDialog.startGroup("Options");
-					for (PrimitiveProperty<?> p : options) configDialog.addProperty(p);
+					for (PrimitiveProperty<?> p : options) configDialog.addProperty(p, false);
 					configDialog.endGroup();
 				}
 				
@@ -802,15 +802,16 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 				BooleanProperty[] dciEnabled = new BooleanProperty[dci.size()];
 				
 				configDialog.startGroup("Include values in output");
-				configDialog.addProperty(eNum);
-				configDialog.addProperty(eEle);
-				configDialog.addProperty(etype);
-				if (exportGrain) configDialog.addProperty(eg);
-				if (exportRBV) configDialog.addProperty(erbv);
+				configDialog.addProperty(eNum, false);
+				configDialog.addProperty(eEle, false);
+				configDialog.addProperty(etype, false);
+				if (exportGrain) configDialog.addProperty(eg, false);
+				if (exportRBV) configDialog.addProperty(erbv, false);
 				
 				for (int i=0; i<dci.size(); i++){
 					DataColumnInfo d = dci.get(i);
-					BooleanProperty bp = configDialog.addBoolean(d.getId(), d.getName(), "", true);
+					BooleanProperty bp = new BooleanProperty(d.getId(), d.getName(), "", true);
+					configDialog.addProperty(bp, false);
 					dciEnabled[i] = bp;
 				}
 				configDialog.endGroup();
@@ -831,7 +832,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 						int num = 0;
 						for (AtomData d : Configuration.getAtomDataIterable()){
 							String newName = current.getName();
-							newName = String.format("%s%s", prefix, num++);
+							newName = String.format("%s.%05d", prefix, num++);
 							
 							writer.writeFile(path, newName, d, null);
 						}

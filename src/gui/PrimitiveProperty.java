@@ -28,7 +28,7 @@ import common.CommonUtils;
 public abstract class PrimitiveProperty<T>{
 	protected String id, label, tooltip;
 	
-	public static JPanel getControlPanelForProperty(final PrimitiveProperty<?> p, Window w){		
+	public static JPanel getControlPanelForProperty(final PrimitiveProperty<?> p, Window w, boolean addDefaultButton){		
 		JPanel propertyPanel = new JPanel();
 		
 		JLabel label1 = null;
@@ -59,7 +59,7 @@ public abstract class PrimitiveProperty<T>{
 		
 		reset.setAlignmentX(Component.RIGHT_ALIGNMENT);
 		
-		editorPanel.add(reset);
+		if (addDefaultButton) editorPanel.add(reset);
 		propertyPanel.add(editorPanel);
 		
 		p.getEditor().addPropertyChangeListener(new PropertyChangeListener() {

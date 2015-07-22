@@ -40,7 +40,7 @@ public class CrystalStructureProperties {
 		
 		configPanel.setBorder(new TitledBorder(new EtchedBorder(1), "Crystal structure options"));
 		for (final PrimitiveProperty<?> c : properties)
-			configPanel.add(PrimitiveProperty.getControlPanelForProperty(c, w));
+			configPanel.add(PrimitiveProperty.getControlPanelForProperty(c, w, true));
 		
 		return configPanel;
 	}

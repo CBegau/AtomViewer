@@ -30,9 +30,6 @@ import java.util.concurrent.Callable;
 
 import javax.swing.JFrame;
 import javax.swing.JSeparator;
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamReader;
-import javax.xml.stream.XMLStreamWriter;
 
 import model.Atom;
 import model.AtomData;
@@ -40,20 +37,17 @@ import model.DataColumnInfo;
 import model.NearestNeighborBuilder;
 import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
-import processingModules.toolchain.Toolchain;
-import processingModules.toolchain.Toolchainable;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
+import processingModules.toolchain.Toolchainable.ExportableValue;
 import common.ThreadPool;
 import common.Tupel;
 import common.Vec3;
 
 @ToolchainSupport()
-public class CommonNeighborsAnalysisModule extends ClonableProcessingModule implements Toolchainable {
+public class CommonNeighborsAnalysisModule extends ClonableProcessingModule {
 
 	private static DataColumnInfo cnaColumn = 
 			new DataColumnInfo("CNA" , "cna" ,"");
-	
-	
 	
 	@ExportableValue
 	private float cutoff = 5f;
@@ -257,19 +251,6 @@ public class CommonNeighborsAnalysisModule extends ClonableProcessingModule impl
 			this.cutoff = cutoff.getValue();
 		}
 		return ok;
-	}
-	
-	@Override
-	public void exportParameters(XMLStreamWriter xmlOut)
-			throws XMLStreamException, IllegalArgumentException, IllegalAccessException {
-		// TODO Auto-generated method stub
-		
-	}
-	
-	@Override
-	public void importParameters(XMLStreamReader reader, Toolchain toolchain) throws Exception {
-		// TODO Auto-generated method stub
-		
 	}
 	
 	private class Pattern implements Comparator<Pattern>{

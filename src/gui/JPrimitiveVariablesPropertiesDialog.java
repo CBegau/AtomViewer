@@ -85,13 +85,13 @@ public class JPrimitiveVariablesPropertiesDialog extends JDialog {
 	
 	public IntegerProperty addInteger(String id, String label, String tooltip, int defaultValue, int min, int max){
 		IntegerProperty ip = new IntegerProperty(id, label, tooltip, defaultValue, min, max);
-		this.addComponent(PrimitiveProperty.getControlPanelForProperty(ip, this));
+		this.addComponent(PrimitiveProperty.getControlPanelForProperty(ip, this, true));
 		return ip;
 	}
 	
 	public FloatProperty addFloat(String id, String label, String tooltip, float defaultValue, float min, float max){
 		FloatProperty fp = new FloatProperty(id, label, tooltip, defaultValue, min, max);
-		this.addComponent(PrimitiveProperty.getControlPanelForProperty(fp, this));
+		this.addComponent(PrimitiveProperty.getControlPanelForProperty(fp, this, true));
 		return fp;
 	}
 
@@ -99,18 +99,18 @@ public class JPrimitiveVariablesPropertiesDialog extends JDialog {
 		String wrappedLabel = CommonUtils.getWordWrappedString(label, new JCheckBox(), this);
 		
 		BooleanProperty bp = new BooleanProperty(id, wrappedLabel, tooltip, defaultValue);
-		this.addComponent(PrimitiveProperty.getControlPanelForProperty(bp, this));
+		this.addComponent(PrimitiveProperty.getControlPanelForProperty(bp, this, true));
 		return bp;
 	}
 	
 	public StringProperty addString(String id, String label, String tooltip, String defaultValue){
 		StringProperty sp = new StringProperty(id, label, tooltip, defaultValue);
-		this.addComponent(PrimitiveProperty.getControlPanelForProperty(sp, this));
+		this.addComponent(PrimitiveProperty.getControlPanelForProperty(sp, this, true));
 		return sp;
 	}
 	
-	public void addProperty(PrimitiveProperty<?> property){
-		this.addComponent(PrimitiveProperty.getControlPanelForProperty(property, this));
+	public void addProperty(PrimitiveProperty<?> property, boolean addDefaultButton){
+		this.addComponent(PrimitiveProperty.getControlPanelForProperty(property, this, addDefaultButton));
 	}
 	
 	public void addLabel(String s){
