@@ -92,6 +92,7 @@ public abstract class PrimitiveProperty<T>{
 	public abstract void setToDefault();
 	
 	public abstract T getValue();
+	public abstract void setValue(T t);
 	
 	public void setEnabled(boolean enabled){
 		this.getEditor().setEnabled(enabled);
@@ -124,6 +125,11 @@ public abstract class PrimitiveProperty<T>{
 
 		public String getValue() {
 			return textField.getText();
+		}
+		
+		@Override
+		public void setValue(String t) {
+			textField.setText(t);
 		}
 		
 		@Override
@@ -188,6 +194,12 @@ public abstract class PrimitiveProperty<T>{
 		}
 		
 		@Override
+		public void setValue(Integer t) {
+			value = t;
+			valueSpinner.setValue(t);
+		}
+		
+		@Override
 		public void save(Properties prop) {
 			prop.setProperty(id, Integer.toString(this.getValue()));
 		}
@@ -222,8 +234,15 @@ public abstract class PrimitiveProperty<T>{
 			});
 		}
 		
+		@Override
 		public Float getValue() {
 			return value;
+		}
+		
+		@Override
+		public void setValue(Float t) {
+			value = t;
+			valueSpinner.setValue(t);
 		}
 		
 		@Override
@@ -282,8 +301,15 @@ public abstract class PrimitiveProperty<T>{
 			});
 		}
 		
+		@Override
 		public Boolean getValue(){
 			return value;
+		}
+		
+		@Override
+		public void setValue(Boolean t) {
+			value = t;
+			valueCheckbox.setSelected(t);
 		}
 		
 		@Override
