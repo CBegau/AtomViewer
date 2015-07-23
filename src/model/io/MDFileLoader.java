@@ -25,8 +25,10 @@ import javax.swing.filechooser.FileFilter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import gui.PrimitiveProperty;
 import gui.ProgressMonitor;
 
 import javax.swing.SwingWorker;
@@ -108,6 +110,10 @@ public abstract class MDFileLoader{
 	public abstract String getName();
 	
 	public abstract Map<String, DataColumnInfo.Component> getDefaultNamesForComponents();
+	
+	public List<PrimitiveProperty<?>> getOptions(){
+		return new ArrayList<PrimitiveProperty<?>>();
+	}
 	
 	/**
 	 * Data from MD input must be stored in this container and then passed into 

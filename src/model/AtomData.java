@@ -240,7 +240,7 @@ public class AtomData {
 			this.applyProcessingModule(pm);
 		}
 		
-		if (ImportStates.IMPORT_GRAINS.isActive() && isGrainsImported()){
+		if (isGrainsImported()){
 			ProgressMonitor.getProgressMonitor().setActivityName("Processing grains");
 			final List<Grain> gr = defaultCrystalStructure.identifyGrains(this, 0f);
 			for (Grain g : gr){

@@ -38,8 +38,6 @@ import common.ColorTable;
 import common.Vec3;
 import model.*;
 import model.BurgersVector.BurgersVectorType;
-import model.ImportConfiguration.ImportStates;
-import model.io.MDFileLoader.ImportDataContainer;
 import model.polygrain.Grain;
 import model.polygrain.grainDetection.*;
 import model.mesh.Mesh;
@@ -566,21 +564,6 @@ public abstract class CrystalStructure{
 		return size;
 	}
 	
-	/**
-	 * Process a single line in the meta data field
-	 * If it can be processed, the result is to be stored into the metaContainer
-	 * @param s
-	 * @param metaContainer
-	 * @param lnr
-	 * @param idc
-	 * return true if processed
-	 */
-	public boolean processMetadataLine(String s, Map<String, Object> metaContainer,
-			LineNumberReader lnr, ImportDataContainer idc) throws IOException{
-		if (ImportStates.IMPORT_GRAINS.isActive())
-			return PolygrainMetadata.processMetadataLine(s, metaContainer, lnr, idc);
-		return false;
-	}
 	
 	public Filter<Atom> getIgnoreAtomsDuringImportFilter(){
 		return null;

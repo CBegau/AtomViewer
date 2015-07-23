@@ -24,10 +24,10 @@ import java.util.Hashtable;
 import java.util.Map;
 
 import common.Vec3;
-import model.ImportConfiguration.ImportStates;
+
 import model.io.MDFileLoader.ImportDataContainer;
 
-class PolygrainMetadata{
+public class PolygrainMetadata{
 	Hashtable<Integer, Vec3[]> grainOrientation = new Hashtable<Integer, Vec3[]>();
 	Hashtable<Integer, MeshData> meshes = new Hashtable<Integer, MeshData>();
 	Hashtable<Integer, Integer> numAtoms = new Hashtable<Integer, Integer>(); 
@@ -38,10 +38,8 @@ class PolygrainMetadata{
 	}
 	
 	
-	static boolean processMetadataLine(String s, Map<String, Object> metaContainer,
+	public static boolean processMetadataLine(String s, Map<String, Object> metaContainer,
 			LineNumberReader lnr, ImportDataContainer idc) throws IOException{
-		if (!ImportStates.IMPORT_GRAINS.isActive()) return false;
-		
 		if (s.startsWith("##grain")){
 			PolygrainMetadata meta;
 			Object o = metaContainer.get("grain");

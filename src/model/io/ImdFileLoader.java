@@ -18,11 +18,14 @@
 
 package model.io;
 
+import gui.PrimitiveProperty.*;
+import gui.PrimitiveProperty;
 import gui.ProgressMonitor;
 
 import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -36,15 +39,29 @@ import common.CommonUtils;
 import common.DataInputStreamWrapper;
 import common.ThreadPool;
 import common.Vec3;
+import crystalStructures.PolygrainMetadata;
 import model.*;
 import model.DataColumnInfo.Component;
-import model.ImportConfiguration.ImportStates;
 
 public class ImdFileLoader extends MDFileLoader{
-
+	
+	private BooleanProperty importGrains = new BooleanProperty("importGrains", "Import Grains", "", false);
+	private BooleanProperty importRBV = new BooleanProperty("importRBV", "Import Burgers Vectors", 
+			"Import Burgers vectors from input file", false);
+	private BooleanProperty importTypes = new BooleanProperty("importTypes", "Import atom types from file", 
+			"If enable, atomic classification are read from file, if available.", false);
+	
 	@Override
 	public String getName() {
 		return "IMD";
+	}
+	
+	public List<PrimitiveProperty<?>> getOptions(){
+		ArrayList<PrimitiveProperty<?>> list = new ArrayList<PrimitiveProperty<?>>();
+		list.add(importTypes);
+		list.add(importRBV);
+		list.add(importGrains);
+		return list;
 	}
 	
 	@Override
@@ -63,7 +80,7 @@ public class ImdFileLoader extends MDFileLoader{
 		
 		ArrayList<String[]> filteredValues = new ArrayList<String[]>();
 		try{
-			ArrayList<String[]> values = IMD_Header.readValuesFromHeader(lnr);
+			ArrayList<String[]> values = new IMD_Header().readValuesFromHeader(lnr);
 			
 			for (String[] v : values){
 				String s = v[0];
@@ -113,7 +130,8 @@ public class ImdFileLoader extends MDFileLoader{
 			lnr = new LineNumberReader(new InputStreamReader(fis));
 		
 		//Reading the header
-		final IMD_Header header = IMD_Header.readHeader(lnr, idc);
+		final IMD_Header header = new IMD_Header();
+		header.readHeader(lnr, idc);
 		
 		if (f.getPath().endsWith(".head") || f.getPath().endsWith(".head.gz"))
 			header.multiFileInput = true;
@@ -493,7 +511,7 @@ public class ImdFileLoader extends MDFileLoader{
 		ProgressMonitor.getProgressMonitor().stop();
 	}
 	
-	private static class IMD_Header{
+	private class IMD_Header{
 		int atomTypeColumn = -1; boolean atomTypeAsInt = false;
 		int elementColumn = -1;
 		int xColumn = -1;
@@ -513,7 +531,7 @@ public class ImdFileLoader extends MDFileLoader{
 		boolean[] columnToBeRead;
 		int[] columnToCustomIndex;
 		
-		private static ArrayList<String[]> readValuesFromHeader(LineNumberReader lnr) throws IOException{
+		private ArrayList<String[]> readValuesFromHeader(LineNumberReader lnr) throws IOException{
 			ArrayList<String[]> values = new ArrayList<String[]>();
 			Pattern p = Pattern.compile("\\s+");
 
@@ -532,97 +550,97 @@ public class ImdFileLoader extends MDFileLoader{
 		}
 		
 		
-		private static IMD_Header readHeader(LineNumberReader lnr,
+		private void readHeader(LineNumberReader lnr,
 				ImportDataContainer idc) throws IOException{
 			
-			IMD_Header header = new IMD_Header();
+			
 			Pattern p = Pattern.compile("\\s+");
 			ArrayList<DataColumnInfo> dataColumns = ImportConfiguration.getInstance().getDataColumns();
 			
-			header.dataColumns = new int[dataColumns.size()];
-			for (int i = 0; i<header.dataColumns.length; i++){
-				header.dataColumns[i] = -1;
+			this.dataColumns = new int[dataColumns.size()];
+			for (int i = 0; i<this.dataColumns.length; i++){
+				this.dataColumns[i] = -1;
 			}
 			
 			String s = lnr.readLine();
 			while (s != null && !s.startsWith("#E")) {
 				if (s.startsWith("#F")){
 					String[] parts = p.split(s);
-					header.format = parts[1];
+					this.format = parts[1];
 				}
 				if (s.startsWith("#C")) {
 					String[] parts = p.split(s);
-					header.numColumns = parts.length - 1;
-					header.columnToBeRead = new boolean[header.numColumns+1];
-					header.columnToCustomIndex = new int[header.numColumns+1];
+					this.numColumns = parts.length - 1;
+					this.columnToBeRead = new boolean[this.numColumns+1];
+					this.columnToCustomIndex = new int[this.numColumns+1];
 					
 					for (int i = 0; i < parts.length; i++) {
-						header.columnToCustomIndex[i] = -1;
+						this.columnToCustomIndex[i] = -1;
 						if (parts[i].equals("number")) {
-							header.numberColumn = i - 1;
-							header.columnToBeRead[i-1] = true;
-						} else if (ImportStates.IMPORT_ATOMTYPE.isActive() && parts[i].equals("ada_type")){
-							header.atomTypeColumn = i - 1;
-							header.columnToBeRead[i-1] = true;
-							header.atomTypeAsInt = true;
-						} else if (ImportStates.IMPORT_ATOMTYPE.isActive() && parts[i].equals("struct_type")){
-							header.atomTypeColumn = i - 1;
-							header.columnToBeRead[i-1] = true;
-							header.atomTypeAsInt = false;
+							this.numberColumn = i - 1;
+							this.columnToBeRead[i-1] = true;
+						} else if (importTypes.getValue() && parts[i].equals("ada_type")){
+							this.atomTypeColumn = i - 1;
+							this.columnToBeRead[i-1] = true;
+							this.atomTypeAsInt = true;
+						} else if (importTypes.getValue() && parts[i].equals("struct_type")){
+							this.atomTypeColumn = i - 1;
+							this.columnToBeRead[i-1] = true;
+							this.atomTypeAsInt = false;
 						} else if (parts[i].equals("type")){
-							header.elementColumn = i - 1;
-							header.columnToBeRead[i-1] = true;
+							this.elementColumn = i - 1;
+							this.columnToBeRead[i-1] = true;
 						} else if (parts[i].equals("mass")){
-							header.massColumn = i - 1;
+							this.massColumn = i - 1;
 							for (int j = 0; j<dataColumns.size(); j++){
 								if (parts[i].equals(dataColumns.get(j).getId())){
-									header.dataColumns[j] = i - 1;
-									header.columnToBeRead[i-1] = true;
-									header.columnToCustomIndex[i-1] = j;
+									this.dataColumns[j] = i - 1;
+									this.columnToBeRead[i-1] = true;
+									this.columnToCustomIndex[i-1] = j;
 								}
 							}
 						} else if (parts[i].equals("x")){
-							header.xColumn = i - 1;
-							header.columnToBeRead[i-1] = true;
-							header.columnToBeRead[i] = true;
-							header.columnToBeRead[i+1] = true;
+							this.xColumn = i - 1;
+							this.columnToBeRead[i-1] = true;
+							this.columnToBeRead[i] = true;
+							this.columnToBeRead[i+1] = true;
 						} else if (parts[i].equals("rbv_data")) {
-							header.rbv_data = i - 1;
-							header.columnToBeRead[i-1] = true;
-						} else if (ImportStates.IMPORT_BURGERS_VECTORS.isActive() && parts[i].equals("rbv_x")) {
-							header.rbvX_Column = i - 1;
-							header.columnToBeRead[i-1] = true;
-							header.columnToCustomIndex[i-1] = dataColumns.size()+3;
-						} else if (!ImportStates.IMPORT_BURGERS_VECTORS.isActive() && parts[i].equals("rbv_y")) {
-							header.columnToBeRead[i-1] = true;
-							header.columnToCustomIndex[i-1] = dataColumns.size()+4;
-						} else if (!ImportStates.IMPORT_BURGERS_VECTORS.isActive() && parts[i].equals("rbv_z")) {
-							header.columnToBeRead[i-1] = true;
-							header.columnToCustomIndex[i-1] = dataColumns.size()+5;
-						} else if (!ImportStates.IMPORT_BURGERS_VECTORS.isActive() && parts[i].equals("ls_x")){
-							header.lsX_Column = i - 1;
-							header.columnToBeRead[i-1] = true;
-							header.columnToCustomIndex[i-1] = dataColumns.size();
-						} else if (!ImportStates.IMPORT_BURGERS_VECTORS.isActive() && parts[i].equals("ls_y")){
-							header.columnToBeRead[i-1] = true;
-							header.columnToCustomIndex[i-1] = dataColumns.size()+1;
-						} else if (!ImportStates.IMPORT_BURGERS_VECTORS.isActive() && parts[i].equals("ls_z")){
-							header.columnToBeRead[i-1] = true;
-							header.columnToCustomIndex[i-1] = dataColumns.size()+2;
-						} else if (!ImportStates.IMPORT_BURGERS_VECTORS.isActive() && parts[i].equals("grain")) {
-							header.grainAsInt = true;
-							header.grainColumn = i - 1;
-							header.columnToBeRead[i-1] = true;
-						} else if (!ImportStates.IMPORT_BURGERS_VECTORS.isActive() && parts[i].equals("grainID")) {
-							header.grainAsInt = false;
-							header.grainColumn = i - 1;
-							header.columnToBeRead[i-1] = true;
+							this.rbv_data = i - 1;
+							this.columnToBeRead[i-1] = true;
+						} else if (!importRBV.getValue() && parts[i].equals("rbv_x")) {
+							this.rbvX_Column = i - 1;
+							this.columnToBeRead[i-1] = true;
+							this.columnToCustomIndex[i-1] = dataColumns.size()+3;
+						} else if (!importRBV.getValue() && parts[i].equals("rbv_y")) {
+							this.columnToBeRead[i-1] = true;
+							this.columnToCustomIndex[i-1] = dataColumns.size()+4;
+						} else if (!importRBV.getValue() && parts[i].equals("rbv_z")) {
+							this.columnToBeRead[i-1] = true;
+							this.columnToCustomIndex[i-1] = dataColumns.size()+5;
+						} else if (!importRBV.getValue() && parts[i].equals("ls_x")){
+							this.lsX_Column = i - 1;
+							this.columnToBeRead[i-1] = true;
+							this.columnToCustomIndex[i-1] = dataColumns.size();
+						} else if (!importRBV.getValue() && parts[i].equals("ls_y")){
+							this.columnToBeRead[i-1] = true;
+							this.columnToCustomIndex[i-1] = dataColumns.size()+1;
+						} else if (!importRBV.getValue() && parts[i].equals("ls_z")){
+							this.columnToBeRead[i-1] = true;
+							this.columnToCustomIndex[i-1] = dataColumns.size()+2;
+						} else if (!importRBV.getValue() && parts[i].equals("grain")) {
+							this.grainAsInt = true;
+							this.grainColumn = i - 1;
+							this.columnToBeRead[i-1] = true;
+						} else if (!importRBV.getValue() && parts[i].equals("grainID")) {
+							this.grainAsInt = false;
+							this.grainColumn = i - 1;
+							this.columnToBeRead[i-1] = true;
 						} else {
 							for (int j = 0; j< dataColumns.size(); j++){
 								if (parts[i].equals(dataColumns.get(j).getId())){
-									header.dataColumns[j] = i - 1;
-									header.columnToBeRead[i-1] = true;
-									header.columnToCustomIndex[i-1] = j;
+									this.dataColumns[j] = i - 1;
+									this.columnToBeRead[i-1] = true;
+									this.columnToCustomIndex[i-1] = j;
 								}
 							}
 						}
@@ -653,9 +671,7 @@ public class ImdFileLoader extends MDFileLoader{
 						idc.fileMetaData = new HashMap<String, Object>();
 					while (!s.startsWith("##METAEND")) {
 						//First check if there are custom options
-						if (s.startsWith("##") &&
-								!ImportConfiguration.getInstance().getCrystalStructure()
-								.processMetadataLine(s, idc.fileMetaData, lnr, idc)){
+						if (s.startsWith("##") && !processGrainMetaData(s, idc.fileMetaData, lnr, idc)){
 							//Try to store the line as a array of floats, e.g. timesteps, indenter...
 							try{
 								s = s.substring(2);
@@ -673,23 +689,20 @@ public class ImdFileLoader extends MDFileLoader{
 				s = lnr.readLine();
 			}
 			
-			if (header.xColumn ==-1) 
+			if (this.xColumn ==-1) 
 				throw new IllegalArgumentException("Broken header, no coordinates x y z");
 			idc.makeBox();
 			if (idc.boxSizeX.x <= 0f || idc.boxSizeY.y <= 0f || idc.boxSizeZ.z <= 0f){
 				throw new IllegalArgumentException("Broken header, box sizes must be larger than 0");
 			}
 			
-			if (header.grainColumn != -1) idc.grainsImported = true;
-			if (header.atomTypeColumn != -1) idc.atomTypesAvailable = true;
+			if (this.grainColumn != -1 && importGrains.getValue()) idc.grainsImported = true;
+			if (this.atomTypeColumn != -1) idc.atomTypesAvailable = true;
 			
-			if ( ((header.rbvX_Column!=-1 && header.lsX_Column!=-1 ) || header.rbv_data!=-1) &&
-					ImportStates.IMPORT_BURGERS_VECTORS.isActive()){
-				header.readRBV = true;
+			if ( ((this.rbvX_Column!=-1 && this.lsX_Column!=-1 ) || this.rbv_data!=-1) && importRBV.getValue()){
+				this.readRBV = true;
 				idc.rbvAvailable = true;
 			}
-
-			return header;
 		}
 		
 	}
@@ -743,5 +756,12 @@ public class ImdFileLoader extends MDFileLoader{
 			}
 		};
 		return imdFileFilterBasic;
+	}
+	
+	private final static boolean processGrainMetaData(String s, Map<String, Object> metaContainer,
+			LineNumberReader lnr, ImportDataContainer idc) throws IOException{
+		boolean imported = PolygrainMetadata.processMetadataLine(s, metaContainer, lnr, idc); 
+		if (imported) idc.grainsImported = true;
+		return imported;
 	}
 }

@@ -36,9 +36,6 @@ public class ImportConfiguration {
 
 	public enum ImportStates {
 		DISPOSE_DEFAULT,
-		IMPORT_BURGERS_VECTORS,
-		IMPORT_GRAINS,
-		IMPORT_ATOMTYPE,
 		APPEND_FILES;
 		
 		private boolean state;
@@ -115,10 +112,6 @@ public class ImportConfiguration {
 		Properties prop = new Properties();
 		prop.load(new FileReader(propertiesFile));
 		
-		for (ImportStates i: ImportStates.values()){
-			i.setState(Boolean.parseBoolean(prop.getProperty(i.toString(), "false")));
-		}
-		
 		this.getPeriodicBoundaryConditions()[0] = Boolean.parseBoolean(prop.getProperty("pbc_x", "false"));
 		this.getPeriodicBoundaryConditions()[1] = Boolean.parseBoolean(prop.getProperty("pbc_y", "false"));
 		this.getPeriodicBoundaryConditions()[2] = Boolean.parseBoolean(prop.getProperty("pbc_z", "false"));
@@ -126,10 +119,6 @@ public class ImportConfiguration {
 	
 	public void saveProperties(File propertiesFile){
 		Properties prop = new Properties();
-	
-		for (ImportStates i: ImportStates.values()){
-			prop.setProperty(i.toString(), Boolean.toString(i.isActive()));
-		}
 		
 		prop.setProperty("pbc_x", Boolean.toString(pbc[0]));
 		prop.setProperty("pbc_y", Boolean.toString(pbc[1]));

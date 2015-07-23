@@ -23,6 +23,7 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
 
 import javax.swing.*;
@@ -166,10 +167,9 @@ public class JMDFileChooser extends JFileChooser{
 		private final JButton editCrystalConfButton = new JButton("Edit crystal.conf");
 		
 		public JOpenOptionComponent() {
-			final JCheckBox importedAtomTypeCheckbox = new JCheckBox("<html>Import atom types<br> from file</html>", ImportStates.IMPORT_ATOMTYPE.isActive());
 			final JCheckBox disposeDefaultAtomsCheckBox = new JCheckBox("<html>Dispose perfect<br>lattice atoms</html>", ImportStates.DISPOSE_DEFAULT.isActive());
-			final JCheckBox calculateRBVcheckBox = new JCheckBox("<html>Import<br>Burgers Vectors</html>", ImportStates.IMPORT_BURGERS_VECTORS.isActive());
-			final JCheckBox identifyGrainsCheckBox = new JCheckBox("Import Grains", ImportStates.IMPORT_GRAINS.isActive());
+			final JPanel optionsPanel = new JPanel();
+			optionsPanel.setLayout(new BoxLayout(optionsPanel, BoxLayout.PAGE_AXIS));
 			
 			JPanel p = new JPanel();
 			JScrollPane sp = new JScrollPane(p);
@@ -198,12 +198,12 @@ public class JMDFileChooser extends JFileChooser{
 						Configuration.setCurrentFileLoader(loader);
 						JMDFileChooser.this.setFileFilter(loader.getDefaultFileFilter());
 						
-						//TODO implement this option properly
-						boolean showExtendedOptions = loader instanceof ImdFileLoader;
-						importedAtomTypeCheckbox.setVisible(showExtendedOptions);
-						disposeDefaultAtomsCheckBox.setVisible(showExtendedOptions);
-						calculateRBVcheckBox.setVisible(showExtendedOptions);
-						identifyGrainsCheckBox.setVisible(showExtendedOptions);
+						optionsPanel.removeAll();
+						for (PrimitiveProperty<?> p : loader.getOptions()){
+							optionsPanel.add(PrimitiveProperty.getControlPanelForProperty(p, 
+									JMDFileChooser.this.owner, false));
+						}
+						optionsPanel.revalidate();
 					}
 				});
 			}
@@ -213,9 +213,7 @@ public class JMDFileChooser extends JFileChooser{
 			final JCheckBox appendFilesCheckbox = new JCheckBox("<html>Append files</html>", false);
 			ImportConfiguration.ImportStates.APPEND_FILES.setState(false);
 			
-			importedAtomTypeCheckbox.setToolTipText("If enable, atomic classification are read from file, if available.");
 			disposeDefaultAtomsCheckBox.setToolTipText("Atoms at perfect lattice sites are not ignored to save memory.");
-			calculateRBVcheckBox.setToolTipText("Import Burgers vectors from input file");
 			editCrystalConfButton.setToolTipText("Configure the crystal structure and define imported values");
 			
 			editCrystalConfButton.setEnabled(false);
@@ -244,28 +242,15 @@ public class JMDFileChooser extends JFileChooser{
 			gbc.gridwidth = 3;
 			p.add(new JSeparator(), gbc); gbc.gridy++;
 			
-			p.add(importedAtomTypeCheckbox, gbc); gbc.gridy++;
 			p.add(disposeDefaultAtomsCheckBox, gbc); gbc.gridy++;
-			p.add(calculateRBVcheckBox, gbc); gbc.gridy++;
-			p.add(identifyGrainsCheckBox, gbc); gbc.gridy++;
-			
-			//TODO implement this option properly
-			boolean showExtendedOptions = Configuration.getCurrentFileLoader() instanceof ImdFileLoader;
-			importedAtomTypeCheckbox.setVisible(showExtendedOptions);
-			disposeDefaultAtomsCheckBox.setVisible(showExtendedOptions);
-			calculateRBVcheckBox.setVisible(showExtendedOptions);
-			identifyGrainsCheckBox.setVisible(showExtendedOptions);
+			p.add(optionsPanel, gbc); gbc.gridy++;
 			
 			ActionListener simpleCheckBoxListener = new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
 					String command = e.getActionCommand();
 					
-					if (command.equals("importType"))
-						ImportStates.IMPORT_ATOMTYPE.setState(((JCheckBox)e.getSource()).isSelected());
-					else if (command.equals("importGrains"))
-						ImportStates.IMPORT_GRAINS.setState(((JCheckBox)e.getSource()).isSelected());
-					else if (command.equals("pbc_x"))
+					if (command.equals("pbc_x"))
 						importConfig.getPeriodicBoundaryConditions()[0] = ((JCheckBox)(e.getSource())).isSelected();
 					else if (command.equals("pbc_y"))
 						importConfig.getPeriodicBoundaryConditions()[1] = ((JCheckBox)(e.getSource())).isSelected();
@@ -275,22 +260,11 @@ public class JMDFileChooser extends JFileChooser{
 						ImportStates.DISPOSE_DEFAULT.setState(((JCheckBox)e.getSource()).isSelected());
 					else if (command.equals("appendFiles"))
 						ImportStates.APPEND_FILES.setState(((JCheckBox)e.getSource()).isSelected());
-					else if (command.equals("importRBV"))
-						ImportStates.IMPORT_BURGERS_VECTORS.setState(((JCheckBox)e.getSource()).isSelected());
 				}
 			};
 			
 			disposeDefaultAtomsCheckBox.setActionCommand("disposeDefaultAtoms");
 			disposeDefaultAtomsCheckBox.addActionListener(simpleCheckBoxListener);
-			
-			calculateRBVcheckBox.setActionCommand("importRBV");
-			calculateRBVcheckBox.addActionListener(simpleCheckBoxListener);
-			
-			importedAtomTypeCheckbox.setActionCommand("importType");
-			importedAtomTypeCheckbox.addActionListener(simpleCheckBoxListener);
-			
-			identifyGrainsCheckBox.setActionCommand("importGrains");
-			identifyGrainsCheckBox.addActionListener(simpleCheckBoxListener);
 			
 			appendFilesCheckbox.setActionCommand("appendFiles");
 			appendFilesCheckbox.addActionListener(simpleCheckBoxListener);
@@ -318,6 +292,17 @@ public class JMDFileChooser extends JFileChooser{
 					}
 				}
 			});
+			
+			
+			//Perform a click operation on the selected button. This causes the event to fire
+			//and adds all needed options into the optionsPanel
+			for (Enumeration<AbstractButton> b = fileLoaderButtonGroup.getElements(); b.hasMoreElements();){
+				AbstractButton button = b.nextElement();
+	            if (button.isSelected())
+	                button.doClick();
+			}
+		
+			
 		}
 	}
 }
