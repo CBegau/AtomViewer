@@ -134,7 +134,7 @@ public class ImdFileWriter extends MDFileWriter {
 			dos.writeBytes(String.format("%d %d %d 3 %d %d\n", (exportNumber?1:0), (exportElement?1:0), 
 					(hasMass?1:0), (hasVelocity?3:0), countExportFields ));
 			
-			dos.writeBytes(String.format("#C %s%s%s x y z %s", exportNumber?"number ":"",
+			dos.writeBytes(String.format("#C %s%s%sx y z %s", exportNumber?"number ":"",
 					exportElement?"type ":"", hasMass?"mass ":"", hasVelocity?"vx vy vz ":""));
 
 			for (int i=0; i<mapData.length; i++){
