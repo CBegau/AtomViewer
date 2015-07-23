@@ -25,7 +25,6 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.*;
 import java.text.DecimalFormat;
-import java.text.NumberFormat;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -45,7 +44,7 @@ import crystalStructures.*;
 public class JCrystalConfigurationDialog extends JDialog{
 	private static final long serialVersionUID = 1L;
 
-	private DecimalFormat decimalFormat = new DecimalFormat("0.###");
+	private DecimalFormat decimalFormat = new DecimalFormat();
 	private JFormattedTextField latticeConstTextField = new JFormattedTextField(decimalFormat);
 	private JFormattedTextField[][] crystalOrientation = new JFormattedTextField[3][3];
 	private JComboBox crystalStructureComboBox = new JComboBox();
@@ -311,7 +310,7 @@ public class JCrystalConfigurationDialog extends JDialog{
 			idTextFieldsList.add(id);
 			unitTextFieldsList.add(new JTextField(t.dataColumns.get(i).getUnit()));
 			
-			JFormattedTextField ftf = new JFormattedTextField(NumberFormat.getNumberInstance());
+			JFormattedTextField ftf = new JFormattedTextField("#.########");
 			ftf.setValue(t.dataColumns.get(i).getScalingFactor());
 			scalingFactorFieldsList.add(ftf);
 			activeCheckBoxesList.add(new JCheckBox("", true));
@@ -334,7 +333,7 @@ public class JCrystalConfigurationDialog extends JDialog{
 			id.setEditable(false);
 			idTextFieldsList.add(id);
 			unitTextFieldsList.add(new JTextField(units.get(i)));
-			JFormattedTextField ftf = new JFormattedTextField(NumberFormat.getNumberInstance());
+			JFormattedTextField ftf = new JFormattedTextField(new DecimalFormat("#.########"));
 			ftf.setValue(1);
 			scalingFactorFieldsList.add(ftf);
 			activeCheckBoxesList.add(new JCheckBox("", false));
@@ -585,7 +584,7 @@ public class JCrystalConfigurationDialog extends JDialog{
 		
 		for (int i=0; i<t.dataColumns.size(); i++){
 			DataColumnInfo c = t.dataColumns.get(i);
-			pw.println(String.format("import_column %s %s %s %f %s", c.getName(), c.getId(), c.getUnit().isEmpty()?"-":c.getUnit(),
+			pw.println(String.format("import_column %s %s %s %e %s", c.getName(), c.getId(), c.getUnit().isEmpty()?"-":c.getUnit(),
 					c.getScalingFactor(), c.getComponent().name()));
 		}
 		

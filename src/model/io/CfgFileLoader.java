@@ -6,7 +6,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.LineNumberReader;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
@@ -18,6 +20,8 @@ import Jama.EigenvalueDecomposition;
 import Jama.Matrix;
 import common.CommonUtils;
 import common.Vec3;
+import gui.PrimitiveProperty;
+import gui.PrimitiveProperty.BooleanProperty;
 import model.Atom;
 import model.AtomData;
 import model.Filter;
@@ -26,6 +30,16 @@ import model.DataColumnInfo.Component;
 
 public class CfgFileLoader extends MDFileLoader {
 
+	private BooleanProperty autoAtomNumbers = new BooleanProperty("autoNumbers", "Assign atom number",
+			"Generate a number for each atom in the order they appear in the file. Otherwise each atom is assigned 0", false);
+	
+	@Override
+	public List<PrimitiveProperty<?>> getOptions(){
+		ArrayList<PrimitiveProperty<?>> list = new ArrayList<PrimitiveProperty<?>>();
+		list.add(autoAtomNumbers);
+		return list;
+	}
+	
 	@Override
 	public AtomData readInputData(File f, AtomData previous) throws Exception {
 		LineNumberReader lnr = null;
@@ -58,6 +72,7 @@ public class CfgFileLoader extends MDFileLoader {
 			boolean headerRead = false;
 			int totalAtoms = 0;
 			int atomsRead = 0;
+			int atomNumber = 0;
 			float currentMass = 0f;
 			Map<String,Integer> typeMap = new TreeMap<String, Integer>();
 			int currentType = 0;
@@ -123,7 +138,8 @@ public class CfgFileLoader extends MDFileLoader {
 						
 						idc.box.backInBox(xyzPos);
 						
-						Atom a = new Atom(xyzPos, (byte)0, 0, (byte)currentType);
+						Atom a = new Atom(xyzPos, atomNumber, (byte)currentType);
+						if (autoAtomNumbers.getValue()) atomNumber++;
 						atomsRead++;
 						//Custom columns
 						for (int j = 0; j<dataColumns.length; j++){
@@ -164,7 +180,8 @@ public class CfgFileLoader extends MDFileLoader {
 					//Put atoms back into the simulation box, they might be slightly outside
 					idc.box.backInBox(xyzPos);
 					
-					Atom a = new Atom(xyzPos, (byte)0, 0, (byte)type);
+					Atom a = new Atom(xyzPos, atomNumber, (byte)type);
+					if (autoAtomNumbers.getValue()) atomNumber++;
 					atomsRead++;
 					//Custom columns
 					for (int j = 0; j<dataColumns.length; j++){

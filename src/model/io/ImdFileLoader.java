@@ -56,6 +56,7 @@ public class ImdFileLoader extends MDFileLoader{
 		return "IMD";
 	}
 	
+	@Override
 	public List<PrimitiveProperty<?>> getOptions(){
 		ArrayList<PrimitiveProperty<?>> list = new ArrayList<PrimitiveProperty<?>>();
 		list.add(importTypes);
@@ -365,7 +366,8 @@ public class ImdFileLoader extends MDFileLoader{
 				//Put atoms back into the simulation box, they might be slightly outside
 				idc.box.backInBox(pos);
 				
-				Atom a = new Atom(pos, type, num, element);
+				Atom a = new Atom(pos, num, element);
+				if (idc.atomTypesAvailable) a.setType(type);
 				if (element+1 > idc.maxElementNumber) idc.maxElementNumber = (byte)(element + 1);
 				
 				//Add rbv info is found in file
@@ -460,7 +462,8 @@ public class ImdFileLoader extends MDFileLoader{
 			//Put atoms back into the simulation box, they might be slightly outside
 			idc.box.backInBox(pos);
 
-			Atom a = new Atom(pos, type, num, element);
+			Atom a = new Atom(pos, num, element);
+			if (idc.atomTypesAvailable) a.setType(type);
 			if (header.grainColumn!=-1) 
 				a.setGrain(grain);	//Assign grain number if found
 			

@@ -43,18 +43,15 @@ public class Atom extends Vec3 implements Pickable {
 	/**
 	 * Creates a new atom
 	 * @param p The position of the atom in space
-	 * @param type its type, required for many steps in the postprocessing routines.
-	 * May be a default value if it is later characterized and set by {@link #setType(int)} 
 	 * @param num The numeric ID of the atom. Not used internally, thus must not be unique. 
 	 * @param element The atoms element. Uses the value of {@link CrystalStructure#getNumberOfElements()}
 	 * to distinguish physical elements from logical elements by computing the modulo of both values 
 	 */
-	public Atom(Vec3 p, byte type, int num, byte element) {
+	public Atom(Vec3 p, int num, byte element) {
 		this.x = p.x;
 		this.y = p.y;
 		this.z = p.z;
 
-		this.type = type;
 		this.atomNumber = num;
 		this.element = element;
 		

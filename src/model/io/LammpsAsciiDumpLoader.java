@@ -128,7 +128,6 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 		int elementColumn = -1;
 		int xColumn = -1;
 		int numberColumn = -1;
-		int atomTypeColumn = -1;
 		boolean scaledCoords = false;
 
 		int[] dataColumns = new int[ImportConfiguration.getInstance().getDataColumns().size()];
@@ -251,7 +250,6 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 					else s = lnr.readLine();
 				}
 				
-				if (atomTypeColumn != -1) idc.atomTypesAvailable = true;
 				if (xColumn == -1) throw new IllegalArgumentException("Broken header, no coordinates x y z");
 
 				if (idc.boxSizeX.x <= 0f || idc.boxSizeY.y <= 0f || idc.boxSizeZ.z <= 0f) {
@@ -259,7 +257,6 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 				}
 
 				Vec3 pos = new Vec3();
-				byte type = 0;
 				byte element = 0;
 				int number = 0;
 
@@ -274,7 +271,6 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 
 					if (numberColumn != -1)
 						number = Integer.parseInt(parts[numberColumn]);
-					if (idc.atomTypesAvailable) type = (byte)Integer.parseInt(parts[atomTypeColumn]);
 
 					if (scaledCoords){
 						pos.x = Float.parseFloat(parts[xColumn + 0])*idc.boxSizeX.x - idc.offset.x;
@@ -289,7 +285,7 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 					//Put atoms back into the simulation box, they might be slightly outside
 					idc.box.backInBox(pos);
 
-					Atom a = new Atom(pos, type, number, element);
+					Atom a = new Atom(pos, number, element);
 
 					//Custom columns
 					for (int j = 0; j<dataColumns.length; j++){

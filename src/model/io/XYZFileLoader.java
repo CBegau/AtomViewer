@@ -21,6 +21,7 @@ package model.io;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
@@ -31,6 +32,8 @@ import javax.swing.filechooser.FileFilter;
 
 import common.CommonUtils;
 import common.Vec3;
+import gui.PrimitiveProperty;
+import gui.PrimitiveProperty.BooleanProperty;
 import model.Atom;
 import model.AtomData;
 import model.ImportConfiguration;
@@ -38,6 +41,16 @@ import model.DataColumnInfo.Component;
 
 public class XYZFileLoader extends MDFileLoader {
 
+	private BooleanProperty autoAtomNumbers = new BooleanProperty("autoNumbers", "Assign atom number",
+			"Generate a number for each atom in the order they appear in the file. Otherwise each atom is assigned 0", false);
+
+	@Override
+	public List<PrimitiveProperty<?>> getOptions(){
+		ArrayList<PrimitiveProperty<?>> list = new ArrayList<PrimitiveProperty<?>>();
+		list.add(autoAtomNumbers);
+		return list;
+	}
+	
 	@Override
 	public String getName() {
 		return "(ext.) xyz";
@@ -54,6 +67,8 @@ public class XYZFileLoader extends MDFileLoader {
 		Map<String,Integer> typeMap = new TreeMap<String, Integer>(); 
 		
 		idc.name = f.getName();
+		
+		int atomNumber = 0;
 		
 		try {
 			boolean extendedFormat = false;
@@ -111,7 +126,8 @@ public class XYZFileLoader extends MDFileLoader {
 					
 					idc.box.backInBox(pos);
 					
-					Atom a = new Atom(pos, (byte)ele, 0, (byte)ele);
+					Atom a = new Atom(pos, atomNumber, (byte)ele);
+					if (autoAtomNumbers.getValue()) atomNumber++;
 					
 					//Custom columns
 					for (int j = 0; j<dataColumns.length; j++){
@@ -140,7 +156,8 @@ public class XYZFileLoader extends MDFileLoader {
 					pos.y = Float.parseFloat(parts[2]);
 					pos.z = Float.parseFloat(parts[3]);
 					
-					Atom a = new Atom(pos, (byte)ele, 0, (byte)ele);
+					Atom a = new Atom(pos, atomNumber, (byte)ele);
+					if (autoAtomNumbers.getValue()) atomNumber++;
 					idc.addAtom(a);
 				}
 				
