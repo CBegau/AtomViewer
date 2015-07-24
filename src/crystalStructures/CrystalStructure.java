@@ -41,10 +41,10 @@ import model.BurgersVector.BurgersVectorType;
 import model.polygrain.Grain;
 import model.polygrain.grainDetection.*;
 import model.mesh.Mesh;
-import processingModules.ProcessingModule;
 import processingModules.skeletonizer.Skeletonizer;
 import processingModules.skeletonizer.processors.BurgersVectorAnalyzer;
 import processingModules.skeletonizer.processors.SkeletonPreprocessor;
+import processingModules.toolchain.Toolchain;
 import processingModules.skeletonizer.processors.BurgersVectorAnalyzer.ClassificationPattern;
 
 /**
@@ -288,11 +288,10 @@ public abstract class CrystalStructure{
 	}
 	
 	/**
-	 * A set of processing modules to be applied at the end of the analysis process
-	 * TODO: Will be replaced by a more advanced toolchain mechanism one day 
+	 * AToolchain to be applied at the end of the analysis process
 	 * @return
 	 */
-	public List<ProcessingModule> getProcessingModuleToApplyAtBeginningOfAnalysis(){
+	public Toolchain getToolchainToApplyAtBeginningOfAnalysis(){
 		return null;
 	}
 	

@@ -226,9 +226,9 @@ public class AtomData {
 		if (this.atoms.size() == 0) return;
 		
 		{
-			List<ProcessingModule> data = defaultCrystalStructure.getProcessingModuleToApplyAtBeginningOfAnalysis();
-			if (data != null){
-				for (ProcessingModule pm : data)
+			Toolchain t = defaultCrystalStructure.getToolchainToApplyAtBeginningOfAnalysis();
+			if (t != null){
+				for (ProcessingModule pm : t.getProcessingModules())
 					this.applyProcessingModule(pm);
 			}
 		}

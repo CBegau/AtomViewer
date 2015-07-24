@@ -26,7 +26,6 @@ import gui.glUtils.ObjectRenderData;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 
 import javax.media.opengl.GL3;
 import javax.swing.JFrame;
@@ -44,9 +43,9 @@ import model.NearestNeighborBuilder;
 import processingModules.ClonableProcessingModule;
 import processingModules.DataContainer;
 import processingModules.JDataPanel;
-import processingModules.ProcessingModule;
 import processingModules.ProcessingResult;
 import processingModules.otherModules.ParticleDataContainer;
+import processingModules.toolchain.Toolchain;
 
 public class FeC_virtStructure extends BCCStructure {
 	
@@ -191,11 +190,11 @@ public class FeC_virtStructure extends BCCStructure {
 	}
 	
 	@Override
-	public List<ProcessingModule> getProcessingModuleToApplyAtBeginningOfAnalysis() {
-		ArrayList<ProcessingModule> pm = new ArrayList<ProcessingModule>();
+	public Toolchain getToolchainToApplyAtBeginningOfAnalysis() {
+		Toolchain t = new Toolchain();
 		if (placeholderProperty.getValue())
-			pm.add(new PlaceholderModule());
-		return pm;
+			t.addModule(new PlaceholderModule());			
+		return t;
 	}
 	
 	private static final class PlaceholderModule extends ClonableProcessingModule{
