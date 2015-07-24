@@ -30,7 +30,6 @@ import javax.media.opengl.GL;
 import javax.media.opengl.GL3;
 
 import model.AtomData;
-import model.Pickable;
 import model.RenderingConfiguration;
 import common.*;
 
@@ -97,13 +96,11 @@ public class SphereRenderer {
 		int sphereTranslateUniform = gl.glGetUniformLocation(shader.getProgram(), "Move");
 
 		for (int i=0; i<ard.getRenderableCells().size(); ++i){
-			ObjectRenderData<? extends Pickable>.Cell c = ard.getRenderableCells().get(i);
-			//TODO remove this line and the upper extend in case of Java7 or higher
-			ObjectRenderData<? extends Vec3>.Cell c2 = ard.getRenderableCells().get(i);
+			ObjectRenderData<?>.Cell c = ard.getRenderableCells().get(i);
 			if (c.getNumVisibleObjects() == 0) continue;
 			float[] colors = c.getColorArray();
 			float[] sizes = c.getSizeArray();
-			List<? extends Vec3> objects = c2.getObjects();
+			List<? extends Vec3> objects = c.getObjects();
 			boolean[] visible = c.getVisibiltyArray();
 			
 			for (int j=0; j<c.getNumObjects(); j++){
@@ -199,9 +196,7 @@ public class SphereRenderer {
 //		int cellsDrawn = 0;
 
 		for (int j=0; j<ard.getRenderableCells().size(); j++){
-			ObjectRenderData<? extends Pickable>.Cell c = ard.getRenderableCells().get(j);
-			//TODO remove this line and the upper extend in case of Java7 or higher
-			ObjectRenderData<? extends Vec3>.Cell c2 = ard.getRenderableCells().get(j);
+			ObjectRenderData<?>.Cell c = ard.getRenderableCells().get(j);
 
 			//Cells are order by visibility, with empty cells at the end of the list
 			//Stop at the first empty block
@@ -248,7 +243,7 @@ public class SphereRenderer {
 				
 				float[] colors = c.getColorArray();
 				float[] sizes = c.getSizeArray();
-				List<? extends Vec3> objects = c2.getObjects();
+				List<? extends Vec3> objects = c.getObjects();
 				boolean[] visible = c.getVisibiltyArray();
 				//Fill render buffer, color values is either the given value or a picking color
 				if (picking){
