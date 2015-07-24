@@ -21,6 +21,7 @@ package crystalStructures;
 import java.util.*;
 
 import common.Vec3;
+import gui.PrimitiveProperty.BooleanProperty;
 import model.*;
 import model.BurgersVector.BurgersVectorType;
 import processingModules.skeletonizer.processors.*;
@@ -35,6 +36,12 @@ public class BCCStructure extends CrystalStructure {
 		//<100>
 		bvClassifcationPattern.add(new ClassificationPattern(100, 1, 2, 100, 1, BurgersVectorType.SUPER));
 	}
+	
+	protected BooleanProperty highTempProperty = 
+			new BooleanProperty("highTempADA", "optimize defect classification for >150K",
+					"<html>Modifies the thresholds to classify atoms.<br>"
+					+ "Typically reduces the number of false classifications.</html>",
+					false);
 	
 	private static Vec3[] neighPerfBCC = new Vec3[]{
 			new Vec3( 0.5f,  0.5f,  0.5f),
@@ -53,6 +60,11 @@ public class BCCStructure extends CrystalStructure {
 			new Vec3( 0f, 0f, 1f),
 			new Vec3( 0f, 0f,-1f),
 	};
+	
+	public BCCStructure() {
+		super();
+		crystalProperties.add(highTempProperty);
+	}
 	
 	@Override
 	protected CrystalStructure deriveNewInstance() {
@@ -78,6 +90,9 @@ public class BCCStructure extends CrystalStructure {
 	
 	@Override
 	public int identifyAtomType(Atom atom, NearestNeighborBuilder<Atom> nnb) {
+		int threshold = highTempProperty.getValue() ? 3 : 2;
+		float t1 = highTempProperty.getValue() ? -.77f : -.75f;
+		float t2 = highTempProperty.getValue() ? -.69f : -0.67f;
 		ArrayList<Vec3> neigh = nnb.getNeighVec(atom);
 		/*
 		 * type=0: bcc
@@ -111,12 +126,12 @@ public class BCCStructure extends CrystalStructure {
 						co_x0++;
 					else if (a < -.915)
 						co_x1++;
-					else if (a > -.75 && a< -0.67)
+					else if (a > t1 && a< t2)
 						co_x2++;
 				}
 			}
 			
-			if (co_x0 > 5 && co_x0+co_x1==7 && co_x2<=2 && neigh.size()==14) return 0;
+			if (co_x0 > 5 && co_x0+co_x1==7 && co_x2<=threshold && neigh.size()==14) return 0;
 			else if (co_x0 == 6 && neigh.size() == 12) return 1;
 			else if (co_x0 == 3 && neigh.size() == 12) return 2;
 			else if (neigh.size() == 12) return 4;

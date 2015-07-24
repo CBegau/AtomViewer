@@ -57,6 +57,7 @@ public class FeC_virtStructure extends BCCStructure {
 	public FeC_virtStructure() {
 		super();
 		this.getCrystalProperties().add(placeholderProperty);
+		this.getCrystalProperties().remove(super.highTempProperty);
 	}
 
 	@Override

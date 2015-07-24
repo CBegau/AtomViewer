@@ -72,6 +72,9 @@ public class FeCStructure extends BCCStructure {
 	
 	@Override
 	public int identifyAtomType(Atom atom, NearestNeighborBuilder<Atom> nnb) {
+		int threshold = highTempProperty.getValue() ? 3 : 2;
+		float t1 = highTempProperty.getValue() ? -.77f : -.75f;
+		float t2 = highTempProperty.getValue() ? -.69f : -0.67f;
 		ArrayList<Tupel<Atom, Vec3>> neigh = nnb.getNeighAndNeighVec(atom);		
 		/*
 		 * type=0: bcc
@@ -115,12 +118,12 @@ public class FeCStructure extends BCCStructure {
 						co_x0++;
 					else if (a < -.915)
 						co_x1++;
-					else if (a > -.75 && a< -0.67)
+					else if (a > t1 && a< t2)
 						co_x2++;
 				}
 			}
 			
-			if (co_x0 > 5 && co_x0+co_x1==7 && co_x2<=2 && count==14) return 0;
+			if (co_x0 > 5 && co_x0+co_x1==7 && co_x2<=threshold && neigh.size()==14) return 0;
 			else if (count==13 && neigh.size()==14 && co_x0==6) return 0;
 			else if (count == 13) return 4;
 			else if (count == 12) return 4;
