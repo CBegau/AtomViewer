@@ -37,6 +37,7 @@ public class Atom extends Vec3 implements Pickable {
 	private RBV rbv;
 	private float[] dataValues;
 	private int atomNumber;
+	//TODO pack the grain into dataValues
 	private short grain = DEFAULT_GRAIN;
 	private byte type, element;
 	
