@@ -281,7 +281,8 @@ public class CrystalRotationTools {
 			else r = rbv_c.z;
 			if (Math.abs(r)>0.75f) bv[i] = 6*(int)Math.signum(r);
 			else if (Math.abs(r)>0.412f) bv[i] = 3*(int)Math.signum(r);
-			else if (Math.abs(r)>0.166f) bv[i] = 2*(int)Math.signum(r);
+			else if (Math.abs(r)>0.25f) bv[i] = 2*(int)Math.signum(r);
+			else if (Math.abs(r)>0.0833f) bv[i] = (int)Math.signum(r);
 			else bv[i] = 0;
 		}
 		
