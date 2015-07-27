@@ -240,12 +240,14 @@ public class Atom extends Vec3 implements Pickable {
 			sb.append(" TBV="+tbv.toString());
 		}
 		
-		List<DataColumnInfo> dci = data.getDataColumnInfos(); 
-		for (int i=0; i < dci.size(); i++){
-			DataColumnInfo c = dci.get(i);
-			sb.append(String.format(" %s=%s%s", c.getName(), 
-					CommonUtils.outputDecimalFormatter.format(getData(i)),
-					c.getUnit()));	
+		List<DataColumnInfo> dci = data.getDataColumnInfos();
+		if (dataValues != null){
+			for (int i=0; i < dataValues.length; i++){
+				DataColumnInfo c = dci.get(i);
+				sb.append(String.format(" %s=%s%s", c.getName(), 
+						CommonUtils.outputDecimalFormatter.format(getData(i)),
+						c.getUnit()));	
+			}
 		}
 		
 		if (ev!=null && (ev.getModifiersEx() & InputEvent.CTRL_DOWN_MASK) == InputEvent.CTRL_DOWN_MASK){

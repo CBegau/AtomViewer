@@ -1562,6 +1562,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		final int picksize = 7;
 		
 		if (atomData==null) return;
+		pickList.clear();
 		
 		boolean adjustPOVOnObject = false;
 		if ((e.getModifiersEx() & (InputEvent.SHIFT_DOWN_MASK | InputEvent.CTRL_DOWN_MASK))
