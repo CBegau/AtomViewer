@@ -589,7 +589,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		toolchainMenu.add(saveToolchainMenuItem);
 		toolchainMenu.add(applyToolchainMenuItem);
 		toolchainMenu.add(applyToAllToolchainMenuItem);
-//		menu.add(toolchainMenu);
+		menu.add(toolchainMenu);
 		
 		
 		final JMenuItem helpMenu = new JMenu("Help");
@@ -1135,6 +1135,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 				
 				if (Configuration.getCurrentAtomData() != null && !ImportStates.APPEND_FILES.isActive()) {
 					Configuration.getCurrentAtomData().clear();
+					Configuration.setCurrentAtomData(null, true, true);
 					RenderingConfiguration.getViewer().getRenderRange().reset();
 				}
 				boolean successfulCreated = chooser.createConfiguration();
