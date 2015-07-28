@@ -115,7 +115,7 @@ public class SlipVectorModule extends ClonableProcessingModule{
 	public ProcessingResult process(final AtomData data) throws Exception {
 		if (referenceAtomData == null){
 			referenceAtomData = data;
-			if (referenceAtomData.getPrevious() != null) referenceAtomData = referenceAtomData.getPrevious(); 
+			while (referenceAtomData.getPrevious() != null) referenceAtomData = referenceAtomData.getPrevious(); 
 		}
 		
 		if (data == referenceAtomData) return null;
