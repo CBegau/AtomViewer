@@ -589,7 +589,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		toolchainMenu.add(saveToolchainMenuItem);
 		toolchainMenu.add(applyToolchainMenuItem);
 		toolchainMenu.add(applyToAllToolchainMenuItem);
-		menu.add(toolchainMenu);
+//		menu.add(toolchainMenu);
 		
 		
 		final JMenuItem helpMenu = new JMenu("Help");
