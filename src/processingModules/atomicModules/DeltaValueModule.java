@@ -41,7 +41,6 @@ import common.ThreadPool;
 import common.CommonUtils.KahanSum;
 import model.Atom;
 import model.AtomData;
-import model.Configuration;
 import model.DataColumnInfo;
 import processingModules.ClonableProcessingModule;
 import processingModules.DataContainer;
@@ -59,7 +58,9 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 	
 	private AtomData referenceAtomData = null;
 	private DataColumnInfo toDeltaColumn;
-	
+	//This is the indicator used for import from a toolchain, since the column
+	//the file is referring to might not exist at that moment 
+	private String toDeltaID;
 	
 	@Override
 	public String getShortName() {
@@ -84,7 +85,16 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 
 	@Override
 	public boolean isApplicable(AtomData data) {
-		return (data.getNext() != null || data.getPrevious() != null);
+		//Identify the column by its ID if imported from a toolchain
+		if (toDeltaColumn == null && toDeltaID != null){
+			for (DataColumnInfo d : data.getDataColumnInfos()){
+				if (d.getId().equals(toDeltaID)){
+					this.toDeltaColumn = d;
+				}
+			}
+		}
+		
+		return ((data.getNext() != null || data.getPrevious() != null) && this.toDeltaColumn != null);
 	}
 
 	@Override
@@ -239,15 +249,7 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 	public void importParameters(XMLStreamReader reader, Toolchain toolchain) throws Exception {
 		reader.next();
 		if (!reader.getLocalName().equals("toDeltaColumn")) throw new XMLStreamException("Illegal element detected");
-		String id = reader.getAttributeValue(null, "id");
-		
-		List<DataColumnInfo> dci = Configuration.getCurrentAtomData().getDataColumnInfos();
-		for (DataColumnInfo d : dci){
-			if (d.getId().equals(id)){
-				this.toDeltaColumn = d;
-				break;
-			}
-		}
+		this.toDeltaID = reader.getAttributeValue(null, "id");
 	}
 	
 }

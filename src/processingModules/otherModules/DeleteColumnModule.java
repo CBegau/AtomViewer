@@ -1,14 +1,11 @@
 package processingModules.otherModules;
 
-import java.util.List;
-
 import javax.swing.JFrame;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
 
 import model.AtomData;
-import model.Configuration;
 import model.DataColumnInfo;
 import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
@@ -20,6 +17,9 @@ import processingModules.toolchain.Toolchainable.ToolchainSupport;
 public class DeleteColumnModule extends ClonableProcessingModule implements Toolchainable{
 	
 	DataColumnInfo toRemove;
+	//This is the indicator used for import from a toolchain, since the column
+	//the file is referring to might not exist at that moment 
+	private String toRemoveID;
 	
 	public DeleteColumnModule() {}
 	
@@ -44,6 +44,17 @@ public class DeleteColumnModule extends ClonableProcessingModule implements Tool
 	
 	@Override
 	public boolean isApplicable(AtomData data) {
+		//Identify the column by its ID if imported from a toolchain
+		if (toRemove == null && toRemoveID != null){
+			for (DataColumnInfo d : data.getDataColumnInfos()){
+				if (d.getId().equals(toRemoveID)){
+					this.toRemove = d;
+					return true;
+				}
+			}
+			return false;
+		}
+		
 		return true;
 	}
 	
@@ -81,14 +92,6 @@ public class DeleteColumnModule extends ClonableProcessingModule implements Tool
 	public void importParameters(XMLStreamReader reader, Toolchain toolchain) throws XMLStreamException {
 		reader.next();
 		if (!reader.getLocalName().equals("toRemoveColumn")) throw new XMLStreamException("Illegal element detected");
-		String id = reader.getAttributeValue(null, "id");
-		
-		List<DataColumnInfo> dci = Configuration.getCurrentAtomData().getDataColumnInfos();
-		for (DataColumnInfo d : dci){
-			if (d.getId().equals(id)){
-				this.toRemove = d;
-				break;
-			}
-		}
+		this.toRemoveID = reader.getAttributeValue(null, "id");
 	}
 }

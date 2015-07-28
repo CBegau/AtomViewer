@@ -459,23 +459,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 							
 							do {
 								if (pm.isApplicable(data)){
-									final SwingWorker<Void,Void> sw = new ProcessModuleWorker(pm, data, !multipleFiles);
-									ProgressMonitor.createNewProgressMonitor(sw);
-									final JProgressDisplayDialog progressDisplay = 
-											new JProgressDisplayDialog(sw, JMainWindow.this, false);
-									progressDisplay.setTitle("Analysis");
-									
-									sw.addPropertyChangeListener(new PropertyChangeListener() {
-										@Override
-										public void propertyChange(PropertyChangeEvent arg0) {
-											if ( sw.isDone() || sw.isCancelled()){
-												progressDisplay.dispose();
-											}
-										}
-									});
-									
-									sw.execute();
-									progressDisplay.setVisible(true);
+									applyProcessWindowWithDisplay(data, pm, multipleFiles);
 								}
 								if (multipleFiles) data = data.getNext();
 							} while (multipleFiles && data != null);
@@ -485,6 +469,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 					}
 				}
 			}
+
 		};
 		atomicModulesMenu.addActionListener(processingActionListener);
 		otherModulesMenu.addActionListener(processingActionListener);
@@ -554,9 +539,42 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 						File file = chooser.getSelectedFile();
 						FileInputStream f = new FileInputStream(file);
 						Toolchain tc = Toolchain.readToolchain(f);
-						for (ProcessingModule pm : tc.getProcessingModules())
-							Configuration.getCurrentAtomData().applyProcessingModule(pm.clone());
+						for (ProcessingModule pm : tc.getProcessingModules()){
+							applyProcessWindowWithDisplay(Configuration.getCurrentAtomData(), pm.clone(), false);
+						}
 						Configuration.setCurrentAtomData(Configuration.getCurrentAtomData(), true, false);
+						JLogPanel.getJLogPanel().addLog("Applied toolchain");
+					}
+					
+					
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
+				
+			}
+		});
+		
+		JMenuItem applyToAllToolchainMenuItem = new JMenuItem("Apply to all");
+		applyToAllToolchainMenuItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					JFileChooser chooser = new JFileChooser();
+					chooser.setFileFilter(new FileNameExtensionFilter("Toolchainfile (*.tcf)","tcf"));
+					int result = chooser.showOpenDialog(JMainWindow.this);
+					if (result == JFileChooser.APPROVE_OPTION){
+						File file = chooser.getSelectedFile();
+						FileInputStream f = new FileInputStream(file);
+						Toolchain tc = Toolchain.readToolchain(f);
+						AtomData def = Configuration.getCurrentAtomData();
+						for (ProcessingModule pm : tc.getProcessingModules()){
+							for (AtomData d : Configuration.getAtomDataIterable()){
+								Configuration.setCurrentAtomData(d, false, false);
+								ProcessingModule pmc = pm.clone();
+								applyProcessWindowWithDisplay(d, pmc, false);
+							}
+						}
+						Configuration.setCurrentAtomData(def, true, false);
 						JLogPanel.getJLogPanel().addLog("Applied toolchain");
 					}
 					
@@ -570,6 +588,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		
 		toolchainMenu.add(saveToolchainMenuItem);
 		toolchainMenu.add(applyToolchainMenuItem);
+		toolchainMenu.add(applyToAllToolchainMenuItem);
 //		menu.add(toolchainMenu);
 		
 		
@@ -1040,6 +1059,26 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 				}
 			});
 		}
+	}
+	
+	public void applyProcessWindowWithDisplay(AtomData data, ProcessingModule pm, boolean multipleFiles) {
+		final SwingWorker<Void,Void> sw = new ProcessModuleWorker(pm, data, !multipleFiles);
+		ProgressMonitor.createNewProgressMonitor(sw);
+		final JProgressDisplayDialog progressDisplay = 
+				new JProgressDisplayDialog(sw, JMainWindow.this, false);
+		progressDisplay.setTitle("Analysis");
+		
+		sw.addPropertyChangeListener(new PropertyChangeListener() {
+			@Override
+			public void propertyChange(PropertyChangeEvent arg0) {
+				if ( sw.isDone() || sw.isCancelled()){
+					progressDisplay.dispose();
+				}
+			}
+		});
+		
+		sw.execute();
+		progressDisplay.setVisible(true);
 	}
 	
 	protected class KeyBoardAction extends AbstractAction{

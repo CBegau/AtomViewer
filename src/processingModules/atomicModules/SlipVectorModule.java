@@ -27,6 +27,7 @@ import processingModules.toolchain.Toolchainable.ExportableValue;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 
 //TODO handle reference in Toolchain
+//Currently a workaround is implemented that always picks the first file in the sequence 
 @ToolchainSupport()
 public class SlipVectorModule extends ClonableProcessingModule{
 	
@@ -112,6 +113,11 @@ public class SlipVectorModule extends ClonableProcessingModule{
 
 	@Override
 	public ProcessingResult process(final AtomData data) throws Exception {
+		if (referenceAtomData == null){
+			referenceAtomData = data;
+			if (referenceAtomData.getPrevious() != null) referenceAtomData = referenceAtomData.getPrevious(); 
+		}
+		
 		if (data == referenceAtomData) return null;
 		
 		if (!data.getBox().getBoxSize()[0].equals(referenceAtomData.getBox().getBoxSize()[0]) || 

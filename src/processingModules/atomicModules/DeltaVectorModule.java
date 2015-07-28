@@ -57,6 +57,9 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 	
 	private AtomData referenceAtomData = null;
 	private DataColumnInfo toDeltaColumn;
+	//This is the indicator used for import from a toolchain, since the column
+	//the file is referring to might not exist at that moment 
+	private String toDeltaID;
 	
 	@Override
 	public String getShortName() {
@@ -81,7 +84,16 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 
 	@Override
 	public boolean isApplicable(AtomData data) {
-		if (data.getNext() == null && data.getPrevious() == null)
+		//Identify the column by its ID if imported from a toolchain
+		if (toDeltaColumn == null && toDeltaID != null){
+			for (DataColumnInfo d : data.getDataColumnInfos()){
+				if (d.getId().equals(toDeltaID)){
+					this.toDeltaColumn = d;
+				}
+			}
+		}
+		
+		if ((data.getNext() == null && data.getPrevious() == null) || this.toDeltaColumn == null)
 			return false;
 		for (DataColumnInfo dci: data.getDataColumnInfos())
 			if (dci.isFirstVectorComponent()) return true; 

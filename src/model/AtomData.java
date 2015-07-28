@@ -200,25 +200,27 @@ public class AtomData {
 	 * @throws Exception
 	 */
 	public void applyProcessingModule(ProcessingModule pm) throws Exception{
-		this.addDataColumnInfo(pm.getDataColumnsInfo());
-		
-		ProcessingResult pr = pm.process(this);
-		
-		if (pr != null){
-			if (pr.getDataContainer() != null)
-				this.addAdditionalData(pr.getDataContainer());
+		if (pm.isApplicable(this)){
+			this.addDataColumnInfo(pm.getDataColumnsInfo());
 			
-			if (pr.getResultInfoString()!=null && !pr.getResultInfoString().isEmpty())
-				JLogPanel.getJLogPanel().addLog(String.format("Results from %s\n%s",
-					pm.getShortName(), pr.getResultInfoString()));
+			ProcessingResult pr = pm.process(this);
+			
+			if (pr != null){
+				if (pr.getDataContainer() != null)
+					this.addAdditionalData(pr.getDataContainer());
+				
+				if (pr.getResultInfoString()!=null && !pr.getResultInfoString().isEmpty())
+					JLogPanel.getJLogPanel().addLog(String.format("Results from %s\n%s",
+						pm.getShortName(), pr.getResultInfoString()));
+			}
+			if (pm.getDataColumnsInfo() != null){
+				for (DataColumnInfo dci : pm.getDataColumnsInfo())
+					if (!dci.isInitialized())
+						dci.findRange(this, false);
+			}
+			//Store sucessful step in Toolchain
+			this.toolchain.addModule(pm);
 		}
-		if (pm.getDataColumnsInfo() != null){
-			for (DataColumnInfo dci : pm.getDataColumnsInfo())
-				if (!dci.isInitialized())
-					dci.findRange(this, false);
-		}
-		//Store sucessful step in Toolchain
-		this.toolchain.addModule(pm);
 	}
 	
 	private void processInputData(MDFileLoader.ImportDataContainer idc) throws Exception{

@@ -113,7 +113,8 @@ public class Toolchain {
 	private boolean exportProcessingModule(XMLStreamWriter xmlout, ProcessingModule pm)
 			throws IllegalArgumentException, XMLStreamException, IllegalAccessException{
 		Class<?> clz = pm.getClass();
-		if (!clz.isAnnotationPresent(ToolchainSupport.class)) return false;
+		//TODO handle not toolchainable modules properly
+		if (!clz.isAnnotationPresent(ToolchainSupport.class)) return true;
 
 		xmlout.writeStartElement("Module");
 		xmlout.writeAttribute("name", clz.getName());

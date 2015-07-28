@@ -24,7 +24,6 @@ import gui.PrimitiveProperty.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.Callable;
 
@@ -37,7 +36,6 @@ import javax.xml.stream.XMLStreamWriter;
 
 import model.Atom;
 import model.AtomData;
-import model.Configuration;
 import model.DataColumnInfo;
 import model.NearestNeighborBuilder;
 import processingModules.ClonableProcessingModule;
@@ -55,6 +53,9 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 	
 	private DataColumnInfo toAverageColumn;
 	private DataColumnInfo averageColumn;
+	//This is the indicator used for import from a toolchain, since the column
+	//the file is referring to might not exist at that moment 
+	private String toAverageID;
 	
 	@ExportableValue
 	private float averageRadius = 0f;
@@ -104,6 +105,16 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 	
 	@Override
 	public boolean isApplicable(AtomData data) {
+		//Identify the column by its ID if imported from a toolchain
+		if (toAverageColumn == null && toAverageID != null){
+			for (DataColumnInfo d : data.getDataColumnInfos()){
+				if (d.getId().equals(toAverageID)){
+					this.toAverageColumn = d;
+				}
+			}
+			if (toAverageColumn == null) return false;
+		}
+		
 		for (DataColumnInfo dci: data.getDataColumnInfos())
 			if (dci.isFirstVectorComponent()) return true; 
 		
@@ -210,14 +221,6 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 	public void importParameters(XMLStreamReader reader, Toolchain toolchain) throws XMLStreamException {
 		reader.next();
 		if (!reader.getLocalName().equals("toAverageColumn")) throw new XMLStreamException("Illegal element detected");
-		String id = reader.getAttributeValue(null, "id");
-		
-		List<DataColumnInfo> dci = Configuration.getCurrentAtomData().getDataColumnInfos();
-		for (DataColumnInfo d : dci){
-			if (d.getId().equals(id)){
-				this.toAverageColumn = d;
-				break;
-			}
-		}
+		this.toAverageID = reader.getAttributeValue(null, "id");
 	}
 }
