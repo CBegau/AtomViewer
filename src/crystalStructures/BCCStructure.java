@@ -84,10 +84,6 @@ public class BCCStructure extends CrystalStructure {
 		return 0.25f;
 	}
 	
-	public float getPerfectBurgersVectorLength(){
-		return latticeConstant*0.866025f;
-	}
-	
 	@Override
 	public int identifyAtomType(Atom atom, NearestNeighborBuilder<Atom> nnb) {
 		int threshold = highTempProperty.getValue() ? 3 : 2;
@@ -179,11 +175,6 @@ public class BCCStructure extends CrystalStructure {
 	@Override
 	public Vec3[] getPerfectNearestNeighborsUnrotated() {
 		return neighPerfBCC.clone();
-	}
-	
-	@Override
-	public int getNumberOfNearestNeighbors() {
-		return 14;
 	}
 	
 	@Override

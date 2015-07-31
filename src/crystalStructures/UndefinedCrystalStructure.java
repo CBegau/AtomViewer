@@ -83,16 +83,6 @@ public class UndefinedCrystalStructure extends CrystalStructure {
 	}
 
 	@Override
-	public float getPerfectBurgersVectorLength() {
-		return 1f;
-	}
-
-	@Override
-	public int getNumberOfNearestNeighbors() {
-		return 1;
-	}
-
-	@Override
 	public Vec3[] getPerfectNearestNeighborsUnrotated() {
 		return new Vec3[]{new Vec3(1,0,0), new Vec3(0,1,0), new Vec3(0,0,1)};
 	}

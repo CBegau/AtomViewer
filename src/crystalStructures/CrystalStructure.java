@@ -142,7 +142,7 @@ public abstract class CrystalStructure{
 								CrystalStructure struct = ctor.newInstance();
 								structures.add(struct);
 							}
-						} catch (NoClassDefFoundError e){
+						} catch (Error e){
 							e.printStackTrace();
 						}
 					}
@@ -222,13 +222,6 @@ public abstract class CrystalStructure{
 	public abstract int identifyAtomType(Atom atom, NearestNeighborBuilder<Atom> nnb);
 	
 	/**
-	 * The number of nearest neighbor atoms in a perfect lattice
-	 * Used in computing grain rotations
-	 * @return
-	 */
-	public abstract int getNumberOfNearestNeighbors();
-	
-	/**
 	 * Test if a Burgers vector should be calculated for an atom
 	 * If no custom implementation of getDislocationDefectAtoms is provided,
 	 * the atoms accepted by this method and have a RBV will be included in the
@@ -261,13 +254,6 @@ public abstract class CrystalStructure{
 	//TODO change to a more abstract scheme what does not only depends on atomic type
 	public abstract int getSurfaceType();
 	
-	
-	/**
-	 * The length of a perfect Burgers vector, required to estimate a scalar value of GND densities.
-	 * @return length of a perfect Burgers vector
-	 */
-	public abstract float getPerfectBurgersVectorLength();
-	
 	/**
 	 * The perfect nearest neighbors in an arbitrary orientation 
 	 * @return
@@ -282,21 +268,13 @@ public abstract class CrystalStructure{
 	
 	
 	/**
-	 * Either include this atom as a neighbor during RBV calculation or not
-	 * @param a
+	 * Return a list of patterns to map numerical Burgers vectors to the crystallographic ones.
+	 * Each desired mapping must be defined in the list 
+	 * Defines at the same time, the assignment of types for the Burgers vectors in 
+	 * "identifyBurgersVectorType(BurgersVector bv)"
 	 * @return
 	 */
-	public boolean considerAtomAsNeighborDuringRBVCalculation(Atom a){
-		return true;
-	}
-	
-	/**
-	 * AToolchain to be applied at the end of the analysis process
-	 * @return
-	 */
-	public Toolchain getToolchainToApplyAtBeginningOfAnalysis(){
-		return null;
-	}
+	public abstract ArrayList<RBVToBVPattern> getBurgersVectorClassificationPattern();
 	
 	/* ******************************
 	 * Final methods
@@ -314,28 +292,6 @@ public abstract class CrystalStructure{
 	@Override
 	public final String toString() {
 		return getIDName();
-	}
-	
-	/**
-	 * Perform an identification of the atom types (Bond angle analysis, Common neighbor analysis, whatever...)
-	 * @param atoms A list of all atoms
-	 * @param nnb The nearest neighbor graph for this task
-	 * @param start Perform the identification for all atom within the range of start and end
-	 * The calculation has to be able to performed in parallel
-	 * @param barrier If the analysis consists of several phases, this barrier can be used to synchronize the threads
-	 * @param end see start
-	 */
-	public void identifyDefectAtoms(List<Atom> atoms, NearestNeighborBuilder<Atom> nnb, int start, int end, CyclicBarrier barrier) {
-		for (int i=start; i<end; i++){
-			if (Thread.interrupted()) return;
-			if ((i-start)%10000 == 0)
-				ProgressMonitor.getProgressMonitor().addToCounter(10000);
-			
-			Atom a = atoms.get(i);
-			a.setType(identifyAtomType(a, nnb));
-		}
-		
-		ProgressMonitor.getProgressMonitor().addToCounter((end-start)%10000);
 	}
 	
 	public final float getLatticeConstant() {
@@ -358,6 +314,38 @@ public abstract class CrystalStructure{
 	}
 	
 	
+	//This value is computed on the first access
+	private float cachedPerfectBurgersVectorLength = -1f;
+	
+	/**
+	 * The length of a perfect Burgers vector, required to estimate a scalar value of GND densities.
+	 * @return length of a perfect Burgers vector
+	 */
+	public final float getPerfectBurgersVectorLength(){
+		//Compute the value if is not cached yet
+		if (cachedPerfectBurgersVectorLength == -1){
+			//Find the Burgers vector tagged as perfect and compute the length
+			ArrayList<RBVToBVPattern> pattern = getBurgersVectorClassificationPattern();
+			float max = 0;
+			for (RBVToBVPattern p : pattern){
+				if (p.getType() == BurgersVectorType.PERFECT)
+					max = Math.max(max, p.getLengthOfReplacementVector());
+			}
+			
+			this.cachedPerfectBurgersVectorLength = max * latticeConstant;
+		}
+		return this.cachedPerfectBurgersVectorLength;
+	};
+	
+	/**
+	 * The number of nearest neighbor atoms in a perfect lattice
+	 * Used in computing grain rotations
+	 * @return
+	 */
+	public final int getNumberOfNearestNeighbors(){
+		return getPerfectNearestNeighborsUnrotated().length;
+	};
+	
 	/**
 	 * The perfect nearest neighbors rotated into the grain orientation 
 	 * @param g
@@ -366,15 +354,6 @@ public abstract class CrystalStructure{
 	public final Vec3[] getPerfectNearestNeighbors(Grain g) {
 		return getPerfectNearestNeighbors(g.getCystalRotationTools());
 	}
-	
-	/**
-	 * The radius of the integrated sphere during the calculation of RBVs.
-	 * Usually somewhere between the first and second nearest neighbor distance 
-	 * @return
-	 */
-	public float getRBVIntegrationRadius(){
-		return getDistanceToNearestNeighbor();
-	};
 	
 	/**
 	 * The nearest neighbors bonds (relative to a central atom) in the current crystal rotation
@@ -431,12 +410,24 @@ public abstract class CrystalStructure{
 	 * The minimal distance between two atoms in a perfect single crystal 
 	 * @return
 	 */
-	public float getDistanceToNearestNeighbor() {
+	public final float getDistanceToNearestNeighbor() {
 		Vec3[] n = this.getPerfectNearestNeighborsUnrotated();
 		float min = Float.POSITIVE_INFINITY;
 		for (int i=0; i<n.length; i++)
 			if (n[i].getLength()<min) min = n[i].getLength();
 		return min * this.latticeConstant;
+	}
+	
+	/* ******************************
+	 * Methods that can be overridden in subclasses 
+	 ********************************/
+	
+	/**
+	 * AToolchain to be applied at the end of the analysis process
+	 * @return
+	 */
+	public Toolchain getToolchainToApplyAtBeginningOfAnalysis(){
+		return null;
 	}
 	
 	/**
@@ -467,16 +458,6 @@ public abstract class CrystalStructure{
 	}
 	
 	/**
-	 * Return the color associated for the given atom class index  
-	 * @param index float[3] array to be used in OpenGl
-	 * @return
-	 */
-	public final float[] getGLColor(int index){
-		assert (index<currentColors.length && index>=0);
-		return currentColors[index];		
-	}	
-	
-	/**
 	 * Provides the default color scheme for this crystal structure
 	 * @return
 	 */
@@ -495,6 +476,15 @@ public abstract class CrystalStructure{
 		}
 	}
 	
+	/**
+	 * Return the color associated for the given atom class index  
+	 * @param index float[3] array to be used in OpenGl
+	 * @return
+	 */
+	public final float[] getGLColor(int index){
+		assert (index<currentColors.length && index>=0);
+		return currentColors[index];		
+	}
 	
 	/**
 	 * Reset the colors used for atoms to a predefined standard
@@ -571,6 +561,28 @@ public abstract class CrystalStructure{
 		return null;
 	}
 	
+	/**
+	 * Perform an identification of the atom types (Bond angle analysis, Common neighbor analysis, whatever...)
+	 * @param atoms A list of all atoms
+	 * @param nnb The nearest neighbor graph for this task
+	 * @param start Perform the identification for all atom within the range of start and end
+	 * The calculation has to be able to performed in parallel
+	 * @param barrier If the analysis consists of several phases, this barrier can be used to synchronize the threads
+	 * @param end see start
+	 */
+	public void identifyDefectAtoms(List<Atom> atoms, NearestNeighborBuilder<Atom> nnb, int start, int end, CyclicBarrier barrier) {
+		for (int i=start; i<end; i++){
+			if (Thread.interrupted()) return;
+			if ((i-start)%10000 == 0)
+				ProgressMonitor.getProgressMonitor().addToCounter(10000);
+			
+			Atom a = atoms.get(i);
+			a.setType(identifyAtomType(a, nnb));
+		}
+		
+		ProgressMonitor.getProgressMonitor().addToCounter((end-start)%10000);
+	}
+	
 	/* **********************************
 	 * skeletonization related methods
 	 ************************************/
@@ -615,14 +627,21 @@ public abstract class CrystalStructure{
 	};
 	
 	/**
-	 * Return a list of patterns to map numerical Burgers vectors to the crystallographic ones.
-	 * Each desired mapping must be defined in the list 
-	 * Defines at the same time, the assignment of types for the Burgers vectors in 
-	 * "identifyBurgersVectorType(BurgersVector bv)"
+	 * The radius of the integrated sphere during the calculation of RBVs.
+	 * Usually somewhere between the first and second nearest neighbor distance 
 	 * @return
 	 */
-	public ArrayList<RBVToBVPattern> getBurgersVectorClassificationPattern() {
-		return new ArrayList<RBVToBVPattern>();
+	public float getRBVIntegrationRadius(){
+		return getDistanceToNearestNeighbor();
+	};
+	
+	/**
+	 * Either include this atom as a neighbor during RBV calculation or not
+	 * @param a
+	 * @return
+	 */
+	public boolean considerAtomAsNeighborDuringRBVCalculation(Atom a){
+		return true;
 	}
 	
 	/* ****************************

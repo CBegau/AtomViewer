@@ -121,10 +121,6 @@ public class B2NiTi extends BCCStructure{
 		return size;
 	}
 	
-	public float getPerfectBurgersVectorLength(){
-		return latticeConstant;
-	}
-	
 	@Override
 	public String getNameForType(int i) {
 		switch (i) {

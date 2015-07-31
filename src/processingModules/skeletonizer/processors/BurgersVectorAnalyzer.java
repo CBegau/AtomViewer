@@ -353,6 +353,18 @@ public class BurgersVectorAnalyzer {
 		}
 		
 		/**
+		 * The length of the Burgers vector as a fraction of the lattice constant
+		 * @return
+		 */
+		public float getLengthOfReplacementVector(){
+			Vec3 v = new Vec3();
+			v.x = replacementComp[0]/(float)(replacementFrac);
+			v.y = replacementComp[1]/(float)(replacementFrac);
+			v.z = replacementComp[2]/(float)(replacementFrac);
+			return v.getLength() ;
+		}
+		
+		/**
 		 * Creates a new Burgers vector by applying the replacement pattern
 		 * @param bv
 		 * @param d

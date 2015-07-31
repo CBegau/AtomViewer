@@ -152,16 +152,6 @@ public class DiamondCubicStructure extends CrystalStructure {
 		float[] size = {0.6f};
 		return size;
 	}
-	
-	@Override
-	public float getPerfectBurgersVectorLength(){
-		return latticeConstant*0.7071067f;
-	}
-
-	@Override
-	public int getNumberOfNearestNeighbors() {
-		return 16;
-	}
 
 	@Override
 	public Vec3[] getPerfectNearestNeighborsUnrotated() {

@@ -25,11 +25,10 @@ import common.Tupel;
 import common.Vec3;
 import gui.PrimitiveProperty.BooleanProperty;
 import model.Atom;
-import model.AtomData;
 import model.Filter;
 import model.NearestNeighborBuilder;
 
-public class YSZStructure extends CrystalStructure {
+public class YSZStructure extends FCCStructure {
 	
 	protected BooleanProperty dontImportOxygen = 
 			new BooleanProperty("dontImportOxygen", "Do not import oxygen",
@@ -45,24 +44,9 @@ public class YSZStructure extends CrystalStructure {
 		super();
 		crystalProperties.add(dontImportOxygen);
 		crystalProperties.add(hasArtificialPlaceHolderAtoms);
+		
+		crystalProperties.remove(super.highTempProperty);
 	}
-	
-	private static Vec3[] neighPerfFCC = new Vec3[]{
-		new Vec3(0f, 0.5f, 0.5f),
-		new Vec3(0f,-0.5f,-0.5f),
-		new Vec3(0f,-0.5f, 0.5f),
-		new Vec3(0f, 0.5f,-0.5f),
-		
-		new Vec3(0.5f , 0f, 0.5f),
-		new Vec3(-0.5f, 0f,-0.5f),
-		new Vec3(-0.5f, 0f, 0.5f),
-		new Vec3(0.5f , 0f,-0.5f),
-		
-		new Vec3(0.5f , 0.5f , 0f),
-		new Vec3(-0.5f, -0.5f, 0f),
-		new Vec3(-0.5f, 0.5f , 0f),
-		new Vec3(0.5f , -0.5f, 0f)
-	};
 	
 	@Override
 	protected CrystalStructure deriveNewInstance() {
@@ -151,16 +135,6 @@ public class YSZStructure extends CrystalStructure {
 	}
 
 	@Override
-	public List<Atom> getStackingFaultAtoms(AtomData data) {
-		return new ArrayList<Atom>();
-	}
-
-	@Override
-	public boolean isRBVToBeCalculated(Atom a) {
-		return false;
-	}
-
-	@Override
 	public String getNameForType(int i) {
 		switch(i){
 		case 0 : return "Oxygen";
@@ -180,31 +154,6 @@ public class YSZStructure extends CrystalStructure {
 		if (hasArtificialPlaceHolderAtoms.getValue())
 			return new float[]{1f, 0.49f, 1.095f, 0.1f};
 		else return new float[]{1f, 0.49f, 1.095f};
-	}
-	
-	@Override
-	public int getDefaultType() {
-		return 1;
-	}
-
-	@Override
-	public int getSurfaceType() {
-		return 6; //Undefined
-	}
-
-	@Override
-	public float getPerfectBurgersVectorLength() {
-		return 1f;
-	}
-
-	@Override
-	public int getNumberOfNearestNeighbors() {
-		return 12;
-	}
-
-	@Override
-	public Vec3[] getPerfectNearestNeighborsUnrotated() {
-		return neighPerfFCC.clone();
 	}
 
 	@Override
@@ -230,4 +179,5 @@ public class YSZStructure extends CrystalStructure {
 			}
 		}; 
 	}
+
 }

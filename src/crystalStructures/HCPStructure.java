@@ -3,7 +3,9 @@ package crystalStructures;
 import java.util.ArrayList;
 
 import model.Atom;
+import model.BurgersVector.BurgersVectorType;
 import model.NearestNeighborBuilder;
+import processingModules.skeletonizer.processors.BurgersVectorAnalyzer.RBVToBVPattern;
 import common.Vec3;
 
 public class HCPStructure extends CrystalStructure {
@@ -87,12 +89,7 @@ public class HCPStructure extends CrystalStructure {
 			else return 4;
 		}
 	}
-
-	@Override
-	public int getNumberOfNearestNeighbors() {
-		return 12;
-	}
-
+	
 	@Override
 	public boolean isRBVToBeCalculated(Atom a) {
 		return a.getType()!=HCP;
@@ -124,11 +121,6 @@ public class HCPStructure extends CrystalStructure {
 	}
 
 	@Override
-	public float getPerfectBurgersVectorLength() {
-		return 0.47f*latticeConstant;
-	}
-
-	@Override
 	public Vec3[] getPerfectNearestNeighborsUnrotated() {
 		return neighPerfHCP.clone();
 	}
@@ -136,6 +128,13 @@ public class HCPStructure extends CrystalStructure {
 	@Override
 	public float getDefaultNearestNeighborSearchScaleFactor() {
 		return 1.1f;
+	}
+
+	@Override
+	public ArrayList<RBVToBVPattern> getBurgersVectorClassificationPattern() {
+		ArrayList<RBVToBVPattern> pattern = new ArrayList<RBVToBVPattern>();
+		pattern.add(new RBVToBVPattern(100, 1,  1, 100, 1, BurgersVectorType.PERFECT));
+		return pattern;
 	}
 
 }

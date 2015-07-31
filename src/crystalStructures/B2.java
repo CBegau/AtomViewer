@@ -71,11 +71,6 @@ public class B2 extends BCCStructure{
 	}
 	
 	@Override
-	public float getPerfectBurgersVectorLength(){
-		return latticeConstant;
-	}
-	
-	@Override
 	public List<SkeletonPreprocessor> getSkeletonizerPreProcessors(){
 		Vector<SkeletonPreprocessor> list = new Vector<SkeletonPreprocessor>();
 		list.add(new MeshCleaningPreprocessor());

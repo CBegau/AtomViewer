@@ -110,11 +110,6 @@ public class FCCStructure extends CrystalStructure {
 	}
 	
 	@Override
-	public float getPerfectBurgersVectorLength(){
-		return latticeConstant*0.7071067f;
-	}
-	
-	@Override
 	public boolean hasStackingFaults(){
 		return true;
 	}
@@ -219,11 +214,6 @@ public class FCCStructure extends CrystalStructure {
 	@Override
 	public Vec3[] getPerfectNearestNeighborsUnrotated() {
 		return neighPerfFCC.clone();
-	}
-	
-	@Override
-	public int getNumberOfNearestNeighbors() {
-		return 12;
 	}
 	
 	@Override
