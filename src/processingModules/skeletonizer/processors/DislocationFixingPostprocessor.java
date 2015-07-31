@@ -240,8 +240,7 @@ public class DislocationFixingPostprocessor implements SkeletonDislocationPostpr
 	 * any value >1 is unacceptable 
 	 */
 	private float nodeFixingQuality(SkeletonNode origin, Dislocation d, SkeletonNode testNode){
-		if (skeleton.getAtomData().isPolyCrystalline() && 
-				!skeleton.getAtomData().getCrystalStructure().skeletonizeOverMultipleGrains()){
+		if (skeleton.getAtomData().isPolyCrystalline() && !skeleton.skeletonizeOverGrains()){
 			if (origin.getMappedAtoms().get(0).getGrain() != testNode.getMappedAtoms().get(0).getGrain()) return 2f;
 		}
 		

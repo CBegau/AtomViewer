@@ -51,7 +51,7 @@ public class Dislocation implements Pickable{
 		this.id = skel.getDislocationIDSource().getUniqueID();
 		this.polyline = polyline;
 		
-		if (skel.getAtomData().isPolyCrystalline() && !skel.getAtomData().getCrystalStructure().skeletonizeOverMultipleGrains()){
+		if (skel.getAtomData().isPolyCrystalline() && !skel.skeletonizeOverGrains()){
 			//as only atoms within the same grain as skeletonized into a dislocation
 			//the first mapped atoms yields the correct grain
 			int grainNumber = polyline[0].getMappedAtoms().get(0).getGrain();

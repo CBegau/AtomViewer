@@ -456,14 +456,21 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		c.gridx = 0;
 		c.gridy = 0;
 		c.anchor = GridBagConstraints.NORTHWEST;
-		ArrayList<Integer> sortedList = new ArrayList<Integer>(atomData.getGrains().size());
-		for (Grain g : atomData.getGrains())
-			sortedList.add(g.getGrainNumber());
-			
-		Collections.sort(sortedList);
-		for (int i : sortedList){
-			grainIgnoreContainer.add(new JIgnoreGrainCheckbox(i), c);
-			c.gridy++;
+		
+		if (atomData.isPolyCrystalline()){
+			ArrayList<Integer> sortedList = new ArrayList<Integer>(atomData.getGrains().size());
+			for (Grain g : atomData.getGrains())
+				sortedList.add(g.getGrainNumber());
+				
+			Collections.sort(sortedList);
+			for (int i : sortedList){
+				grainIgnoreContainer.add(new JIgnoreGrainCheckbox(i), c);
+				c.gridy++;
+			}
+			if (atomData.getGrains(Atom.DEFAULT_GRAIN) == null)
+				grainIgnoreContainer.add(new JIgnoreGrainCheckbox(Atom.DEFAULT_GRAIN), c); c.gridy++;
+			if (atomData.getGrains(Atom.IGNORED_GRAIN) == null)
+			grainIgnoreContainer.add(new JIgnoreGrainCheckbox(Atom.IGNORED_GRAIN), c);
 		}
 		c.gridwidth = GridBagConstraints.REMAINDER;
 		c.weighty = 1.;

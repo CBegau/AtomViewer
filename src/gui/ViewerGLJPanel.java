@@ -1395,6 +1395,10 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			grainColorTable.put(i, colors[j]);
 			j++;
 		}
+		if (atomData.getGrains(Atom.DEFAULT_GRAIN) == null)
+			grainColorTable.put(Atom.DEFAULT_GRAIN, colors[sortGrainIndices.size()-2]);
+		if (atomData.getGrains(Atom.IGNORED_GRAIN) == null)
+			grainColorTable.put(Atom.IGNORED_GRAIN, colors[sortGrainIndices.size()-1]);
 	}
 	
 	public RenderRange getRenderRange(){

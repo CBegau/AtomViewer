@@ -60,9 +60,11 @@ public class Skeletonizer extends DataContainer {
 	private AtomData data;
 	
 	private float meshingThreshold = -1;
+	private boolean skeletonizeOverGrains;
 	
-	public Skeletonizer(float meshingThreshold){
+	public Skeletonizer(float meshingThreshold, boolean skeletonizeOverGrains){
 		this.meshingThreshold = meshingThreshold;
+		this.skeletonizeOverGrains = skeletonizeOverGrains;
 	}
 	
 	/**
@@ -86,7 +88,7 @@ public class Skeletonizer extends DataContainer {
 		final NearestNeighborBuilder<SkeletonNode> nnb = 
 				new NearestNeighborBuilder<SkeletonNode>(data.getBox(), meshingThreshold, true);
 		nnb.addAll(nodes);
-		final boolean sameGrainsOnly = data.isPolyCrystalline() && !data.getCrystalStructure().skeletonizeOverMultipleGrains();
+		final boolean sameGrainsOnly = data.isPolyCrystalline() && !skeletonizeOverGrains;
 		//Parallel build
 		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
 		for (int i=0; i<ThreadPool.availProcessors(); i++){
@@ -140,6 +142,14 @@ public class Skeletonizer extends DataContainer {
 	 */
 	public float getNearestNeigborDist() {
 		return meshingThreshold;
+	}
+	
+	/**
+	 * Indicates if a skeleton is to be created across multiple grains or phases
+	 * @return
+	 */
+	public boolean skeletonizeOverGrains() {
+		return skeletonizeOverGrains;
 	}
 	
 	/**

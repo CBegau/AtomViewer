@@ -51,7 +51,7 @@ public class BurgersVectorAnalyzer {
 			if (!d.getBurgersVectorInfo().isLineSenseKnown()) continue;
 			
 			BurgersVector bv;
-			if (!skel.getAtomData().isPolyCrystalline() || skel.getAtomData().getCrystalStructure().skeletonizeOverMultipleGrains()){
+			if (!skel.getAtomData().isPolyCrystalline() || skel.skeletonizeOverGrains()){
 				//Single crystal or poly-phase material with same orientations 
 				 bv = skel.getAtomData().getCrystalRotation().rbvToBurgersVector(d.getBurgersVectorInfo().getAverageResultantBurgersVector());	
 			} else {

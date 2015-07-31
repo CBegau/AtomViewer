@@ -170,11 +170,6 @@ public class B2NiTi extends BCCStructure{
 		return list;
 	}
 	
-	@Override
-	public boolean skeletonizeOverMultipleGrains(){
-		return true;
-	}
-	
 	public float getDefaultSkeletonizerMeshingThreshold(){
 		return 1.28f;
 	}

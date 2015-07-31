@@ -20,6 +20,9 @@ public class SkeletonizerModule extends ClonableProcessingModule {
 	@ExportableValue
 	private float meshingThreshold = -1;
 	
+	@ExportableValue
+	private boolean skeletonizeBetweenGrains = false;
+	
 	@Override
 	public String getFunctionDescription() {
 		return "Creates a dislocation network from defects";
@@ -32,7 +35,7 @@ public class SkeletonizerModule extends ClonableProcessingModule {
 
 	@Override
 	public ProcessingResult process(AtomData data) throws Exception {
-		Skeletonizer dc = new Skeletonizer(meshingThreshold);
+		Skeletonizer dc = new Skeletonizer(meshingThreshold, skeletonizeBetweenGrains);
 		dc.processData(data);
 		return new DataContainer.DefaultDataContainerProcessingResult(dc, "");
 	}
@@ -51,9 +54,16 @@ public class SkeletonizerModule extends ClonableProcessingModule {
 						+ "only slightly seperated partial dislocation cores"
 						+ "<br> Min: 1.0, Max: 2.0</html>", 1.1f, 1f, 2f);
 		
+		BooleanProperty multipleGrains = dialog.addBoolean("skeletonizeGrains", "Create a single dislocation network across multiple grains",
+				"If selected, grain or phase boundaries are ignored during creation of a dislocation network. "
+				+ "All atoms are treated as if the belong to the same structure", false);
+		
+		multipleGrains.setEnabled(data.isPolyCrystalline());
+		
 		boolean ok = dialog.showDialog();
 		if (ok){
-			this.meshingThreshold = meshThreshold.getValue(); 
+			this.meshingThreshold = meshThreshold.getValue();
+			this.skeletonizeBetweenGrains = multipleGrains.getValue();
 		}
 		return ok;
 	}

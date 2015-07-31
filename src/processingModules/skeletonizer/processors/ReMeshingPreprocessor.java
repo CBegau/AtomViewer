@@ -40,8 +40,7 @@ public class ReMeshingPreprocessor implements SkeletonPreprocessor {
 		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
 		final List<SkeletonNode> nodes = skel.getNodes(); 
 		
-		final boolean sameGrainsOnly = skel.getAtomData().isPolyCrystalline() && 
-			!skel.getAtomData().getCrystalStructure().skeletonizeOverMultipleGrains();
+		final boolean sameGrainsOnly = skel.getAtomData().isPolyCrystalline() && !skel.skeletonizeOverGrains();
 		for (int i=0; i<ThreadPool.availProcessors(); i++){
 			final int j = i;
 			parallelTasks.add(new Callable<Void>() {

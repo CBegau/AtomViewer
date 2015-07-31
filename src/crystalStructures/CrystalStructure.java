@@ -133,7 +133,8 @@ public abstract class CrystalStructure{
 				
 				for (File f : files){
 					if (f.getName().endsWith(".class")){
-							String name = "crystalStructures."+f.getName().replace(".class", "");
+						String name = "crystalStructures."+f.getName().replace(".class", "");
+						try {
 							Class<?> clazz = Class.forName(name, true, loader);
 							if (CrystalStructure.class.isAssignableFrom(clazz)){
 								Class<? extends CrystalStructure> crystalStructureClass = clazz.asSubclass(CrystalStructure.class);
@@ -141,7 +142,9 @@ public abstract class CrystalStructure{
 								CrystalStructure struct = ctor.newInstance();
 								structures.add(struct);
 							}
-						
+						} catch (NoClassDefFoundError e){
+							e.printStackTrace();
+						}
 					}
 				}
 			}
@@ -761,14 +764,5 @@ public abstract class CrystalStructure{
 	 */
 	public CrystalStructure getCrystalStructureOfDetectedGrains(){
 		return this;
-	}
-	
-	/**
-	 * Defines if connection in the dislocation structure are possible
-	 * over multiple grains (phases) or not
-	 * @return
-	 */
-	public boolean skeletonizeOverMultipleGrains(){
-		return false;
 	}
 }
