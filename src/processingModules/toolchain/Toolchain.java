@@ -32,11 +32,58 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
 
+import model.AtomData;
 import processingModules.ProcessingModule;
 import processingModules.toolchain.Toolchainable.ExportableValue;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 
 public class Toolchain {
+	
+	public enum ReferenceData {FIRST("First", 0), LAST("Last", 1), PREVIOUS("Previous", 2), NEXT("Next", 3), REF("Reference", 4);
+		private String displayedName;
+		private final int id;
+		
+		private ReferenceData(String displayedName, int id){
+			this.displayedName = displayedName;
+			this.id = id;
+		}
+		
+		public final int getID() {
+			return id;
+		}
+		
+		@Override
+		public String toString() {
+			return displayedName;
+		}
+	};
+	
+	public static AtomData getReferenceData(AtomData currentData, int type){
+		AtomData referenceData = null;
+		
+		if (type == ReferenceData.FIRST.id){
+			referenceData = currentData;
+			while (referenceData.getPrevious() != null) referenceData = referenceData.getPrevious();
+		} else if (type == ReferenceData.LAST.id){
+			referenceData = currentData;
+			while (referenceData.getNext() != null) referenceData = referenceData.getNext();
+		} else if (type == ReferenceData.NEXT.id){
+			referenceData = currentData.getNext();
+		} else if (type == ReferenceData.PREVIOUS.id){
+			referenceData = currentData.getPrevious();
+		} else if (type == ReferenceData.REF.id){
+			referenceData = currentData;
+			while(referenceData.getPrevious()!=null) referenceData = referenceData.getPrevious();
+			while(referenceData!=null){
+				if (referenceData.isReferenceForProcessingModule())
+					return referenceData;
+				referenceData = referenceData.getNext();
+			}
+		} else throw new RuntimeException("Unknown reference state");
+		
+		return referenceData;
+	}
+	
 	private List<ProcessingModule> processingModules;
 	
 	public Toolchain(){

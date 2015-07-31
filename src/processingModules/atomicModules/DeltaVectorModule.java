@@ -44,8 +44,8 @@ import model.Configuration;
 import model.DataColumnInfo;
 import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
-import processingModules.toolchain.Toolchain;
-import processingModules.toolchain.Toolchainable;
+import processingModules.toolchain.*;
+import processingModules.toolchain.Toolchain.ReferenceData;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 
 //TODO handle reference in Toolchain
@@ -55,11 +55,13 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 	private static HashMap<DataColumnInfo, DataColumnInfo> existingDeltaColumns 
 		= new HashMap<DataColumnInfo, DataColumnInfo>();
 	
-	private AtomData referenceAtomData = null;
 	private DataColumnInfo toDeltaColumn;
 	//This is the indicator used for import from a toolchain, since the column
 	//the file is referring to might not exist at that moment 
 	private String toDeltaID;
+	
+	@ExportableValue
+	private int referenceMode = 0;
 	
 	@Override
 	public String getShortName() {
@@ -150,7 +152,8 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 		
 		boolean ok = dialog.showDialog();
 		if (ok){
-			this.referenceAtomData = (AtomData)referenceComboBox.getSelectedItem(); 
+			this.referenceMode = ReferenceData.REF.getID();
+			((AtomData)referenceComboBox.getSelectedItem()).setAsReferenceForProcessingModule();
 			this.toDeltaColumn = ((DataColumnInfo.VectorDataColumnInfo)dataComboBox.getSelectedItem()).getDci();
 		}
 		if (this.toDeltaColumn == null) return false;
@@ -180,6 +183,7 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 	public ProcessingResult process(final AtomData data) throws Exception {
 		final AtomicBoolean mismatchWarningShown = new AtomicBoolean(false);
 		
+		final AtomData referenceAtomData = Toolchain.getReferenceData(data, referenceMode);
 		if (data == referenceAtomData) return null;
 		
 		if (data.getAtoms().size() != referenceAtomData.getAtoms().size()){ 

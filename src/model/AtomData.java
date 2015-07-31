@@ -95,6 +95,10 @@ public class AtomData {
 
 	private Toolchain toolchain = new Toolchain();
 	
+	//Flag that this file is the reference for a processing module
+	//There is always only maximum one reference 
+	private boolean isReferenceForProcessingModule = false;
+	
 	public AtomData(AtomData previous, MDFileLoader.ImportDataContainer idc){
 		this.defaultCrystalStructure = ImportConfiguration.getInstance().getCrystalStructure();
 		
@@ -420,6 +424,20 @@ public class AtomData {
 	
 	public CrystalStructure getCrystalStructure() {
 		return defaultCrystalStructure;
+	}
+	
+	public boolean isReferenceForProcessingModule() {
+		return isReferenceForProcessingModule;
+	}
+	
+	public void setAsReferenceForProcessingModule() {
+		AtomData a = this;
+		while(a.getPrevious()!=null) a = a.getPrevious();
+		while(a!=null){
+			a.isReferenceForProcessingModule = false;
+			a = a.next;
+		}
+		this.isReferenceForProcessingModule = true;
 	}
 	
 	public CrystalRotationTools getCrystalRotation() {

@@ -37,6 +37,9 @@ import model.AtomData;
 import model.DataColumnInfo;
 import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
+import processingModules.toolchain.Toolchain;
+import processingModules.toolchain.Toolchain.ReferenceData;
+import processingModules.toolchain.Toolchainable.ExportableValue;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 
 //TODO handle reference in Toolchain
@@ -48,13 +51,13 @@ public class DisplacementModule extends ClonableProcessingModule {
 			new DataColumnInfo("Displacement", "displ_z", ""),
 			new DataColumnInfo("Displacement (length)" , "displ_abs" ,"")};
 	
+	@ExportableValue
+	private int referenceMode = 0;
+	
 	static {
 		//Define the vector components
 		cci[0].setAsFirstVectorComponent(cci[1], cci[2], cci[3], "Displacement");
 	}
-	
-	private AtomData referenceAtomData = null;
-	
 	
 	@Override
 	public String getShortName() {
@@ -103,7 +106,8 @@ public class DisplacementModule extends ClonableProcessingModule {
 		
 		boolean ok = dialog.showDialog();
 		if (ok){
-			this.referenceAtomData = (AtomData)referenceComboBox.getSelectedItem(); 
+			this.referenceMode = ReferenceData.REF.getID();
+			((AtomData)referenceComboBox.getSelectedItem()).setAsReferenceForProcessingModule(); 
 		}
 		return ok;
 	}
@@ -116,7 +120,7 @@ public class DisplacementModule extends ClonableProcessingModule {
 	@Override
 	public ProcessingResult process(final AtomData data) throws Exception {
 		final AtomicBoolean mismatchWarningShown = new AtomicBoolean(false);
-		
+		final AtomData referenceAtomData = Toolchain.getReferenceData(data, referenceMode);
 		if (data == referenceAtomData) return null;
 		
 		if (!data.getBox().getBoxSize()[0].equals(referenceAtomData.getBox().getBoxSize()[0]) || 

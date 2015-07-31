@@ -23,6 +23,8 @@ import model.DataColumnInfo;
 import model.NearestNeighborBuilder;
 import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
+import processingModules.toolchain.Toolchain;
+import processingModules.toolchain.Toolchain.ReferenceData;
 import processingModules.toolchain.Toolchainable.ExportableValue;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 
@@ -41,11 +43,13 @@ public class SlipVectorModule extends ClonableProcessingModule{
 		cci[0].setAsFirstVectorComponent(cci[1], cci[2], cci[3], "Slip-Vector");
 	}
 	
-	private AtomData referenceAtomData = null;
 	@ExportableValue
 	private float cutoffRadius = 3f;
 	@ExportableValue
 	private float slipThreshold = 0.5f;
+	
+	@ExportableValue
+	private int referenceMode = 0;
 	
 	@Override
 	public String getShortName() {
@@ -100,7 +104,8 @@ public class SlipVectorModule extends ClonableProcessingModule{
 		boolean ok = dialog.showDialog();
 		if (ok){
 			this.cutoffRadius = cRadius.getValue();
-			this.referenceAtomData = (AtomData)referenceComboBox.getSelectedItem();
+			this.referenceMode = ReferenceData.REF.getID();
+			((AtomData)referenceComboBox.getSelectedItem()).setAsReferenceForProcessingModule();
 			this.slipThreshold = slipThres.getValue();
 		}
 		return ok;
@@ -113,10 +118,7 @@ public class SlipVectorModule extends ClonableProcessingModule{
 
 	@Override
 	public ProcessingResult process(final AtomData data) throws Exception {
-		if (referenceAtomData == null){
-			referenceAtomData = data;
-			while (referenceAtomData.getPrevious() != null) referenceAtomData = referenceAtomData.getPrevious(); 
-		}
+		final AtomData referenceAtomData = Toolchain.getReferenceData(data, referenceMode);
 		
 		if (data == referenceAtomData) return null;
 		

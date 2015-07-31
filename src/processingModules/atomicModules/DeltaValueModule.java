@@ -47,6 +47,7 @@ import processingModules.DataContainer;
 import processingModules.ProcessingResult;
 import processingModules.toolchain.Toolchain;
 import processingModules.toolchain.Toolchainable;
+import processingModules.toolchain.Toolchain.ReferenceData;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 
 //TODO handle reference in Toolchain
@@ -56,7 +57,9 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 	private static HashMap<DataColumnInfo, DataColumnInfo> existingDeltaColumns 
 		= new HashMap<DataColumnInfo, DataColumnInfo>();
 	
-	private AtomData referenceAtomData = null;
+	@ExportableValue
+	private int referenceMode = 0;
+	
 	private DataColumnInfo toDeltaColumn;
 	//This is the indicator used for import from a toolchain, since the column
 	//the file is referring to might not exist at that moment 
@@ -141,7 +144,8 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 		
 		boolean ok = dialog.showDialog();
 		if (ok){
-			this.referenceAtomData = (AtomData)referenceComboBox.getSelectedItem(); 
+			this.referenceMode = ReferenceData.REF.getID();
+			((AtomData)referenceComboBox.getSelectedItem()).setAsReferenceForProcessingModule();
 			this.toDeltaColumn = (DataColumnInfo)dataComboBox.getSelectedItem();
 		}
 		if (this.toDeltaColumn == null) return false;
@@ -166,6 +170,7 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 		final AtomicBoolean mismatchWarningShown = new AtomicBoolean(false);
 		final KahanSum sumOfAllDeltas = new KahanSum();
 		
+		final AtomData referenceAtomData = Toolchain.getReferenceData(data, referenceMode);
 		if (data == referenceAtomData) return null;
 		
 		if (data.getAtoms().size() != referenceAtomData.getAtoms().size()){ 
