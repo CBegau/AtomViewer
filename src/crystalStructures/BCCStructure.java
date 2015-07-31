@@ -25,16 +25,16 @@ import gui.PrimitiveProperty.BooleanProperty;
 import model.*;
 import model.BurgersVector.BurgersVectorType;
 import processingModules.skeletonizer.processors.*;
-import processingModules.skeletonizer.processors.BurgersVectorAnalyzer.ClassificationPattern;
+import processingModules.skeletonizer.processors.BurgersVectorAnalyzer.RBVToBVPattern;
 
 public class BCCStructure extends CrystalStructure {
 
-	private static final ArrayList<ClassificationPattern> bvClassifcationPattern = new ArrayList<ClassificationPattern>();
+	private static final ArrayList<RBVToBVPattern> bvClassifcationPattern = new ArrayList<RBVToBVPattern>();
 	static{
 		//1/2<111>
-		bvClassifcationPattern.add(new ClassificationPattern(111, 2, 4, 111, 2, BurgersVectorType.PERFECT));
+		bvClassifcationPattern.add(new RBVToBVPattern(111, 2, 4, 111, 2, BurgersVectorType.PERFECT));
 		//<100>
-		bvClassifcationPattern.add(new ClassificationPattern(100, 1, 2, 100, 1, BurgersVectorType.SUPER));
+		bvClassifcationPattern.add(new RBVToBVPattern(100, 1, 2, 100, 1, BurgersVectorType.SUPER));
 	}
 	
 	protected BooleanProperty highTempProperty = 
@@ -187,7 +187,7 @@ public class BCCStructure extends CrystalStructure {
 	}
 	
 	@Override
-	public ArrayList<ClassificationPattern> getBurgersVectorClassificationPattern() {
+	public ArrayList<RBVToBVPattern> getBurgersVectorClassificationPattern() {
 		return bvClassifcationPattern;
 	}
 	

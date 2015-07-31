@@ -22,18 +22,18 @@ import java.util.*;
 
 import model.BurgersVector.BurgersVectorType;
 import processingModules.skeletonizer.processors.*;
-import processingModules.skeletonizer.processors.BurgersVectorAnalyzer.ClassificationPattern;
+import processingModules.skeletonizer.processors.BurgersVectorAnalyzer.RBVToBVPattern;
 
 public class B2 extends BCCStructure{
 	
-	private static final ArrayList<ClassificationPattern> bvClassifcationPattern = new ArrayList<ClassificationPattern>();
+	private static final ArrayList<RBVToBVPattern> bvClassifcationPattern = new ArrayList<RBVToBVPattern>();
 	static{
 		//1/2<111>
-		bvClassifcationPattern.add(new ClassificationPattern(111, 2, 4, 111, 2, BurgersVectorType.PARTIAL));
+		bvClassifcationPattern.add(new RBVToBVPattern(111, 2, 4, 111, 2, BurgersVectorType.PARTIAL));
 		//<100>
-		bvClassifcationPattern.add(new ClassificationPattern(100, 1, 2, 100, 1, BurgersVectorType.PERFECT));
+		bvClassifcationPattern.add(new RBVToBVPattern(100, 1, 2, 100, 1, BurgersVectorType.PERFECT));
 		//1/2<111> identified as 1/4<112>
-		bvClassifcationPattern.add(new ClassificationPattern(112, 4, 4, 111, 2, BurgersVectorType.PARTIAL));
+		bvClassifcationPattern.add(new RBVToBVPattern(112, 4, 4, 111, 2, BurgersVectorType.PARTIAL));
 	}
 	
 	@Override
@@ -85,7 +85,7 @@ public class B2 extends BCCStructure{
 	}
 	
 	@Override
-	public ArrayList<ClassificationPattern> getBurgersVectorClassificationPattern() {
+	public ArrayList<RBVToBVPattern> getBurgersVectorClassificationPattern() {
 		return bvClassifcationPattern;
 	}
 	

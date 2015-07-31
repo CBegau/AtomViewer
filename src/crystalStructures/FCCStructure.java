@@ -27,7 +27,7 @@ import model.BurgersVector.BurgersVectorType;
 import model.polygrain.grainDetection.AtomToGrainObject;
 import model.polygrain.grainDetection.GrainDetectionCriteria;
 import processingModules.skeletonizer.processors.*;
-import processingModules.skeletonizer.processors.BurgersVectorAnalyzer.ClassificationPattern;
+import processingModules.skeletonizer.processors.BurgersVectorAnalyzer.RBVToBVPattern;
 
 public class FCCStructure extends CrystalStructure {
 
@@ -51,36 +51,36 @@ public class FCCStructure extends CrystalStructure {
 		new Vec3(0.5f , -0.5f, 0f)
 	};
 	
-	private static final ArrayList<ClassificationPattern> bvClassifcationPattern = new ArrayList<ClassificationPattern>();
+	private static final ArrayList<RBVToBVPattern> bvClassifcationPattern = new ArrayList<RBVToBVPattern>();
 	static{
 		//Shockley partial <211> with two adjacent stacking fault planes
-		bvClassifcationPattern.add(new ClassificationPattern(211, 4, 9, 211, 6, 2, 2, BurgersVectorType.PARTIAL));
+		bvClassifcationPattern.add(new RBVToBVPattern(211, 4, 9, 211, 6, 2, 2, BurgersVectorType.PARTIAL));
 		//Shockley partial <211> with more than two adjacent stacking fault planes e.g. thin separated cores
-		bvClassifcationPattern.add(new ClassificationPattern(211, 5, 7, 211, 6, 0, 100, BurgersVectorType.PARTIAL));
+		bvClassifcationPattern.add(new RBVToBVPattern(211, 5, 7, 211, 6, 0, 100, BurgersVectorType.PARTIAL));
 		//Perfect <110> with no adjacent stacking fault planes
-		bvClassifcationPattern.add(new ClassificationPattern(110, 1, 3, 110, 2, 0, 0, BurgersVectorType.PERFECT));
+		bvClassifcationPattern.add(new RBVToBVPattern(110, 1, 3, 110, 2, 0, 0, BurgersVectorType.PERFECT));
 		//Ideal Shockley partials, where the adjacent stacking faults are not precisely identified 
-		bvClassifcationPattern.add(new ClassificationPattern(211, 6, 6, 211, 6, 0, 10, BurgersVectorType.PARTIAL));
+		bvClassifcationPattern.add(new RBVToBVPattern(211, 6, 6, 211, 6, 0, 10, BurgersVectorType.PARTIAL));
 		//Slightly disordered partial <211> recognized as <632>
-		bvClassifcationPattern.add(new ClassificationPattern(632, 10, 30, 211, 6, 2, 3, BurgersVectorType.PARTIAL));
+		bvClassifcationPattern.add(new RBVToBVPattern(632, 10, 30, 211, 6, 2, 3, BurgersVectorType.PARTIAL));
 //		//Slightly disordered partial <211> recognized as 1/5<211> or 1/8<211> 
 //		bvClassifcationPattern.add(new ClassificationPattern(211, 5, 8, 211, 6, 2, 2, BurgersVectorType.PARTIAL));
 		//More severed disordered partial <211> recognized as 1/5<211> or 1/11<211> but with correct number of adjacent stacking faults
-		bvClassifcationPattern.add(new ClassificationPattern(211, 5, 11, 211, 6, 2, 2, BurgersVectorType.PARTIAL));
+		bvClassifcationPattern.add(new RBVToBVPattern(211, 5, 11, 211, 6, 2, 2, BurgersVectorType.PARTIAL));
 		//Stair Rod <100> with extremely clear signals
-		bvClassifcationPattern.add(new ClassificationPattern(100, 3, 6, 100, 3, 4, 4, BurgersVectorType.STAIR_ROD));
+		bvClassifcationPattern.add(new RBVToBVPattern(100, 3, 6, 100, 3, 4, 4, BurgersVectorType.STAIR_ROD));
 		//Stair Rod 1/3<101> with perfect signals
-		bvClassifcationPattern.add(new ClassificationPattern(110, 3, 3, 110, 3, 4, 10, BurgersVectorType.STAIR_ROD));
+		bvClassifcationPattern.add(new RBVToBVPattern(110, 3, 3, 110, 3, 4, 10, BurgersVectorType.STAIR_ROD));
 		//Stair Rod 1/6<101> with perfect signals
-		bvClassifcationPattern.add(new ClassificationPattern(110, 6, 8, 110, 6, 4, 10, BurgersVectorType.STAIR_ROD));
+		bvClassifcationPattern.add(new RBVToBVPattern(110, 6, 8, 110, 6, 4, 10, BurgersVectorType.STAIR_ROD));
 		//Stair Rod 1/6<101> with not so close signals, but correct number of adjacent surfaces
-		bvClassifcationPattern.add(new ClassificationPattern(110, 6, 11, 110, 6, 4, 4, BurgersVectorType.STAIR_ROD));
+		bvClassifcationPattern.add(new RBVToBVPattern(110, 6, 11, 110, 6, 4, 4, BurgersVectorType.STAIR_ROD));
 		//Stair Rod 1/6<310> with perfect signals
-		bvClassifcationPattern.add(new ClassificationPattern(310, 6, 8, 310, 6, 4, 4, BurgersVectorType.STAIR_ROD));
+		bvClassifcationPattern.add(new RBVToBVPattern(310, 6, 8, 310, 6, 4, 4, BurgersVectorType.STAIR_ROD));
 		//Stair Rod 1/6<123> with perfect signals
-		bvClassifcationPattern.add(new ClassificationPattern(123, 6, 8, 123, 6, 4, 4, BurgersVectorType.STAIR_ROD));
+		bvClassifcationPattern.add(new RBVToBVPattern(123, 6, 8, 123, 6, 4, 4, BurgersVectorType.STAIR_ROD));
 		//Frank partial 1/3<111> with perfect signals
-		bvClassifcationPattern.add(new ClassificationPattern(111, 3, 3, 111, 3, 0, 4, BurgersVectorType.FRANK_PARTIAL));
+		bvClassifcationPattern.add(new RBVToBVPattern(111, 3, 3, 111, 3, 0, 4, BurgersVectorType.FRANK_PARTIAL));
 	}
 	
 	protected BooleanProperty highTempProperty = 
@@ -227,7 +227,7 @@ public class FCCStructure extends CrystalStructure {
 	}
 	
 	@Override
-	public ArrayList<ClassificationPattern> getBurgersVectorClassificationPattern() {
+	public ArrayList<RBVToBVPattern> getBurgersVectorClassificationPattern() {
 		return bvClassifcationPattern;
 	}
 	

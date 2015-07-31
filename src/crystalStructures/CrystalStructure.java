@@ -45,7 +45,7 @@ import processingModules.skeletonizer.Skeletonizer;
 import processingModules.skeletonizer.processors.BurgersVectorAnalyzer;
 import processingModules.skeletonizer.processors.SkeletonPreprocessor;
 import processingModules.toolchain.Toolchain;
-import processingModules.skeletonizer.processors.BurgersVectorAnalyzer.ClassificationPattern;
+import processingModules.skeletonizer.processors.BurgersVectorAnalyzer.RBVToBVPattern;
 
 /**
  * All crystal structure depended subroutines are collected here
@@ -406,7 +406,7 @@ public abstract class CrystalStructure{
 		if (bv.getDirection()[0] == 0 && bv.getDirection()[1] == 0 && bv.getDirection()[2] == 0)
 			return BurgersVectorType.ZERO;
 		
-		for (ClassificationPattern cp : getBurgersVectorClassificationPattern())
+		for (RBVToBVPattern cp : getBurgersVectorClassificationPattern())
 			if (cp.typeMatch(bv)) return cp.getType();
 		
 		return BurgersVectorType.OTHER;
@@ -618,8 +618,8 @@ public abstract class CrystalStructure{
 	 * "identifyBurgersVectorType(BurgersVector bv)"
 	 * @return
 	 */
-	public ArrayList<ClassificationPattern> getBurgersVectorClassificationPattern() {
-		return new ArrayList<ClassificationPattern>();
+	public ArrayList<RBVToBVPattern> getBurgersVectorClassificationPattern() {
+		return new ArrayList<RBVToBVPattern>();
 	}
 	
 	/* ****************************

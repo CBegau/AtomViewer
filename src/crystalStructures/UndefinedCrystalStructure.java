@@ -25,7 +25,7 @@ import common.Vec3;
 import model.Atom;
 import model.AtomData;
 import model.NearestNeighborBuilder;
-import processingModules.skeletonizer.processors.BurgersVectorAnalyzer.ClassificationPattern;
+import processingModules.skeletonizer.processors.BurgersVectorAnalyzer.RBVToBVPattern;
 
 public class UndefinedCrystalStructure extends CrystalStructure {
 	
@@ -98,8 +98,8 @@ public class UndefinedCrystalStructure extends CrystalStructure {
 	}
 
 	@Override
-	public ArrayList<ClassificationPattern> getBurgersVectorClassificationPattern() {
-		return new ArrayList<ClassificationPattern>();
+	public ArrayList<RBVToBVPattern> getBurgersVectorClassificationPattern() {
+		return new ArrayList<RBVToBVPattern>();
 	}
 
 	@Override

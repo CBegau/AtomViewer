@@ -34,7 +34,7 @@ public class BurgersVectorAnalyzer {
 
 	CrystalStructure cs;
 	Skeletonizer skel;
-	List<ClassificationPattern> patterns;
+	List<RBVToBVPattern> patterns;
 	
 	public BurgersVectorAnalyzer(CrystalStructure cs){
 		this.cs = cs;
@@ -90,7 +90,7 @@ public class BurgersVectorAnalyzer {
 	}
 
 	protected BurgersVector mapNumericalBurgersVectorToCrystalFromScratch(BurgersVector bv, Dislocation d){
-		for (ClassificationPattern cp : patterns){
+		for (RBVToBVPattern cp : patterns){
 			if (cp.match(bv, d))
 				return cp.replace(bv, d);
 		}
@@ -282,7 +282,7 @@ public class BurgersVectorAnalyzer {
 	 * Each pattern consists of a pattern of Burgersvector components to match and one which is the replacement
 	 * Intervals for min and max fraction can be set and the number of adjacent surfaces 
 	 */
-	public static class ClassificationPattern{
+	public static class RBVToBVPattern{
 		private int pattern, replacementFrac;
 		private int minFrac, maxFrac, minSurfaces, maxSurfaces;
 		private int[] patternComp, replacementComp;
@@ -299,12 +299,12 @@ public class BurgersVectorAnalyzer {
 		 * @param replacementFrac the replacing fraction, Vectors of type 1/19<632> can be mapped to 1/6<211>
 		 * @param type The Burgers vector type
 		 */
-		public ClassificationPattern(int pattern, int minFrac, int maxFrac, 
+		public RBVToBVPattern(int pattern, int minFrac, int maxFrac, 
 				int replacementPattern, int replacementFrac, BurgersVectorType type) {
 			this(pattern, minFrac, maxFrac, replacementPattern, replacementFrac, 0, 0, type);
 		}
 		
-		public ClassificationPattern(int pattern, int minFrac, int maxFrac, int replacement, int replacementFrac, 
+		public RBVToBVPattern(int pattern, int minFrac, int maxFrac, int replacement, int replacementFrac, 
 				 int minSurfaces, int maxSurfaces, BurgersVectorType type) {
 			this.pattern = orderPattern(pattern);
 			this.patternComp = decompPattern(this.pattern);

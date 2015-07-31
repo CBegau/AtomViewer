@@ -23,7 +23,7 @@ import java.util.*;
 import common.Vec3;
 import model.*;
 import model.BurgersVector.BurgersVectorType;
-import processingModules.skeletonizer.processors.BurgersVectorAnalyzer.ClassificationPattern;
+import processingModules.skeletonizer.processors.BurgersVectorAnalyzer.RBVToBVPattern;
 
 /**
  * Not fully implemented! And not tested!
@@ -53,13 +53,13 @@ public class DiamondCubicStructure extends CrystalStructure {
 		new Vec3(0.0f, -0.5f, -0.5f),
 	};
 	
-	private static final ArrayList<ClassificationPattern> bvClassifcationPattern = new ArrayList<ClassificationPattern>();
+	private static final ArrayList<RBVToBVPattern> bvClassifcationPattern = new ArrayList<RBVToBVPattern>();
 	
 	static{
 		//1/2<110>
-		bvClassifcationPattern.add(new ClassificationPattern(110, 2, 4, 110, 2, BurgersVectorType.PERFECT));
+		bvClassifcationPattern.add(new RBVToBVPattern(110, 2, 4, 110, 2, BurgersVectorType.PERFECT));
 		//1/6<211>
-		bvClassifcationPattern.add(new ClassificationPattern(211, 6, 6, 211, 6, BurgersVectorType.PARTIAL));
+		bvClassifcationPattern.add(new RBVToBVPattern(211, 6, 6, 211, 6, BurgersVectorType.PARTIAL));
 	}
 	
 	@Override
@@ -174,7 +174,7 @@ public class DiamondCubicStructure extends CrystalStructure {
 	}
 	
 	@Override
-	public ArrayList<ClassificationPattern> getBurgersVectorClassificationPattern() {
+	public ArrayList<RBVToBVPattern> getBurgersVectorClassificationPattern() {
 		return bvClassifcationPattern;
 	}
 
