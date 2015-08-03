@@ -253,9 +253,9 @@ public class Grain implements Pickable{
 		StringBuilder sb = new StringBuilder();
 		sb.append(String.format("Grain (%d) Volume: %.4f Surface: %.4f Atoms: %d\n", 
 				this.grainNumber, mesh.getVolume(), mesh.getArea(), this.numAtoms));
-		sb.append(String.format("(%.3f, %.3f, %.3f)\n", o[0][0], o[0][1], o[0][2]));
-		sb.append(String.format("(%.3f, %.3f, %.3f)\n", o[1][0], o[1][1], o[1][2]));
-		sb.append(String.format("(%.3f, %.3f, %.3f)\n", o[2][0], o[2][1], o[2][2]));
+		sb.append(String.format("(%.3f, %.3f, %.3f)\n", o[0][0], o[1][0], o[2][0]));
+		sb.append(String.format("(%.3f, %.3f, %.3f)\n", o[0][1], o[1][1], o[2][1]));
+		sb.append(String.format("(%.3f, %.3f, %.3f)\n", o[0][2], o[1][2], o[2][2]));
 		return sb.toString();
 	}
 	
