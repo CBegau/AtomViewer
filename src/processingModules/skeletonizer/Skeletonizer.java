@@ -245,8 +245,9 @@ public class Skeletonizer extends DataContainer {
 		
 		//Analyze the skeleton and find Burgers vectors
 		//TODO: Extension required to identify Burgersvectors in poly-phase material 
-		//with completely different crystal structures 
-		data.getCrystalStructure().analyse(this);
+		//with completely different crystal structures
+		if(data.isRbvAvailable())
+			new BurgersVectorAnalyzer(data.getCrystalStructure()).analyse(this);
 		
 		// Remove dislocation with length less than two nodes
 		Iterator<Dislocation> disIter = dislocations.iterator();

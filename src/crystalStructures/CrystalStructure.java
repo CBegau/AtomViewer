@@ -41,8 +41,6 @@ import model.BurgersVector.BurgersVectorType;
 import model.polygrain.Grain;
 import model.polygrain.grainDetection.*;
 import model.mesh.Mesh;
-import processingModules.skeletonizer.Skeletonizer;
-import processingModules.skeletonizer.processors.BurgersVectorAnalyzer;
 import processingModules.skeletonizer.processors.SkeletonPreprocessor;
 import processingModules.toolchain.Toolchain;
 import processingModules.skeletonizer.processors.BurgersVectorAnalyzer.RBVToBVPattern;
@@ -586,14 +584,6 @@ public abstract class CrystalStructure{
 	/* **********************************
 	 * skeletonization related methods
 	 ************************************/
-	/**
-	 * Perform analysis on a finalized skeleton, e.g. mapping of Burgers vectors 
-	 * @param skel
-	 */
-	public void analyse(Skeletonizer skel) {
-		if (skel.getAtomData().isRbvAvailable())
-			new BurgersVectorAnalyzer(this).analyse(skel);
-	}
 	
 	/**
 	 * Define a set of PreProcessors for the skeletonizer
