@@ -297,16 +297,16 @@ public class Grain implements Pickable{
 		if (samples == 0)
 			return null;
 		
+		//Default parameters for the grain
 		Vec3[] neighPerf = cs.getPerfectNearestNeighborsUnrotated();
+		float lc = cs.getLatticeConstant();
 		
 		//From the matrices found, select the one that overall minimizes the
 		//deviation for all configurations
 		int bestConfig = 0;
 		float bestFit = Float.POSITIVE_INFINITY;
 		for (int i=0; i<samples; i++){
-			float fit = 0f;
-			
-			float lc = cs.getLatticeConstant();
+			//Rotate the default neighbors into the best fit for sampling site i
 			Vec3[] neighRot = new Vec3[neighPerf.length];  
 			Vec3[] rot = rots[i];
 			
@@ -318,7 +318,9 @@ public class Grain implements Pickable{
 				neighRot[k] = n;
 			}
 			
-			
+			//Estimate how well the orientation fits overall by computing the deviations
+			//between atom positions in all selected configurations
+			float fit = 0f;
 			for (int j = 0; j<samples; j++){
 				float bestBond = Float.POSITIVE_INFINITY;
 				for (Vec3 v : neighRot){
@@ -329,7 +331,7 @@ public class Grain implements Pickable{
 					fit += bestBond;
 				}
 			}
-			
+			//Select the one that fits best as the grain orientation
 			if (fit<bestFit){
 				bestFit = fit;
 				bestConfig = i;
