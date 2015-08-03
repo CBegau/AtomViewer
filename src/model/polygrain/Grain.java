@@ -262,27 +262,82 @@ public class Grain implements Pickable{
 	private Vec3[] identifyGrainRotation(List<Atom> atoms, BoxParameter box){
 		//find an perfect lattice site atom surrounded by only perfect lattice site atoms
 		//This will be the reference orientation for the whole grain.
-		int defaultType = cs.getDefaultType();
+		int defaultNeigh = cs.getNumberOfNearestNeighbors();
+		
+		final int samplingSize = 20;
 		
 		if (atoms == null || atoms.size()<cs.getNumberOfNearestNeighbors())
 			return null;
 		
 		NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(
-				box, cs.getNearestNeighborSearchRadius());
-		for (Atom a : atoms) {
-			if (a.getType() == defaultType) nnb.add(a);
-		}
+				box, cs.getNearestNeighborSearchRadius(), true);
+		nnb.addAll(atoms);
 		
-		Vec3[] rot = null;
-		for (Atom a : atoms) {
-			if (a.getType() == defaultType) {
-				// Identify the local grain rotation
-				rot = this.cs.identifyRotation(a, nnb);
+		Random r = new Random(42);
+		
+		int samples = 0; int trials = 0;
+		Vec3[][] rots = new Vec3[samplingSize][];
+		List<List<Vec3>> neighs = new ArrayList<List<Vec3>>();
+		
+		//Gather a few crystal rotations at random sampling sites in the grain
+		//Due to crystal symmetries, it is likely that the matrices differ numerically significantly
+		//although they might be crystallographic equivalents
+		while (trials++ < 5*samplingSize && samples < samplingSize){
+			Atom a = atoms.get(r.nextInt(atoms.size()));
+			if (nnb.getNeigh(a).size() == defaultNeigh) {
+				Vec3[] r1 = this.cs.identifyRotation(a, nnb);
+				if (r1 != null){
+					rots[samples++] = r1;
+					neighs.add(nnb.getNeighVec(a));
+				}
 			}
-			if (rot != null) break;
 		}
 		
-		return rot;
+		//Not a single fitting configuration found, skip
+		if (samples == 0)
+			return null;
+		
+		Vec3[] neighPerf = cs.getPerfectNearestNeighborsUnrotated();
+		
+		//From the matrices found, select the one that overall minimizes the
+		//deviation for all configurations
+		int bestConfig = 0;
+		float bestFit = Float.POSITIVE_INFINITY;
+		for (int i=0; i<samples; i++){
+			float fit = 0f;
+			
+			float lc = cs.getLatticeConstant();
+			Vec3[] neighRot = new Vec3[neighPerf.length];  
+			Vec3[] rot = rots[i];
+			
+			for (int k=0; k<neighPerf.length;k++){
+				Vec3 n = new Vec3();
+				n.x = (neighPerf[k].x * rot[0].x + neighPerf[k].y * rot[0].y + neighPerf[k].z * rot[0].z) * lc; 
+				n.y = (neighPerf[k].x * rot[1].x + neighPerf[k].y * rot[1].y + neighPerf[k].z * rot[1].z) * lc;
+				n.z = (neighPerf[k].x * rot[2].x + neighPerf[k].y * rot[2].y + neighPerf[k].z * rot[2].z) * lc;
+				neighRot[k] = n;
+			}
+			
+			
+			for (int j = 0; j<samples; j++){
+				float bestBond = Float.POSITIVE_INFINITY;
+				for (Vec3 v : neighRot){
+					for (Vec3 v2 : neighs.get(j)){
+						if (v.getDistTo(v2) < bestBond)
+							bestBond = v.getDistTo(v2);
+					}
+					fit += bestBond;
+				}
+			}
+			
+			if (fit<bestFit){
+				bestFit = fit;
+				bestConfig = i;
+			}
+			
+		}		
+		
+		return rots[bestConfig];
 	}
 	
 	@Override
