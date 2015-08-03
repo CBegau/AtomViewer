@@ -11,12 +11,14 @@ public class DefaultGrainDetectionCriteria implements GrainDetectionCriteria {
 	private int surfaceType;
 	private int defaultType;
 	private int defaultNumAtoms;
+	private int tolerance;
 	
 	public DefaultGrainDetectionCriteria(CrystalStructure cs){
 		this.cs = cs;
 		this.surfaceType = cs.getSurfaceType();
 		this.defaultType = cs.getDefaultType();
 		this.defaultNumAtoms = cs.getNumberOfNearestNeighbors();
+		this.tolerance = (int) Math.round(this.defaultNumAtoms/4.);
 	}
 	
 	@Override
@@ -41,12 +43,12 @@ public class DefaultGrainDetectionCriteria implements GrainDetectionCriteria {
 			if (neighbors.get(j).getAtom().getType() == defaultType) count++;
 		}
 		
-		return count>=this.defaultNumAtoms-3;
+		return count>=this.defaultNumAtoms-tolerance;
 	}
 	
 	@Override
 	public boolean acceptAsFirstAtomInGrain(Atom atom, List<AtomToGrainObject> neighbors) {
-		return neighbors.size()>this.defaultNumAtoms-3;
+		return neighbors.size()>this.defaultNumAtoms-tolerance;
 	}
 
 }
