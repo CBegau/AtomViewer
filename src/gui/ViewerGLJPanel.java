@@ -146,8 +146,8 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	 */
 	private boolean colorShiftForVElements = true;
 	
-	private DataColoringAndFilter dataAtomFilter = new DataColoringAndFilter();
-	private VectorDataColoringAndFilter vectorDataAtomFilter = new VectorDataColoringAndFilter();
+	private DataColoringAndFilter dataAtomFilter = new DataColoringAndFilter(false);
+	private DataColoringAndFilter vectorDataAtomFilter = new DataColoringAndFilter(true);
 	
 	// Time it took to render the last frame in nanoseconds
 	private long timeToRenderFrame = 0l;
@@ -2029,11 +2029,15 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		boolean inversed = false;
 		float min = 0f, max = 0f;
 		int selected = 0;
+		boolean isVector;
+		
+		public DataColoringAndFilter(boolean isVector) {
+			this.isVector = isVector;
+		}
 		
 		@Override
 		public boolean accept(Atom a) {
-			if ((filterMin && a.getData(selected)<min) ||
-					(filterMax && a.getData(selected)>max))
+			if ((filterMin && a.getData(selected)<min) || (filterMax && a.getData(selected)>max))
 					return inversed;
 				return !inversed;
 		}
@@ -2045,47 +2049,23 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		
 		@Override
 		public void update() {
-			DataColumnInfo dataInfo = RenderingConfiguration.getSelectedColumn();
+			DataColumnInfo dataInfo = isVector?
+					RenderingConfiguration.getSelectedVectorColumn():
+					RenderingConfiguration.getSelectedColumn();
 			if (dataInfo == null) return;
-			selected = atomData.getIndexForCustomColumn(dataInfo);
+			
+			if (isVector){
+				selected = atomData.getIndexForCustomColumn(dataInfo.getVectorComponents()[3]);
+				min = dataInfo.getVectorComponents()[3].getLowerLimit();
+				max = dataInfo.getVectorComponents()[3].getUpperLimit();
+			} else { 
+				selected = atomData.getIndexForCustomColumn(dataInfo);
+				min = dataInfo.getLowerLimit();
+				max = dataInfo.getUpperLimit();
+			}
 			if (selected == -1) return;
 			
-			min = dataInfo.getLowerLimit();
-			max = dataInfo.getUpperLimit();
-			filterMin = RenderingConfiguration.isFilterMin();
-			filterMax = RenderingConfiguration.isFilterMax();
-			inversed = RenderingConfiguration.isFilterInversed();
-		}
-	}
-	
-	private class VectorDataColoringAndFilter implements Filter<Atom>, ColoringFunction{
-		boolean filterMin = false;
-		boolean filterMax = false;
-		boolean inversed = false;
-		float min = 0f, max = 0f;
-		int selectedVectorAbs = 0;
-		
-		@Override
-		public boolean accept(Atom a) {
-			if ((filterMin && a.getData(selectedVectorAbs)<min) ||
-				(filterMax && a.getData(selectedVectorAbs)>max))
-				return inversed;
-			return !inversed;
-		}
-		
-		@Override
-		public float[] getColor(Atom c) {
-			return ColorTable.getIntensityGLColor(min, max, c.getData(selectedVectorAbs));
-		}
-		
-		@Override
-		public void update() {
-			DataColumnInfo dataInfo = RenderingConfiguration.getSelectedVectorColumn();
-			if (dataInfo == null) return;
-			selectedVectorAbs = atomData.getIndexForCustomColumn(dataInfo.getVectorComponents()[3]);
 			
-			min = dataInfo.getVectorComponents()[3].getLowerLimit();
-			max = dataInfo.getVectorComponents()[3].getUpperLimit();
 			filterMin = RenderingConfiguration.isFilterMin();
 			filterMax = RenderingConfiguration.isFilterMax();
 			inversed = RenderingConfiguration.isFilterInversed();
