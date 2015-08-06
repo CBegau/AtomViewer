@@ -792,6 +792,8 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 			this.filterCheckboxMax.setSelected(RenderingConfiguration.isFilterMax());
 			this.inverseFilterCheckbox.setSelected(RenderingConfiguration.isFilterInversed());
 			this.inverseFilterCheckbox.setEnabled(this.filterCheckboxMin.isSelected() || this.filterCheckboxMax.isSelected());
+			if (aFlag)
+				setSpinner();
 		}
 		
 		private void setSpinner(){
