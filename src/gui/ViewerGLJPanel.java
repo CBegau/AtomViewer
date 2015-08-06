@@ -146,9 +146,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	 */
 	private boolean colorShiftForVElements = true;
 	
-	private DataColoringAndFilter dataAtomFilter = new DataColoringAndFilter(false);
-	private DataColoringAndFilter vectorDataAtomFilter = new DataColoringAndFilter(true);
-	
 	// Time it took to render the last frame in nanoseconds
 	private long timeToRenderFrame = 0l;
 	
@@ -817,6 +814,8 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			}
 			
 			if (updateRenderContent){
+				DataColoringAndFilter dataAtomFilter = new DataColoringAndFilter(atomRenderType == AtomRenderType.VECTOR_DATA);
+				
 				atomFilterSet.clear();
 				//Test if types need to be filtered
 				TypeColoringAndFilter tf = new TypeColoringAndFilter();
@@ -831,21 +830,16 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 				if (!renderInterval.isNoLimiting()) atomFilterSet.addFilter(renderInterval);
 				//Test if data needs to be filtered
 				if ((RenderingConfiguration.isFilterMin() || RenderingConfiguration.isFilterMax()) 
-						&& !atomData.getDataColumnInfos().isEmpty()
-						&& atomRenderType != AtomRenderType.VECTOR_DATA) 
+						&& !atomData.getDataColumnInfos().isEmpty())
 					atomFilterSet.addFilter(dataAtomFilter);
-				if ((RenderingConfiguration.isFilterMin() || RenderingConfiguration.isFilterMax())
-						&& atomRenderType == AtomRenderType.VECTOR_DATA) 
-					atomFilterSet.addFilter(vectorDataAtomFilter);
-				
 				
 				final ColoringFunction colFunc;
 				switch (atomRenderType){
 					case TYPE: colFunc = new TypeColoringAndFilter(); break;
 					case ELEMENTS: colFunc = new ElementColoringAndFilter(); break;
 					case GRAINS: colFunc = new GrainColoringAndFilter(); break;
-					case DATA: colFunc = dataAtomFilter; break;
-					case VECTOR_DATA: colFunc = vectorDataAtomFilter; break;
+					case DATA:
+					case VECTOR_DATA: colFunc = dataAtomFilter; break;
 					default: colFunc = null;
 				}
 				colFunc.update();
