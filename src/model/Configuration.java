@@ -92,7 +92,7 @@ public class Configuration {
 		return currentAtomData;
 	}
 	
-	public static Iterable<AtomData> getAtomDataIterable(){
+	public static Iterable<AtomData> getAtomDataIterable(final AtomData data){
 		return new Iterable<AtomData>() {
 			
 			@Override
@@ -102,7 +102,7 @@ public class Configuration {
 					private boolean done = false;
 					
 					private void getFirst(){
-						current = getCurrentAtomData();
+						current = data;
 						if (current == null) return;
 						while (current.getPrevious() != null)
 							current = current.getPrevious();

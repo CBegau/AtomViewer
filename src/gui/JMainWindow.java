@@ -568,7 +568,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 						Toolchain tc = Toolchain.readToolchain(f);
 						AtomData def = Configuration.getCurrentAtomData();
 						for (ProcessingModule pm : tc.getProcessingModules()){
-							for (AtomData d : Configuration.getAtomDataIterable()){
+							for (AtomData d : Configuration.getAtomDataIterable(Configuration.getCurrentAtomData())){
 								Configuration.setCurrentAtomData(d, false, false);
 								ProcessingModule pmc = pm.clone();
 								applyProcessWindowWithDisplay(d, pmc, false);
@@ -806,7 +806,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 				List<DataColumnInfo> dci = current.getDataColumnInfos();
 				//Identify which entries are common in all AtomData
 				if (exportAll.isSelected()){
-					for (AtomData d : Configuration.getAtomDataIterable()){
+					for (AtomData d : Configuration.getAtomDataIterable(Configuration.getCurrentAtomData())){
 						dci.retainAll(d.getDataColumnInfos());
 						if (exportGrain) exportGrain = d.isPolyCrystalline();
 						if (exportRBV) exportRBV = d.isRbvAvailable();
@@ -849,7 +849,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 						File path = chooser.getSelectedFile().getParentFile();
 						String prefix = chooser.getSelectedFile().getName();
 						int num = 0;
-						for (AtomData d : Configuration.getAtomDataIterable()){
+						for (AtomData d : Configuration.getAtomDataIterable(Configuration.getCurrentAtomData())){
 							String newName = current.getName();
 							newName = String.format("%s.%05d", prefix, num++);
 							
