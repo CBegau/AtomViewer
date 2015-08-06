@@ -25,6 +25,10 @@ import javax.imageio.*;
 import javax.imageio.metadata.*;
 import javax.imageio.stream.ImageOutputStream;
 
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+
 import gui.JMainWindow;
 import gui.ViewerGLJPanel;
 import model.AtomData;
@@ -35,7 +39,7 @@ public class ImageOutput {
 	 * Writes a screenshot as a BufferedImage to a file and includes metadata
 	 * The metadata includes the original data filename, the AtomViewer version and the Point of View
 	 * string that describes the perspective to recreate the picture if needed.
-	 * Metadata is only included in compatible formats (PNG, JPEG)
+	 * Metadata is only included in compatible formats (PNG, JPEG) 
 	 * @param bim The image to be saved
 	 * @param format A format string, the format is used to detect a compatible image writer by
 	 * {@link ImageIO#getImageWritersByFormatName(String)}
@@ -49,27 +53,22 @@ public class ImageOutput {
 		IIOMetadata metadata = null;
 		ImageWriteParam writeParam = null;
 		
-		if (format.equals("png")){
-			writer = ImageIO.getImageWritersByFormatName("png").next();
-	
+		writer = ImageIO.getImageWritersByFormatName(format).next();
+		if (writer == null)
+			throw new Exception(String.format("No ImageWriter found for format %s", format));
+		
+		//Get the metadata object for supported formats
+		if (format.equals("png") || format.equals("jpg") || format.equals("jpeg")){
 		    writeParam = writer.getDefaultWriteParam();
 		    ImageTypeSpecifier typeSpecifier = ImageTypeSpecifier.createFromBufferedImageType(BufferedImage.TYPE_INT_RGB);
 	
 		    //adding metadata
 		    metadata = writer.getDefaultImageMetadata(typeSpecifier, writeParam);
-	
-		    IIOMetadataNode textEntry = new IIOMetadataNode("tEXtEntry");
-		    textEntry.setAttribute("keyword", "Software");
-		    textEntry.setAttribute("value", "AtomViewer "+JMainWindow.VERSION+" (build "+JMainWindow.buildVersion+")");
-	
-		    IIOMetadataNode text = new IIOMetadataNode("tEXt");
-		    text.appendChild(textEntry);
-		    
-		    textEntry = new IIOMetadataNode("tEXtEntry");
-		    textEntry.setAttribute("keyword", "Title");
-		    textEntry.setAttribute("value", data.getName());
-		    text.appendChild(textEntry);
-		    
+		}
+		
+		//Write metadata if possible
+		if (metadata != null){
+			 //POV as a text string
 		    float[] pov = viewer.getPov();
 		    StringBuilder povString = new StringBuilder();
 		    for (float p : pov){
@@ -77,23 +76,57 @@ public class ImageOutput {
 		    	povString.append(";");
 		    }
 		    
-		    textEntry = new IIOMetadataNode("tEXtEntry");
-		    textEntry.setAttribute("keyword", "Comment");
-		    textEntry.setAttribute("value", "Point of view "+povString.toString());
-		    text.appendChild(textEntry);
-	
-		    IIOMetadataNode root = new IIOMetadataNode("javax_imageio_png_1.0");
-		    root.appendChild(text);
-	
-		    metadata.mergeTree("javax_imageio_png_1.0", root);
-		} else 
-			writer = ImageIO.getImageWritersByFormatName(format).next();
-
-	    //writing the data
+		    if (format.equals("png")){
+		    	IIOMetadataNode root = new IIOMetadataNode(metadata.getNativeMetadataFormatName());
+			    //Write software and version
+			    IIOMetadataNode textEntry = new IIOMetadataNode("tEXtEntry");
+			    textEntry.setAttribute("keyword", "Software");
+			    textEntry.setAttribute("value", "AtomViewer "+JMainWindow.VERSION+" (build "+JMainWindow.buildVersion+")");
+		
+			    IIOMetadataNode text = new IIOMetadataNode("tEXt");
+			    text.appendChild(textEntry);
+			    //The original data filename or identifier
+			    textEntry = new IIOMetadataNode("tEXtEntry");
+			    textEntry.setAttribute("keyword", "Title");
+			    textEntry.setAttribute("value", data.getName());
+			    text.appendChild(textEntry);
+			   
+			    textEntry = new IIOMetadataNode("tEXtEntry");
+			    textEntry.setAttribute("keyword", "Comment");
+			    textEntry.setAttribute("value", "Point of view "+povString.toString());
+			    text.appendChild(textEntry);
+		
+			    root.appendChild(text);
+			    metadata.mergeTree(metadata.getNativeMetadataFormatName(), root);
+			} 
+		    else if (format.equals("jpg") || format.equals("jpeg")){
+		    	//Jpeg 
+		    	StringBuilder sb = new StringBuilder();
+		    	sb.append(String.format("created by AtomViewer %s (build %s)\n", JMainWindow.VERSION, JMainWindow.buildVersion));
+		    	sb.append(String.format("Image created from file: %s\n", data.getName()));
+		    	sb.append(String.format("Point of view %s", povString.toString()));
+		    	
+		    	Element tree = (Element) metadata.getAsTree(metadata.getNativeMetadataFormatName());
+		    	NodeList comNL = tree.getElementsByTagName("com");
+		    	IIOMetadataNode comNode;
+		    	if (comNL.getLength() == 0) {
+		    	    comNode = new IIOMetadataNode("com");
+		    	    Node markerSequenceNode = tree.getElementsByTagName("markerSequence").item(0);
+		    	    markerSequenceNode.insertBefore(comNode,markerSequenceNode.getFirstChild());
+		    	} else {
+		    	    comNode = (IIOMetadataNode) comNL.item(0);
+		    	}
+		    	comNode.setUserObject((sb.toString()).getBytes("ISO-8859-1"));
+		    	metadata.setFromTree(metadata.getNativeMetadataFormatName(), tree);
+			}
+		}
+		
+	    //save the image including metadata if available
 	    FileOutputStream baos = new FileOutputStream(file);
 	    ImageOutputStream stream = ImageIO.createImageOutputStream(baos);
 	    writer.setOutput(stream);
-	    writer.write(metadata, new IIOImage(bim, null, metadata), writeParam);		
+	    writer.write(metadata, new IIOImage(bim, null, metadata), writeParam);
+	    writer.dispose();
 	    stream.close();
 	}
 	
