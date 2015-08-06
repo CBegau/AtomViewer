@@ -33,6 +33,7 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.*;
@@ -1672,7 +1673,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	}
     
     //region export methods
-	public void makeScreenshot(String filename, String type, boolean sequence, int w, int h){
+	public void makeScreenshot(String filename, String type, boolean sequence, int w, int h) throws Exception{
 		GL3 gl = this.getGLFromContext();
 		
 		int oldwidth = this.width;
@@ -1701,28 +1702,19 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 				composeCompleteScene(gl, screenshotFBO);
 				
 				BufferedImage bi = screenshotFBO.textureToBufferedImage(w, h, gl);
-				ImageIO.write(bi, type, new java.io.File(filename));
+				ImageOutput.writeScreenshotFile(bi, type, new File(filename), this.atomData, this);
 			} else {
-				if (this.atomData!=null){
-					AtomData currentAtomData = this.atomData;
-					
-					//rewind to beginning
-					while (atomData.getPrevious()!=null)
-						this.atomData = atomData.getPrevious();
-					
-					do {
-						this.setAtomData(atomData, false);
-						renderSceneIntoFBOs(gl, RenderOption.STEREO.isEnabled());
-						composeCompleteScene(gl, screenshotFBO);
+				AtomData currentAtomData = this.atomData;
+				for (AtomData c : Configuration.getAtomDataIterable(currentAtomData)){
+					this.setAtomData(c, false);
+					renderSceneIntoFBOs(gl, RenderOption.STEREO.isEnabled());
+					composeCompleteScene(gl, screenshotFBO);
 
-						BufferedImage bi = screenshotFBO.textureToBufferedImage(w, h, gl);
-						ImageIO.write(bi, type, new java.io.File(filename+atomData.getName()+"."+type) );
-						
-						this.atomData = atomData.getNext();
-					} while (this.atomData != null);
-					
-					this.setAtomData(currentAtomData, false);
-				}
+					BufferedImage bi = screenshotFBO.textureToBufferedImage(w, h, gl);
+					ImageOutput.writeScreenshotFile(bi, type, new File(filename+atomData.getName()+"."+type),
+							c, this);
+				}	
+				this.setAtomData(currentAtomData, false);
 			}
 			//restore old size and FBOs
 			fboLeft.destroy(gl); fboLeft = fboLeftOld;             
@@ -1746,8 +1738,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	}
 	
 	//endregion export methods
-	
-	
 	
 	private void makeFullScreenQuad(GL3 gl){
 		if (fullScreenQuad != null)
