@@ -531,11 +531,11 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		
 		gl.glDepthMask(true);
 		drawGrain(gl, picking);
+		drawIndent(gl, picking);
 		
 		//Additional objects
 		//Some are placed on top of the scene as 2D objects
 		if (!picking){
-			drawIndent(gl);
 			drawCoordinateSystem(gl);
 			drawThompsonTetraeder(gl);			
 			drawLegend(gl);
@@ -675,8 +675,19 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		}	
 	}
 	
-	private void drawIndent(GL3 gl){
+	private void drawIndent(GL3 gl, boolean picking){
 		if (!RenderOption.INDENTER.isEnabled()) return;
+		
+		BuiltInShader.ADS_UNIFORM_COLOR.getShader().enable(gl);
+		GLMatrix mvm = modelViewMatrix.clone();
+		SimplePickable indenter = new SimplePickable();
+		
+		float[] color = new float[]{0f, 1f, 0.5f, 0.4f};;
+		if(picking)
+			color = getNextPickingColor(indenter);
+		
+		gl.glUniform4f(gl.glGetUniformLocation(
+				BuiltInShader.ADS_UNIFORM_COLOR.getShader().getProgram(),"Color"), color[0], color[1], color[2], color[3]);
 		
 		//Test indenter geometry, sphere or cylinder
 		Object o = atomData.getFileMetaData("extpot_cylinder");
@@ -684,10 +695,12 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			float[] indent = null;
 			if (o instanceof float[]) indent = (float[])o;
 			else return;
-			BuiltInShader.ADS_UNIFORM_COLOR.getShader().enable(gl);
-			gl.glUniform4f(gl.glGetUniformLocation(
-					BuiltInShader.ADS_UNIFORM_COLOR.getShader().getProgram(),"Color"), 0f, 1f, 0.5f, 0.4f);
-			GLMatrix mvm = modelViewMatrix.clone();
+			if (picking){
+				Vec3 p;
+				indenter.setCenter(p=new Vec3(indent[1], indent[2], indent[3]));
+				indenter.setText(String.format("Cylindrical indenter (r=%f) at %s", indent[4], p.toString()));
+			} 
+			
 			mvm.translate(indent[1], indent[2], indent[3]);
 			
 			Vec3 bounds = atomData.getBox().getHeight();
@@ -705,41 +718,44 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			
 			updateModelViewInShader(gl, BuiltInShader.ADS_UNIFORM_COLOR.getShader(), mvm, projectionMatrix);
 			SimpleGeometriesRenderer.drawCylinder(gl);
-			updateModelViewInShader(gl, BuiltInShader.ADS_UNIFORM_COLOR.getShader(), modelViewMatrix, projectionMatrix);
 		}
 		o = atomData.getFileMetaData("extpot");
 		if (o != null) {
 			float[] indent = null;
 			if (o instanceof float[]) indent = (float[])o;
 			else return;
-			BuiltInShader.ADS_UNIFORM_COLOR.getShader().enable(gl);
-			gl.glUniform4f(gl.glGetUniformLocation(
-					BuiltInShader.ADS_UNIFORM_COLOR.getShader().getProgram(),"Color"), 0f, 1f, 0.5f, 0.4f);
-			GLMatrix mvm = modelViewMatrix.clone();
+			if (picking){
+				Vec3 p;
+				indenter.setCenter(p=new Vec3(indent[1], indent[2], indent[3]));
+				indenter.setText(String.format("Spherical indenter (r=%f) at %s", indent[4], p.toString()));
+			} 
+			
 			mvm.translate(indent[1], indent[2], indent[3]);
 			mvm.scale(indent[4], indent[4], indent[4]);
 			updateModelViewInShader(gl, BuiltInShader.ADS_UNIFORM_COLOR.getShader(), mvm, projectionMatrix);
 			SimpleGeometriesRenderer.drawSphere(gl);
-			updateModelViewInShader(gl, BuiltInShader.ADS_UNIFORM_COLOR.getShader(), modelViewMatrix, projectionMatrix);
 		}
 		o = atomData.getFileMetaData("wall");
 		if (o != null) {
 			float[] indent = null;
 			if (o instanceof float[]) indent = (float[]) o;
 			else return;
-			BuiltInShader.ADS_UNIFORM_COLOR.getShader().enable(gl);
-			gl.glUniform4f(gl.glGetUniformLocation(
-					BuiltInShader.ADS_UNIFORM_COLOR.getShader().getProgram(),"Color"), 0f, 1f, 0.5f, 1f);
-			GLMatrix mvm = modelViewMatrix.clone();
+			
 			Vec3[] box = atomData.getBox().getBoxSize();
 			float hx = box[0].x + box[1].x + box[2].x;
 			float hy = box[0].y + box[1].y + box[2].y;
+			
+			if (picking){
+				indenter.setCenter(new Vec3(hx/2f, hx/2f, indent[1]));
+				indenter.setText(String.format("Flat punch indenter at z=%f", indent[1]));
+			} 
+
 			mvm.translate(0, 0, indent[1] - indent[2]);
 			mvm.scale(hx, hy, 3*indent[2]);
 			updateModelViewInShader(gl, BuiltInShader.ADS_UNIFORM_COLOR.getShader(), mvm, projectionMatrix);
 			SimpleGeometriesRenderer.drawCube(gl);
-			updateModelViewInShader(gl, BuiltInShader.ADS_UNIFORM_COLOR.getShader(), modelViewMatrix, projectionMatrix);
 		}
+		updateModelViewInShader(gl, BuiltInShader.ADS_UNIFORM_COLOR.getShader(), modelViewMatrix, projectionMatrix);
 	}
 	
 
