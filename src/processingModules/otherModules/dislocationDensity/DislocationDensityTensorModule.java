@@ -32,6 +32,7 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.IOException;
 import java.text.DecimalFormat;
+import java.util.Arrays;
 
 import javax.media.opengl.GL3;
 import javax.swing.*;
@@ -98,12 +99,19 @@ public class DislocationDensityTensorModule extends ClonableProcessingModule {
 	
 	@Override
 	public boolean isApplicable(AtomData data) {
-		return true;
+		boolean hasLatticeRotation = 
+				Configuration.getCurrentAtomData().getDataColumnInfos().containsAll(
+						Arrays.asList(new LatticeRotationModule().getDataColumnsInfo())
+						);
+		boolean hasSkeleton = (Configuration.getCurrentAtomData().getDataContainer(Skeletonizer.class)!=null);
+		
+		
+		return hasLatticeRotation || hasSkeleton;
 	}
 
 	@Override
 	public String getRequirementDescription() {
-		return "";
+		return "Either the dislocation network or lattice rotations (for single crystals) are needed";
 	}
 	
 	@Override
@@ -467,12 +475,10 @@ public class DislocationDensityTensorModule extends ClonableProcessingModule {
 			});
 			
 			//Enable default value, hide buttons if no selection possible
-			DataColumnInfo[] dci = new LatticeRotationModule().getDataColumnsInfo();
-			boolean hasLatticeRotation = true;
-			for (DataColumnInfo d : dci)
-				if (Configuration.getCurrentAtomData().getIndexForCustomColumn(d) == -1)
-					hasLatticeRotation = false;
-			
+			boolean hasLatticeRotation = 
+					Configuration.getCurrentAtomData().getDataColumnInfos().containsAll(
+							Arrays.asList(new LatticeRotationModule().getDataColumnsInfo())
+							);
 			boolean hasSkeleton = (Configuration.getCurrentAtomData().getDataContainer(Skeletonizer.class)!=null);
 			
 			if (!hasSkeleton || !hasLatticeRotation){
