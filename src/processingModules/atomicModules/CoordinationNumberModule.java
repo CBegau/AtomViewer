@@ -110,8 +110,8 @@ public class CoordinationNumberModule extends ClonableProcessingModule {
 						Atom a = data.getAtoms().get(i);	
 						float neigh = nnb.getNeigh(a).size();
 						
-						if (density)
-							neigh = (neigh/sphereVolume)*scalingFactor;
+						if (density)	//The density including the central particle itself
+							neigh = ((neigh+1)/sphereVolume)*scalingFactor;
 						
 						
 						a.setData(neigh, v);
