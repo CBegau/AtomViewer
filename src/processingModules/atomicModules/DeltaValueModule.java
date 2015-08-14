@@ -180,14 +180,8 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 		
 		
 		final HashMap<Integer, Atom> atomsMap = new HashMap<Integer, Atom>();
-		for (Atom a : referenceAtomData.getAtoms()){
-			if (atomsMap.get(a.getNumber()) != null){
-				JLogPanel.getJLogPanel().addLog(String.format("Atom ID duplicates Atom1: %s Atom2: %s.", 
-						a.toString(), atomsMap.get(a.getNumber()).toString() ));
-			}
-			
+		for (Atom a : referenceAtomData.getAtoms())
 			atomsMap.put(a.getNumber(), a);
-		}
 		
 		if (atomsMap.size() != referenceAtomData.getAtoms().size())
 			throw new RuntimeException(
