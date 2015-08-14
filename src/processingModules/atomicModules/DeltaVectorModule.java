@@ -193,8 +193,13 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 		
 		
 		final HashMap<Integer, Atom> atomsMap = new HashMap<Integer, Atom>();
-		for (Atom a : referenceAtomData.getAtoms())
-			atomsMap.put(a.getNumber(), a);
+		for (Atom a : referenceAtomData.getAtoms()){
+			Atom oldValue = atomsMap.put(a.getNumber(), a);
+			if (oldValue != null){
+				JLogPanel.getJLogPanel().addLog(String.format("Duplicated IDs ID1: %s ID2: %s.", 
+						a.printMessage(null, data), oldValue.printMessage(null, referenceAtomData) ));
+			}
+		}
 		
 		if (atomsMap.size() != referenceAtomData.getAtoms().size())
 			throw new RuntimeException(
