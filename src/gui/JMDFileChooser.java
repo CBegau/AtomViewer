@@ -139,6 +139,7 @@ public class JMDFileChooser extends JFileChooser{
 			}
 		});
 
+		this.removeChoosableFileFilter(this.getFileFilter());	//remove old file filter before adding a new one
 		this.setFileFilter(Configuration.getCurrentFileLoader().getDefaultFileFilter());
 	}
 	
@@ -196,6 +197,9 @@ public class JMDFileChooser extends JFileChooser{
 					@Override
 					public void actionPerformed(ActionEvent e) {
 						Configuration.setCurrentFileLoader(loader);
+
+						//remove old file filter before adding a new one
+						JMDFileChooser.this.removeChoosableFileFilter(JMDFileChooser.this.getFileFilter());
 						JMDFileChooser.this.setFileFilter(loader.getDefaultFileFilter());
 						
 						optionsPanel.removeAll();
