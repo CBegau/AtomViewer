@@ -48,11 +48,30 @@ public class ObjectRenderData<T extends Vec3 & Pickable> {
 	public ObjectRenderData(List<T> objects, boolean subdivide, BoxParameter box) {
 //		long time = System.nanoTime();
 		
+		final Cell rootCell;
+		
+		if (objects.size() == 0){
+			Vec3 size = box.getHeight();
+			rootCell = new Cell(size.multiplyClone(0.5f), size);
+		} else {
+			Vec3 min = new Vec3(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY);
+			Vec3 max = new Vec3(Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY);
+			
+			for (T o : objects){
+				if (o.x < min.x) min.x = o.x;
+				if (o.y < min.y) min.y = o.y;
+				if (o.z < min.z) min.z = o.z;
+				
+				if (o.x > max.x) max.x = o.x;
+				if (o.y > max.y) max.y = o.y;
+				if (o.z > max.z) max.z = o.z;
+			}
+			
+			rootCell = new Cell(max.subClone(min).multiplyClone(0.5f), max.subClone(min));
+		}
+		
 		this.subdivided = subdivide;
-		
-		Vec3 size = box.getHeight();
-		final Cell rootCell = new Cell(size.multiplyClone(0.5f), size);
-		
+	
 		if (objects instanceof ArrayList<?>)
 			rootCell.objects = (ArrayList<T>)objects;
 		else rootCell.objects = new ArrayList<T>(objects);
