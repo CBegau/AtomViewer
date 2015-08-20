@@ -63,7 +63,8 @@ public abstract class MDFileLoader{
 			
 			for (File f : filesToRead){
 				ProgressMonitor.getProgressMonitor().setCurrentFilename(f.getName());
-				toReturn = readInputData(f, previous);
+				Filter<Atom> filter = ImportConfiguration.getInstance().getCrystalStructure().getIgnoreAtomsDuringImportFilter();
+				toReturn = readInputData(f, previous, filter); 
 				previous = toReturn;
 			}
 					
@@ -86,11 +87,14 @@ public abstract class MDFileLoader{
 	/**
 	 * Creates a single instance of AtomData from {@code f}. 
 	 * @param f the file containing the atomic data
-	 * @param previous an instance of AtomData that is the previous data in a linked list
+	 * @param previous an instance of AtomData that is the previous data in a linked list.
+	 * May be null if this is the first file in a list.
+	 * @param atomFilter A filter that ignores certain atoms already during import.
+	 * Can be null, in which case no atoms are filtered 
 	 * @return An instance of AtomData read from file, possibly linking to a previous data sets
 	 * @throws IOException
 	 */
-	public abstract AtomData readInputData(File f, AtomData previous) throws Exception;
+	public abstract AtomData readInputData(File f, AtomData previous, Filter<Atom> atomFilter) throws Exception;
 	
 	public abstract FileFilter getDefaultFileFilter();
 	

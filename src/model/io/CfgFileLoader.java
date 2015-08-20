@@ -41,7 +41,7 @@ public class CfgFileLoader extends MDFileLoader {
 	}
 	
 	@Override
-	public AtomData readInputData(File f, AtomData previous) throws Exception {
+	public AtomData readInputData(File f, AtomData previous, Filter<Atom> atomFilter) throws Exception {
 		LineNumberReader lnr = null;
 		if (CommonUtils.isFileGzipped(f)) {
 			// Directly read gzip-compressed files
@@ -76,8 +76,6 @@ public class CfgFileLoader extends MDFileLoader {
 			float currentMass = 0f;
 			Map<String,Integer> typeMap = new TreeMap<String, Integer>();
 			int currentType = 0;
-			
-			Filter<Atom> atomFilter = ImportConfiguration.getInstance().getCrystalStructure().getIgnoreAtomsDuringImportFilter();
 			
 			int[] dataColumns = new int[ImportConfiguration.getInstance().getDataColumns().size()];
 			for (int i = 0; i<dataColumns.length; i++)

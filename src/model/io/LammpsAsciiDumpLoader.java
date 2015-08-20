@@ -40,8 +40,8 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 	}
 	
 	@Override
-	public AtomData readInputData(File f, AtomData previous) throws IOException{
-		return readFile(f, previous);
+	public AtomData readInputData(File f, AtomData previous, Filter<Atom> atomFilter) throws IOException{
+		return readFile(f, previous, atomFilter);
 	}
 	
 	@Override
@@ -118,7 +118,7 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 	 * @throws IOException
 	 * @throws IllegalAccessException
 	 */
-	private AtomData readFile(File f, AtomData previous) throws IOException {
+	private AtomData readFile(File f, AtomData previous, Filter<Atom> atomFilter) throws IOException {
 		LineNumberReader lnr = null;
 		if (CommonUtils.isFileGzipped(f)) {
 			// Directly read gzip-compressed files
@@ -135,7 +135,6 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 			dataColumns[i] = -1;
 
 		Pattern p = Pattern.compile("\\s+");
-		Filter<Atom> atomFilter = ImportConfiguration.getInstance().getCrystalStructure().getIgnoreAtomsDuringImportFilter();
 
 		ImportDataContainer idc = new ImportDataContainer();
 		try {

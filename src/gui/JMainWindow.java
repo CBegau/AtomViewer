@@ -993,7 +993,8 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 				Configuration.create();
 				
 				Configuration.setLastOpenedFolder(inputFile.getParentFile());
-				AtomData data = fileLoader.readInputData(inputFile, null);
+				Filter<Atom> filter = ImportConfiguration.getInstance().getCrystalStructure().getIgnoreAtomsDuringImportFilter();
+				AtomData data = fileLoader.readInputData(inputFile, null, filter);
 				
 				boolean binaryFormat = true;
 				boolean exportDislocations = false;

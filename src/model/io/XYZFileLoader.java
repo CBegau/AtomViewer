@@ -38,6 +38,7 @@ import model.Atom;
 import model.AtomData;
 import model.ImportConfiguration;
 import model.DataColumnInfo.Component;
+import model.Filter;
 
 public class XYZFileLoader extends MDFileLoader {
 
@@ -57,7 +58,7 @@ public class XYZFileLoader extends MDFileLoader {
 	}
 	
 	@Override
-	public AtomData readInputData(File f, AtomData previous) throws Exception {
+	public AtomData readInputData(File f, AtomData previous, Filter<Atom> atomFilter) throws Exception {
 		LineNumberReader lnr = null;
 		String line = null;
 		
@@ -134,8 +135,8 @@ public class XYZFileLoader extends MDFileLoader {
 						if (dataColumns[j] != -1)
 							a.setData(Float.parseFloat(parts[dataColumns[j]]), j);
 					}
-					
-					idc.addAtom(a);
+					if (atomFilter == null || atomFilter.accept(a))
+						idc.addAtom(a);
 				}
 				
 				

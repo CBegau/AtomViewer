@@ -103,8 +103,8 @@ public class ImdFileLoader extends MDFileLoader{
 	}
 	
 	@Override
-	public AtomData readInputData(File f, AtomData previous) throws IOException{
-		return new AtomData(previous, this.readFile(f));
+	public AtomData readInputData(File f, AtomData previous, Filter<Atom> atomFilter) throws IOException{
+		return new AtomData(previous, this.readFile(f, atomFilter));
 	}
 	
 	/**
@@ -112,7 +112,7 @@ public class ImdFileLoader extends MDFileLoader{
 	 * @param f File to read
 	 * @throws IOException
 	 */
-	protected ImportDataContainer readFile(File f) throws IOException{
+	protected ImportDataContainer readFile(File f, final Filter<Atom> atomFilter) throws IOException{
 		ProgressMonitor.getProgressMonitor().setActivityName("Reading file");
 		final ImportDataContainer idc = new ImportDataContainer();
 		idc.name = f.getName();
@@ -163,7 +163,7 @@ public class ImdFileLoader extends MDFileLoader{
 									lnr = new LineNumberReader(new InputStreamReader(gzipis));
 								} else 
 									lnr = new LineNumberReader(new FileReader(nextFile));
-								readASCIIFile(idc, lnr, header, fis);
+								readASCIIFile(idc, lnr, header, fis, atomFilter);
 								fileNumber++;
 							} finally {
 								if (lnr!=null) lnr.close();	
@@ -171,7 +171,7 @@ public class ImdFileLoader extends MDFileLoader{
 						}
 					} while (nextFile.exists());
 				} else
-					readASCIIFile(idc, lnr, header, fis);
+					readASCIIFile(idc, lnr, header, fis, atomFilter);
 			}
 			//binary formats
 			else if (header.format.equals("l") || header.format.equals("b") || 
@@ -198,7 +198,7 @@ public class ImdFileLoader extends MDFileLoader{
 								@Override
 								public Void call() throws Exception {
 									//Read one file per thread
-									readBinaryFile(nf, idc, gzipped, header);
+									readBinaryFile(nf, idc, gzipped, header, atomFilter);
 									return null;
 								}
 							};
@@ -211,7 +211,7 @@ public class ImdFileLoader extends MDFileLoader{
 						t.get();
 					}
 				} else
-					readBinaryFile(f, idc, gzipped, header);
+					readBinaryFile(f, idc, gzipped, header, atomFilter);
 			}
 			else throw new IllegalArgumentException("File format not supported");
 		}catch (IOException ex){
@@ -224,7 +224,7 @@ public class ImdFileLoader extends MDFileLoader{
 		return idc;
 	}
 
-	private void readBinaryFile(File f, ImportDataContainer idc, boolean gzipped, IMD_Header header)
+	private void readBinaryFile(File f, ImportDataContainer idc, boolean gzipped, IMD_Header header, Filter<Atom> atomFilter)
 			throws FileNotFoundException, IOException {
 		GZIPInputStream gzipis;
 		if (header.numberColumn == -1) 
@@ -270,8 +270,6 @@ public class ImdFileLoader extends MDFileLoader{
 		
 		DataInputStreamWrapper dis = 
 			DataInputStreamWrapper.getDataInputStreamWrapper(bis, doublePrecision, littleEndian);
-		
-		Filter<Atom> atomFilter = ImportConfiguration.getInstance().getCrystalStructure().getIgnoreAtomsDuringImportFilter();
 		
 		try {
 			if (!header.multiFileInput){ //Files created with parallel output do not have a header
@@ -412,7 +410,7 @@ public class ImdFileLoader extends MDFileLoader{
 	}
 
 	private void readASCIIFile(ImportDataContainer idc, LineNumberReader lnr, IMD_Header header,
-			FileInputStream fis) throws IOException {
+			FileInputStream fis, Filter<Atom> atomFilter) throws IOException {
 		String s = lnr.readLine();
 		Vec3 pos = new Vec3();
 		byte type = 0;
@@ -422,7 +420,6 @@ public class ImdFileLoader extends MDFileLoader{
 		int atomRead = 0;
 		
 		ProgressMonitor.getProgressMonitor().start(fis.getChannel().size());
-		Filter<Atom> atomFilter = ImportConfiguration.getInstance().getCrystalStructure().getIgnoreAtomsDuringImportFilter();
 		
 		while (s!=null){
 			atomRead++;
