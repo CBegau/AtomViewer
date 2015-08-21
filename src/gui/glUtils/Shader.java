@@ -206,22 +206,14 @@ public class Shader {
 		"}"
 	};
 	
-	
-	private static String[] deferredADSFragmentShader = {
+	private static String[] ssaoFragmentShader = {
 		"#version 150\n"+
 
-		"uniform sampler2D posTexture;"+
 		"uniform sampler2D normalTexture;"+
 		"uniform sampler2D colorTexture;"+
 		
 		"in vec2 TexCoord0;"+
 		"out vec4 vFragColor;"+
-		
-		"uniform int picking;"+
-		"uniform int ads;"+
-		
-		"uniform mat4 mvm;"+
-		"uniform vec3 lightPos;"+
 		
 		//SSAO uniforms
         "uniform sampler2D noiseTexture;"+
@@ -231,8 +223,6 @@ public class Shader {
         "uniform float ssaoRad;\n"+
         "uniform float ssaoOffset = 5.25;"+
         
-		"uniform int ambientOcclusion;\n"+
-		
 		"const int SAMPLES = 10;"+
 		"const float invSamples = 1.0/SAMPLES;"+
 		
@@ -280,6 +270,38 @@ public class Shader {
 		
 		"void main(void) {"+
 		"  vec4 FrontColor = texture(colorTexture, TexCoord0.st);"+
+		"  vec4 normTexel = texture(normalTexture, TexCoord0.st);"+
+		"  gl_FragDepth = normTexel[3];"+			// normal[3] is the depth value
+		"  vFragColor.rgb = vec3(0.);"+
+		"  vFragColor.a = 1.;"+
+		"  if (FrontColor.a >= 0.05) {"+
+		"    vFragColor.rgb = vec3(occlusion(normTexel));"+
+		"  }"+
+		"}"
+	};
+	
+	
+	private static String[] deferredADSFragmentShader = {
+		"#version 150\n"+
+
+		"uniform sampler2D posTexture;"+
+		"uniform sampler2D normalTexture;"+
+		"uniform sampler2D colorTexture;"+
+		
+		"in vec2 TexCoord0;"+
+		"out vec4 vFragColor;"+
+		
+		"uniform int picking;"+
+		"uniform int ads;"+
+		
+		"uniform mat4 mvm;"+
+		"uniform vec3 lightPos;"+
+		
+		"uniform int ambientOcclusion = 0;"+
+		"uniform sampler2D occlusionTexture;"+
+			
+		"void main(void) {"+
+		"  vec4 FrontColor = texture(colorTexture, TexCoord0.st);"+
 		"  if (FrontColor.a >= 0.05) {"+
 		"    vec4 normTexel = texture(normalTexture, TexCoord0.st);"+
 		"    gl_FragDepth = normTexel[3];"+			// normal[3] is the depth value
@@ -287,7 +309,7 @@ public class Shader {
 		"      vFragColor = FrontColor;\n"+
 		"    } else { \n"+
 		"      float ambient = ads==1 ? 0.3: 0.5;"+
-		"      float occ = ambientOcclusion==1 ? occlusion(normTexel) : 0.;"+
+		"	   float occ = ambientOcclusion==1 ? texture(occlusionTexture, TexCoord0.st).r : 0.;"+
 		
 		"      vec4 position = texture(posTexture, TexCoord0.st);"+
 		"      vec3 norm = normTexel.xyz;"+
@@ -920,6 +942,8 @@ public class Shader {
 				new int[]{ATTRIB_VERTEX, ATTRIB_NORMAL}, new String[]{"v", "norm"}),
 		ADS_VERTEX_COLOR(defaultVertexShader, pplFragmentwithADSShader,
 				new int[]{ATTRIB_VERTEX, ATTRIB_NORMAL, ATTRIB_COLOR}, new String[]{"v", "norm", "Color"}),
+		
+		SSAO(defaultVertexShader, ssaoFragmentShader,new int[]{ATTRIB_VERTEX, ATTRIB_TEX0}, new String[]{"v", "Tex"}),
 		
 		//Render from deferred buffers
 		DEFERRED_ADS_RENDERING(defaultVertexShader, deferredADSFragmentShader,

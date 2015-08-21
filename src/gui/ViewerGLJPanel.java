@@ -515,7 +515,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		if (drawIntoFBO != null)
 			drawIntoFBO.bind(gl, !picking);
 		
-		if (!picking) drawFromDeferredBuffer(gl, picking);
+		if (!picking) drawFromDeferredBuffer(gl, picking, drawIntoFBO);
 		
 		//Using forward rendering
 		//Renderpass 2 for transparent objects
@@ -543,15 +543,42 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		Shader.disableLastUsedShader(gl);
 	}
 
-	private void drawFromDeferredBuffer(GL3 gl, boolean picking) {
+	private void drawFromDeferredBuffer(GL3 gl, boolean picking, FrameBufferObject targetFbo) {
 		GLMatrix pm = setupProjectionFlatMatrix();
-	    
+		FrameBufferObject ssaoFBO = null;
+		
 		gl.glActiveTexture(GL.GL_TEXTURE0+Shader.FRAG_COLOR);
 		gl.glBindTexture(GL.GL_TEXTURE_2D, fboDeferredBuffer.getColorTextureName());
 		gl.glActiveTexture(GL.GL_TEXTURE0+Shader.FRAG_NORMAL);
 		gl.glBindTexture(GL.GL_TEXTURE_2D,  fboDeferredBuffer.getNormalTextureName());
 		gl.glActiveTexture(GL.GL_TEXTURE0+Shader.FRAG_POSITION);
 		gl.glBindTexture(GL.GL_TEXTURE_2D, fboDeferredBuffer.getPositionTextureName());
+
+		if (RenderingConfiguration.Options.SSAO.isEnabled() & !picking){
+			//Switch to the SSAO shader, render into new FBO
+			if (targetFbo != null)
+				targetFbo.unbind(gl);
+			
+			ssaoFBO = new FrameBufferObject(width, height, gl);
+			ssaoFBO.bind(gl, !picking);
+			gl.glClear(GL.GL_DEPTH_BUFFER_BIT);
+			
+			Shader ssaoShader = BuiltInShader.SSAO.getShader();
+			ssaoShader.enable(gl);
+			
+			updateModelViewInShader(gl, ssaoShader, new GLMatrix(), setupProjectionFlatMatrix());
+			
+			gl.glUniform1f(gl.glGetUniformLocation(ssaoShader.getProgram(), "ssaoOffset"), 5.25f*zoom);
+			gl.glActiveTexture(GL.GL_TEXTURE0+4);
+			gl.glBindTexture(GL.GL_TEXTURE_2D, noiseTexture.getTextureObject());
+			
+			fullScreenQuad.draw(gl, GL.GL_TRIANGLE_STRIP);
+			
+			ssaoFBO.unbind(gl);
+		}
+		
+		if (targetFbo != null)
+			targetFbo.bind(gl, !picking);
 		
 		Shader s = BuiltInShader.DEFERRED_ADS_RENDERING.getShader();
 		int prog = s.getProgram();
@@ -564,17 +591,18 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			if (RenderingConfiguration.Options.NO_SHADING.isEnabled())
 				gl.glUniform1i(gl.glGetUniformLocation(prog, "picking"), 1);
 			else gl.glUniform1i(gl.glGetUniformLocation(prog, "picking"), 0);
+			
+			if (RenderingConfiguration.Options.SSAO.isEnabled()){
+				gl.glActiveTexture(GL.GL_TEXTURE0+4);
+				gl.glBindTexture(GL.GL_TEXTURE_2D, ssaoFBO.getColorTextureName());
+			}
+			gl.glUniform1i(gl.glGetUniformLocation(prog, "ambientOcclusion"), 
+					RenderingConfiguration.Options.SSAO.isEnabled()?1:0);
 		}
-		
-		if (RenderingConfiguration.Options.SSAO.isEnabled()){
-			gl.glActiveTexture(GL.GL_TEXTURE0+4);
-			gl.glBindTexture(GL.GL_TEXTURE_2D, noiseTexture.getTextureObject());
-			gl.glUniform1f(gl.glGetUniformLocation(prog, "ssaoOffset"), 5.25f*zoom);
-		}
-		gl.glUniform1i(gl.glGetUniformLocation(prog, "ambientOcclusion"), 
-				RenderingConfiguration.Options.SSAO.isEnabled()?1:0);
 		
 		fullScreenQuad.draw(gl, GL.GL_TRIANGLE_STRIP);
+		
+		if (ssaoFBO != null) ssaoFBO.destroy(gl);
 	}
 
 //	private void drawRotationSphere(GL3 gl){
@@ -1862,6 +1890,12 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		gl.glUniform1i(gl.glGetUniformLocation(prog, "colorTexture"), Shader.FRAG_COLOR);
 		gl.glUniform1i(gl.glGetUniformLocation(prog, "normalTexture"), Shader.FRAG_NORMAL);
 		gl.glUniform1i(gl.glGetUniformLocation(prog, "posTexture"), Shader.FRAG_POSITION);
+		gl.glUniform1i(gl.glGetUniformLocation(prog, "occlusionTexture"), 4);
+		
+		BuiltInShader.SSAO.getShader().enable(gl);
+		prog = BuiltInShader.SSAO.getShader().getProgram();
+		gl.glUniform1i(gl.glGetUniformLocation(prog, "colorTexture"), Shader.FRAG_COLOR);
+		gl.glUniform1i(gl.glGetUniformLocation(prog, "normalTexture"), Shader.FRAG_NORMAL);
 		gl.glUniform1i(gl.glGetUniformLocation(prog, "noiseTexture"), 4);
 		gl.glUniform1f(gl.glGetUniformLocation(prog, "ssaoTotStrength"), 2.38f);
 		gl.glUniform1f(gl.glGetUniformLocation(prog, "ssaoStrength"), 0.15f);
