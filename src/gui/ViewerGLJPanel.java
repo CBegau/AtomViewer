@@ -560,7 +560,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 				targetFbo.unbind(gl);
 			
 			ssaoFBO = new FrameBufferObject(width, height, gl);
-			ssaoFBO.bind(gl, !picking);
+			ssaoFBO.bind(gl, false);
 			gl.glClear(GL.GL_DEPTH_BUFFER_BIT);
 			
 			Shader ssaoShader = BuiltInShader.SSAO.getShader();
@@ -575,6 +575,35 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			fullScreenQuad.draw(gl, GL.GL_TRIANGLE_STRIP);
 			
 			ssaoFBO.unbind(gl);
+			
+			//Blur the results, first horizontal
+			FrameBufferObject blurFBO = new FrameBufferObject(width, height, gl);
+			blurFBO.bind(gl, false);
+			gl.glClear(GL.GL_DEPTH_BUFFER_BIT);
+			Shader blurShader = BuiltInShader.BLUR.getShader();
+			blurShader.enable(gl);
+			updateModelViewInShader(gl, blurShader, new GLMatrix(), setupProjectionFlatMatrix());
+			
+			gl.glUniform1f(gl.glGetUniformLocation(blurShader.getProgram(), "radius"), 4f);
+			gl.glUniform1f(gl.glGetUniformLocation(blurShader.getProgram(), "resolution"), width);
+			gl.glUniform1i(gl.glGetUniformLocation(blurShader.getProgram(), "tex"), 4);
+			gl.glUniform2f(gl.glGetUniformLocation(blurShader.getProgram(), "dir"), 1f, 0f);
+			
+			gl.glBindTexture(GL.GL_TEXTURE_2D, ssaoFBO.getColorTextureName());
+			
+			fullScreenQuad.draw(gl, GL.GL_TRIANGLE_STRIP);
+			//then once more in vertical direction
+			ssaoFBO.bind(gl, false);
+			gl.glClear(GL.GL_DEPTH_BUFFER_BIT);
+			
+			gl.glUniform2f(gl.glGetUniformLocation(blurShader.getProgram(), "dir"), 0f, 1f);
+			gl.glUniform1f(gl.glGetUniformLocation(blurShader.getProgram(), "resolution"), height);
+			gl.glBindTexture(GL.GL_TEXTURE_2D, blurFBO.getColorTextureName());
+			
+			fullScreenQuad.draw(gl, GL.GL_TRIANGLE_STRIP);
+			
+			ssaoFBO.unbind(gl);
+			blurFBO.destroy(gl);
 		}
 		
 		if (targetFbo != null)

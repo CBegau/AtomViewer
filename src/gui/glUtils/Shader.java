@@ -281,6 +281,43 @@ public class Shader {
 	};
 	
 	
+	private static String[] blurShader = {
+		"#version 150\n"+
+		"in vec2 TexCoord0;"+
+		"out vec4 vFragColor;"+
+
+		//declare uniforms
+		"uniform sampler2D tex; "+
+		"uniform float resolution; "+
+		"uniform float radius; "+
+		"uniform vec2 dir; \n"+
+
+		"void main() {																					"+
+		"    vec4 sum = vec4(0.0);                                                                      "+
+        "                                                                                               "+
+		"    vec2 tc =TexCoord0;                                                                        "+
+        "                                                                                               "+
+		"    float blur = radius/resolution;                                                            "+
+        "                                                                                               "+
+		"    float hstep = dir.x;                                                                       "+
+		"    float vstep = dir.y;                                                                       "+
+        "                                                                                               "+
+		"    sum += texture(tex, vec2(tc.x - 4.0*blur*hstep, tc.y - 4.0*blur*vstep)) * 0.0162162162;    "+
+		"    sum += texture(tex, vec2(tc.x - 3.0*blur*hstep, tc.y - 3.0*blur*vstep)) * 0.0540540541;    "+
+		"    sum += texture(tex, vec2(tc.x - 2.0*blur*hstep, tc.y - 2.0*blur*vstep)) * 0.1216216216;    "+
+		"    sum += texture(tex, vec2(tc.x - 1.0*blur*hstep, tc.y - 1.0*blur*vstep)) * 0.1945945946;    "+
+        "                                                                                               "+
+		"    sum += texture(tex, vec2(tc.x, tc.y)) * 0.2270270270;                                      "+
+        "                                                                                               "+
+		"    sum += texture(tex, vec2(tc.x + 1.0*blur*hstep, tc.y + 1.0*blur*vstep)) * 0.1945945946;    "+
+		"    sum += texture(tex, vec2(tc.x + 2.0*blur*hstep, tc.y + 2.0*blur*vstep)) * 0.1216216216;    "+
+		"    sum += texture(tex, vec2(tc.x + 3.0*blur*hstep, tc.y + 3.0*blur*vstep)) * 0.0540540541;    "+
+		"    sum += texture(tex, vec2(tc.x + 4.0*blur*hstep, tc.y + 4.0*blur*vstep)) * 0.0162162162;    "+
+        "                                                                                               "+
+		"    vFragColor = vec4(sum.rgb, 1.0);                                                           "+
+		"}                                                                                              "
+	};
+	
 	private static String[] deferredADSFragmentShader = {
 		"#version 150\n"+
 
@@ -944,6 +981,7 @@ public class Shader {
 				new int[]{ATTRIB_VERTEX, ATTRIB_NORMAL, ATTRIB_COLOR}, new String[]{"v", "norm", "Color"}),
 		
 		SSAO(defaultVertexShader, ssaoFragmentShader,new int[]{ATTRIB_VERTEX, ATTRIB_TEX0}, new String[]{"v", "Tex"}),
+		BLUR(defaultVertexShader, blurShader,new int[]{ATTRIB_VERTEX, ATTRIB_TEX0}, new String[]{"v", "Tex"}),
 		
 		//Render from deferred buffers
 		DEFERRED_ADS_RENDERING(defaultVertexShader, deferredADSFragmentShader,
