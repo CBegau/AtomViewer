@@ -556,12 +556,12 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 
 		if (RenderingConfiguration.Options.SSAO.isEnabled() & !picking){
 			//Switch to the SSAO shader, render into new FBO
+			gl.glDisable(GL.GL_DEPTH_TEST);
 			if (targetFbo != null)
 				targetFbo.unbind(gl);
 			
 			ssaoFBO = new FrameBufferObject(width, height, gl);
 			ssaoFBO.bind(gl, false);
-			gl.glClear(GL.GL_DEPTH_BUFFER_BIT);
 			
 			Shader ssaoShader = BuiltInShader.SSAO.getShader();
 			ssaoShader.enable(gl);
@@ -579,7 +579,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			//Blur the results, first horizontal
 			FrameBufferObject blurFBO = new FrameBufferObject(width, height, gl);
 			blurFBO.bind(gl, false);
-			gl.glClear(GL.GL_DEPTH_BUFFER_BIT);
+			
 			Shader blurShader = BuiltInShader.BLUR.getShader();
 			blurShader.enable(gl);
 			updateModelViewInShader(gl, blurShader, new GLMatrix(), setupProjectionFlatMatrix());
@@ -604,6 +604,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			
 			ssaoFBO.unbind(gl);
 			blurFBO.destroy(gl);
+			gl.glEnable(GL.GL_DEPTH_TEST);
 		}
 		
 		if (targetFbo != null)
