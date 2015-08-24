@@ -81,7 +81,7 @@ public class ImageOutput {
 			    //Write software and version
 			    IIOMetadataNode textEntry = new IIOMetadataNode("tEXtEntry");
 			    textEntry.setAttribute("keyword", "Software");
-			    textEntry.setAttribute("value", "AtomViewer "+JMainWindow.VERSION+" (build "+JMainWindow.buildVersion+")");
+			    textEntry.setAttribute("value", "AtomViewer "+JMainWindow.VERSION+" "+JMainWindow.buildVersion);
 		
 			    IIOMetadataNode text = new IIOMetadataNode("tEXt");
 			    text.appendChild(textEntry);
@@ -102,7 +102,7 @@ public class ImageOutput {
 		    else if (format.equals("jpg") || format.equals("jpeg")){
 		    	//Jpeg 
 		    	StringBuilder sb = new StringBuilder();
-		    	sb.append(String.format("created by AtomViewer %s (build %s)\n", JMainWindow.VERSION, JMainWindow.buildVersion));
+		    	sb.append(String.format("created by AtomViewer %s \n", JMainWindow.VERSION+" "+JMainWindow.buildVersion));
 		    	sb.append(String.format("Image created from file: %s\n", data.getName()));
 		    	sb.append(String.format("Point of view %s", povString.toString()));
 		    	

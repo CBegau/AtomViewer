@@ -43,11 +43,30 @@
 		        <arg value="--tags"/>
 		        <arg value="--always"/>
 		        <arg value="HEAD"/>
-		    </exec>
-		    <condition property="repository.version" value="${git.revision}" else="">
+		</exec>
+		<condition property="repository.version" value="${git.revision}" else="">
 		    <and>
 		        <isset property="git.revision"/>
 		        <length string="${git.revision}" trim="yes" length="0" when="greater"/>
+		    </and>
+		</condition>
+		<exec executable="git" outputproperty="git.date" failifexecutionfails="false" errorproperty="">
+		        <arg value="show"/>
+		        <arg value="-s"/>
+		        <arg value="--format=%cD"/>
+		        <arg value="HEAD"/>
+		</exec>
+		
+		<!--Remove linebreak from the git date -->
+		 <script language="javascript">
+		  project.setProperty('git.date', project.getProperty('git.date').
+		   replace("\n", ""));
+		 </script>
+		
+		<condition property="repository.date" value="${git.date}" else="${TODAY}">
+		    <and>
+		        <isset property="git.date"/>
+		        <length string="${git.date}" trim="yes" length="0" when="greater"/>
 		    </and>
 		</condition>
 		
@@ -63,7 +82,7 @@
 			<manifest>
 				<attribute name="Main-Class" value="AtomViewer" />
 				<attribute name="Class-Path" value="jogamp/jar/gluegen-rt.jar jogamp/jar/jogl-all.jar libs/Jama/Jama.jar libs/Quickhull3d/quickhull3d.jar" />
-				<attribute name="Build-Date" value="${TODAY}"/>
+				<attribute name="Build-Date" value="${repository.date}"/>
 				<attribute name="Revision" value="${repository.version}"/>
 			</manifest>
 		</jar>

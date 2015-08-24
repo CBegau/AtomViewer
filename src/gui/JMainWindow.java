@@ -615,7 +615,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 				String message = "<html><body>" +
 						"AtomViewer  Copyright (C) 2015, ICAMS, Ruhr-Universtät Bochum <br>" +
 						"AtomViewer is a tool to display and analyse atomistic simulations<br><br>" +
-						"AtomViewer Version "+JMainWindow.VERSION+"-"+JMainWindow.buildVersion+"<br>"+
+						"AtomViewer Version "+JMainWindow.VERSION+" "+JMainWindow.buildVersion+"<br>"+
 						"Available OpenGL version on this machine: "+ViewerGLJPanel.openGLVersion +"<br><br>" +
 						"Using Jogl Version "+JoglVersion.getInstance().getSpecificationVersion()+"<br>"+
 						"This program comes with ABSOLUTELY NO WARRANTY <br>" +
