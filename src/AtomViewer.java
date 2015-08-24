@@ -17,7 +17,7 @@ public class AtomViewer {
 				JarFile jar = new JarFile(f);
 			    Manifest manifest = jar.getManifest();
 			    Attributes attributes = manifest.getMainAttributes();
-			    JMainWindow.buildVersion = attributes.getValue("Build-Date");
+			    JMainWindow.buildVersion = attributes.getValue("Build-Date")+" Rev."+attributes.getValue("Revision");
 			    jar.close();
 			}
 		} catch (Exception e){}

@@ -17,6 +17,8 @@
 		<pathelement path="${libDir}libs/Quickhull3d/quickhull3d.jar"/>
 	 </path>	
 	
+	
+	
 	<target name="compile">
 		 <mkdir dir="${binDir}" />
 		<delete>
@@ -35,6 +37,20 @@
 		    <format property="TODAY" pattern="dd.MM.yyyy" />
 		</tstamp>
 		
+		<available file=".git" type="dir" property="git.present"/>	
+	    <exec executable="git" outputproperty="git.revision" failifexecutionfails="false" errorproperty="">
+		        <arg value="describe"/>
+		        <arg value="--tags"/>
+		        <arg value="--always"/>
+		        <arg value="HEAD"/>
+		    </exec>
+		    <condition property="repository.version" value="${git.revision}" else="">
+		    <and>
+		        <isset property="git.revision"/>
+		        <length string="${git.revision}" trim="yes" length="0" when="greater"/>
+		    </and>
+		</condition>
+		
 		<jar destfile="${jarDir}/AtomViewer.jar">
 			<fileset dir="${binDir}">
 				<include name="**/*.class" />
@@ -48,6 +64,7 @@
 				<attribute name="Main-Class" value="AtomViewer" />
 				<attribute name="Class-Path" value="jogamp/jar/gluegen-rt.jar jogamp/jar/jogl-all.jar libs/Jama/Jama.jar libs/Quickhull3d/quickhull3d.jar" />
 				<attribute name="Build-Date" value="${TODAY}"/>
+				<attribute name="Revision" value="${repository.version}"/>
 			</manifest>
 		</jar>
 		
