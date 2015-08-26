@@ -284,13 +284,13 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		this.height = arg4;
 		
 		if (fboDeferredBuffer != null) fboDeferredBuffer.reset(gl, width, height);
-		else fboDeferredBuffer = new FrameBufferObject(width, height, gl, true, true);
+		else fboDeferredBuffer = new FrameBufferObject(width, height, gl, true);
 		if (fboLeft != null) fboLeft.reset(gl, width, height);
 		else fboLeft = new FrameBufferObject(width, height, gl);
 		if (fboRight != null) fboRight.reset(gl, width, height);
 		else fboRight = new FrameBufferObject(width, height, gl);
 		if (fboBackground != null) fboBackground.reset(gl, width, height);
-		else fboBackground = new FrameBufferObject(width, height, gl, false, false);
+		else fboBackground = new FrameBufferObject(width, height, gl);
 
 		this.makeBackground();
 		this.arcBall.setSize(this.width, this.height);
@@ -556,10 +556,11 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 
 		if (RenderingConfiguration.Options.SSAO.isEnabled() & !picking){
 			//Switch to the SSAO shader, render into new FBO
+			gl.glDisable(GL.GL_DEPTH_TEST);
 			if (targetFbo != null)
 				targetFbo.unbind(gl);
 			
-			ssaoFBO = new FrameBufferObject(width, height, gl, false, false);
+			ssaoFBO = new FrameBufferObject(width, height, gl);
 			ssaoFBO.bind(gl, false);
 			
 			Shader ssaoShader = BuiltInShader.SSAO.getShader();
@@ -576,7 +577,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			ssaoFBO.unbind(gl);
 			
 			//Blur the results, first horizontal
-			FrameBufferObject blurFBO = new FrameBufferObject(width, height, gl, false, false);
+			FrameBufferObject blurFBO = new FrameBufferObject(width, height, gl);
 			blurFBO.bind(gl, false);
 			
 			Shader blurShader = BuiltInShader.BLUR.getShader();
@@ -593,6 +594,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			fullScreenQuad.draw(gl, GL.GL_TRIANGLE_STRIP);
 			//then once more in vertical direction
 			ssaoFBO.bind(gl, false);
+			gl.glClear(GL.GL_DEPTH_BUFFER_BIT);
 			
 			gl.glUniform2f(gl.glGetUniformLocation(blurShader.getProgram(), "dir"), 0f, 1f);
 			gl.glUniform1f(gl.glGetUniformLocation(blurShader.getProgram(), "resolution"), height);
@@ -602,6 +604,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			
 			ssaoFBO.unbind(gl);
 			blurFBO.destroy(gl);
+			gl.glEnable(GL.GL_DEPTH_TEST);
 		}
 		
 		if (targetFbo != null)
@@ -1757,10 +1760,10 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			FrameBufferObject deferredFBOOld = fboDeferredBuffer;
 			
 			gl.glViewport(0, 0, w, h);
-			fboDeferredBuffer= new FrameBufferObject(w, h, gl, true, true);
+			fboDeferredBuffer= new FrameBufferObject(w, h, gl, true);
 			fboLeft = new FrameBufferObject(w, h, gl);
 			fboRight = new FrameBufferObject(w, h, gl);
-			fboBackground = new FrameBufferObject(w, h, gl, false, false);
+			fboBackground = new FrameBufferObject(w, h, gl);
 			this.makeBackground();
 			this.makeFullScreenQuad(gl);
 			
@@ -1823,6 +1826,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		//Render Background
 		GL3 gl = getGLFromContext();
 		fboBackground.bind(gl, false);
+		gl.glClear(GL.GL_DEPTH_BUFFER_BIT);
 	
 		//Use a gray to gray color gradient as background, otherwise use pure white
 		GLMatrix mvm = new GLMatrix();
