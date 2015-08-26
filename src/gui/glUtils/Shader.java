@@ -272,7 +272,7 @@ public class Shader {
 		"  vFragColor.rgb = vec3(0.);"+
 		"  vFragColor.a = 1.;"+
 		"  if (FrontColor.a >= 0.05) {"+
-		"    vFragColor.rgb = vec3(occlusion(normTexel));"+
+		"    vFragColor.rgb = vec3(occlusion(normTexel) * FrontColor.a);"+
 		"  }"+
 		"}"
 	};
@@ -513,15 +513,23 @@ public class Shader {
 		
 		"  vec3 u;\n"+
 		"  vec3 d = normalize(Direction);\n"+
-		"  if (abs(d[0]) >= abs(d[1])){\n"+
-		"    u[0] = d[2];\n"+
-		"    u[1] = 0.;\n"+
-		"    u[2] = -d[0];\n"+
-		"  } else {\n"+
-		"    u[0] = 0.;\n"+
-		"    u[1] = d[2];\n"+
-		"    u[2] = -d[1];\n"+
-		"  }\n"+
+
+		//Default functionality with branching
+//		"  if (abs(d[0]) >= abs(d[1])){\n"+
+//		"    u[0] = d[2];\n"+
+//		"    u[1] = 0.;\n"+
+//		"    u[2] = -d[0];\n"+
+//		"  } else {\n"+
+//		"    u[0] = 0.;\n"+
+//		"    u[1] = d[2];\n"+
+//		"    u[2] = -d[1];\n"+
+//		"  }\n"+
+		//Same functionality without branching
+		"  float d0_gt_d1 = max(sign(d[0] - d[1]), 0.0);"+
+		"  u[0] = d[2] * d0_gt_d1;\n"+
+		"  u[1] = (1.-d0_gt_d1) * d[2];\n"+
+		"  u[2] = d0_gt_d1*(-d[0]) + (1.-d0_gt_d1) * (-d[1]);\n"+
+		
 		"  u = normalize(u);\n"+
 		"  vec3 v = normalize(cross(Direction,u));\n"+
 		"  vec3 shift = d * (Dimensions[3]-2.*Dimensions[1]);\n"+
@@ -553,15 +561,22 @@ public class Shader {
 		
 		"  vec3 u;\n"+
 		"  vec3 d = normalize(Direction);\n"+
-		"  if (abs(d[0]) >= abs(d[1])){\n"+
-		"    u[0] = d[2];\n"+
-		"    u[1] = 0.;\n"+
-		"    u[2] = -d[0];\n"+
-		"  } else {\n"+
-		"    u[0] = 0.;\n"+
-		"    u[1] = d[2];\n"+
-		"    u[2] = -d[1];\n"+
-		"  }\n"+
+		//Default functionality with branching
+//		"  if (abs(d[0]) >= abs(d[1])){\n"+
+//		"    u[0] = d[2];\n"+
+//		"    u[1] = 0.;\n"+
+//		"    u[2] = -d[0];\n"+
+//		"  } else {\n"+
+//		"    u[0] = 0.;\n"+
+//		"    u[1] = d[2];\n"+
+//		"    u[2] = -d[1];\n"+
+//		"  }\n"+
+		//Same functionality without branching
+		"  float d0_gt_d1 = max(sign(d[0] - d[1]), 0.0);"+
+		"  u[0] = d[2] * d0_gt_d1;\n"+
+		"  u[1] = (1.-d0_gt_d1) * d[2];\n"+
+		"  u[2] = d0_gt_d1*(-d[0]) + (1.-d0_gt_d1) * (-d[1]);\n"+
+		
 		"  u = normalize(u);\n"+
 		"  vec3 v = normalize(cross(Direction,u));\n"+
 		"  vec3 shift = d * (Dimensions[3]-2.*Dimensions[1]);\n"+
