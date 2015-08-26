@@ -338,6 +338,7 @@ public class Shader {
 		"  vec4 FrontColor = texture(colorTexture, TexCoord0.st);"+
 		"  vec4 normTexel = texture(normalTexture, TexCoord0.st);"+
 		"  vFragColor = FrontColor;\n"+
+		"  gl_FragDepth = 1.;"+
 		
 		"  if (noShading != 1) { \n"+
 		"    vec4 position = texture(posTexture, TexCoord0.st);"+
@@ -353,9 +354,9 @@ public class Shader {
 		"    float spec = max(0.0, dot(norm, reflect(-lv, norm))-occ)*ads;"+
 		"    float fSpec = pow(spec, 96.0);"+
 		"    vFragColor.rgb = vFragColor.rgb*(diff+ambient) + fSpec;"+
-		"  }\n"+    
 		
-		"  gl_FragDepth = normTexel[3];"+			// normal[3] is the depth value
+		"  }\n"+
+		"  gl_FragDepth = FrontColor.a>0 ? normTexel[3] : 1.;"+			// normal[3] is the depth value
 		"}"
 	};
 	
