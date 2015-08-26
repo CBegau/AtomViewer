@@ -616,8 +616,8 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		
 		if (!picking){
 			if (RenderingConfiguration.Options.NO_SHADING.isEnabled())
-				gl.glUniform1i(gl.glGetUniformLocation(prog, "picking"), 1);
-			else gl.glUniform1i(gl.glGetUniformLocation(prog, "picking"), 0);
+				gl.glUniform1i(gl.glGetUniformLocation(prog, "noShading"), 1);
+			else gl.glUniform1i(gl.glGetUniformLocation(prog, "noShading"), 0);
 			
 			if (RenderingConfiguration.Options.SSAO.isEnabled()){
 				gl.glActiveTexture(GL.GL_TEXTURE0+4);
@@ -1643,7 +1643,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		}
 
 		GL3 gl = this.getGLFromContext();
-		updateIntInAllShader(gl, "picking", 1);
+		updateIntInAllShader(gl, "noShading", 1);
 		
 		//Extract viewport
 		int[] viewport = new int[4];
@@ -1732,7 +1732,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		}
 		pickList.clear();
 		
-		updateIntInAllShader(gl,"picking", 0);
+		updateIntInAllShader(gl,"noShading", 0);
 		if (repaintRequired){
 			reRenderTexture = true;
 			this.reDraw();

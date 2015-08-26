@@ -181,26 +181,24 @@ public class Shader {
 		"in vec4 FrontColor;"+
 		"out vec4 vFragColor;"+
 		
-		"uniform int picking;"+
+		"uniform int noShading;"+
 		"uniform int ads;"+
-		
+			
 		"void main(void) {"+
-		"  if (picking == 1){\n"+
-		"    vFragColor = FrontColor;\n"+
-		"  } else { \n"+
+		"  vFragColor = FrontColor;\n"+
+		"  if (noShading != 1){\n"+
 		"    vec3 norm = normalize(normal);"+
 		"    vec3 lv = normalize(lightvec);"+
-		
+		"    float ambient = 0.5 - ads*0.2;"+
 		"    if (ads == 1){\n"+
 		"      float diff = max(0.0, dot(norm, lv));"+
-		"      vFragColor = vec4(diff+0.3,diff+0.3,diff+0.3, 1.) * FrontColor;"+
 		"      vec3 vReflection = normalize(reflect(-lv, norm));"+
 		"      float spec = max(0.0, dot(norm, vReflection));"+
 		"      float fSpec = pow(spec, 96.0);"+
-		"      vFragColor.rgb += vec3(fSpec, fSpec, fSpec);"+
+		"      vFragColor.rgb *= vec3(diff+ambient);"+
+		"      vFragColor.rgb += vec3(fSpec);"+
 		"    } else {\n"+
-		"      vFragColor.rgb = (max(dot(norm, lv), 0.) + 0.5) * FrontColor.rgb;"+
-		"      vFragColor.a = FrontColor.a;"+
+		"      vFragColor.rgb *= (max(dot(norm, lv), 0.) + ambient);"+
 		"    }\n"+
 		"  }\n"+
 		"}"
@@ -327,7 +325,7 @@ public class Shader {
 		"in vec2 TexCoord0;"+
 		"out vec4 vFragColor;"+
 		
-		"uniform int picking;"+
+		"uniform int noShading;"+
 		"uniform int ads;"+
 		
 		"uniform mat4 mvm;"+
@@ -338,32 +336,26 @@ public class Shader {
 			
 		"void main(void) {"+
 		"  vec4 FrontColor = texture(colorTexture, TexCoord0.st);"+
-		"  if (FrontColor.a >= 0.05) {"+
-		"    vec4 normTexel = texture(normalTexture, TexCoord0.st);"+
-		"    gl_FragDepth = normTexel[3];"+			// normal[3] is the depth value
-		"    if (picking == 1){\n"+
-		"      vFragColor = FrontColor;\n"+
-		"    } else { \n"+
-		"      float ambient = ads==1 ? 0.3: 0.5;"+
-		"	   float occ = ambientOcclusion==1 ? texture(occlusionTexture, TexCoord0.st).r : 0.;"+
+		"  vec4 normTexel = texture(normalTexture, TexCoord0.st);"+
+		"  vFragColor = FrontColor;\n"+
 		
-		"      vec4 position = texture(posTexture, TexCoord0.st);"+
-		"      vec3 norm = normTexel.xyz;"+
-
-		"      vec3 v = (mvm*position).xyz;"+
-		"      vec3 lv = normalize(lightPos - v);"+
-		"      float diff = max(0.0, dot(norm, lv)-occ);"+
-		"      vFragColor = vec4((diff+ambient) * FrontColor.rgb, FrontColor.a);"+
+		"  if (noShading != 1) { \n"+
+		"    vec4 position = texture(posTexture, TexCoord0.st);"+
+		"    vec3 norm = normTexel.xyz;"+
+		"    vec3 v = (mvm*position).xyz;"+
+		"    vec3 lv = normalize(lightPos - v);"+
+		//ambient, diffusion and occlusion factors for lighting
+		"	 float occ = ambientOcclusion==1 ? texture(occlusionTexture, TexCoord0.st).r : 0.;"+
+		"    float diff = max(0.0, dot(norm, lv)-occ);"+
+		//In case of specular lighting use an ambient factor of 0.5 otherwise 0.3
+		"    float ambient = 0.5 - ads*0.2;"+
+		//Multiply specular value with the ads uniform, disables effect if required
+		"    float spec = max(0.0, dot(norm, reflect(-lv, norm))-occ)*ads;"+
+		"    float fSpec = pow(spec, 96.0);"+
+		"    vFragColor.rgb = vFragColor.rgb*(diff+ambient) + fSpec;"+
+		"  }\n"+    
 		
-		"      if (ads == 1){\n"+
-		"        float spec = max(0.0, dot(norm, reflect(-lv, norm))-occ);"+
-		"        float fSpec = pow(spec, 96.0);"+
-		"        vFragColor.rgb += fSpec;"+
-		"      }\n"+
-		"    }\n"+
-		"  }"+
-		"  else "+
-		"    gl_FragDepth = 1.;"+
+		"  gl_FragDepth = normTexel[3];"+			// normal[3] is the depth value
 		"}"
 	};
 	
