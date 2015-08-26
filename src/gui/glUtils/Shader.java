@@ -271,7 +271,6 @@ public class Shader {
 		"void main(void) {"+
 		"  vec4 FrontColor = texture(colorTexture, TexCoord0.st);"+
 		"  vec4 normTexel = texture(normalTexture, TexCoord0.st);"+
-		"  gl_FragDepth = normTexel[3];"+			// normal[3] is the depth value
 		"  vFragColor.rgb = vec3(0.);"+
 		"  vFragColor.a = 1.;"+
 		"  if (FrontColor.a >= 0.05) {"+

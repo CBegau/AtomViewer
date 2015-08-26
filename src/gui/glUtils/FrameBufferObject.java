@@ -33,15 +33,16 @@ public class FrameBufferObject extends FBObject{
 	private boolean filtered = false;
 	
 	public FrameBufferObject(int minWidth, int minHeight, GL3 gl){
-		this(minWidth, minHeight, gl, false);
+		this(minWidth, minHeight, gl, false, true);
 	}
 	
-	public FrameBufferObject(int minWidth, int minHeight, GL3 gl, boolean deferredRendering){
+	public FrameBufferObject(int minWidth, int minHeight, GL3 gl, boolean deferredRendering, boolean depthBuffer){
 		super();
 		this.reset(gl, minWidth, minHeight);
 		this.deferredRendering = deferredRendering;
 		
-		this.attachRenderbuffer(gl, GL3.GL_DEPTH_COMPONENT24);
+		if(depthBuffer)
+			this.attachRenderbuffer(gl, GL3.GL_DEPTH_COMPONENT24);
 		this.colorTexture = this.attachTexture2D(gl, 0, GL3.GL_RGBA ,GL3.GL_RGBA ,GL3.GL_UNSIGNED_BYTE, 
 				GL3.GL_NEAREST, GL3.GL_NEAREST, GL.GL_CLAMP_TO_EDGE,GL.GL_CLAMP_TO_EDGE);
 		
