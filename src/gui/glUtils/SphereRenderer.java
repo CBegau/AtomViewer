@@ -137,9 +137,7 @@ public class SphereRenderer {
 		//Select the rendering shader
 		Shader shader;
 		if (RenderingConfiguration.Options.PERFECT_SPHERES.isEnabled())
-			if (BuiltInShader.BILLBOARD_INSTANCED_DEFERRED_PERFECT_GL4.getShader().isAvailable()) 
-				shader = BuiltInShader.BILLBOARD_INSTANCED_DEFERRED_PERFECT_GL4.getShader();
-			else shader = BuiltInShader.BILLBOARD_INSTANCED_DEFERRED_PERFECT.getShader();
+			shader = BuiltInShader.BILLBOARD_INSTANCED_DEFERRED_PERFECT.getShader();
 		else shader = BuiltInShader.BILLBOARD_INSTANCED_DEFERRED.getShader();
 
 		// Init the shader for drawing test bounding boxes

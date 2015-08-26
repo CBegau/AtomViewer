@@ -714,6 +714,7 @@ public class Shader {
 	
 	private int shaderProgram = -1;
 	private String[] vertexShader, fragmentShader;
+	private String[] alternativeVertexShader, alternativeFragmentShader;
 	private int[] indices;
 	private String[] attribs;
 	private double minGLversion = 3.2f;
@@ -725,9 +726,12 @@ public class Shader {
 		this.attribs = attribs;
 	}
 	
-	public Shader(String[] vertexShader, String[] fragmentShader, int[] indices, String[] attribs, double minGLVersion){
+	public Shader(String[] vertexShader, String[] fragmentShader, int[] indices, String[] attribs, double minGLVersion,
+			String[] altVertexShader, String[] altFragmentShader){
 		this(vertexShader, fragmentShader, indices,attribs);
 		this.minGLversion = minGLVersion;
+		this.alternativeVertexShader = altVertexShader;
+		this.alternativeFragmentShader = altFragmentShader;
 	}
 	
 	public void compile(GL3 gl){
@@ -736,6 +740,7 @@ public class Shader {
 		double openGLVersion = Double.parseDouble(glVersion);
 		if (openGLVersion >= minGLversion)
 			shaderProgram = createShaderProgram(vertexShader, fragmentShader, gl, indices, attribs);
+		else shaderProgram = createShaderProgram(alternativeVertexShader, alternativeFragmentShader, gl, indices, attribs);
 	}
 	
 	public void delete(GL3 gl){
@@ -990,11 +995,10 @@ public class Shader {
 				new int[]{ATTRIB_VERTEX, ATTRIB_TEX0}, new String[]{"p", "tex"}),
 				
 		BILLBOARD_INSTANCED_DEFERRED_PERFECT(translateBillboardVertexInstancedShaderDeferred, 
-				billboardFragmentShaderDeferredPerfectSphere, 
-				new int[]{ATTRIB_VERTEX, ATTRIB_COLOR, ATTRIB_VERTEX_OFFSET, ATTRIB_TEX0}, new String[]{"p", "Color", "Move", "tex"}),
-		BILLBOARD_INSTANCED_DEFERRED_PERFECT_GL4(translateBillboardVertexInstancedShaderDeferred, 
 				billboardFragmentShaderDeferredPerfectSphereGL42, 
-				new int[]{ATTRIB_VERTEX, ATTRIB_COLOR, ATTRIB_VERTEX_OFFSET, ATTRIB_TEX0}, new String[]{"p", "Color", "Move", "tex"}, 4.2),
+				new int[]{ATTRIB_VERTEX, ATTRIB_COLOR, ATTRIB_VERTEX_OFFSET, ATTRIB_TEX0}, 
+				new String[]{"p", "Color", "Move", "tex"}, 4.2,
+				translateBillboardVertexInstancedShaderDeferred, billboardFragmentShaderDeferredPerfectSphere),
 		BILLBOARD_DEFERRED_PERFECT(translateBillboardVertexShaderDeferred, billboardFragmentShaderDeferredPerfectSphere, 
 				new int[]{ATTRIB_VERTEX, ATTRIB_TEX0}, new String[]{"p", "tex"}),
 		
@@ -1019,8 +1023,9 @@ public class Shader {
 			s = new Shader(vertexShader, fragmentShader, indices, attribs);
 		}
 		
-		private BuiltInShader(String[] vertexShader, String[] fragmentShader, int[] indices, String[] attribs, double minGL){
-			s = new Shader(vertexShader, fragmentShader, indices, attribs, minGL);
+		private BuiltInShader(String[] vertexShader, String[] fragmentShader, int[] indices, String[] attribs, double minGL,
+				String[] altVertexShader, String[] altFragmentShader){
+			s = new Shader(vertexShader, fragmentShader, indices, attribs, minGL, altVertexShader, altFragmentShader);
 		}
 		
 		public Shader getShader(){
