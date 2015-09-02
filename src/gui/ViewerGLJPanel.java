@@ -890,7 +890,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 						&& !atomData.getDataColumnInfos().isEmpty())
 					atomFilterSet.addFilter(dataAtomFilter);
 				
-				final ColoringFunction colFunc;
+				final ColoringFilter<Atom> colFunc;
 				switch (atomRenderType){
 					case TYPE: colFunc = new TypeColoringAndFilter(); break;
 					case ELEMENTS: colFunc = new ElementColoringAndFilter(); break;
@@ -1997,12 +1997,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		if (fboBackground != null) fboBackground.destroy(gl);
 	}
 	
-	private interface ColoringFunction{
-		float[] getColor(Atom c);
-		void update();
-	}
-	
-	private class TypeColoringAndFilter implements Filter<Atom>, ColoringFunction{
+	private class TypeColoringAndFilter implements ColoringFilter<Atom> {
 		float[][] colors = null;
 		int numEleColors;
 		
@@ -2033,7 +2028,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		}
 	}
 	
-	private class GrainColoringAndFilter implements Filter<Atom>, ColoringFunction{
+	private class GrainColoringAndFilter implements ColoringFilter<Atom> {
 		boolean isNeeded(){
 			for (boolean b : ignoreGrain.values())
 				if (b) return true;
@@ -2053,7 +2048,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		};
 	}
 	
-	private class ElementColoringAndFilter implements Filter<Atom>, ColoringFunction{
+	private class ElementColoringAndFilter implements ColoringFilter<Atom> {
 		float[][] colorTable = null;
 		
 		boolean isNeeded(){
@@ -2079,7 +2074,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		}
 	}
 	
-	private class DataColoringAndFilter implements Filter<Atom>, ColoringFunction{
+	private class DataColoringAndFilter implements ColoringFilter<Atom> {
 		boolean filterMin = false;
 		boolean filterMax = false;
 		boolean inversed = false;

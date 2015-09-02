@@ -1,3 +1,20 @@
+// Part of AtomViewer: AtomViewer is a tool to display and analyse
+// atomistic simulations
+//
+// Copyright (C) 2015  ICAMS, Ruhr-Universität Bochum
+//
+// AtomViewer is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// AtomViewer is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
 package processingModules.otherModules;
 
 import gui.JColorSelectPanel;
@@ -25,6 +42,7 @@ import javax.swing.event.ChangeListener;
 
 import common.Vec3;
 import model.BoxParameter;
+import model.ColoringFilter;
 import model.DataColumnInfo;
 import model.Pickable;
 import model.RenderingConfiguration;
@@ -62,13 +80,15 @@ public abstract class ParticleDataContainer<T extends Vec3 & Pickable> extends D
 	public void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
 		if (!getDataControlPanel().isDataVisible()) return;
 		
-		float[] col = getParticleDataControlPanel().getColor();
 		if (viewer.isUpdateRenderContent()){
+			ColoringFilter<T> cf = getColoringFilter();
+			cf.update();
 			float size = getParticleDataControlPanel().getParticleSize();
 			for (ObjectRenderData<T>.Cell c: ord.getRenderableCells()){
 				for (int i = 0; i < c.getNumObjects(); i++) {
 					T v = c.getObjects().get(i);
-					if (renderRange.isInInterval(v)){
+					if (renderRange.isInInterval(v) && cf.accept(v) ){
+						float[] col = cf.getColor(v);
 						c.getVisibiltyArray()[i] = true;
 						c.getSizeArray()[i] = size;
 						c.getColorArray()[3*i+0] = col[0];
@@ -82,6 +102,23 @@ public abstract class ParticleDataContainer<T extends Vec3 & Pickable> extends D
 			ord.reinitUpdatedCells();
 		}
 		viewer.drawSpheres(gl, ord, picking);
+	}
+	
+	protected ColoringFilter<T> getColoringFilter(){
+		return new ColoringFilter<T>() {
+			@Override
+			public boolean accept(T a) {
+				return true;
+			}
+			
+			@Override
+			public void update() {}
+			
+			@Override
+			public float[] getColor(T c) {
+				return getParticleDataControlPanel().getColor();
+			}
+		};
 	}
 	
 	@Override

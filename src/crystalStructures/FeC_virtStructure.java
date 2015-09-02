@@ -18,22 +18,18 @@
 
 package crystalStructures;
 
-import gui.RenderRange;
-import gui.ViewerGLJPanel;
 import gui.PrimitiveProperty.BooleanProperty;
 import gui.ViewerGLJPanel.AtomRenderType;
-import gui.glUtils.ObjectRenderData;
 
 import java.io.IOException;
 import java.util.ArrayList;
 
-import javax.media.opengl.GL3;
 import javax.swing.JFrame;
 
 import common.ColorTable;
 import model.Atom;
 import model.AtomData;
-import model.BoxParameter;
+import model.ColoringFilter;
 import model.RenderingConfiguration;
 import model.ImportConfiguration;
 import model.DataColumnInfo;
@@ -176,80 +172,52 @@ public class FeC_virtStructure extends FeCStructure {
 	
 	private static final class PlaceholderDataContainer extends ParticleDataContainer<Atom>{
 		private static JParticleDataControlPanel<Atom> dataPanel = null;
+		private static PlaceholderColoringFilter colFunc;
 		
 		@Override
 		protected String getLabelForControlPanel() {
 			return "Placeholder";
 		}
-
-		@Override
-		public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
-			return;
-		}
-
-		@Override
-		public void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
-			if (!dataPanel.isDataVisible()) return;
+		
+		protected ColoringFilter<Atom> getColoringFilter(){
+			if(colFunc == null)
+				colFunc = new PlaceholderColoringFilter();
 			
-			if (viewer.isUpdateRenderContent()){
-				float particleSize = getParticleDataControlPanel().getParticleSize();
-				
-				if (viewer.getAtomRenderType() == AtomRenderType.DATA){
-					DataColumnInfo dataInfo = RenderingConfiguration.getSelectedColumn();
-					int selected = particleDataColumns.indexOf(dataInfo);
-					if (selected == -1){
-						for (ObjectRenderData<Atom>.Cell cell : ord.getRenderableCells()){
-							for (int i = 0; i < cell.getNumObjects(); i++) {
-								 cell.getVisibiltyArray()[i] = false;
-							}
-						}
-					} else {
-						float min = dataInfo.getLowerLimit();
-						float max = dataInfo.getUpperLimit();
-						boolean filterMin = RenderingConfiguration.isFilterMin();
-						boolean filterMax = RenderingConfiguration.isFilterMax();
-						boolean inversed = RenderingConfiguration.isFilterInversed();
-						
-						//Set custom color scheme of the data value if present
-						for (ObjectRenderData<Atom>.Cell cell : ord.getRenderableCells()){
-							for (int i = 0; i < cell.getNumObjects(); i++) {
-								Atom c = cell.getObjects().get(i);
-								if (renderRange.accept(c) && 
-									!(((filterMin && c.getData(selected)<min) || (filterMax && c.getData(selected)>max))^inversed)) {
-									 cell.getVisibiltyArray()[i] = true;
-									 cell.getSizeArray()[i] = particleSize;
-									 float[] col = ColorTable.getIntensityGLColor(min, max, c.getData(selected));
-									 cell.getColorArray()[3*i+0] = col[0];
-									 cell.getColorArray()[3*i+1] = col[1];
-									 cell.getColorArray()[3*i+2] = col[2];
-								 } else {
-									 cell.getVisibiltyArray()[i] = false;
-								 }
-							}
-						}
-					}
-				} else {
-					float[] col = getParticleDataControlPanel().getColor();
-					for (ObjectRenderData<Atom>.Cell cell : ord.getRenderableCells()){
-						for (int i = 0; i < cell.getNumObjects(); i++) {
-							Atom c = cell.getObjects().get(i);
-							if (renderRange.accept(c)) {
-								 cell.getVisibiltyArray()[i] = true;
-								 cell.getSizeArray()[i] = particleSize;
-								 cell.getColorArray()[3*i+0] = col[0];
-								 cell.getColorArray()[3*i+1] = col[1];
-								 cell.getColorArray()[3*i+2] = col[2];
-							 } else {
-								 cell.getVisibiltyArray()[i] = false;
-							 }
-						}
-					}	
-				}
-				ord.reinitUpdatedCells();
+			return colFunc;
+		}
+		
+		private class PlaceholderColoringFilter implements ColoringFilter<Atom>{
+			DataColumnInfo dataInfo;
+			int selected;
+			float min, max;
+			boolean filterMin,filterMax,inversed, colorByValue;
+			
+			@Override
+			public boolean accept(Atom a) {
+				if (!colorByValue) return true;
+				if (selected == -1) return false;
+				return !(((filterMin && a.getData(selected)<min) || (filterMax && a.getData(selected)>max))^inversed);
 			}
 			
-			viewer.drawSpheres(gl, ord, picking);
-		}
+			@Override
+			public void update() {
+				dataInfo = RenderingConfiguration.getSelectedColumn();
+				selected = particleDataColumns.indexOf(dataInfo);
+				min = dataInfo.getLowerLimit();
+				max = dataInfo.getUpperLimit();
+				filterMin = RenderingConfiguration.isFilterMin();
+				filterMax = RenderingConfiguration.isFilterMax();
+				inversed = RenderingConfiguration.isFilterInversed();
+				
+				colorByValue = RenderingConfiguration.getViewer().getAtomRenderType() == AtomRenderType.DATA;
+			}
+			
+			@Override
+			public float[] getColor(Atom c) {
+				if (colorByValue) return ColorTable.getIntensityGLColor(min, max, c.getData(selected));
+				else return getParticleDataControlPanel().getColor();
+			}
+		};
 		
 		public boolean processData(AtomData atomData) throws IOException {
 			ArrayList<Atom> realAtoms = new ArrayList<Atom>();
