@@ -124,7 +124,7 @@ public class FeCStructure extends BCCStructure {
 				}
 			}
 			
-			if (co_x0 > 5 && co_x0+co_x1==7 && co_x2<=threshold && neigh.size()==14) return 0;
+			if (co_x0 > 5 && co_x0+co_x1==7 && co_x2<=threshold && count==14) return 0;
 			else if (count==13 && neigh.size()==14 && co_x0==6) return 0;
 			else if (count == 13) return 4;
 			else if (count == 12) return 4;
