@@ -87,6 +87,10 @@ public class RbvModule extends ClonableProcessingModule{
 	
 	@ExportableValue
 	private float acceptanceThreshold = 0.14f;
+	
+	@ExportableValue
+	private boolean defectsOnly = true;
+	
 	private float[] pnl;
 	private float perfectBurgersVectorLength, rbvCorrectionFactor;
 	private float nnbDist;
@@ -101,8 +105,10 @@ public class RbvModule extends ClonableProcessingModule{
 		icoVertices = null;
 	}
 	
-	private RbvModule(AtomData data, List<Atom> atoms, final CrystalStructure s, Grain g, float acceptanceThreshold) {
+	private RbvModule(AtomData data, List<Atom> atoms, final CrystalStructure s, Grain g, RbvModule parent) {
 		this.nnb = new NearestNeighborBuilder<Vec3>(data.getBox(), s.getNearestNeighborSearchRadius(), true);
+		this.defectsOnly = parent.defectsOnly;
+		this.acceptanceThreshold = parent.acceptanceThreshold;
 		
 		Vec3[] perfNeighbors;
 		if (g == null)
@@ -113,7 +119,6 @@ public class RbvModule extends ClonableProcessingModule{
 		this.perfectBurgersVectorLength = s.getPerfectBurgersVectorLength();
 		this.rbvCorrectionFactor = 1f/(s.getRBVIntegrationRadius()/this.perfectBurgersVectorLength);
 		this.nnbDist = s.getNearestNeighborSearchRadius();
-		this.acceptanceThreshold = acceptanceThreshold;
 		
 		//Add vacancy markers as pseudo-particles if existing
 		DataContainer dc = data.getDataContainer(VacancyDataContainer.class);
@@ -162,7 +167,12 @@ public class RbvModule extends ClonableProcessingModule{
 		for (int i=0; i<atoms.size(); i++){
 			Atom a = atoms.get(i);
 			
-			if (s.isRBVToBeCalculated(a)){
+			boolean include = false;
+			//Identify for which atoms RBVs are to be computed
+			if (defectsOnly && s.isRBVToBeCalculated(a)) include = true; 
+			else if(!defectsOnly && s.considerAtomAsNeighborDuringRBVCalculation(a)) include = true;
+			
+			if (include){
 				RbvInfo<Atom> info = new RbvInfo<Atom>();
 				info.atom = atoms.get(i);
 				atomToRbvInfoMap.put(atoms.get(i), info);
@@ -661,9 +671,15 @@ public class RbvModule extends ClonableProcessingModule{
 						+ "<br> Min: 0.05, Max: 1.0</html>",
 						0.14f, 0.05f, 1f);
 		
+		BooleanProperty rbvForAllAtoms = dialog.addBoolean("rbvForAllAtoms", 
+				"Compute RBVs for all atoms in the lattice, not only for defects",
+						"<html>Enabling this options is very time consuming, but may help to identify extended defects in unknown structures<br></html>",
+						false);
+		
 		boolean ok = dialog.showDialog();
 		if (ok){
 			this.acceptanceThreshold = acceptanceThreshold.getValue();
+			this.defectsOnly = !rbvForAllAtoms.getValue();
 		}
 		return ok;
 	}
@@ -681,10 +697,10 @@ public class RbvModule extends ClonableProcessingModule{
 		}
 		
 		if (data.getGrains() == null || data.getGrains().size() == 0)
-			new RbvModule(data, data.getAtoms(), data.getCrystalStructure(), null, acceptanceThreshold);
+			new RbvModule(data, data.getAtoms(), data.getCrystalStructure(), null, this);
 		else {
 			for (Grain g : data.getGrains())
-				new RbvModule(data, g.getAtomsInGrain(), g.getCrystalStructure(), g, acceptanceThreshold);
+				new RbvModule(data, g.getAtomsInGrain(), g.getCrystalStructure(), g, this);
 		}
 		return null;
 	}
