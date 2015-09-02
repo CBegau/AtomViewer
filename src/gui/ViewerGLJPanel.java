@@ -694,37 +694,34 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		if (!RenderOption.BOUNDING_BOX.isEnabled() || picking) return;
 		
 		Vec3[] box = atomData.getBox().getBoxSize();
-		float[] boxVertices = new float[]{
-			0f, 0f, 0f,	 	 0f, 1f, 0f,
-			0f, 1f, 0f,	 	 1f, 1f, 0f,
-			1f, 1f, 0f,	 	 1f, 0f, 0f,
-			1f, 0f, 0f,	 	 0f, 0f, 0f,
-			0f, 0f, 1f,	 	 1f, 0f, 1f,
-			1f, 0f, 1f,	 	 1f, 1f, 1f,
-			1f, 1f, 1f,	 	 0f, 1f, 1f,
-			0f, 1f, 1f,	 	 0f, 0f, 1f,
-			0f, 0f, 0f,	 	 0f, 0f, 1f,
-			0f, 1f, 0f,	 	 0f, 1f, 1f,
-			1f, 0f, 0f,	 	 1f, 0f, 1f,
-			1f, 1f, 0f,	 	 1f, 1f, 1f,
+		Vec3[] v = new Vec3[]{	//Corners of the box to draw
+			new Vec3(0f, 0f, 0f),	new Vec3(0f, 1f, 0f),
+			new Vec3(0f, 1f, 0f),	new Vec3(1f, 1f, 0f),
+			new Vec3(1f, 1f, 0f),	new Vec3(1f, 0f, 0f),
+			new Vec3(1f, 0f, 0f),	new Vec3(0f, 0f, 0f),
+			new Vec3(0f, 0f, 1f),	new Vec3(1f, 0f, 1f),
+			new Vec3(1f, 0f, 1f),	new Vec3(1f, 1f, 1f),
+			new Vec3(1f, 1f, 1f),	new Vec3(0f, 1f, 1f),
+			new Vec3(0f, 1f, 1f),	new Vec3(0f, 0f, 1f),
+			new Vec3(0f, 0f, 0f),	new Vec3(0f, 0f, 1f),
+			new Vec3(0f, 1f, 0f),	new Vec3(0f, 1f, 1f),
+			new Vec3(1f, 0f, 0f),	new Vec3(1f, 0f, 1f),
+			new Vec3(1f, 1f, 0f),	new Vec3(1f, 1f, 1f),
 		};
-		
+		//Scale to actual coordiate system
 		for (int i=0; i<24; i++){
-			float x = box[0].x * boxVertices[i*3] + box[1].x * boxVertices[i*3+1] + box[2].x * boxVertices[i*3+2];
-			float y = box[0].y * boxVertices[i*3] + box[1].y * boxVertices[i*3+1] + box[2].y * boxVertices[i*3+2];
-			float z = box[0].z * boxVertices[i*3] + box[1].z * boxVertices[i*3+1] + box[2].z * boxVertices[i*3+2];
-			boxVertices[i*3] = x;
-			boxVertices[i*3+1] = y;
-			boxVertices[i*3+2] = z;
+			float x = box[0].x * v[i].x + box[1].x * v[i].y + box[2].x * v[i].z;
+			float y = box[0].y * v[i].x + box[1].y * v[i].y + box[2].y * v[i].z;
+			float z = box[0].z * v[i].x + box[1].z * v[i].y + box[2].z * v[i].z;
+			v[i].setTo(x,y,z);
 		}
-		
+		//Draw the 12 segments each as a cylinder using the tube renderer 
 		BuiltInShader.UNIFORM_COLOR_DEFERRED.getShader().enable(gl);
 		int colorUniform = gl.glGetUniformLocation(BuiltInShader.UNIFORM_COLOR_DEFERRED.getShader().getProgram(), "Color");
 		gl.glUniform4f(colorUniform, 0.7f, 0.7f, 0.7f, 1f);
-		for (int i=0; i<12; i++){
+		for (int i=0; i<24; i+=2){
 			ArrayList<Vec3> points = new ArrayList<Vec3>();
-			points.add(new Vec3(boxVertices[i*6], boxVertices[i*6+1], boxVertices[i*6+2]));
-			points.add(new Vec3(boxVertices[i*6+3], boxVertices[i*6+4], boxVertices[i*6+5]));
+			points.add(v[i]); points.add(v[i+1]);
 			TubeRenderer.drawTube(gl, points, atomData.getBox().getHeight().maxComponent()/200f);
 		}	
 	}
