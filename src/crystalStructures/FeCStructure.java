@@ -72,10 +72,6 @@ public class FeCStructure extends BCCStructure {
 	
 	@Override
 	public int identifyAtomType(Atom atom, NearestNeighborBuilder<Atom> nnb) {
-		int threshold = highTempProperty.getValue() ? 3 : 2;
-		float t1 = highTempProperty.getValue() ? -.77f : -.75f;
-		float t2 = highTempProperty.getValue() ? -.69f : -0.67f;
-		ArrayList<Tupel<Atom, Vec3>> neigh = nnb.getNeighAndNeighVec(atom);		
 		/*
 		 * type=0: bcc
 		 * type=1: unused
@@ -86,14 +82,19 @@ public class FeCStructure extends BCCStructure {
 		 * type=6: less than 11 neighbors
 		 * type=7: carbon
 		 */
-		
+		int numTypes = getNumberOfElements();
 		//carbon
-		if (atom.getElement()%2 == 1) return 7;
+		if (atom.getElement()%numTypes == 1) return 7;
+		
+		int threshold = highTempProperty.getValue() ? 3 : 2;
+		float t1 = highTempProperty.getValue() ? -.77f : -.75f;
+		float t2 = highTempProperty.getValue() ? -.69f : -0.67f;
+		ArrayList<Tupel<Atom, Vec3>> neigh = nnb.getNeighAndNeighVec(atom);
 		
 		//count Fe neighbors for Fe atoms
 		int count = 0;
 		for (int i=0; i < neigh.size(); i++)
-			if (neigh.get(i).o1.getElement() % 2 == 0) count++;		
+			if (neigh.get(i).o1.getElement() % numTypes == 0) count++;		
 		
 		if (count < 11) return 6;
 		else if (count == 11) return 4;
@@ -103,13 +104,13 @@ public class FeCStructure extends BCCStructure {
 			int co_x1 = 0;
 			int co_x2 = 0;
 			for (int i = 0; i < neigh.size(); i++) {
-				if (neigh.get(i).o1.getElement() % 2 == 1) continue; //ignore carbon atoms
+				if (neigh.get(i).o1.getElement() % numTypes != 0) continue; //ignore carbon atoms
 				Vec3 v = neigh.get(i).o2;
 				
 				float v_length = v.getLength();
 				
 				for (int j = 0; j < i; j++) {
-					if (neigh.get(j).o1.getElement() % 2 == 1) continue; //ignore carbon atoms
+					if (neigh.get(j).o1.getElement() % numTypes != 0) continue; //ignore carbon atoms
 					Vec3 u = neigh.get(j).o2;
 					float u_length = u.getLength();
 					float a = v.dot(u) / (v_length*u_length);

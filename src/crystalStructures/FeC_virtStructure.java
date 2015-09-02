@@ -31,8 +31,6 @@ import javax.media.opengl.GL3;
 import javax.swing.JFrame;
 
 import common.ColorTable;
-import common.Tupel;
-import common.Vec3;
 import model.Atom;
 import model.AtomData;
 import model.BoxParameter;
@@ -47,7 +45,7 @@ import processingModules.ProcessingResult;
 import processingModules.otherModules.ParticleDataContainer;
 import processingModules.toolchain.Toolchain;
 
-public class FeC_virtStructure extends BCCStructure {
+public class FeC_virtStructure extends FeCStructure {
 	
 	protected BooleanProperty placeholderProperty = 
 			new BooleanProperty("placeholders", "handle Placeholders separately","", true);
@@ -89,7 +87,7 @@ public class FeC_virtStructure extends BCCStructure {
 	 * Ignore carbon and placeholders
 	 */
 	public boolean considerAtomAsNeighborDuringRBVCalculation(Atom a){
-		if (a.getType() == 7) return false;
+		if (a.getType() == 7 || a.getType() == 8) return false;
 		return true;
 	}
 	
@@ -120,74 +118,8 @@ public class FeC_virtStructure extends BCCStructure {
 	
 	@Override
 	public int identifyAtomType(Atom atom, NearestNeighborBuilder<Atom> nnb) {
-		int threshold = highTempProperty.getValue() ? 3 : 2;
-		float t1 = highTempProperty.getValue() ? -.77f : -.75f;
-		float t2 = highTempProperty.getValue() ? -.69f : -0.67f;
-		ArrayList<Tupel<Atom, Vec3>> neigh = nnb.getNeighAndNeighVec(atom);		
-		/*
-		 * type=0: bcc
-		 * type=1: unused
-		 * type=2: unused
-		 * type=3: 14 neighbors
-		 * type=4: 11-13 neighbors
-		 * type=5: >14 neighbors
-		 * type=6: less than 11 neighbors
-		 * type=7: carbon
-		 */
-		
-		//carbon
-		if (atom.getElement()%3 == 1) return 7;
-		//placeholder
-		else if (atom.getElement()%3 == 2) return 8;
-		
-		//count Fe neighbors for Fe atoms
-		int count = 0;
-		for (int i=0; i < neigh.size(); i++)
-			if (neigh.get(i).getO1().getElement() % 3 == 0) count++;		
-		
-		if (count < 11) return 6;
-		else if (count == 11) return 4;
-		else if (count >= 15) return 5;
-		else {
-			int co_x0 = 0;
-			int co_x1 = 0;
-			int co_x2 = 0;
-			for (int i = 0; i < neigh.size(); i++) {
-				if (neigh.get(i).getO1().getElement() % 3 != 0) continue; //ignore carbon atoms
-				Vec3 v = neigh.get(i).getO2();
-				
-				float v_length = v.getLength();
-				
-				for (int j = 0; j < i; j++) {
-					if (neigh.get(j).getO1().getElement() % 3 != 0) continue; //ignore carbon atoms
-					Vec3 u = neigh.get(j).getO2();
-					float u_length = u.getLength();
-					float a = v.dot(u) / (v_length*u_length);
-					
-					if (a < -.945)
-						co_x0++;
-					else if (a < -.915)
-						co_x1++;
-					else if (a > t1 && a< t2)
-						co_x2++;
-				}
-			}
-			
-			if (co_x0 > 5 && co_x0+co_x1==7 && co_x2<=threshold && count==14) return 0;
-			else if (count==13 && neigh.size()==14 && co_x0==6) return 0;
-			else if (count == 13) return 4;
-			else if (count == 12) return 4;
-			else return 3;
-		}
-	}
-	
-	@Override
-	public boolean isRBVToBeCalculated(Atom a) {
-		int type = a.getType();		
-		if (type != 0 && type < 6) {			
-			return true;
-		}
-		return false;		
+		if (atom.getElement()%3 == 2) return 8;	//Placeholder particles
+		else return super.identifyAtomType(atom, nnb);
 	}
 	
 	@Override
