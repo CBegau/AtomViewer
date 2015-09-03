@@ -69,8 +69,8 @@ public class SphereRenderer {
 		//Select the rendering shader
 		Shader shader;
 		if (RenderingConfiguration.Options.PERFECT_SPHERES.isEnabled())
-			shader = BuiltInShader.BILLBOARD_DEFERRED_PERFECT.getShader();
-		else shader = BuiltInShader.BILLBOARD_DEFERRED.getShader();
+			shader = BuiltInShader.SPHERE_DEFERRED_PERFECT.getShader();
+		else shader = BuiltInShader.SPHERE_DEFERRED.getShader();
 		
 		//Set all uniforms, depending on the active shader, some may not be used
 		shader.enable(gl);
@@ -137,8 +137,8 @@ public class SphereRenderer {
 		//Select the rendering shader
 		Shader shader;
 		if (RenderingConfiguration.Options.PERFECT_SPHERES.isEnabled())
-			shader = BuiltInShader.BILLBOARD_INSTANCED_DEFERRED_PERFECT.getShader();
-		else shader = BuiltInShader.BILLBOARD_INSTANCED_DEFERRED.getShader();
+			shader = BuiltInShader.SPHERE_INSTANCED_DEFERRED_PERFECT.getShader();
+		else shader = BuiltInShader.SPHERE_INSTANCED_DEFERRED.getShader();
 
 		// Init the shader for drawing test bounding boxes
 		Shader visTestShader = BuiltInShader.VERTEX_ARRAY_COLOR_UNIFORM.getShader();
