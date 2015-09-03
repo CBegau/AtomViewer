@@ -583,9 +583,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			blurShader.enable(gl);
 			updateModelViewInShader(gl, blurShader, new GLMatrix(), setupProjectionFlatMatrix());
 			
-			gl.glUniform1f(gl.glGetUniformLocation(blurShader.getProgram(), "radius"), 4f);
 			gl.glUniform1f(gl.glGetUniformLocation(blurShader.getProgram(), "resolution"), width);
-			gl.glUniform1i(gl.glGetUniformLocation(blurShader.getProgram(), "tex"), 4);
 			gl.glUniform2f(gl.glGetUniformLocation(blurShader.getProgram(), "dir"), 1f, 0f);
 			
 			gl.glBindTexture(GL.GL_TEXTURE_2D, ssaoFBO.getColorTextureName());
@@ -1926,6 +1924,11 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		gl.glUniform1f(gl.glGetUniformLocation(prog, "ssaoStrength"), 0.15f);
 		gl.glUniform1f(gl.glGetUniformLocation(prog, "ssaoFalloff"), 0.0008f);
 		gl.glUniform1f(gl.glGetUniformLocation(prog, "ssaoRad"), 0.005f);
+		
+		BuiltInShader.BLUR.getShader().enable(gl);
+		prog = BuiltInShader.BLUR.getShader().getProgram();
+		gl.glUniform1i(gl.glGetUniformLocation(prog, "tex"), 4);
+		gl.glUniform1f(gl.glGetUniformLocation(prog, "radius"), 4f);
 		
 		Shader.disableLastUsedShader(gl);
 	}
