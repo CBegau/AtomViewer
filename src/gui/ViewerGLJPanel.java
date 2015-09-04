@@ -1179,32 +1179,31 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		if (RenderOption.STEREO.isEnabled() || RenderOption.PERSPECTIVE.isEnabled()) return;
 		if (atomData == null) return;
 		
+		final int blocks = 4;
 		float size = 50;
 		float unitLengthInPixel = estimateUnitLengthInPixels();
 		float unitsOnScreen = width/unitLengthInPixel;
 		float a = unitsOnScreen/10;
 		
+		//Determine best fitting size for the label
+		//Possible values are 1*10^x, 2*10^x and 5*10^x, which x the nearest power
 		float power = (float)Math.ceil(Math.log10(a));
 		float b = a/(float)Math.pow(10, power);
 		if (b>0.5) size = 1;
 		else if (b>0.33f) size = 0.5f;
 		else size = 0.2f;
-		
 		size *= (int)Math.pow(10, power);
-		
 		String sizeString = String.format("%.1f",size);
-		int blocks = 4;
 		
-		int xshift = width/10;
-		int yshift = height-2*(height/20);
+		//The length scale box is placed 10% of the screen resolution away from the upper, left corner
+		final int xshift = width/10;
+		final int yshift = height-(height/10);
 		
 		gl.glDisable(GL.GL_DEPTH_TEST);
-		
 		GLMatrix mvm = new GLMatrix();
 		GLMatrix pm = setupProjectionFlatMatrix();
-		updateModelViewInShader(gl, BuiltInShader.NO_LIGHTING.getShader(), mvm, pm);
-		
 		BuiltInShader.NO_LIGHTING.getShader().enable(gl);
+		updateModelViewInShader(gl, BuiltInShader.NO_LIGHTING.getShader(), mvm, pm);
 		
 		float w = (size*unitLengthInPixel)/blocks;
 		float h_scale = (height/20f)/10f;
@@ -1215,38 +1214,40 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		float textWidth = textRenderer.getStringWidth(sizeString)*textscale;
 		float minSize = Math.max(textWidth+5, w*blocks);
 		
+		//Draw black background
 		VertexDataStorageLocal vds = new VertexDataStorageLocal(gl, 4, 2, 0, 0, 4, 0, 0, 0, 0);
 		vds.beginFillBuffer(gl);
 		
-		vds.setColor(0f, 0f, 0f, 1f); vds.setVertex(xshift-10-border, yshift-textHeigh-border);
-		vds.setColor(0f, 0f, 0f, 1f); vds.setVertex(xshift+minSize+10+border, yshift-textHeigh-border);
-		vds.setColor(0f, 0f, 0f, 1f); vds.setVertex(xshift-10-border, yshift+10*h_scale+border);
-		vds.setColor(0f, 0f, 0f, 1f); vds.setVertex(xshift+minSize+10+border, yshift+10*h_scale+border);
+		vds.setColor(0f, 0f, 0f, 1f);
+		vds.setVertex(xshift-10-border, yshift-textHeigh-border);
+		vds.setVertex(xshift+minSize+10+border, yshift-textHeigh-border);
+		vds.setVertex(xshift-10-border, yshift+10*h_scale+border);
+		vds.setVertex(xshift+minSize+10+border, yshift+10*h_scale+border);
 			
 		vds.endFillBuffer(gl);
 		vds.draw(gl, GL.GL_TRIANGLE_STRIP);
 		vds.dispose(gl);
 		
-		//Draw white background
+		//Draw white rectangle into black background -> white area + black border
 		vds = new VertexDataStorageLocal(gl, 4, 2, 0, 0, 4, 0, 0, 0, 0);
 		vds.beginFillBuffer(gl);
 		
-		vds.setColor(1f, 1f, 1f, 1f); vds.setVertex(xshift-10, yshift-textHeigh);
-		vds.setColor(1f, 1f, 1f, 1f); vds.setVertex(xshift+minSize+10, yshift-textHeigh);
-		vds.setColor(1f, 1f, 1f, 1f); vds.setVertex(xshift-10, yshift+10*h_scale);
-		vds.setColor(1f, 1f, 1f, 1f); vds.setVertex(xshift+minSize+10, yshift+10*h_scale);
+		vds.setColor(1f, 1f, 1f, 1f);
+		vds.setVertex(xshift-10, yshift-textHeigh);
+		vds.setVertex(xshift+minSize+10, yshift-textHeigh);
+		vds.setVertex(xshift-10, yshift+10*h_scale);
+		vds.setVertex(xshift+minSize+10, yshift+10*h_scale);
 		
 		vds.endFillBuffer(gl);
 		vds.draw(gl, GL.GL_TRIANGLE_STRIP);
 		vds.dispose(gl);
 		
-		//Lenght bar
+		//Add lenght bar
 		vds = new VertexDataStorageLocal(gl, blocks*6, 2, 0, 0, 4, 0, 0, 0, 0);
 		float offset = Math.min(w*blocks-(textWidth+5), 0f)*-0.5f;
     	for (int i=0; i<blocks; i++){
     		float c = i%2==0? 0.7f: 0f;
-    		for (int j=0; j<6; j++)
-    			vds.setColor(c, c, c, 1f);
+    		vds.setColor(c, c, c, 1f);
     		
     		vds.setVertex(offset + w*i+xshift, yshift+8*h_scale);
     		vds.setVertex(offset + w*i+xshift, yshift+2*h_scale);
@@ -1260,7 +1261,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		vds.draw(gl, GL.GL_TRIANGLES);
 		vds.dispose(gl);
 		
-		//Label
+		//Add label
 		textRenderer.beginRendering(gl, 0f, 0f, 0f, 1f, mvm, pm);
     	textRenderer.draw(gl, sizeString, minSize*0.5f-textWidth*0.5f+xshift,
     			yshift+2*h_scale-textRenderer.getStringHeigh()*textscale, 1f, textscale);
