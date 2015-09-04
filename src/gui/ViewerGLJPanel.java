@@ -1105,8 +1105,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			if (Math.abs(z-atomData.getCrystalRotation().getCrystalOrientation()[i].z) > 1e-5f) evenNumbers = false;
 		}
 		
-		textRenderer.setColor(gl, 0f, 0f, 0f, 1f);
-		
 		//Labels
 		for (int i=0; i<3; i++){
 			String s = "";
@@ -1128,10 +1126,8 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			else mvm_new.translate(-0.05f, 0.1f, 0f);
 			
 			gl.glDisable(GL.GL_DEPTH_TEST);
-			textRenderer.beginRendering(gl);
-			updateModelViewInShader(gl, Shader.BuiltInShader.PLAIN_TEXTURED.getShader(), mvm_new, pm);
+			textRenderer.beginRendering(gl, 0f, 0f, 0f, 1f, mvm_new, pm);
 	        textRenderer.draw(gl, s, 0f, 0f, 0f, 0.0025f);
-	        updateModelViewInShader(gl, Shader.BuiltInShader.PLAIN_TEXTURED.getShader(), mvm, pm);
 	        textRenderer.endRendering(gl);
 	        gl.glEnable(GL.GL_DEPTH_TEST);
 		}
@@ -1168,15 +1164,12 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
         vds.draw(gl, GL.GL_TRIANGLE_STRIP);
         vds.dispose(gl);
         
-		textRenderer.setColor(gl, 0f, 0f, 0f, 1f);
 		//Labels
-		textRenderer.beginRendering(gl);
-		updateModelViewInShader(gl, Shader.BuiltInShader.PLAIN_TEXTURED.getShader(), mvm, pm);
+		textRenderer.beginRendering(gl, 0f, 0f, 0f, 1f, mvm, pm);
     	textRenderer.draw(gl, this.legendLabels[0], width*0.01f+height*0.06f, height*0.01f, zoom*1.01f, 0.00035f*height);
    		textRenderer.draw(gl, this.legendLabels[1], width*0.01f+height*0.06f, height*0.13f, zoom*1.01f, 0.00035f*height);
     	textRenderer.draw(gl, this.legendLabels[2], width*0.01f+height*0.06f, height*0.25f, zoom*1.01f, 0.00035f*height);
 	    textRenderer.endRendering(gl);
-	    updateModelViewInShader(gl, Shader.BuiltInShader.PLAIN_TEXTURED.getShader(), modelViewMatrix, projectionMatrix);
         gl.glEnable(GL.GL_DEPTH_TEST);
         drawLegendThisFrame = false;
 	}
@@ -1267,11 +1260,8 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		vds.draw(gl, GL.GL_TRIANGLES);
 		vds.dispose(gl);
 		
-		
-		textRenderer.setColor(gl, 0f, 0f, 0f, 1f);
-		//Labels
-		textRenderer.beginRendering(gl);
-		updateModelViewInShader(gl, Shader.BuiltInShader.PLAIN_TEXTURED.getShader(), mvm, pm);
+		//Label
+		textRenderer.beginRendering(gl, 0f, 0f, 0f, 1f, mvm, pm);
     	textRenderer.draw(gl, sizeString, minSize*0.5f-textWidth*0.5f+xshift,
     			yshift+2*h_scale-textRenderer.getStringHeigh()*textscale, 1f, textscale);
 	    textRenderer.endRendering(gl);

@@ -28,10 +28,12 @@ public class Shader {
 	public final static int FRAG_NORMAL = 1;
 	public final static int FRAG_POSITION = 2;
 	
-	private final static String vertexArrayColorUniformVertexShader = 
+	private final static String defaultVertexShaderUniformColor = 
 		"#version $VERSION$\n"+
 		"in vec3 v;" +
+		"in vec2 Tex;" +
 		"out vec4 FrontColor;" +
+		"out vec2 TexCoord0;" +
 		
 		"uniform vec4 Color;" +
 		"uniform mat4 mvpm;"+
@@ -40,6 +42,7 @@ public class Shader {
 		"{"+
 		"gl_Position = mvpm * vec4(v,1);"+
 		"FrontColor  = Color;"+
+		"TexCoord0   = Tex;"+
 		"}"
 	;
 	
@@ -99,11 +102,12 @@ public class Shader {
 	private final static String simpleTextureShader = 
 		"#version $VERSION$\n"+
 		"uniform sampler2D Texture0;"+
+		"in vec4 FrontColor;" +
 		"in vec2 TexCoord0;"+
 		"out vec4 vFragColor;"+
 		
 		"void main(void) {"+
-			"vFragColor   = texture(Texture0, TexCoord0.xy);"+
+			"vFragColor   = texture(Texture0, TexCoord0.xy)*FrontColor;"+
 		"}"
 	;	
 	
@@ -951,7 +955,7 @@ public class Shader {
 	public enum BuiltInShader {
 		//Shader for forward rendering
 		VERTEX_ARRAY_COLOR_UNIFORM(
-				new String[]{vertexArrayColorUniformVertexShader}, 
+				new String[]{defaultVertexShaderUniformColor}, 
 				new String[]{simpleColorFragmentShader},
 				new int[]{ATTRIB_VERTEX}, 
 				new String[]{"v"}),
@@ -961,7 +965,7 @@ public class Shader {
 				new int[]{ATTRIB_VERTEX, ATTRIB_COLOR}, 
 				new String[]{"v", "Color"}),
 		PLAIN_TEXTURED(
-				new String[]{defaultVertexShader},
+				new String[]{defaultVertexShaderUniformColor},
 				new String[]{simpleTextureShader},
 				new int[]{ATTRIB_VERTEX, ATTRIB_TEX0},
 				new String[]{"v", "Tex"}),
