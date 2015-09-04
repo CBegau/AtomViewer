@@ -609,7 +609,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		int prog = s.getProgram();
 		s.enable(gl);
 		
-		updateModelViewInShader(gl, s, modelViewMatrix, projectionMatrix);
+		updateModelViewInShader(gl, s, new GLMatrix(), projectionMatrix);
 		gl.glUniformMatrix4fv(gl.glGetUniformLocation(s.getProgram(), "mvpm"), 1, false, pm.getMatrix());
 		
 		if (!picking){
@@ -626,6 +626,8 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		}
 		
 		fullScreenQuad.draw(gl, GL.GL_TRIANGLE_STRIP);
+		
+		updateModelViewInShader(gl, s, modelViewMatrix, projectionMatrix);
 		
 		if (ssaoFBO != null) ssaoFBO.destroy(gl);
 		if (targetFbo != null)	//rebind if necessary after destruction of ssaoFBO

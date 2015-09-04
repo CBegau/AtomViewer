@@ -269,11 +269,9 @@ public class Shader {
 		"void main(void) {"+
 		"  vec4 FrontColor = texture(colorTexture, TexCoord0.st);"+
 		"  vec4 normTexel = texture(normalTexture, TexCoord0.st);"+
-		"  vFragColor.rgb = vec3(0.);"+
 		"  vFragColor.a = 1.;"+
-		"  if (FrontColor.a >= 0.05) {"+
-		"    vFragColor.rgb = vec3(occlusion(normTexel) * FrontColor.a);"+
-		"  }"+
+		//Assign color if alpha > 0.05, otherwise the value is 0.
+		"  vFragColor.rgb = vec3(occlusion(normTexel) * FrontColor.a) * step(0.05, FrontColor.a);"+
 		"}"
 	;
 	
@@ -347,13 +345,13 @@ public class Shader {
 		"    vec3 lv = normalize(lightPos - v);"+
 		//ambient, diffusion and occlusion factors for lighting
 		"	 float occ = ambientOcclusion==1 ? texture(occlusionTexture, TexCoord0.st).r : 0.;"+
-		"    float diff = max(0.0, dot(norm, lv)-occ);"+
+		"    float diff = max(0.0, dot(norm, lv));"+
 		//In case of specular lighting use an ambient factor of 0.5 otherwise 0.3
 		"    float ambient = 0.5 - ads*0.2;"+
 		//Multiply specular value with the ads uniform, disables effect if required
-		"    float spec = max(0.0, dot(norm, reflect(-lv, norm))-occ)*ads;"+
+		"    float spec = max(0.0, dot(norm, reflect(-lv, norm)))*ads;"+
 		"    float fSpec = pow(spec, 96.0);"+
-		"    vFragColor.rgb = vFragColor.rgb*(diff+ambient) + fSpec;"+
+		"    vFragColor.rgb = (vFragColor.rgb*(diff+ambient) + fSpec)-occ;"+
 		
 		"  }\n"+
 		"  gl_FragDepth = FrontColor.a>0 ? normTexel[3] : 1.;"+			// normal[3] is the depth value
