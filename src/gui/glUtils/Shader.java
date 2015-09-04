@@ -283,7 +283,7 @@ public class Shader {
 
 		//declare uniforms
 		"uniform sampler2D tex; "+
-		"uniform float resolution; "+
+		"uniform vec2 resolution; "+
 		"uniform float radius; "+
 		"uniform vec2 dir; \n"+
 
@@ -292,7 +292,7 @@ public class Shader {
         "                                                                                               "+
 		"    vec2 tc =TexCoord0;                                                                        "+
         "                                                                                               "+
-		"    float blur = radius/resolution;                                                            "+
+		"    float blur = radius/dot(resolution,dir);                                                   "+
         "                                                                                               "+
 		"    float hstep = dir.x;                                                                       "+
 		"    float vstep = dir.y;                                                                       "+

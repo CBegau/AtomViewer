@@ -553,7 +553,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		gl.glBindTexture(GL.GL_TEXTURE_2D,  fboDeferredBuffer.getNormalTextureName());
 		gl.glActiveTexture(GL.GL_TEXTURE0+Shader.FRAG_POSITION);
 		gl.glBindTexture(GL.GL_TEXTURE_2D, fboDeferredBuffer.getPositionTextureName());
-
+		
 		if (RenderingConfiguration.Options.SSAO.isEnabled() & !picking){
 			//Switch to the SSAO shader, render into new FBO
 			if (targetFbo != null)
@@ -565,7 +565,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			Shader ssaoShader = BuiltInShader.SSAO.getShader();
 			ssaoShader.enable(gl);
 			
-			updateModelViewInShader(gl, ssaoShader, new GLMatrix(), setupProjectionFlatMatrix());
+			gl.glUniformMatrix4fv(gl.glGetUniformLocation(ssaoShader.getProgram(), "mvpm"), 1, false, pm.getMatrix());
 			
 			gl.glUniform1f(gl.glGetUniformLocation(ssaoShader.getProgram(), "ssaoOffset"), 5.25f*zoom);
 			gl.glActiveTexture(GL.GL_TEXTURE0+4);
@@ -573,29 +573,24 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			
 			fullScreenQuad.draw(gl, GL.GL_TRIANGLE_STRIP);
 			
-			ssaoFBO.unbind(gl);
-			
-			//Blur the results, first horizontal
+			//Blur the results, first horizontal, write results in temporary fbo
 			FrameBufferObject blurFBO = new FrameBufferObject(width, height, gl, false, false);
 			blurFBO.bind(gl, false);
 			
 			Shader blurShader = BuiltInShader.BLUR.getShader();
 			blurShader.enable(gl);
-			updateModelViewInShader(gl, blurShader, new GLMatrix(), setupProjectionFlatMatrix());
 			
-			gl.glUniform1f(gl.glGetUniformLocation(blurShader.getProgram(), "resolution"), width);
+			gl.glUniformMatrix4fv(gl.glGetUniformLocation(blurShader.getProgram(), "mvpm"), 1, false, pm.getMatrix());
+			
+			gl.glUniform2f(gl.glGetUniformLocation(blurShader.getProgram(), "resolution"), width,height);
 			gl.glUniform2f(gl.glGetUniformLocation(blurShader.getProgram(), "dir"), 1f, 0f);
-			
 			gl.glBindTexture(GL.GL_TEXTURE_2D, ssaoFBO.getColorTextureName());
-			
 			fullScreenQuad.draw(gl, GL.GL_TRIANGLE_STRIP);
-			//then once more in vertical direction
+			
+			//then once more in vertical direction, write final results into the ssao fbo
 			ssaoFBO.bind(gl, false);
-			
 			gl.glUniform2f(gl.glGetUniformLocation(blurShader.getProgram(), "dir"), 0f, 1f);
-			gl.glUniform1f(gl.glGetUniformLocation(blurShader.getProgram(), "resolution"), height);
 			gl.glBindTexture(GL.GL_TEXTURE_2D, blurFBO.getColorTextureName());
-			
 			fullScreenQuad.draw(gl, GL.GL_TRIANGLE_STRIP);
 			
 			ssaoFBO.unbind(gl);
@@ -609,25 +604,21 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		int prog = s.getProgram();
 		s.enable(gl);
 		
-		updateModelViewInShader(gl, s, new GLMatrix(), projectionMatrix);
 		gl.glUniformMatrix4fv(gl.glGetUniformLocation(s.getProgram(), "mvpm"), 1, false, pm.getMatrix());
 		
 		if (!picking){
-			if (RenderingConfiguration.Options.NO_SHADING.isEnabled())
-				gl.glUniform1i(gl.glGetUniformLocation(prog, "noShading"), 1);
-			else gl.glUniform1i(gl.glGetUniformLocation(prog, "noShading"), 0);
+			gl.glUniform1i(gl.glGetUniformLocation(prog, "noShading"),
+					RenderingConfiguration.Options.NO_SHADING.isEnabled()?1:0);
+			gl.glUniform1i(gl.glGetUniformLocation(prog, "ambientOcclusion"), 
+					RenderingConfiguration.Options.SSAO.isEnabled()?1:0);
 			
 			if (RenderingConfiguration.Options.SSAO.isEnabled()){
 				gl.glActiveTexture(GL.GL_TEXTURE0+4);
 				gl.glBindTexture(GL.GL_TEXTURE_2D, ssaoFBO.getColorTextureName());
 			}
-			gl.glUniform1i(gl.glGetUniformLocation(prog, "ambientOcclusion"), 
-					RenderingConfiguration.Options.SSAO.isEnabled()?1:0);
 		}
 		
 		fullScreenQuad.draw(gl, GL.GL_TRIANGLE_STRIP);
-		
-		updateModelViewInShader(gl, s, modelViewMatrix, projectionMatrix);
 		
 		if (ssaoFBO != null) ssaoFBO.destroy(gl);
 		if (targetFbo != null)	//rebind if necessary after destruction of ssaoFBO
@@ -1916,6 +1907,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		gl.glUniform1i(gl.glGetUniformLocation(prog, "normalTexture"), Shader.FRAG_NORMAL);
 		gl.glUniform1i(gl.glGetUniformLocation(prog, "posTexture"), Shader.FRAG_POSITION);
 		gl.glUniform1i(gl.glGetUniformLocation(prog, "occlusionTexture"), 4);
+		gl.glUniformMatrix4fv(gl.glGetUniformLocation(prog, "mvm"), 1, false, new GLMatrix().getMatrix());
 		
 		BuiltInShader.SSAO.getShader().enable(gl);
 		prog = BuiltInShader.SSAO.getShader().getProgram();
