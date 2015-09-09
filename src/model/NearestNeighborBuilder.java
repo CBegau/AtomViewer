@@ -545,10 +545,10 @@ public class NearestNeighborBuilder<T extends Vec3> {
 		ArrayList<Vec3> n = getNeighVec(c);
 		if (n.size() == 0) return null;
 		int closest = 0;
-		float dist = n.get(0).getLengthSqr();
+		float dist = n.get(0).getLength();
 		
 		for (int i=1; i<n.size(); i++){
-			float a = n.get(1).getLengthSqr();
+			float a = n.get(i).getLength();
 			if (a<dist){
 				dist = a;
 				closest = i;
@@ -571,7 +571,7 @@ public class NearestNeighborBuilder<T extends Vec3> {
 		float dist = n.get(0).o2.getLengthSqr();
 		
 		for (int i=1; i<n.size(); i++){
-			float a = n.get(1).o2.getLengthSqr();
+			float a = n.get(i).o2.getLengthSqr();
 			if (a<dist){
 				dist = a;
 				closest = i;
