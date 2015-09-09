@@ -110,10 +110,13 @@ public class Vertex extends Vec3 implements Comparable<Vertex>, MeshElement{
 	public void shrink(NearestNeighborBuilder<? extends Vec3> nnb, float offset){
 		Vec3 dir = nnb.getVectorToNearest(this);
 		if (dir==null) return;
-		if (offset>0f)
-			dir.sub(dir.normalizeClone().multiply(offset));
-		
-		this.add(dir.multiply(0.4f));
+		float factor = 0.4f;
+		if (offset>0f){
+			float l = dir.getLength();
+			if (l*(1f-factor)<offset)
+			factor = -offset/(l*(1f-factor));
+		}
+		this.add(dir.multiply(factor));
 	}
 	
 	public HalfEdge getNeighborEdge() {
