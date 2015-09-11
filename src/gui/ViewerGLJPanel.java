@@ -278,23 +278,9 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	@Override
 	public void reshape(GLAutoDrawable arg0, int arg1, int arg2, int arg3, int arg4) {
 		GL3 gl = arg0.getGL().getGL3();
-		arg0.getGL().glViewport(arg1, arg2, arg3, arg4);
+		this.changeResolution(gl, arg3, arg4);
 		reRenderTexture = true;
-		this.width = arg3;
-		this.height = arg4;
-		
-		if (fboDeferredBuffer != null) fboDeferredBuffer.reset(gl, width, height);
-		else fboDeferredBuffer = new FrameBufferObject(width, height, gl, true, true);
-		if (fboLeft != null) fboLeft.reset(gl, width, height);
-		else fboLeft = new FrameBufferObject(width, height, gl);
-		if (fboRight != null) fboRight.reset(gl, width, height);
-		else fboRight = new FrameBufferObject(width, height, gl);
-		if (fboBackground != null) fboBackground.reset(gl, width, height);
-		else fboBackground = new FrameBufferObject(width, height, gl, false, false);
-
-		this.makeBackground();
 		this.arcBall.setSize(this.width, this.height);
-		this.makeFullScreenQuad(gl);
 	}
 	
 	private GLMatrix setupProjectionOrthogonal() {
@@ -440,12 +426,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			
 			gl.glActiveTexture(GL.GL_TEXTURE0);
 			gl.glBindTexture(GL.GL_TEXTURE_2D, fboDeferredBuffer.getColorTextureName());
-			
 			BuiltInShader.FXAA.getShader().enable(gl);
-			
-			gl.glUniform1i(gl.glGetUniformLocation(BuiltInShader.FXAA.getShader().getProgram(), "Texture0"), 0);
-			gl.glUniform1f(gl.glGetUniformLocation(BuiltInShader.FXAA.getShader().getProgram(), "rt_w"), width);
-			gl.glUniform1f(gl.glGetUniformLocation(BuiltInShader.FXAA.getShader().getProgram(), "rt_h"), height);
 			
 			fullScreenQuad.draw(gl, GL.GL_TRIANGLE_STRIP);
 		}
@@ -581,8 +562,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			blurShader.enable(gl);
 			
 			gl.glUniformMatrix4fv(gl.glGetUniformLocation(blurShader.getProgram(), "mvpm"), 1, false, pm.getMatrix());
-			
-			gl.glUniform2f(gl.glGetUniformLocation(blurShader.getProgram(), "resolution"), width,height);
 			gl.glUniform2f(gl.glGetUniformLocation(blurShader.getProgram(), "dir"), 1f, 0f);
 			gl.glBindTexture(GL.GL_TEXTURE_2D, ssaoFBO.getColorTextureName());
 			fullScreenQuad.draw(gl, GL.GL_TRIANGLE_STRIP);
@@ -1718,31 +1697,43 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		}
 	}
     
+	private void changeResolution(GL3 gl, int width, int height){
+		this.width = width;
+		this.height = height;
+		gl.glViewport(0, 0, width, height);
+		this.makeFullScreenQuad(gl);
+		
+		if (fboDeferredBuffer != null) fboDeferredBuffer.reset(gl, width, height);
+		else fboDeferredBuffer = new FrameBufferObject(width, height, gl, true, true);
+		if (fboLeft != null) fboLeft.reset(gl, width, height);
+		else fboLeft = new FrameBufferObject(width, height, gl);
+		if (fboRight != null) fboRight.reset(gl, width, height);
+		else fboRight = new FrameBufferObject(width, height, gl);
+		if (fboBackground != null) fboBackground.reset(gl, width, height);
+		else fboBackground = new FrameBufferObject(width, height, gl, false, false);
+		
+		//Update resolution in shader
+		Shader.BuiltInShader.BLUR.getShader().enableAndPushOld(gl);
+		gl.glUniform2f(gl.glGetUniformLocation(BuiltInShader.BLUR.getShader().getProgram(), "resolution"), width, height);
+		Shader.popShader();
+		Shader.BuiltInShader.FXAA.getShader().enableAndPushOld(gl);
+		gl.glUniform2f(gl.glGetUniformLocation(BuiltInShader.FXAA.getShader().getProgram(), "resolution"), width, height);
+		Shader.popAndEnableShader(gl);
+		
+		this.makeBackground();
+	}
+	
     //region export methods
 	public void makeScreenshot(String filename, String type, boolean sequence, int w, int h) throws Exception{
 		GL3 gl = this.getGLFromContext();
 		
 		int oldwidth = this.width;
 		int oldheight = this.height;
-		this.width = w;
-		this.height = h;
+		
+		this.changeResolution(gl, w, h);
+		FrameBufferObject screenshotFBO = new FrameBufferObject(w, h, gl);
 		
 		try {
-			FrameBufferObject screenshotFBO = new FrameBufferObject(w, h, gl);
-			//store size and FBOs
-			FrameBufferObject fboLeftOld = fboLeft;
-			FrameBufferObject fboRightOld = fboRight;
-			FrameBufferObject fboBackgroundOld = fboBackground;
-			FrameBufferObject deferredFBOOld = fboDeferredBuffer;
-			
-			gl.glViewport(0, 0, w, h);
-			fboDeferredBuffer= new FrameBufferObject(w, h, gl, true, true);
-			fboLeft = new FrameBufferObject(w, h, gl);
-			fboRight = new FrameBufferObject(w, h, gl);
-			fboBackground = new FrameBufferObject(w, h, gl, false, false);
-			this.makeBackground();
-			this.makeFullScreenQuad(gl);
-			
 			if (!sequence) {
 				renderSceneIntoFBOs(gl, RenderOption.STEREO.isEnabled());
 				composeCompleteScene(gl, screenshotFBO);
@@ -1762,25 +1753,16 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 				}	
 				this.setAtomData(currentAtomData, false);
 			}
-			//restore old size and FBOs
-			fboLeft.destroy(gl); fboLeft = fboLeftOld;             
-			fboRight.destroy(gl); fboRight = fboRightOld;           
-			fboBackground.destroy(gl); fboBackground = fboBackgroundOld;
-			fboDeferredBuffer.destroy(gl); fboDeferredBuffer = deferredFBOOld; 
-			renderSceneIntoFBOs(gl, RenderOption.STEREO.isEnabled());
-			screenshotFBO.destroy(gl);
-			
 		} catch (GLException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		} finally {
-			this.width = oldwidth;
-			this.height = oldheight;
-			gl.glViewport(0, 0, this.width, this.height);
-			this.makeFullScreenQuad(gl);
+			//restore old size
+			screenshotFBO.destroy(gl);
+			this.changeResolution(gl, oldwidth, oldheight);
+			this.reDraw();
 		}
-		this.reDraw();
 	}
 	
 	//endregion export methods
@@ -1914,6 +1896,10 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		prog = BuiltInShader.BLUR.getShader().getProgram();
 		gl.glUniform1i(gl.glGetUniformLocation(prog, "tex"), 4);
 		gl.glUniform1f(gl.glGetUniformLocation(prog, "radius"), 4f);
+		
+		BuiltInShader.FXAA.getShader().enable(gl);
+		prog = BuiltInShader.FXAA.getShader().getProgram();
+		gl.glUniform1i(gl.glGetUniformLocation(prog, "Texture0"), 0);
 		
 		Shader.disableLastUsedShader(gl);
 	}
@@ -2100,8 +2086,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 				max = dataInfo.getUpperLimit();
 			}
 			if (selected == -1) return;
-			
-			
+		
 			filterMin = RenderingConfiguration.isFilterMin();
 			filterMax = RenderingConfiguration.isFilterMax();
 			inversed = RenderingConfiguration.isFilterInversed();

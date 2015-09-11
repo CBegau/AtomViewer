@@ -588,18 +588,18 @@ public class Shader {
 		"in vec2 Tex;" +
 		"out vec2 TexCoord0;" +
 		"out vec4 posPos;"+
+		"out vec2 rcpFrame;"+
 		
 		"uniform mat4 mvpm;"+
 		
 		"uniform float FXAA_SUBPIX_SHIFT = 1.0/4.0;"+
-		"uniform float rt_w;"+
-		"uniform float rt_h;"+
+		"uniform vec2 resolution; "+
 		
 		"void main(void)"+
 		"{"+
 		"gl_Position = mvpm * vec4(v,1);"+
 		"TexCoord0   = Tex;"+
-		"vec2 rcpFrame = vec2(1.0/rt_w, 1.0/rt_h);"+
+		"rcpFrame = 1.0/resolution;"+
 		"posPos.xy = TexCoord0.xy;"+
 		"posPos.zw = TexCoord0.xy - (rcpFrame * (0.5 + FXAA_SUBPIX_SHIFT));"+
 		"}"
@@ -610,16 +610,15 @@ public class Shader {
 		
 		"in vec2 TexCoord0;"+
 		"in vec4 posPos;\n"+
+		"in vec2 rcpFrame;"+
 		"out vec4 vFragColor;"+
 		
 		"uniform sampler2D Texture0;"+
 		
-		"uniform float rt_w; \n"+
-		"uniform float rt_h; \n"+
+		"uniform vec2 resolution; "+
 		"uniform float FXAA_SPAN_MAX = 8.0;\n"+
 		"uniform float FXAA_REDUCE_MUL = 1.0/8.0;\n"+
 
-		
 		"#define FxaaInt2 ivec2\n"+
 		"#define FxaaFloat2 vec2\n"+
 		
@@ -675,7 +674,6 @@ public class Shader {
 		"vec4 PostFX(sampler2D tex, vec2 uv)\n"+
 		"{\n"+
 		"  vec4 c = vec4(0.0);\n"+
-		"  vec2 rcpFrame = vec2(1.0/rt_w, 1.0/rt_h);\n"+
 		"  c.rgb = FxaaPixelShader(posPos, tex, rcpFrame);\n"+
 		"  c.a = 1.0;\n"+
 		"  return c;\n"+
