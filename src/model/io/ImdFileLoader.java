@@ -761,7 +761,6 @@ public class ImdFileLoader extends MDFileLoader{
 	private final static boolean processGrainMetaData(String s, Map<String, Object> metaContainer,
 			LineNumberReader lnr, ImportDataContainer idc) throws IOException{
 		boolean imported = PolygrainMetadata.processMetadataLine(s, metaContainer, lnr, idc); 
-		if (imported) idc.grainsImported = true;
 		return imported;
 	}
 }
