@@ -151,6 +151,9 @@ public class FCCTwinnedStructure extends FCCStructure {
 	public List<Grain> identifyGrains(final AtomData data, float meshSize) {
 		if (!data.isGrainsImported()){
 			List<Grain> grains = new Vector<Grain>();
+			//Reset grain ID
+			for (Atom a : data.getAtoms())
+				a.setGrain(Atom.DEFAULT_GRAIN);
 			
 			final List<List<Atom>> grainSets = GrainDetector.identifyGrains(data.getAtoms(), 
 					this.getGrainDetectionCriteria(), data.getBox());
@@ -201,7 +204,7 @@ public class FCCTwinnedStructure extends FCCStructure {
 										if (ng[i] == currentIndex){
 											currentElement++;
 										} else {
-											if (currentElement > maxElement && currentIndex != Atom.DEFAULT_GRAIN) {
+											if (currentElement > maxElement && currentIndex < Atom.DEFAULT_GRAIN) {
 												maxElement = currentElement;
 												maxIndex = currentIndex;
 											}
@@ -210,7 +213,7 @@ public class FCCTwinnedStructure extends FCCStructure {
 										}
 									}
 									
-									if (maxIndex != Atom.DEFAULT_GRAIN){
+									if (maxIndex < Atom.DEFAULT_GRAIN){
 										assigns.add(new Tupel<Atom, Integer>(a, maxIndex));
 									}
 								}

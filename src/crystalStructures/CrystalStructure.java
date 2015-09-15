@@ -688,6 +688,9 @@ public abstract class CrystalStructure{
 		
 		if (!data.isGrainsImported()){
 			//Identify grains from scratch 
+			//Reset grain ID
+			for (Atom a : data.getAtoms())
+				a.setGrain(Atom.DEFAULT_GRAIN);
 			
 			List<List<Atom>> grainSets = GrainDetector.identifyGrains(data.getAtoms(), 
 							this.getGrainDetectionCriteria(), data.getBox());
