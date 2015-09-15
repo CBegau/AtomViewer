@@ -386,8 +386,12 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 			boxSizeLabel[2].setText("");
 			crystalStructureLabel.setText("");
 			return;
+		} else if (e.getOldAtomData() != null && 
+				e.getNewAtomData().getCrystalStructure().getNumberOfTypes()!= 
+				e.getOldAtomData().getCrystalStructure().getNumberOfTypes()){
+			fillIgnoreBoxPanel();
 		}
-		
+			
 		for (DataContainer dc: atomData.getAdditionalData()){
 			dc.getDataControlPanel().update(dc);
 			dataPanel.add(dc.getDataControlPanel(),dataPanelContraints);

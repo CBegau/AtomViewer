@@ -113,7 +113,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	//The index is the position in the list, therefore it is some kind of map
 	private ArrayList<Pickable> pickList = new ArrayList<Pickable>();
 
-	private boolean[] ignoreTypes;
+	private boolean[] ignoreTypes = new boolean[0];
 	private boolean[] ignoreElement = new boolean[0];
 	private HashMap<Integer,Boolean> ignoreGrain = new HashMap<Integer, Boolean>();
 	private HashMap<Integer,float[]> grainColorTable = new HashMap<Integer, float[]>();
@@ -1373,9 +1373,13 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			ignoreElement = newIgnore;
 		}
 		
+		if (atomData.getCrystalStructure().getNumberOfTypes() > ignoreTypes.length){
+			boolean[] newIgnore = new boolean[atomData.getCrystalStructure().getNumberOfTypes()];
+			for (int i=0; i<ignoreTypes.length;i++) newIgnore[i] = ignoreTypes[i];
+			ignoreTypes = newIgnore;
+		}
+		
 		if (reinit){
-			ignoreTypes = new boolean[atomData.getCrystalStructure().getNumberOfTypes()];
-			ignoreElement = new boolean[atomData.getNumberOfElements()];
 			setSphereSize(atomData.getCrystalStructure().getDistanceToNearestNeighbor()*0.55f);
 			if (!atomData.isPolyCrystalline()) RenderOption.GRAINS.enabled = false;
 			
@@ -1459,6 +1463,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	}
 	
 	public boolean isElementIgnored(int i){
+		if (i>=ignoreElement.length) return true;
 		return ignoreElement[i];
 	}
 	
@@ -1484,7 +1489,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	}
 	
 	public void setTypeIgnored(int i, boolean ignore){
-		if (i>atomData.getCrystalStructure().getNumberOfTypes()) return;
 		ignoreTypes[i] = ignore;
 	}
 	
