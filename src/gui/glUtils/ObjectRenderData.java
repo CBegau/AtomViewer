@@ -66,8 +66,8 @@ public class ObjectRenderData<T extends Vec3 & Pickable> {
 				if (o.y > max.y) max.y = o.y;
 				if (o.z > max.z) max.z = o.z;
 			}
-			
-			rootCell = new Cell(max.subClone(min).multiplyClone(0.5f), max.subClone(min));
+			Vec3 size = max.subClone(min);
+			rootCell = new Cell(min.add(size.multiplyClone(0.5f)), size);
 		}
 		
 		this.subdivided = subdivide;
@@ -361,9 +361,9 @@ public class ObjectRenderData<T extends Vec3 & Pickable> {
 				for (int j=0; j<blocks[1]; j++){
 					for (int k=0; k<blocks[2]; k++){
 						Vec3 center = new Vec3();
-						center.x = (this.x - 0.5f*this.size.x) + (0.5f+i) * subBlockSize.x;
-						center.y = (this.y - 0.5f*this.size.y) + (0.5f+j) * subBlockSize.y;
-						center.z = (this.z - 0.5f*this.size.z) + (0.5f+k) * subBlockSize.z;
+						center.x = (this.x - 0.5f*this.size.x) + ((0.5f+i) * subBlockSize.x);
+						center.y = (this.y - 0.5f*this.size.y) + ((0.5f+j) * subBlockSize.y);
+						center.z = (this.z - 0.5f*this.size.z) + ((0.5f+k) * subBlockSize.z);
 						Cell c = new Cell(center, subBlockSize.clone());
 						c.objects = new ArrayList<T>(APPROXIMATE_ELEMENTS_PER_INITIAL_CELL>>2);
 						cells.add(c);
@@ -374,7 +374,7 @@ public class ObjectRenderData<T extends Vec3 & Pickable> {
 			final float invSizeX = 1f/subBlockSize.x;
 			final float invSizeY = 1f/subBlockSize.y;
 			final float invSizeZ = 1f/subBlockSize.z;
-			
+			final Vec3 corner = this.subClone(this.size.multiplyClone(0.5f));
 			Vector<Callable<Void>> tasks = new Vector<Callable<Void>>();
 			
 			for (int i=0; i<ThreadPool.availProcessors(); i++){
@@ -387,9 +387,9 @@ public class ObjectRenderData<T extends Vec3 & Pickable> {
 					public Void call() throws Exception {
 						for (int i=start; i<end; i++){
 							T ra = objects.get(i);
-							int x = (int)(ra.x*invSizeX);
-							int y = (int)(ra.y*invSizeY);
-							int z = (int)(ra.z*invSizeZ);
+							int x = (int)((ra.x-corner.x)*invSizeX);
+							int y = (int)((ra.y-corner.y)*invSizeY);
+							int z = (int)((ra.z-corner.z)*invSizeZ);
 							
 							if (x < 0) x = 0;
 							else if (x >= blocks[0]) x = blocks[0]-1;
