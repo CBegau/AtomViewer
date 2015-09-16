@@ -716,16 +716,16 @@ public class Mesh implements Callable<Void>, Pickable{
 		return cost;
 	}	
 	
-	public synchronized void standardSimplification(float nearestNeighborSearchRadius){
-		shrink(nearestNeighborSearchRadius);
+	public synchronized void standardSimplification(float simplificationRate){
+		shrink(0f);
 		cornerPreservingSmooth();
-		shrink(nearestNeighborSearchRadius);
+		shrink(0f);
 		cornerPreservingSmooth();		
-		shrink(nearestNeighborSearchRadius);
+		shrink(0f);
 		smooth();
 		smooth();
 		
-		simplifyMesh(6f*(float)Math.pow(nearestNeighborSearchRadius,3.));
+		simplifyMesh(6f*(float)Math.pow(simplificationRate,3.));
 	}
 	
 	public synchronized double getVolume(){

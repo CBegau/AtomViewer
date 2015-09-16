@@ -23,7 +23,6 @@ import java.util.*;
 import java.util.concurrent.*;
 
 import common.ThreadPool;
-import common.Tupel;
 import common.Vec3;
 import crystalStructures.CrystalStructure;
 import model.*;
@@ -81,8 +80,10 @@ public class Grain implements Pickable{
 		
 		//The BSPTree implementation is often slower
 		final float threshold = filterDistance;
-		final ClosestTriangleSearchAlgorithm ctsa = new ClosestTriangleSearch(threshold);
-//		final ClosestTriangleSearchAlgorithm ctsa = new BSPTree(threshold);
+		final ClosestTriangleSearchAlgorithm<Atom> ctsa = 
+//				new ClosestTriangleSearchBruteForce<Atom>(threshold, data.getBox(), data.getCrystalStructure().getDistanceToNearestNeighbor());		 
+				new GridRasterTriangleSearch<Atom>(threshold, data.getBox());
+		
 		
 		ArrayList<FinalizedTriangle> trias = new ArrayList<FinalizedTriangle>();
 		for (Grain g : data.getGrains()){
@@ -93,80 +94,14 @@ public class Grain implements Pickable{
 		for (FinalizedTriangle t : trias)
 			ctsa.add(t);
 		
-//		final int defaultType = Configuration.getCrystalStructure().getDefaultType();
-//		final int surfaceType = Configuration.getCrystalStructure().getSurfaceType();
-		final float nnbDist = data.getCrystalStructure().getNearestNeighborSearchRadius();
+		List<Atom> closeToMesh = ctsa.getElementsWithinThreshold(data.getAtoms());
 		
-		final ArrayList<AtomMeshDistanceHelper> atomsToTest = new ArrayList<AtomMeshDistanceHelper>();
-		
-		final NearestNeighborBuilder<AtomMeshDistanceHelper> nnb =
-				new NearestNeighborBuilder<Grain.AtomMeshDistanceHelper>(data.getBox(), nnbDist);
-		
-		for (Atom a : data.getAtoms()){
-//			if (a.getType() != defaultType && a.getType() != surfaceType && a.getGrain() != Atom.DEFAULT_GRAIN){
+		for (Atom a : closeToMesh){
 			if (a.getGrain() != Atom.DEFAULT_GRAIN && a.getGrain() != Atom.IGNORED_GRAIN){
-				AtomMeshDistanceHelper amdh = new AtomMeshDistanceHelper(a);
-				atomsToTest.add(amdh);
-				nnb.add(amdh);
+				data.getGrains(a.getGrain()).decreaseAtomCount();
+				a.setGrain(Atom.IGNORED_GRAIN);
 			}
 		}
-				
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int j = i;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					int start = (int)(((long)atomsToTest.size() * j)/ThreadPool.availProcessors());
-					int end = (int)(((long)atomsToTest.size() * (j+1))/ThreadPool.availProcessors());
-					
-					for (int i=start; i<end; i++){
-						AtomMeshDistanceHelper a = atomsToTest.get(i);
-						if (Thread.interrupted()) return null;
-						
-						ArrayList<Tupel<AtomMeshDistanceHelper, Vec3>> nn = nnb.getNeighAndNeighVec(a);
-						
-						//A (positive) distance has been set before
-						if (!Float.isInfinite(a.distance) && a.distance >= threshold){
-							//Update positions of neighbors as well
-							for (Tupel<AtomMeshDistanceHelper, Vec3> t : nn){
-								AtomMeshDistanceHelper n = t.o1;
-								float minDistToMesh = a.distance-t.o2.getLength(); 
-								if (minDistToMesh>threshold)
-									n.distance = minDistToMesh;
-							}
-						} else if (a.distance+nnbDist < threshold){
-							data.getGrains(a.atom.getGrain()).decreaseAtomCount();
-							a.atom.setGrain(Atom.IGNORED_GRAIN);
-						} else {
-							float distanceToMesh = ctsa.sqrDistToMeshElement(a);
-							
-							distanceToMesh=(float)Math.sqrt(distanceToMesh);
-							if (distanceToMesh < threshold){
-								data.getGrains(a.atom.getGrain()).decreaseAtomCount();
-								a.atom.setGrain(Atom.IGNORED_GRAIN);
-								a.distance = distanceToMesh;
-							} 
-
-							//The atom is so far away from the mesh that
-							//all neighbors cannot be within the threshold
-							//update their minimum distances, to avoid computing these atoms if possible
-							for (Tupel<AtomMeshDistanceHelper, Vec3> t : nn){
-								float dist = t.o2.getLength();
-								AtomMeshDistanceHelper n = t.o1;
-								float minDistToMesh = distanceToMesh-dist; 
-								if (minDistToMesh>threshold)
-									n.distance = minDistToMesh;
-							}
-
-						}
-					}
-					
-					return null;
-				}
-			});
-		};
-		ThreadPool.executeParallel(parallelTasks);
 	}
 	
 	public synchronized Mesh getMesh() {
@@ -351,17 +286,5 @@ public class Grain implements Pickable{
 	public Vec3 getCenterOfObject() {
 		if(mesh == null) return null;
 		return mesh.getCenterOfObject();
-	}
-	
-	private static class AtomMeshDistanceHelper extends Vec3 {
-		Atom atom;
-		float distance;
-		
-		public AtomMeshDistanceHelper(Atom a) {
-			this.setTo(a);
-			this.atom = a;
-			this.distance = Float.POSITIVE_INFINITY;	//Unknown value
-		}
-		
 	}
 }

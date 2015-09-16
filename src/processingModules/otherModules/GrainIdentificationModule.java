@@ -89,7 +89,7 @@ public class GrainIdentificationModule extends ClonableProcessingModule {
 						+ "This value defines the maximum distance at which atoms are excluded."
 						+ "If set to zero, the feature is disabled completely."
 						+ "IMPORTANT: This feature can be very time consuming."
-						+ "Min: 0, Max: 25", 0f, 0f, 25f);		
+						+ "Min: 0, Max: 25", 0f, 0f, 25f);
 		
 		boolean ok = dialog.showDialog();
 		if (ok){
@@ -113,10 +113,13 @@ public class GrainIdentificationModule extends ClonableProcessingModule {
 		
 		ProgressMonitor.getProgressMonitor().setActivityName("Processing grains");
 		
+		for (Grain g : gr){
+			data.addGrain(g);
+			g.getMesh();
+		}
+		
 		if (orderGrainsBySize){
 			ArrayList<Grain> sortedGrains = new ArrayList<Grain>(gr);
-			for (Grain g : sortedGrains)
-				g.getMesh();
 			
 			Collections.sort(gr, new Comparator<Grain>() {
 				@Override
@@ -134,14 +137,8 @@ public class GrainIdentificationModule extends ClonableProcessingModule {
 					a.setGrain(i);
 			}	
 		}
-		
+
 		Grain.processGrains(data, filterGrainsDistance);
-		
-		for (Grain g : gr) {
-			data.addGrain(g);
-			// Make sure all meshes are calculated if grains are imported
-			g.getMesh();
-		}
 		
 		return null;
 	}

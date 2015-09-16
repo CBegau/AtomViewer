@@ -18,25 +18,33 @@
 
 package model.mesh;
 
-import common.Vec3;
+import java.util.List;
 
-public abstract class ClosestTriangleSearchAlgorithm {
+import common.Vec3;
+import model.BoxParameter;
+
+public abstract class ClosestTriangleSearchAlgorithm<T extends Vec3> {
 	
 	float threshold;
+	BoxParameter box;
 	
-	protected ClosestTriangleSearchAlgorithm(float threshold){
-		this.threshold = threshold*threshold;
+	protected ClosestTriangleSearchAlgorithm(float threshold, BoxParameter box){
+		this.threshold = threshold;
+		this.box = box;
 	}
 	
 	public abstract void add(FinalizedTriangle t);
 	
 	/**
-	 * Provides the squared distance to the the mesh from point p
-	 * If no mesh element is closer than the threshold, the exact distance is returned
-	 * Otherwise, the first mesh element found within the threshold distance is returned  
+	 * Provides a squared distance to the mesh from point p
+	 * Depending on the implementation, this can be an exact value or an 
+	 * approximation. The method may return infinity if no element of
+	 * the mesh is found in the vicinity. 
 	 * @param p a point in space
-	 * @return the squared distance that is either the true distance
-	 * to the point p or the first found element that is closer than the threshold
+	 * @return the (approximated) squared distance
 	 */
 	public abstract float sqrDistToMeshElement(Vec3 p);
+	
+	
+	public abstract List<T> getElementsWithinThreshold(List<T> sites);
 }
