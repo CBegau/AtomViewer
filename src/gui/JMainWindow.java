@@ -19,6 +19,7 @@
 package gui;
 
 import gui.PrimitiveProperty.BooleanProperty;
+import gui.PrimitiveProperty.FloatProperty;
 import gui.ViewerGLJPanel.RenderOption;
 
 import java.awt.*;
@@ -234,16 +235,38 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		changeSphereSizeMenuItem.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				String str = JOptionPane.showInputDialog(null, "Enter new sphere size (current "+
-						Float.toString(RenderingConfiguration.getViewer().getSphereSize()) +"): ", 
-						"Enter sphere size", JOptionPane.QUESTION_MESSAGE);
-				try {
-					if (str!=null){
-						float f = Float.parseFloat(str);
-						RenderingConfiguration.getViewer().setSphereSize(f);
+				JPrimitiveVariablesPropertiesDialog d = 
+						new JPrimitiveVariablesPropertiesDialog(JMainWindow.this, "Edit sphere size");
+				FloatProperty defSize = d.addFloat("scale", "Global scaling factor", "Adjust the scaling of all atoms",
+						RenderingConfiguration.getViewer().getSphereSize(), 0.001f, 1000f);
+				
+				FloatProperty[] atomScales = new FloatProperty[0];
+				
+				if (Configuration.getCurrentAtomData() != null){
+					CrystalStructure cs = Configuration.getCurrentAtomData().getCrystalStructure();
+					defSize.setDefaultValue(cs.getDistanceToNearestNeighbor()*0.55f);
+					
+					if (cs.getNumberOfElements() > 1){
+						float[] defsizes = cs.getDefaultSphereSizeScalings();
+						float[] sizes = cs.getSphereSizeScalings();
+						String[] names = cs.getNamesOfElements();
+						atomScales = new FloatProperty[sizes.length];
+						d.add(new JSeparator());
+						d.startGroup("Clustering");
+				
+						d.addLabel("Individual scaling");
+						for (int i=0; i<sizes.length; i++){
+							atomScales[i] = d.addFloat("", names[i], "", sizes[i], 0.001f, 1000f);
+							atomScales[i].setDefaultValue(defsizes[i]); 
+						}
+						d.endGroup();
 					}
-				} catch (Exception ex) {
-					JOptionPane.showMessageDialog(null, "Please enter a valid number", "Warning", JOptionPane.WARNING_MESSAGE);
+				}
+				boolean ok = d.showDialog();
+				if (ok){
+					for (int i=0; i<atomScales.length; i++)
+						Configuration.getCurrentAtomData().getCrystalStructure().setSphereSizeScalings(i, atomScales[i].value);
+					RenderingConfiguration.getViewer().setSphereSize(defSize.value);
 				}
 			}
 		});

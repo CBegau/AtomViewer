@@ -150,10 +150,8 @@ public class YSZStructure extends FCCStructure {
 	}
 	
 	@Override
-	public float[] getSphereSizeScalings() {
-		if (hasArtificialPlaceHolderAtoms.getValue())
-			return new float[]{1f, 0.49f, 1.095f, 0.1f};
-		else return new float[]{1f, 0.49f, 1.095f};
+	public float[] getDefaultSphereSizeScalings(){
+		return new float[]{1f, 0.49f, 1.095f, 0.1f};
 	}
 
 	@Override

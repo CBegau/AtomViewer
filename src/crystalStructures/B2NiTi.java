@@ -114,11 +114,8 @@ public class B2NiTi extends BCCStructure{
 	}
 	
 	@Override
-	public float[] getSphereSizeScalings(){
-		float[] size = new float[getNumberOfElements()];
-		size[0] = 1f;
-		size[1] = 0.85f;
-		return size;
+	public float[] getDefaultSphereSizeScalings(){
+		return new float[]{1f, 0.85f};
 	}
 	
 	@Override

@@ -63,11 +63,8 @@ public class FeCStructure extends BCCStructure {
 	}
 	
 	@Override
-	public float[] getSphereSizeScalings(){
-		float[] size = new float[getNumberOfElements()];
-		size[0] = 1f;
-		size[1] = 0.43f;
-		return size;
+	public float[] getDefaultSphereSizeScalings(){
+		return new float[]{1f, 0.43f};
 	}
 	
 	@Override

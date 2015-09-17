@@ -268,11 +268,8 @@ public class L12_Ni3AlStructure extends FCCStructure{
 	}
 	
 	@Override
-	public float[] getSphereSizeScalings(){
-		float[] size = new float[getNumberOfElements()];
-		size[0] = 1f;
-		size[1] = 0.79f;
-		return size;
+	public float[] getDefaultSphereSizeScalings(){
+		return new float[]{1f, 0.79f};
 	}
 	
 	@Override

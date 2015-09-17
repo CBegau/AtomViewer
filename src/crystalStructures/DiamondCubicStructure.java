@@ -148,9 +148,8 @@ public class DiamondCubicStructure extends CrystalStructure {
 	}
 	
 	@Override
-	public float[] getSphereSizeScalings(){
-		float[] size = {0.6f};
-		return size;
+	public float[] getDefaultSphereSizeScalings(){
+		return new float[]{0.6f};
 	}
 
 	@Override

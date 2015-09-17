@@ -104,12 +104,8 @@ public class FeC_virtStructure extends FeCStructure {
 	}
 
 	@Override
-	public float[] getSphereSizeScalings(){
-		float[] size = new float[getNumberOfElements()];
-		size[0] = 1f;
-		size[1] = 0.43f;
-		size[2] = 0.43f;
-		return size;
+	public float[] getDefaultSphereSizeScalings(){
+		return new float[]{1f, 0.43f, 0.43f};
 	}
 	
 	@Override

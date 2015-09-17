@@ -68,6 +68,7 @@ public abstract class CrystalStructure{
 	ArrayList<PrimitiveProperty<?>> crystalProperties = new ArrayList<PrimitiveProperty<?>>();
 	float[][] currentColors;
 	
+	private static HashMap<Class<?>,float[]> sphereScalingsPerClass = new HashMap<Class<?>, float[]>();
 	private static final ArrayList<CrystalStructure> structures = new ArrayList<CrystalStructure>();
 	/**
 	 * Initialize a list of all supported crystal structures
@@ -157,6 +158,7 @@ public abstract class CrystalStructure{
 		//if no default file exists, use default values
 		if (this.currentColors == null || this.currentColors.length<this.getNumberOfTypes())
 			this.currentColors = getDefaultColors();
+		CrystalStructure.sphereScalingsPerClass.put(this.getClass(), this.getDefaultSphereSizeScalings());
 	}
 	
 	public static List<CrystalStructure> getCrystalStructures(){
@@ -547,13 +549,17 @@ public abstract class CrystalStructure{
 	 * Scaling factor to display atoms of different elements with different sizes 
 	 * @return scaling factors, array has the same size as the value returned by getNumberOfElements()
 	 */
-	public float[] getSphereSizeScalings(){
-		float[] size = new float[getNumberOfElements()];
-		for (int i=0; i<getNumberOfElements(); i++)
-			size[i] = 1f;
-		return size;
+	public final float[] getSphereSizeScalings(){
+		return sphereScalingsPerClass.get(this.getClass()).clone();
 	}
 	
+	public final void setSphereSizeScalings(int index, float size){
+		sphereScalingsPerClass.get(this.getClass())[index] = size;
+	}
+	
+	public float[] getDefaultSphereSizeScalings(){
+		return new float[]{1f};
+	}
 	
 	public Filter<Atom> getIgnoreAtomsDuringImportFilter(){
 		return null;
