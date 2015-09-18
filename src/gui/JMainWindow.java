@@ -612,7 +612,8 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		toolchainMenu.add(saveToolchainMenuItem);
 		toolchainMenu.add(applyToolchainMenuItem);
 		toolchainMenu.add(applyToAllToolchainMenuItem);
-//		menu.add(toolchainMenu);
+		if (Configuration.experimentalFeatures)
+			menu.add(toolchainMenu);
 		
 		
 		final JMenuItem helpMenu = new JMenu("Help");
@@ -970,7 +971,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 	public static void main(String[] args) {
 		Locale.setDefault(Locale.US);
 		//Headless processing
-		if (args.length != 0){
+		if (args.length != 0 && !args[0].equals("-exp")){
 			ImdFileLoader fileLoader = new ImdFileLoader();
 			try {
 				if (args.length < 5 || !args[0].equals("-h")){
