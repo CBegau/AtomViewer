@@ -408,6 +408,9 @@ public class Shader {
 	
 	private final static String billboardFragmentShaderDeferred = 
 		"#version $VERSION$\n"+
+		"#if __VERSION__>=420\n"+	
+		"layout(early_fragment_tests) in;\n"+
+		"#endif\n"+
 		"flat in vec4 pos;"+
 		"flat in vec4 FrontColor;"+
 		"noperspective in vec2 vTexCoord;"+
