@@ -42,6 +42,7 @@ import common.Vec3;
 import crystalStructures.PolygrainMetadata;
 import model.*;
 import model.DataColumnInfo.Component;
+import model.ImportConfiguration.ImportStates;
 
 public class ImdFileLoader extends MDFileLoader{
 	
@@ -104,6 +105,25 @@ public class ImdFileLoader extends MDFileLoader{
 	
 	@Override
 	public AtomData readInputData(File f, AtomData previous, Filter<Atom> atomFilter) throws IOException{
+		
+		//Dispose perfect lattice atoms during import
+		if (ImportStates.DISPOSE_DEFAULT.isActive()){ 
+			final int defaultType = ImportConfiguration.getInstance().getCrystalStructure().getDefaultType();
+			Filter<Atom> defaultAtomFilter = new Filter<Atom>() {
+				@Override
+				public boolean accept(Atom a) {
+					return a.getType() != defaultType;
+				}
+			};
+			if (atomFilter == null) atomFilter = defaultAtomFilter;
+			else {
+				AtomFilterSet af = new AtomFilterSet();
+				af.addFilter(atomFilter);
+				af.addFilter(defaultAtomFilter);
+				atomFilter = af;
+			}
+		}
+		
 		return new AtomData(previous, this.readFile(f, atomFilter));
 	}
 	
@@ -607,31 +627,31 @@ public class ImdFileLoader extends MDFileLoader{
 						} else if (parts[i].equals("rbv_data")) {
 							this.rbv_data = i - 1;
 							this.columnToBeRead[i-1] = true;
-						} else if (!importRBV.getValue() && parts[i].equals("rbv_x")) {
+						} else if (importRBV.getValue() && parts[i].equals("rbv_x")) {
 							this.rbvX_Column = i - 1;
 							this.columnToBeRead[i-1] = true;
 							this.columnToCustomIndex[i-1] = dataColumns.size()+3;
-						} else if (!importRBV.getValue() && parts[i].equals("rbv_y")) {
+						} else if (importRBV.getValue() && parts[i].equals("rbv_y")) {
 							this.columnToBeRead[i-1] = true;
 							this.columnToCustomIndex[i-1] = dataColumns.size()+4;
-						} else if (!importRBV.getValue() && parts[i].equals("rbv_z")) {
+						} else if (importRBV.getValue() && parts[i].equals("rbv_z")) {
 							this.columnToBeRead[i-1] = true;
 							this.columnToCustomIndex[i-1] = dataColumns.size()+5;
-						} else if (!importRBV.getValue() && parts[i].equals("ls_x")){
+						} else if (importRBV.getValue() && parts[i].equals("ls_x")){
 							this.lsX_Column = i - 1;
 							this.columnToBeRead[i-1] = true;
 							this.columnToCustomIndex[i-1] = dataColumns.size();
-						} else if (!importRBV.getValue() && parts[i].equals("ls_y")){
+						} else if (importRBV.getValue() && parts[i].equals("ls_y")){
 							this.columnToBeRead[i-1] = true;
 							this.columnToCustomIndex[i-1] = dataColumns.size()+1;
-						} else if (!importRBV.getValue() && parts[i].equals("ls_z")){
+						} else if (importRBV.getValue() && parts[i].equals("ls_z")){
 							this.columnToBeRead[i-1] = true;
 							this.columnToCustomIndex[i-1] = dataColumns.size()+2;
-						} else if (!importRBV.getValue() && parts[i].equals("grain")) {
+						} else if (importRBV.getValue() && parts[i].equals("grain")) {
 							this.grainAsInt = true;
 							this.grainColumn = i - 1;
 							this.columnToBeRead[i-1] = true;
-						} else if (!importRBV.getValue() && parts[i].equals("grainID")) {
+						} else if (importRBV.getValue() && parts[i].equals("grainID")) {
 							this.grainAsInt = false;
 							this.grainColumn = i - 1;
 							this.columnToBeRead[i-1] = true;
