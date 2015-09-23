@@ -83,7 +83,12 @@ public class CommonUtils {
 		
 		public double getSum() {
 			return sum;
-		}	 
+		}
+		
+		@Override
+		public String toString() {
+			return Double.toString(sum);
+		}
 	}
 	
 	public final static GridBagConstraints getBasicGridBagConstraint(){
