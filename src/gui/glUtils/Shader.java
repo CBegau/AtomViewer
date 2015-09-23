@@ -29,7 +29,6 @@ public class Shader {
 	public final static int FRAG_POSITION = 2;
 	
 	private final static String defaultVertexShaderUniformColor = 
-		"#version $VERSION$\n"+
 		"in vec3 v;" +
 		"in vec2 Tex;" +
 		"out vec4 FrontColor;" +
@@ -47,7 +46,6 @@ public class Shader {
 	;
 	
 	private final static String defaultVertexShader = 
-		"#version $VERSION$\n"+
 		"in vec4 Color;" +
 		"in vec3 v;" +
 		"in vec2 Tex;" +
@@ -65,7 +63,6 @@ public class Shader {
 	;
 	
 	private final static String anaglyphFragmentShader = 
-		"#version $VERSION$\n"+
 		"uniform sampler2D left;"+
 		"uniform sampler2D right;"+
 		"uniform sampler2D back;"+
@@ -90,7 +87,6 @@ public class Shader {
 	;
 		
 	private final static String simpleColorFragmentShader = 
-		"#version $VERSION$\n"+
 		"in vec4 FrontColor;"+
 		"out vec4 vFragColor;"+
 		
@@ -100,7 +96,6 @@ public class Shader {
 	;
 	
 	private final static String simpleTextureShader = 
-		"#version $VERSION$\n"+
 		"uniform sampler2D Texture0;"+
 		"in vec4 FrontColor;" +
 		"in vec2 TexCoord0;"+
@@ -112,7 +107,6 @@ public class Shader {
 	;	
 	
 	private final static String defaultPPLVertexShaderUniformColor = 
-		"#version $VERSION$\n"+
 		"in vec3 v;"+
 		"in vec3 norm;"+
 		"uniform vec4 Color;"+
@@ -135,8 +129,6 @@ public class Shader {
 	;
 	
 	private final static String passThroughDeferredVertexShader = 
-		"#version $VERSION$\n"+
-	
 		"in vec3 v;"+
 		"in vec3 norm;"+
 		"uniform vec4 Color;"+
@@ -157,8 +149,6 @@ public class Shader {
 	;
 	
 	private final static String passThroughDeferredColorVertexShader = 
-		"#version $VERSION$\n"+
-	
 		"in vec3 v;"+
 		"in vec3 norm;"+
 		"in vec3 Color;"+
@@ -179,7 +169,6 @@ public class Shader {
 	;
 	
 	private final static String pplFragmentwithADSShader = 
-		"#version $VERSION$\n"+
 		"in vec3 lightvec;"+
 		"in vec3 normal;"+
 		"in vec4 FrontColor;"+
@@ -209,8 +198,6 @@ public class Shader {
 	;
 	
 	private final static String ssaoFragmentShader = 
-		"#version $VERSION$\n"+
-
 		"uniform sampler2D normalTexture;"+
 		"uniform sampler2D colorTexture;"+
 		
@@ -281,7 +268,6 @@ public class Shader {
 	
 	
 	private final static String blurShader = 
-		"#version $VERSION$\n"+
 		"in vec2 TexCoord0;"+
 		"out vec4 vFragColor;"+
 
@@ -318,8 +304,6 @@ public class Shader {
 	;
 	
 	private final static String deferredADSFragmentShader = 
-		"#version $VERSION$\n"+
-
 		"uniform sampler2D posTexture;"+
 		"uniform sampler2D normalTexture;"+
 		"uniform sampler2D colorTexture;"+
@@ -363,8 +347,6 @@ public class Shader {
 	;
 	
 	private final static String toGBufferFragmentShader = 
-		"#version $VERSION$\n"+
-		
 		"in vec3 normal;"+
 		"in vec4 FrontColor;"+
 		"in vec4 position;"+
@@ -380,8 +362,6 @@ public class Shader {
 	;
 	
 	private final static String translateBillboardVertexShaderDeferred = 
-		"#version $VERSION$\n"+
-	
 		"#ifdef INSTANCED\n"+
 		"  in vec4 Move;"+
 		"  in vec4 Color;\n"+
@@ -407,7 +387,6 @@ public class Shader {
 	;
 	
 	private final static String billboardFragmentShaderDeferred = 
-		"#version $VERSION$\n"+
 		"#if __VERSION__>=420\n"+	
 		"layout(early_fragment_tests) in;\n"+
 		"#endif\n"+
@@ -433,7 +412,6 @@ public class Shader {
 	;
 	
 	private final static String billboardFragmentShaderDeferredPerfectSphere = 
-		"#version $VERSION$\n"+
 		"#if __VERSION__>=420\n"+	
 		"layout (depth_less) out float gl_FragDepth;\n"+
 		"#endif\n"+
@@ -476,7 +454,6 @@ public class Shader {
 	;
 	
 	private final static String arrowVertexShader = 
-		"#version $VERSION$\n"+
 		"uniform vec3 Direction;"+
 		"uniform vec3 Origin;"+
 		"uniform vec4 Color;"+
@@ -529,7 +506,6 @@ public class Shader {
 	;
 	
 	private final static String arrowVertexShaderDeferred = 
-		"#version $VERSION$\n"+
 		"#ifdef INSTANCED\n"+
 		"  in vec3 Direction;"+
 		"  in vec3 Origin;"+
@@ -586,7 +562,6 @@ public class Shader {
 	;
 	
 	private final static String fxaaVertexShader =
-		"#version $VERSION$\n"+
 		"in vec3 v;" +
 		"in vec2 Tex;" +
 		"out vec2 TexCoord0;" +
@@ -609,8 +584,6 @@ public class Shader {
 	;
 	
 	private final static String fxaaFragmentShader =
-		"#version $VERSION$\n"+
-		
 		"in vec2 TexCoord0;"+
 		"in vec4 posPos;\n"+
 		"in vec2 rcpFrame;"+
@@ -830,13 +803,16 @@ public class Shader {
 			System.exit(1);
 		}
 
-		//Replace the shader version number
-		String[] vs = new String[vertexShader.length];
-		String[] fs = new String[fragmentShader.length];
-		for (int i=0; i<vs.length; i++) 
-			vs[i] = vertexShader[i].replace("$VERSION$", Integer.toString(version));
-		for (int i=0; i<fs.length; i++) 
-			fs[i] = fragmentShader[i].replace("$VERSION$", Integer.toString(version));
+		//Include shader version at the first position
+		String[] vs = new String[vertexShader.length+1];
+		String[] fs = new String[fragmentShader.length+1];
+		vs[0] = "#version "+Integer.toString(version)+"\n";
+		fs[0] = "#version "+Integer.toString(version)+"\n";
+		
+		for (int i=1; i<vs.length; i++) 
+			vs[i] = vertexShader[i-1];
+		for (int i=1; i<fs.length; i++) 
+			fs[i] = fragmentShader[i-1];
 		
 		int v = gl.glCreateShader(GL3.GL_VERTEX_SHADER);
 		int f = gl.glCreateShader(GL3.GL_FRAGMENT_SHADER);
