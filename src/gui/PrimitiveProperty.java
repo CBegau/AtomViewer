@@ -2,7 +2,6 @@ package gui;
 
 import java.awt.Component;
 import java.awt.GridLayout;
-import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.beans.PropertyChangeEvent;
@@ -25,20 +24,19 @@ import javax.swing.event.ChangeListener;
 
 import common.CommonUtils;
 
-public abstract class PrimitiveProperty<T>{
+public abstract class PrimitiveProperty<T> extends JPanel{
+	private static final long serialVersionUID = 1L;
 	protected String id, label, tooltip;
 	
-	public static JPanel getControlPanelForProperty(final PrimitiveProperty<?> p, Window w, boolean addDefaultButton){		
-		JPanel propertyPanel = new JPanel();
-		
+	protected void initControlPanel(boolean addDefaultButton){
 		JLabel label1 = null;
-		if (p.label != null && !p.label.isEmpty()){
-			label1 = CommonUtils.getWordWrappedJLabel(p.label, w);
-			label1.setToolTipText(p.tooltip);
-			propertyPanel.setLayout(new GridLayout(2, 1));
-			propertyPanel.add(label1);
+		if (this.label != null && !this.label.isEmpty()){
+			label1 = CommonUtils.getWordWrappedJLabel(this.label);
+			label1.setToolTipText(this.tooltip);
+			this.setLayout(new GridLayout(2, 1));
+			this.add(label1);
 		} else {
-			propertyPanel.setLayout(new GridLayout(1, 1));
+			this.setLayout(new GridLayout(1, 1));
 		}
 		
 		final JLabel label = label1;
@@ -46,32 +44,30 @@ public abstract class PrimitiveProperty<T>{
 		JPanel editorPanel = new JPanel();
 		editorPanel.setLayout(new BoxLayout(editorPanel, BoxLayout.LINE_AXIS));
 		
-		editorPanel.add(p.getEditor());
-		if (p.editorNeedsGlue()) editorPanel.add(Box.createHorizontalGlue());
+		editorPanel.add(this.getEditor());
+		if (this.editorNeedsGlue()) editorPanel.add(Box.createHorizontalGlue());
 		
 		final JButton reset = new JButton("default");
 		reset.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
-				p.setToDefault();
+				setToDefault();
 			}
 		});
 		
 		reset.setAlignmentX(Component.RIGHT_ALIGNMENT);
 		
 		if (addDefaultButton) editorPanel.add(reset);
-		propertyPanel.add(editorPanel);
+		this.add(editorPanel);
 		
-		p.getEditor().addPropertyChangeListener(new PropertyChangeListener() {
+		this.getEditor().addPropertyChangeListener(new PropertyChangeListener() {
 			@Override
 			public void propertyChange(PropertyChangeEvent evt) {
-				boolean e = p.getEditor().isEnabled();
+				boolean e = getEditor().isEnabled();
 				reset.setEnabled(e);
 				if (label!=null) label.setEnabled(e);
 			}
 		});
-		
-		return propertyPanel;
 	}
 		
 	protected PrimitiveProperty(String id, String label, String tooltip) {
@@ -107,14 +103,20 @@ public abstract class PrimitiveProperty<T>{
 	}
 	
 	public static class StringProperty extends PrimitiveProperty<String>{
+		private static final long serialVersionUID = 1L;
 		JTextField textField;
 		String defaultText;
 		
-		public StringProperty(String id, String label, String tooltip, String defaultString) {
+		public StringProperty(String id, String label, String tooltip, String defaultString){
+			this(id, label, tooltip, defaultString, false);
+		}
+		
+		public StringProperty(String id, String label, String tooltip, String defaultString, boolean addDefaultButton) {
 			super(id, label, tooltip);
 			textField.setText(defaultString);
 			textField.setEditable(true);
 			this.defaultText = defaultString;
+			super.initControlPanel(addDefaultButton);
 		}
 
 		@Override
@@ -154,11 +156,17 @@ public abstract class PrimitiveProperty<T>{
 	}
 
 	public static class IntegerProperty extends PrimitiveProperty<Integer>{
+		private static final long serialVersionUID = 1L;
 		int value, defaultValue;
 		int max, min;
 		JSpinner valueSpinner;
 		
-		public IntegerProperty(String id, String label, String tooltip, int defaultValue, int min, int max) {
+		public IntegerProperty(String id, String label, String tooltip, int defaultValue, int min, int max){
+			this(id, label, tooltip, defaultValue, min, max, false);
+		}
+		
+		public IntegerProperty(String id, String label, String tooltip, int defaultValue, 
+				int min, int max, boolean addDefaultButton) {
 			super(id, label, tooltip);
 			this.min = min;
 			this.max = max;
@@ -173,6 +181,7 @@ public abstract class PrimitiveProperty<T>{
 					value = ((Integer)(((JSpinner)arg0.getSource()).getValue())).intValue();
 				}
 			});
+			super.initControlPanel(addDefaultButton);
 		}
 		
 		@Override
@@ -217,11 +226,17 @@ public abstract class PrimitiveProperty<T>{
 	}
 
 	public static class FloatProperty extends PrimitiveProperty<Float>{
+		private static final long serialVersionUID = 1L;
 		float value, defaultValue;
 		float max, min;
 		JSpinner valueSpinner;
 		
-		public FloatProperty(String id, String label, String tooltip, float defaultValue, float min, float max) {
+		public FloatProperty(String id, String label, String tooltip, float defaultValue, float min, float max){
+			this(id, label, tooltip, defaultValue, min, max, false);
+		}
+		
+		public FloatProperty(String id, String label, String tooltip, float defaultValue, 
+				float min, float max, boolean addDefaultButton) {
 			super(id, label, tooltip);
 			this.min = min;
 			this.max = max;
@@ -236,6 +251,7 @@ public abstract class PrimitiveProperty<T>{
 					value = ((Double)(((JSpinner)arg0.getSource()).getValue())).floatValue();
 				}
 			});
+			super.initControlPanel(addDefaultButton);
 		}
 		
 		@Override
@@ -280,12 +296,17 @@ public abstract class PrimitiveProperty<T>{
 	}
 
 	public static class BooleanProperty extends PrimitiveProperty<Boolean>{
+		private static final long serialVersionUID = 1L;
 		boolean value, defaultValue;
 		JCheckBox valueCheckbox;
 		
-		ArrayList<PrimitiveProperty<?>> dependentProperties = new ArrayList<PrimitiveProperty<?>>();
+		ArrayList<JComponent> dependentComponents = new ArrayList<JComponent>();
 		
 		public BooleanProperty(String id, String label, String tooltip, boolean defaultValue) {
+			this(id, label, tooltip, defaultValue, false);
+		}
+		
+		public BooleanProperty(String id, String label, String tooltip, boolean defaultValue, boolean addDefaultButton) {
 			super(id, "", "");
 			this.value = defaultValue;
 			this.defaultValue = defaultValue;
@@ -299,10 +320,11 @@ public abstract class PrimitiveProperty<T>{
 				public void actionPerformed(ActionEvent arg0) {
 					value = valueCheckbox.isSelected();
 					
-					for (PrimitiveProperty<?> p: dependentProperties)
-						p.setEnabled(value);
+					for (JComponent c: dependentComponents)
+						c.setEnabled(value);
 				}
 			});
+			super.initControlPanel(addDefaultButton);
 		}
 		
 		@Override
@@ -329,23 +351,23 @@ public abstract class PrimitiveProperty<T>{
 		public  void setToDefault() {
 			this.value = this.defaultValue;
 			valueCheckbox.setSelected(this.value);
-			for (PrimitiveProperty<?> p: dependentProperties)
-				p.setEnabled(this.value);
+			for (JComponent c: dependentComponents)
+				c.setEnabled(this.value);
 		}
 		
 		public void setDefaultValue(boolean defaultValue) {
 			this.defaultValue = defaultValue;
 		}
 		
-		public void addDependentProperty(PrimitiveProperty<?> p){
-			dependentProperties.add(p);
+		public void addDependentComponent(JComponent p){
+			dependentComponents.add(p);
 			p.setEnabled(valueCheckbox.isSelected());
 		}
 		
 		public void setEnabled(boolean enabled){
 			super.setEnabled(enabled);
-			for (PrimitiveProperty<?> p: dependentProperties)
-				p.setEnabled(enabled);
+			for (JComponent c: dependentComponents)
+				c.setEnabled(enabled);
 		}
 		
 		@Override

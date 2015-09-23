@@ -208,7 +208,7 @@ public class SpatialAveragingModule extends ClonableProcessingModule implements 
 		JRadioButton arithmeticButton = new JRadioButton("Arithmetic average");
 		
 		String wrappedToolTip = CommonUtils.getWordWrappedString("Computed average is the weightend average of all particles based on their distance d "
-				+ "<br> (2-d)³-4(1-d)³ for d&lt;1/2r <br> (2-d)³ for 1/2r&lt;d&lt;r", smoothingButton, dialog);
+				+ "<br> (2-d)³-4(1-d)³ for d&lt;1/2r <br> (2-d)³ for 1/2r&lt;d&lt;r", smoothingButton);
 		
 		smoothingButton.setToolTipText(wrappedToolTip);
 		arithmeticButton.setToolTipText("Computed average is the arithmetic average");

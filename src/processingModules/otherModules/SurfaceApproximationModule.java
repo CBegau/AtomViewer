@@ -94,8 +94,8 @@ public class SurfaceApproximationModule extends ClonableProcessingModule {
 				"", Configuration.getCurrentAtomData().getCrystalStructure().getNearestNeighborSearchRadius(), 0.001f, 100000f);
 		dialog.endGroup();
 		
-		clusterAtoms.addDependentProperty(minClusterSize);
-		clusterAtoms.addDependentProperty(clusterDetectionRadius);
+		clusterAtoms.addDependentComponent(minClusterSize);
+		clusterAtoms.addDependentComponent(clusterDetectionRadius);
 		
 		boolean ok = dialog.showDialog();
 		if (ok){

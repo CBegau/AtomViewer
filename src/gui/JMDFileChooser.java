@@ -204,8 +204,7 @@ public class JMDFileChooser extends JFileChooser{
 						
 						optionsPanel.removeAll();
 						for (PrimitiveProperty<?> p : loader.getOptions()){
-							optionsPanel.add(PrimitiveProperty.getControlPanelForProperty(p, 
-									JMDFileChooser.this.owner, false));
+							optionsPanel.add(p);
 						}
 						optionsPanel.revalidate();
 					}

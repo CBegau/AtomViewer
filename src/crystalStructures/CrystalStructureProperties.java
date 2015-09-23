@@ -19,7 +19,6 @@
 package crystalStructures;
 
 import java.awt.GridLayout;
-import java.awt.Window;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
@@ -35,12 +34,12 @@ import gui.PrimitiveProperty;
 
 public class CrystalStructureProperties {
 	
-	public static JPanel createPropertyContainer(Collection<PrimitiveProperty<?>> properties, Window w){
+	public static JPanel createPropertyContainer(Collection<PrimitiveProperty<?>> properties){
 		JPanel configPanel = new JPanel(new GridLayout(properties.size(), 1));
 		
 		configPanel.setBorder(new TitledBorder(new EtchedBorder(1), "Crystal structure options"));
-		for (final PrimitiveProperty<?> c : properties)
-			configPanel.add(PrimitiveProperty.getControlPanelForProperty(c, w, true));
+		for (final PrimitiveProperty<?> p : properties)
+			configPanel.add(p);
 		
 		return configPanel;
 	}
