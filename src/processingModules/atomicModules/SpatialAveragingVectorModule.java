@@ -27,8 +27,10 @@ import java.util.HashMap;
 import java.util.Vector;
 import java.util.concurrent.Callable;
 
+import javax.swing.ButtonGroup;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
+import javax.swing.JRadioButton;
 import javax.swing.JSeparator;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
@@ -43,7 +45,10 @@ import processingModules.ProcessingResult;
 import processingModules.toolchain.Toolchain;
 import processingModules.toolchain.Toolchainable;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
+import common.CommonUtils;
 import common.ThreadPool;
+import common.Tupel;
+import common.Vec3;
 
 @ToolchainSupport()
 public class SpatialAveragingVectorModule extends ClonableProcessingModule implements Toolchainable {
@@ -59,6 +64,9 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 	
 	@ExportableValue
 	private float averageRadius = 0f;
+	
+	@ExportableValue
+	private boolean usSmoothingKernel = true;
 
 	public SpatialAveragingVectorModule() {}
 	
@@ -143,7 +151,7 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 			parallelTasks.add(new Callable<Void>() {
 				@Override
 				public Void call() throws Exception {
-					float tempX, tempY, tempZ;
+					final Vec3 temp = new Vec3();
 					final int start = (int)(((long)data.getAtoms().size() * j)/ThreadPool.availProcessors());
 					final int end = (int)(((long)data.getAtoms().size() * (j+1))/ThreadPool.availProcessors());
 					
@@ -152,23 +160,44 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 							ProgressMonitor.getProgressMonitor().addToCounter(1000);
 						
 						Atom a = data.getAtoms().get(i);
-						tempX = a.getData(vx);
-						tempY = a.getData(vy);
-						tempZ = a.getData(vz);
+						temp.x = a.getData(vx);
+						temp.y = a.getData(vy);
+						temp.z = a.getData(vz);
 						
-						ArrayList<Atom> neigh = nnb.getNeigh(a);
-						for (Atom n : neigh){
-							tempX += n.getData(vx);
-							tempY += n.getData(vy);
-							tempZ += n.getData(vz);
+						if (!usSmoothingKernel){
+							ArrayList<Atom> neigh = nnb.getNeigh(a);
+							for (Atom n : neigh){
+								temp.x += n.getData(vx);
+								temp.y += n.getData(vy);
+								temp.z += n.getData(vz);
+							}
+							temp.divide(neigh.size()+1);
+						} else {
+							ArrayList<Tupel<Atom,Vec3>> neigh = nnb.getNeighAndNeighVec(a);
+							//Start with central particle with d = 0
+							float density = CommonUtils.getM4SmoothingKernelWeight(0f, averageRadius);
+							temp.multiply(density); 
+							
+							for (Tupel<Atom,Vec3> n : neigh){
+								//Estimate local density of particles
+								density += CommonUtils.getM4SmoothingKernelWeight(n.getO2().getLength(), averageRadius);
+							}
+							
+							for (Tupel<Atom,Vec3> n : neigh){
+								//Weighting based on distance
+								float w = CommonUtils.getM4SmoothingKernelWeight(n.getO2().getLength(), averageRadius);
+								temp.x += w * n.o1.getData(vx);
+								temp.y += w * n.o1.getData(vy);
+								temp.z += w * n.o1.getData(vz);
+							}
+							//Scale weighted average by density  
+							temp.divide(density);
 						}
-						tempX /= neigh.size()+1;
-						tempY /= neigh.size()+1;
-						tempZ /= neigh.size()+1;
-						a.setData(tempX, avx);
-						a.setData(tempY, avy);
-						a.setData(tempZ, avz);
-						a.setData((float)Math.sqrt(tempX*tempX + tempY*tempY + tempZ*tempZ), ava);
+						
+						a.setData(temp.x, avx);
+						a.setData(temp.y, avy);
+						a.setData(temp.z, avz);
+						a.setData(temp.getLength(), ava);
 					}
 					
 					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
@@ -200,8 +229,27 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 		FloatProperty avRadius = dialog.addFloat("avRadius", "Cutoff radius for averaging"
 				, "", 5f, 0f, 1000f);
 		
+		ButtonGroup bg = new ButtonGroup();
+		dialog.startGroup("Averaging method");
+		JRadioButton smoothingButton = new JRadioButton("Cubic spline smoothing kernel");
+		JRadioButton arithmeticButton = new JRadioButton("Arithmetic average");
+		
+		String wrappedToolTip = CommonUtils.getWordWrappedString("Computed average is the weightend average of all particles based on their distance d "
+				+ "<br> (2-d)³-4(1-d)³ for d&lt;1/2r <br> (2-d)³ for 1/2r&lt;d&lt;r", smoothingButton, dialog);
+		
+		smoothingButton.setToolTipText(wrappedToolTip);
+		arithmeticButton.setToolTipText("Computed average is the arithmetic average");
+		smoothingButton.setSelected(true);
+		arithmeticButton.setSelected(false);
+		dialog.addComponent(smoothingButton);
+		dialog.addComponent(arithmeticButton);
+		bg.add(smoothingButton);
+		bg.add(arithmeticButton);
+		dialog.endGroup();
+		
 		boolean ok = dialog.showDialog();
 		if (ok){
+			this.usSmoothingKernel = smoothingButton.isSelected();
 			this.averageRadius = avRadius.getValue();
 			this.toAverageColumn = ((DataColumnInfo.VectorDataColumnInfo)averageComponentsComboBox.getSelectedItem()).getDci(); 
 		}

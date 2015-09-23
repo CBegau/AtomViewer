@@ -41,6 +41,19 @@ public class CommonUtils {
 	public static int smallestCommonMultiple(int a, int b) {
 		return Math.abs(a * b) / euclid(a, b);
 	}
+	
+	public static float getM4SmoothingKernelWeight(float distance, float radius){
+		float d = distance/radius;
+		float n = (2f-d)*(2f-d)*(2f-d);
+
+		if (d>1f && d<2f)
+			n -= 4f*(1f-d)*(1f-d)*(1f-d);
+		
+		n /= (radius*radius*radius)*4f*(float)Math.PI;
+		
+		if (d>2f) return 0f;
+		else return n;
+	}
 
 	/**
 	 * Computes the greatest common divisor (GCD) from an array of integers
