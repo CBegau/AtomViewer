@@ -50,6 +50,7 @@ private final static ArrayList<ProcessingModule> otherModules;
 		atomicScaleModules.add(new DisplacementModule());
 		atomicScaleModules.add(new DeltaValueModule());
 		atomicScaleModules.add(new CoordinationNumberModule());
+		atomicScaleModules.add(new ParticleDensityModule());
 		atomicScaleModules.add(new AtomicVolumeModule());
 		atomicScaleModules.add(new SpatialAveragingVectorModule());
 		atomicScaleModules.add(new DeltaVectorModule());

@@ -43,24 +43,18 @@ public class CoordinationNumberModule extends ClonableProcessingModule {
 
 	private static DataColumnInfo coordNumColumn = 
 			new DataColumnInfo("Coordination" , "coordNum" ,"");
-	private static DataColumnInfo densityColumn = 
-			new DataColumnInfo("Particle density" , "partDens" ,"");
+	
 	@ExportableValue
 	private float radius = 5f;
-	@ExportableValue
-	private float scalingFactor = 1f;
-	@ExportableValue
-	private boolean density = false;
 	
 	@Override
 	public DataColumnInfo[] getDataColumnsInfo() {
-		if (density) return new DataColumnInfo[]{densityColumn};
 		return new DataColumnInfo[]{coordNumColumn};
 	}
 	
 	@Override
 	public String getShortName() {
-		return "Coordination number / Particle density";
+		return "Coordination number";
 	}
 	
 	@Override
@@ -70,8 +64,7 @@ public class CoordinationNumberModule extends ClonableProcessingModule {
 	
 	@Override
 	public String getFunctionDescription() {
-		return "Computes the number of neighboring particles in a given radius. "
-				+ "Alternatively, the density of particles inside the spherical volume can be computed.";
+		return "Computes the number of neighboring particles in a given radius.";
 	}
 	
 	@Override
@@ -87,9 +80,8 @@ public class CoordinationNumberModule extends ClonableProcessingModule {
 	@Override
 	public ProcessingResult process(final AtomData data) throws Exception {
 		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
-		final float sphereVolume = radius*radius*radius*((float)Math.PI)*(4f/3f);
 		
-		final int v = density ? data.getIndexForCustomColumn(densityColumn): data.getIndexForCustomColumn(coordNumColumn);
+		final int v = data.getIndexForCustomColumn(coordNumColumn);
 		
 		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), radius, true);
 		nnb.addAll(data.getAtoms());
@@ -107,14 +99,8 @@ public class CoordinationNumberModule extends ClonableProcessingModule {
 						if ((i-start)%1000 == 0)
 							ProgressMonitor.getProgressMonitor().addToCounter(1000);
 						
-						Atom a = data.getAtoms().get(i);	
-						float neigh = nnb.getNeigh(a).size();
-						
-						if (density)	//The density including the central particle itself
-							neigh = ((neigh+1)/sphereVolume)*scalingFactor;
-						
-						
-						a.setData(neigh, v);
+						Atom a = data.getAtoms().get(i);
+						a.setData(nnb.getNeigh(a).size(), v);
 					}
 					
 					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
@@ -130,18 +116,14 @@ public class CoordinationNumberModule extends ClonableProcessingModule {
 
 	@Override
 	public boolean showConfigurationDialog(JFrame frame, AtomData data) {
-		JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(frame, "Compute coordination number / particle density");
+		JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(frame, "Compute coordination number");
 		dialog.addLabel(getFunctionDescription());
 		dialog.add(new JSeparator());
-		FloatProperty avRadius = dialog.addFloat("avRadius", "Radius of the sphere", "", 5f, 0f, 1000f);
-		BooleanProperty dens = dialog.addBoolean("compDensity", "Compute density instead of volume", "", false);
-		FloatProperty scaling = dialog.addFloat("scalingFactor", "Scaling factor for the result (e.g. to particles/nm³)."
-				+ "Only used if densities are computed.", "", 1f, 0f, 1e20f);
+		FloatProperty avRadius = dialog.addFloat("avRadius", "Radius", "", 5f, 0f, 1000f);
+		
 		boolean ok = dialog.showDialog();
 		if (ok){
 			this.radius = avRadius.getValue();
-			this.density = dens.getValue();
-			this.scalingFactor = scaling.getValue();
 		}
 		return ok;
 	}

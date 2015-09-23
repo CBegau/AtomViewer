@@ -22,10 +22,13 @@ import gui.JPrimitiveVariablesPropertiesDialog;
 import gui.ProgressMonitor;
 import gui.PrimitiveProperty.*;
 
+import java.util.ArrayList;
 import java.util.Vector;
 import java.util.concurrent.Callable;
 
+import javax.swing.ButtonGroup;
 import javax.swing.JFrame;
+import javax.swing.JRadioButton;
 import javax.swing.JSeparator;
 
 import model.Atom;
@@ -36,33 +39,30 @@ import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
 import processingModules.toolchain.Toolchainable.ExportableValue;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
+import common.CommonUtils;
 import common.ThreadPool;
-import common.VoronoiVolume;
+import common.Vec3;
 
 @ToolchainSupport()
-public class AtomicVolumeModule extends ClonableProcessingModule {
+public class ParticleDensityModule extends ClonableProcessingModule {
 
-	private static DataColumnInfo volumeColumn = 
-			new DataColumnInfo("Atomic volume" , "atomVol" ,"");
 	private static DataColumnInfo densityColumn = 
-			new DataColumnInfo("Atomic density" , "atomDens" ,"");
-	
+			new DataColumnInfo("Particle density" , "partDens" ,"");
 	@ExportableValue
 	private float radius = 5f;
 	@ExportableValue
 	private float scalingFactor = 1f;
 	@ExportableValue
-	private boolean computeDensity = false;
+	private boolean useSmoothKernel = true;
 	
 	@Override
 	public DataColumnInfo[] getDataColumnsInfo() {
-		if (computeDensity) return new DataColumnInfo[]{densityColumn};
-		else return new DataColumnInfo[]{volumeColumn};
+		return new DataColumnInfo[]{densityColumn};
 	}
 	
 	@Override
 	public String getShortName() {
-		return "Atomic volume / density";
+		return "Particle density";
 	}
 	
 	@Override
@@ -72,11 +72,7 @@ public class AtomicVolumeModule extends ClonableProcessingModule {
 	
 	@Override
 	public String getFunctionDescription() {
-		return "Computes the volume of particles using a Voronoi cell construction. Particles at surfaces which are"
-				+ "not properly enclosed by a voronoi cell will have a volume equal to zero. "
-				+ "Alternatively, the atomic density as the inverse of the volume can be computed. "
-				+ "Choosing the neighbor search distance as small as possible is needed to reduce the execution time. "
-				+ "Warning: Current implementation is really slow!";
+		return "Computes the local particle density. The computed value is locally smoothed within a defined radius.";
 	}
 	
 	@Override
@@ -91,13 +87,12 @@ public class AtomicVolumeModule extends ClonableProcessingModule {
 
 	@Override
 	public ProcessingResult process(final AtomData data) throws Exception {
-		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), radius, true);
-		final int v = computeDensity ? 
-				data.getIndexForCustomColumn(densityColumn) : data.getIndexForCustomColumn(volumeColumn);
-		final float sphereVolume = (radius*radius*radius)*((float)Math.PI)*(4f/3f);
-		
 		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
+		final float sphereVolume = radius*radius*radius*((float)Math.PI)*(4f/3f);
 		
+		final int v = data.getIndexForCustomColumn(densityColumn);
+		
+		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), radius, true);
 		nnb.addAll(data.getAtoms());
 		
 		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
@@ -113,16 +108,20 @@ public class AtomicVolumeModule extends ClonableProcessingModule {
 						if ((i-start)%1000 == 0)
 							ProgressMonitor.getProgressMonitor().addToCounter(1000);
 						
-						Atom a = data.getAtoms().get(i);
+						Atom a = data.getAtoms().get(i);	
 						
-						float value = VoronoiVolume.getVoronoiVolume(nnb.getNeighVec(a));
-						
-						if (value > sphereVolume)
-							value = 0f;
-						else if (computeDensity && value > 1e-8f) value = 1f/value;
-						if (computeDensity && value < 0f) value = 0f;
-						
-						a.setData(value*scalingFactor, v);
+						if (useSmoothKernel){
+							float density = ((nnb.getNeigh(a).size()+1)/sphereVolume)*scalingFactor;
+							a.setData(density, v);
+						} else {
+							ArrayList<Vec3> neigh = nnb.getNeighVec(a);
+							//Include central particle a with d = 0
+							float density = CommonUtils.getM4SmoothingKernelWeight(0f, radius);
+							//Estimate local density based on distance to other particles
+							for (Vec3 n : neigh)
+								density += CommonUtils.getM4SmoothingKernelWeight(n.getLength(), radius);
+							a.setData(density, v);
+						}
 					}
 					
 					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
@@ -133,24 +132,42 @@ public class AtomicVolumeModule extends ClonableProcessingModule {
 		ThreadPool.executeParallel(parallelTasks);	
 		
 		ProgressMonitor.getProgressMonitor().stop();
-		
 		return null;
 	}
 
 	@Override
 	public boolean showConfigurationDialog(JFrame frame, AtomData data) {
-		JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(frame, "Compute atomic volume/density");
+		JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(frame, "Compute particle density");
 		dialog.addLabel(getFunctionDescription());
-		dialog.addLabel("The result of the volume has the unit of '(length unit)^3', the density '(length unit)^-3'");
 		dialog.add(new JSeparator());
-		FloatProperty avRadius = dialog.addFloat("avRadius", "Radius of a sphere to find neighbors for a voronoi cell construction."
-				, "", 5f, 0f, 1000f);
-		BooleanProperty density = dialog.addBoolean("compDensity", "Compute density instead of volume", "", false);
-		FloatProperty scaling = dialog.addFloat("scalingFactor", "Scaling factor for the result (e.g. to nm³)", "", 1f, 0f, 1e20f);
+		FloatProperty avRadius = dialog.addFloat("avRadius", "Radius of the sphere", "", 5f, 0f, 1000f);
+		
+		FloatProperty scaling = dialog.addFloat("scalingFactor", "Scaling factor for the result (e.g. to particles/nm³)", "", 1f, 0f, 1e20f);
+		
+		ButtonGroup bg = new ButtonGroup();
+		
+		dialog.startGroup("Averaging method");
+		JRadioButton smoothingButton = new JRadioButton("Cubic spline smoothing kernel");
+		JRadioButton arithmeticButton = new JRadioButton("Arithmetic average");
+		
+		String wrappedToolTip = CommonUtils.getWordWrappedString("Computed average is the weightend average of all particles based on their distance d "
+				+ "<br> (2-d)³-4(1-d)³ for d&lt;1/2r <br> (2-d)³ for 1/2r&lt;d&lt;r", smoothingButton);
+		
+		smoothingButton.setToolTipText(wrappedToolTip);
+		arithmeticButton.setToolTipText("Computed average is the arithmetic average");
+		smoothingButton.setSelected(true);
+		arithmeticButton.setSelected(false);
+		dialog.addComponent(smoothingButton);
+		dialog.addComponent(arithmeticButton);
+		bg.add(smoothingButton);
+		bg.add(arithmeticButton);
+		dialog.endGroup();
+		
+		
 		boolean ok = dialog.showDialog();
 		if (ok){
-			this.computeDensity = density.getValue();
 			this.radius = avRadius.getValue();
+			this.useSmoothKernel = smoothingButton.isSelected();
 			this.scalingFactor = scaling.getValue();
 		}
 		return ok;
