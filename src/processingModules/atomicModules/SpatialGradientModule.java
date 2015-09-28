@@ -1,0 +1,226 @@
+// Part of AtomViewer: AtomViewer is a tool to display and analyse
+// atomistic simulations
+//
+// Copyright (C) 2015  ICAMS, Ruhr-Universität Bochum
+//
+// AtomViewer is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// AtomViewer is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
+
+package processingModules.atomicModules;
+
+import gui.JPrimitiveVariablesPropertiesDialog;
+import gui.ProgressMonitor;
+import gui.PrimitiveProperty.*;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Vector;
+import java.util.concurrent.Callable;
+
+import javax.swing.JComboBox;
+import javax.swing.JFrame;
+import javax.swing.JSeparator;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
+import javax.xml.stream.XMLStreamWriter;
+
+import model.Atom;
+import model.AtomData;
+import model.DataColumnInfo;
+import model.NearestNeighborBuilder;
+import processingModules.ClonableProcessingModule;
+import processingModules.ProcessingResult;
+import processingModules.toolchain.Toolchain;
+import processingModules.toolchain.Toolchainable;
+import processingModules.toolchain.Toolchainable.ToolchainSupport;
+import common.CommonUtils;
+import common.ThreadPool;
+import common.Tupel;
+import common.Vec3;
+
+@ToolchainSupport()
+public class SpatialGradientModule extends ClonableProcessingModule implements Toolchainable{
+
+	private static HashMap<DataColumnInfo, DataColumnInfo> existingGradientColumns 
+		= new HashMap<DataColumnInfo, DataColumnInfo>();
+	
+	@ExportableValue
+	private float radius = 5f;
+	
+	private DataColumnInfo toDeriveColumn;
+	private DataColumnInfo gradientColumn;
+	//This is the indicator used for import from a toolchain, since the column
+	//the file is referring to might not exist at that moment 
+	private String toDeriveID;
+	
+	
+	@Override
+	public DataColumnInfo[] getDataColumnsInfo() {
+		if (existingGradientColumns.containsKey(toDeriveColumn)){
+			this.gradientColumn = existingGradientColumns.get(toDeriveColumn);
+		} else {
+			String name = "Δ"+toDeriveColumn.getName();
+			DataColumnInfo avX = new DataColumnInfo(toDeriveColumn.getName()+"_dx", toDeriveColumn.getId()+"_grad_x", "");
+			DataColumnInfo avY = new DataColumnInfo(toDeriveColumn.getName()+"_dy", toDeriveColumn.getId()+"_grad_y", "");
+			DataColumnInfo avZ = new DataColumnInfo(toDeriveColumn.getName()+"_dz", toDeriveColumn.getId()+"_grad_z","");
+			DataColumnInfo avA = new DataColumnInfo("|Δ"+toDeriveColumn.getId()+"|", toDeriveColumn.getId()+"_grad_abs", "");
+			
+			avX.setAsFirstVectorComponent(avY, avZ, avA, name, false);
+			
+			this.gradientColumn = avX;
+			existingGradientColumns.put(toDeriveColumn, gradientColumn);
+		}
+		
+		return gradientColumn.getVectorComponents();
+	}
+	
+	@Override
+	public String getShortName() {
+		return "Spatial gradient";
+	}
+	
+	@Override
+	public boolean canBeAppliedToMultipleFilesAtOnce() {
+		return true;
+	}
+	
+	@Override
+	public String getFunctionDescription() {
+		return "Computes the spatial gradient of a scalar value.";
+	}
+	
+	@Override
+	public String getRequirementDescription() {
+		return "";
+	}
+	
+	@Override
+	public boolean isApplicable(AtomData atomData) {
+		//Identify the column by its ID if imported from a toolchain
+		if (toDeriveColumn == null && toDeriveID != null){
+			for (DataColumnInfo d : atomData.getDataColumnInfos()){
+				if (d.getId().equals(toDeriveID)){
+					this.toDeriveColumn = d;
+				}
+			}
+			if (toDeriveColumn == null) return false;
+		}
+		
+		return true;
+	}
+
+	@Override
+	public ProcessingResult process(final AtomData data) throws Exception {
+		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
+		
+		final int v = data.getIndexForCustomColumn(toDeriveColumn);
+		
+		final int gx = data.getIndexForCustomColumn(gradientColumn.getVectorComponents()[0]);
+		final int gy = data.getIndexForCustomColumn(gradientColumn.getVectorComponents()[1]);
+		final int gz = data.getIndexForCustomColumn(gradientColumn.getVectorComponents()[2]);
+		final int ga = data.getIndexForCustomColumn(gradientColumn.getVectorComponents()[3]);
+		
+		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), radius, true);
+		nnb.addAll(data.getAtoms());
+		
+		final float halfR = radius*0.5f;
+		
+		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
+		for (int i=0; i<ThreadPool.availProcessors(); i++){
+			final int j = i;
+			parallelTasks.add(new Callable<Void>() {
+				@Override
+				public Void call() throws Exception {
+					final int start = (int)(((long)data.getAtoms().size() * j)/ThreadPool.availProcessors());
+					final int end = (int)(((long)data.getAtoms().size() * (j+1))/ThreadPool.availProcessors());
+					
+					//Compute density of all particles and store in the data column
+					for (int i=start; i<end; i++){
+						if ((i-start)%1000 == 0)
+							ProgressMonitor.getProgressMonitor().addToCounter(1000);
+						Atom a = data.getAtoms().get(i);
+						
+						ArrayList<Tupel<Atom,Vec3>> neigh = nnb.getNeighAndNeighVec(a);
+
+						//Estimate local density
+						float density = CommonUtils.getM4SmoothingKernelWeight(0f, halfR);
+						for (int k=0, len = neigh.size(); k<len; k++)
+							density += CommonUtils.getM4SmoothingKernelWeight(neigh.get(k).o2.getLength(), halfR);
+						 
+						
+						Vec3 grad = new Vec3();
+						
+						float valueA = a.getData(v);
+						
+						for (Tupel<Atom,Vec3> n : neigh){
+							float valueB = n.o1.getData(v);
+							grad.add(CommonUtils.getM4SmoothingKernelDerivative(n.o2, halfR).multiply(valueB-valueA));
+						}
+						
+						grad.divide(density);
+						
+						a.setData(grad.x, gx);
+						a.setData(grad.y, gy);
+						a.setData(grad.z, gz);						
+						a.setData(grad.getLength(), ga);
+						
+					}
+					ProgressMonitor.getProgressMonitor().addToCounter( (end-start)%1000);
+					return null;
+				}
+			});
+		}
+		ThreadPool.executeParallel(parallelTasks);	
+		
+		ProgressMonitor.getProgressMonitor().stop();
+		return null;
+	}
+
+	@Override
+	public boolean showConfigurationDialog(JFrame frame, AtomData data) {
+		JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(frame, getShortName());
+		dialog.addLabel(getFunctionDescription());
+		dialog.add(new JSeparator());
+		FloatProperty avRadius = dialog.addFloat("avRadius", "Radius of the sphere", "", 5f, 0f, 1000f);
+		
+		JComboBox averageComponentsComboBox = new JComboBox();
+		for (DataColumnInfo dci : data.getDataColumnInfos())
+			averageComponentsComboBox.addItem(dci);
+		
+		dialog.addLabel("Select value to compute gradient");
+		dialog.addComponent(averageComponentsComboBox);
+		
+		boolean ok = dialog.showDialog();
+		if (ok){
+			this.radius = avRadius.getValue();
+			this.toDeriveColumn = (DataColumnInfo)averageComponentsComboBox.getSelectedItem();
+		}
+		return ok;
+	}
+	
+	@Override
+	public void exportParameters(XMLStreamWriter xmlOut)
+			throws XMLStreamException, IllegalArgumentException, IllegalAccessException {
+		xmlOut.writeStartElement("toDeriveColumn");
+		xmlOut.writeAttribute("id", toDeriveColumn.getId());
+		xmlOut.writeEndElement();
+		
+	}
+	
+	@Override
+	public void importParameters(XMLStreamReader reader, Toolchain toolchain) throws XMLStreamException {
+		reader.next();
+		if (!reader.getLocalName().equals("toDeriveColumn")) throw new XMLStreamException("Illegal element detected");
+		this.toDeriveID = reader.getAttributeValue(null, "id");
+	}
+}

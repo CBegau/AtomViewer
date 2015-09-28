@@ -153,6 +153,10 @@ public class DataColumnInfo {
 		this.component = component;
 	}
 	
+	public void setAsFirstVectorComponent(DataColumnInfo cy, DataColumnInfo cz, DataColumnInfo abs, String name){
+		this.setAsFirstVectorComponent(cy, cz, abs, name, true);
+	}
+	
 	/**
 	 * Creates a vector out of three DataColumnInfo.
 	 * The vector components are initialized by assigning the second and third component to
@@ -162,14 +166,14 @@ public class DataColumnInfo {
 	 * @name the name of the vector, each component is automatically renamed into a pattern
 	 * name_x, name_y and name_z 
 	 */
-	public void setAsFirstVectorComponent(DataColumnInfo cy, DataColumnInfo cz, DataColumnInfo abs, String name){
+	public void setAsFirstVectorComponent(DataColumnInfo cy, DataColumnInfo cz, DataColumnInfo abs, String name, boolean overrideNames){
 		assert(cy != null && cz != null && this != cy && this != cz && cy != cz);
 		this.vectorComponentOrder[0] = this;
 		this.vectorComponentOrder[1] = cy;
 		this.vectorComponentOrder[2] = cz;
 		this.vectorComponentOrder[3] = abs;
 		this.isVectorComponent = true;
-		this.name = name+"_x";
+		if (overrideNames) this.name = name+"_x";
 		this.vectorName = name;
 		
 		cy.vectorComponentOrder[0] = this;
@@ -177,7 +181,7 @@ public class DataColumnInfo {
 		cy.vectorComponentOrder[2] = cz;
 		cy.vectorComponentOrder[3] = abs;
 		cy.isVectorComponent = true;
-		cy.name = name+"_y";
+		if (overrideNames) cy.name = name+"_y";
 		cy.vectorName = name;
 		
 		cz.vectorComponentOrder[0] = this;
@@ -185,7 +189,7 @@ public class DataColumnInfo {
 		cz.vectorComponentOrder[2] = cz;
 		cz.vectorComponentOrder[3] = abs;
 		cz.isVectorComponent = true;
-		cz.name = name+"_z";
+		if (overrideNames) cz.name = name+"_z";
 		cz.vectorName = name;
 		
 		abs.vectorComponentOrder[0] = this;
@@ -193,7 +197,7 @@ public class DataColumnInfo {
 		abs.vectorComponentOrder[2] = cz;
 		abs.vectorComponentOrder[3] = abs;
 		abs.isVectorComponent = true;
-		abs.name = name+"_abs";
+		if (overrideNames) abs.name = name+"_abs";
 		abs.vectorName = name;
 	}
 	

@@ -45,7 +45,7 @@ public class CommonUtils {
 	public static float getM4SmoothingKernelWeight(float distance, float h){
 		float q = distance / h;
 
-		float fac = (1f/(4*(float)Math.PI*h*h*h));
+		float fac = 1f/(4*(float)Math.PI*h*h*h);
 		
 		float tmp2 = 2f - q;
 		float val = tmp2*tmp2*tmp2;
@@ -60,22 +60,15 @@ public class CommonUtils {
 	}
 	
 	public static Vec3 getM4SmoothingKernelDerivative(Vec3 r, float h){
-		float distance = r.getLength();
+		float d = r.getLength();
+		float q = d / h;
 		
-		float h1 = 1f / h;
-		float q = distance * h1;
-
-		float fac = (1f/(float)Math.PI) * h1 * h1 * h1;
-
-		float tmp2 = 2f - q;
 		float val;
+        if (q < 1f) val = 0.75f*q*q - q;
+        else val = -(1f - q + 0.25f*q*q);
 		if (q > 2f) val = 0.f;
-		else if (q > 1f) val = -0.75f * tmp2 * tmp2 * h1 / distance;
-		else val = -3.0f * q * (1f - 0.75f * q) * h1 / distance;
-        
-
-        return r.multiplyClone(val * fac);
 		
+        return r.multiplyClone(3f * val / (h*h*h*h * d * (float)Math.PI) );
 	}
 
 	/**
