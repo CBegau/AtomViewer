@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Vector;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CyclicBarrier;
 
 import javax.swing.ButtonGroup;
 import javax.swing.JComboBox;
@@ -66,7 +67,7 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 	private float averageRadius = 0f;
 	
 	@ExportableValue
-	private boolean usSmoothingKernel = true;
+	private boolean useSmoothingKernel = true;
 
 	public SpatialAveragingVectorModule() {}
 	
@@ -141,9 +142,11 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 		final int avz = data.getIndexForCustomColumn(averageColumn.getVectorComponents()[2]);
 		final int ava = data.getIndexForCustomColumn(averageColumn.getVectorComponents()[3]);
 		
-		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
+		ProgressMonitor.getProgressMonitor().start(2*data.getAtoms().size());
 		
 		nnb.addAll(data.getAtoms());
+		
+		final CyclicBarrier barrier = new CyclicBarrier(ThreadPool.availProcessors());
 		
 		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
 		for (int i=0; i<ThreadPool.availProcessors(); i++){
@@ -151,20 +154,20 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 			parallelTasks.add(new Callable<Void>() {
 				@Override
 				public Void call() throws Exception {
+					
+					final float halfR = averageRadius*0.5f;
 					final Vec3 temp = new Vec3();
 					final int start = (int)(((long)data.getAtoms().size() * j)/ThreadPool.availProcessors());
 					final int end = (int)(((long)data.getAtoms().size() * (j+1))/ThreadPool.availProcessors());
 					
-					for (int i=start; i<end; i++){
-						if ((i-start)%1000 == 0)
-							ProgressMonitor.getProgressMonitor().addToCounter(1000);
-						
-						Atom a = data.getAtoms().get(i);
-						temp.x = a.getData(vx);
-						temp.y = a.getData(vy);
-						temp.z = a.getData(vz);
-						
-						if (!usSmoothingKernel){
+					if (!useSmoothingKernel){
+						for (int i=start; i<end; i++){
+							if ((i-start)%1000 == 0) ProgressMonitor.getProgressMonitor().addToCounter(2000);
+					
+							Atom a = data.getAtoms().get(i);
+							temp.x = a.getData(vx);
+							temp.y = a.getData(vy);
+							temp.z = a.getData(vz);
 							ArrayList<Atom> neigh = nnb.getNeigh(a);
 							for (Atom n : neigh){
 								temp.x += n.getData(vx);
@@ -172,36 +175,70 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 								temp.z += n.getData(vz);
 							}
 							temp.divide(neigh.size()+1);
-						} else {
+							
+							a.setData(temp.x, avx);          
+							a.setData(temp.y, avy);          
+							a.setData(temp.z, avz);          
+							a.setData(temp.getLength(), ava);
+						}
+						ProgressMonitor.getProgressMonitor().addToCounter( 2*(end-start%1000));
+					} else {
+						//Compute density of all particles and temporarily store in the last data column
+						for (int i=start; i<end; i++){
+							if ((i-start)%1000 == 0)
+								ProgressMonitor.getProgressMonitor().addToCounter(1000);
+							Atom a = data.getAtoms().get(i);
+							ArrayList<Vec3> neigh = nnb.getNeighVec(a);
+							//Include central particle a with d = 0
+							float density = CommonUtils.getM4SmoothingKernelWeight(0f, halfR);
+							//Estimate local density based on distance to other particles
+							for (int k=0, len = neigh.size(); k<len; k++)
+								density += CommonUtils.getM4SmoothingKernelWeight(neigh.get(k).getLength(), halfR);
+								
+							a.setData(density, ava);
+						}
+						ProgressMonitor.getProgressMonitor().addToCounter((end-start)%1000);
+						barrier.await();
+						
+						//Compute the averages 
+						for (int i=start; i<end; i++){
+							if ((i-start)%1000 == 0)
+								ProgressMonitor.getProgressMonitor().addToCounter(1000);
+							
+							Atom a = data.getAtoms().get(i);
+							temp.x = a.getData(vx); temp.y = a.getData(vy); temp.z = a.getData(vz);
+							float density = a.getData(ava);
+							
 							ArrayList<Tupel<Atom,Vec3>> neigh = nnb.getNeighAndNeighVec(a);
 							//Start with central particle with d = 0
-							float density = CommonUtils.getM4SmoothingKernelWeight(0f, averageRadius);
-							temp.multiply(density); 
+							temp.multiply(CommonUtils.getM4SmoothingKernelWeight(0f, halfR)).divide(density);
 							
 							for (Tupel<Atom,Vec3> n : neigh){
-								//Estimate local density of particles
-								density += CommonUtils.getM4SmoothingKernelWeight(n.getO2().getLength(), averageRadius);
-							}
-							
-							for (Tupel<Atom,Vec3> n : neigh){
-								//Weighting based on distance
-								float w = CommonUtils.getM4SmoothingKernelWeight(n.getO2().getLength(), averageRadius);
-								temp.x += w * n.o1.getData(vx);
-								temp.y += w * n.o1.getData(vy);
-								temp.z += w * n.o1.getData(vz);
-							}
-							//Scale weighted average by density  
-							temp.divide(density);
+								//Weighting based on distance and density
+								float w = CommonUtils.getM4SmoothingKernelWeight(n.getO2().getLength(), halfR);
+								w /= n.o1.getData(ava); //Divide by local density
+								temp.x += n.o1.getData(vx) * w;
+								temp.y += n.o1.getData(vy) * w;
+								temp.z += n.o1.getData(vz) * w;
+
+							}							
+							a.setData(temp.x, avx); a.setData(temp.y, avy); a.setData(temp.z, avz);
 						}
 						
-						a.setData(temp.x, avx);
-						a.setData(temp.y, avy);
-						a.setData(temp.z, avz);
-						a.setData(temp.getLength(), ava);
-					}
+						barrier.await();
+						
+						//Compute length of vector and overwrite the density with this value
+						for (int i=start; i<end; i++){
+							Atom a = data.getAtoms().get(i);
+							Vec3 v = new Vec3(a.getData(avx), a.getData(avy), a.getData(avz)); 
+							a.setData(v.getLength(), ava);
+						}
+						
+						ProgressMonitor.getProgressMonitor().addToCounter((end-start)%1000);
 					
-					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
+					} // End of smoothing kernel
 					return null;
+					
 				}
 			});
 		}
@@ -239,17 +276,17 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 		
 		smoothingButton.setToolTipText(wrappedToolTip);
 		arithmeticButton.setToolTipText("Computed average is the arithmetic average");
-		smoothingButton.setSelected(true);
-		arithmeticButton.setSelected(false);
-		dialog.addComponent(smoothingButton);
+		smoothingButton.setSelected(false);
+		arithmeticButton.setSelected(true);
 		dialog.addComponent(arithmeticButton);
+		dialog.addComponent(smoothingButton);
 		bg.add(smoothingButton);
 		bg.add(arithmeticButton);
 		dialog.endGroup();
 		
 		boolean ok = dialog.showDialog();
 		if (ok){
-			this.usSmoothingKernel = smoothingButton.isSelected();
+			this.useSmoothingKernel = smoothingButton.isSelected();
 			this.averageRadius = avRadius.getValue();
 			this.toAverageColumn = ((DataColumnInfo.VectorDataColumnInfo)averageComponentsComboBox.getSelectedItem()).getDci(); 
 		}

@@ -124,7 +124,7 @@ public class ParticleDensityModule extends ClonableProcessingModule {
 						}
 					}
 					
-					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
+					ProgressMonitor.getProgressMonitor().addToCounter((end-start)%1000);
 					return null;
 				}
 			});
