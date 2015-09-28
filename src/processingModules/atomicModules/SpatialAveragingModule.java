@@ -227,7 +227,10 @@ public class SpatialAveragingModule extends ClonableProcessingModule implements 
 	public boolean showConfigurationDialog(JFrame frame, AtomData data) {
 		JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(frame, "Compute spatial average");
 		
-		dialog.addLabel("Computes the spatial average of a value.");
+		dialog.addLabel("Computes the spatial average of a value. <br>"
+				+ "The average is computed from all neighbors within a given "
+				+ "radius either as the arithmetical average or as a weigthed average using a "
+				+ "cubic spline smoothing kernel as described in (Monaghan, Rep. Prog. Phys 68, 2005)");
 		dialog.add(new JSeparator());
 		
 		JComboBox averageComponentsComboBox = new JComboBox();
@@ -244,12 +247,10 @@ public class SpatialAveragingModule extends ClonableProcessingModule implements 
 		JRadioButton smoothingButton = new JRadioButton("Cubic spline smoothing kernel");
 		JRadioButton arithmeticButton = new JRadioButton("Arithmetic average");
 		
-		String wrappedToolTip = CommonUtils.getWordWrappedString("Computed average is the weightend average of all particles based on their distance d <br>"
-				+ "and local particle density"
-				+ "<br> (2-d)³-4(1-d)³ for d&lt;1/2r <br> (2-d)³ for 1/2r&lt;d&lt;r", smoothingButton);
-		
-		smoothingButton.setToolTipText(wrappedToolTip);
-		arithmeticButton.setToolTipText("Computed average is the arithmetic average");
+		String smoothingTooltip = "Computes a weightend average over neighbors based on distance and density<br>"
+				+ "This implementation is using the cubic spline M4 kernel<br>";
+		smoothingButton.setToolTipText(CommonUtils.getWordWrappedString(smoothingTooltip, smoothingButton));
+		arithmeticButton.setToolTipText("Computes the arithmetic average over all nearby neighbors without weighting.");
 		smoothingButton.setSelected(false);
 		arithmeticButton.setSelected(true);
 		dialog.addComponent(arithmeticButton);
