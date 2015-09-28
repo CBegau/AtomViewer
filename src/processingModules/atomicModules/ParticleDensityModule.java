@@ -110,17 +110,17 @@ public class ParticleDensityModule extends ClonableProcessingModule {
 						
 						Atom a = data.getAtoms().get(i);	
 						
-						if (useSmoothKernel){
-							float density = ((nnb.getNeigh(a).size()+1)/sphereVolume)*scalingFactor;
-							a.setData(density, v);
+						if (!useSmoothKernel){
+							float density = ((nnb.getNeigh(a).size()+1)/sphereVolume);
+							a.setData(density*scalingFactor, v);
 						} else {
 							ArrayList<Vec3> neigh = nnb.getNeighVec(a);
 							//Include central particle a with d = 0
-							float density = CommonUtils.getM4SmoothingKernelWeight(0f, radius);
+							float density = CommonUtils.getM4SmoothingKernelWeight(0f, radius*0.5f);
 							//Estimate local density based on distance to other particles
 							for (Vec3 n : neigh)
-								density += CommonUtils.getM4SmoothingKernelWeight(n.getLength(), radius);
-							a.setData(density, v);
+								density += CommonUtils.getM4SmoothingKernelWeight(n.getLength(), radius*0.5f);
+							a.setData(density*scalingFactor, v);
 						}
 					}
 					

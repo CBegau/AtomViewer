@@ -42,17 +42,40 @@ public class CommonUtils {
 		return Math.abs(a * b) / euclid(a, b);
 	}
 	
-	public static float getM4SmoothingKernelWeight(float distance, float radius){
-		float d = distance/radius;
-		float n = (2f-d)*(2f-d)*(2f-d);
+	public static float getM4SmoothingKernelWeight(float distance, float h){
+		float q = distance / h;
 
-		if (d>1f && d<2f)
-			n -= 4f*(1f-d)*(1f-d)*(1f-d);
+		float fac = (1f/(4*(float)Math.PI*h*h*h));
 		
-		n /= (radius*radius*radius)*4f*(float)Math.PI;
+		float tmp2 = 2f - q;
+		float val = tmp2*tmp2*tmp2;
 		
-		if (d>2f) return 0f;
-		else return n;
+		if (q<1f){
+			float tmp1 = 1f - q;
+			val -= 4*tmp1*tmp1*tmp1;
+		}
+		
+		if (q > 2f) val = 0f;		
+		return val*fac;
+	}
+	
+	public static Vec3 getM4SmoothingKernelDerivative(Vec3 r, float h){
+		float distance = r.getLength();
+		
+		float h1 = 1f / h;
+		float q = distance * h1;
+
+		float fac = (1f/(float)Math.PI) * h1 * h1 * h1;
+
+		float tmp2 = 2f - q;
+		float val;
+		if (q > 2f) val = 0.f;
+		else if (q > 1f) val = -0.75f * tmp2 * tmp2 * h1 / distance;
+		else val = -3.0f * q * (1f - 0.75f * q) * h1 / distance;
+        
+
+        return r.multiplyClone(val * fac);
+		
 	}
 
 	/**
