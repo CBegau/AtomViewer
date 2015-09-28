@@ -68,7 +68,7 @@ public class CommonUtils {
         else val = -(1f - q + 0.25f*q*q);
 		if (q > 2f) val = 0.f;
 		
-        return r.multiplyClone(3f * val / (h*h*h*h * d * (float)Math.PI) );
+        return r.multiplyClone(-3f * val / (h*h*h*h * d * (float)Math.PI) );
 	}
 
 	/**

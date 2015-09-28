@@ -49,7 +49,7 @@ import common.Tupel;
 import common.Vec3;
 
 @ToolchainSupport()
-public class SpatialGradientModule extends ClonableProcessingModule implements Toolchainable{
+public class SpatialDerivatiesModule extends ClonableProcessingModule implements Toolchainable{
 
 	private static HashMap<DataColumnInfo, DataColumnInfo> existingGradientColumns 
 		= new HashMap<DataColumnInfo, DataColumnInfo>();
@@ -86,7 +86,7 @@ public class SpatialGradientModule extends ClonableProcessingModule implements T
 	
 	@Override
 	public String getShortName() {
-		return "Spatial gradient";
+		return "Spatial derivatives";
 	}
 	
 	@Override
@@ -96,7 +96,7 @@ public class SpatialGradientModule extends ClonableProcessingModule implements T
 	
 	@Override
 	public String getFunctionDescription() {
-		return "Computes the spatial gradient of a scalar value.";
+		return "Computes the spatial derivatives and its absolute of a scalar value.";
 	}
 	
 	@Override
@@ -116,7 +116,7 @@ public class SpatialGradientModule extends ClonableProcessingModule implements T
 			if (toDeriveColumn == null) return false;
 		}
 		
-		return true;
+		return !atomData.getDataColumnInfos().isEmpty();
 	}
 
 	@Override
@@ -189,6 +189,11 @@ public class SpatialGradientModule extends ClonableProcessingModule implements T
 	@Override
 	public boolean showConfigurationDialog(JFrame frame, AtomData data) {
 		JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(frame, getShortName());
+		dialog.addLabel(getFunctionDescription()+"<br>"
+				+ "The first derivaties are approximated using a smoothing kernel summing up all particles in a given radius."
+				+ "The implementation is based on the methods used in Smooth particle hydrodynamics and uses a "
+				+ "cubic spline smoothing kernel as described in (Monaghan, Rep. Prog. Phys 68, 2005)");
+		
 		dialog.addLabel(getFunctionDescription());
 		dialog.add(new JSeparator());
 		FloatProperty avRadius = dialog.addFloat("avRadius", "Radius of the sphere", "", 5f, 0f, 1000f);
