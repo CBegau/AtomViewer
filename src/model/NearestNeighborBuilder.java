@@ -267,7 +267,7 @@ public class NearestNeighborBuilder<T extends Vec3> {
 			for (int i=0; i<27; i++){				
 				List<T> possibleNeigh = cells[p+cellOffsets[i]];
 				if (possibleNeigh!=null){
-					for (int l=0; l<possibleNeigh.size(); l++){
+					for (int l=0, len = possibleNeigh.size(); l<len; l++){
 						T s = possibleNeigh.get(l);
 						if (!s.equals(c) && c.getSqrDistTo(s)<=sqrCutoff) neigh.add(s);
 					}
@@ -300,7 +300,7 @@ public class NearestNeighborBuilder<T extends Vec3> {
 						
 						List<T> possibleNeigh = accessCell(x+i, y+j, z+k);
 						if (possibleNeigh!=null){
-							for (int l=0; l<possibleNeigh.size(); l++){
+							for (int l=0, len = possibleNeigh.size(); l<len; l++){
 								T s = possibleNeigh.get(l);
 								if (!s.equals(c) && v.getSqrDistTo(s)<=sqrCutoff) neigh.add(s);
 							}
@@ -343,7 +343,7 @@ public class NearestNeighborBuilder<T extends Vec3> {
 			for (int i=0; i<27; i++){				
 				List<T> possibleNeigh = cells[p+cellOffsets[i]];
 				if (possibleNeigh!=null){
-					for (int l=0; l<possibleNeigh.size(); l++){
+					for (int l=0, len = possibleNeigh.size(); l<len; l++){
 						T s = possibleNeigh.get(l);
 						if (!s.equals(c) && s.getSqrDistTo(c)<=sqrCutoff) neigh.add(s.subClone(c));
 					}
@@ -375,7 +375,7 @@ public class NearestNeighborBuilder<T extends Vec3> {
 						
 						List<T> possibleNeigh = accessCell(x + i, y + j, z + k);
 						if (possibleNeigh!=null){
-							for (int l=0; l<possibleNeigh.size(); l++){
+							for (int l=0, len = possibleNeigh.size(); l<len; l++){
 								T s = possibleNeigh.get(l);
 								Vec3 t = s.subClone(cclone);
 								if (!s.equals(c) && t.getLengthSqr()<=sqrCutoff) neigh.add(t);
@@ -452,7 +452,7 @@ public class NearestNeighborBuilder<T extends Vec3> {
 						
 						List<T> possibleNeigh = accessCell(x + i, y + j, z + k);
 						if (possibleNeigh!=null){
-							for (int l=0; l<possibleNeigh.size(); l++){
+							for (int l=0, len = possibleNeigh.size(); l<len; l++){
 								T s = possibleNeigh.get(l);
 								Vec3 t = s.subClone(cclone);
 								if (!s.equals(c) && t.getLengthSqr()<= sqrCutoff)
