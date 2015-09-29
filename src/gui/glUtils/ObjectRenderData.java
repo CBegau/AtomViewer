@@ -19,6 +19,7 @@
 package gui.glUtils;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Collections;
 import java.util.Comparator;
@@ -45,7 +46,7 @@ public class ObjectRenderData<T extends Vec3 & Pickable> {
 	private boolean subdivided = false;
 	
 	
-	public ObjectRenderData(List<T> objects, boolean subdivide, BoxParameter box) {
+	public ObjectRenderData(Collection<T> objects, boolean subdivide, BoxParameter box) {
 //		long time = System.nanoTime();
 		
 		final Cell rootCell;
@@ -72,12 +73,15 @@ public class ObjectRenderData<T extends Vec3 & Pickable> {
 		
 		this.subdivided = subdivide;
 	
-		if (objects instanceof ArrayList<?>)
-			rootCell.objects = (ArrayList<T>)objects;
-		else rootCell.objects = new ArrayList<T>(objects);
-		
 		if (objects.size()<MAX_ELEMENTS_PER_CELL)
 			subdivide = false;
+		
+		if (objects instanceof ArrayList<?> && subdivide)
+			//Performance optimizations; the root cell is to be split and its content will be 
+			//copied to sub cells. Therefore do not create a copy of the object collection, but use the
+			//underlying ArrayList directly. Especially for large arrays this is beneficial
+			rootCell.objects = (ArrayList<T>)objects;
+		else rootCell.objects = new ArrayList<T>(objects);
 		
 		if(subdivide)
 			submitTask(rootCell);
