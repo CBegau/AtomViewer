@@ -455,9 +455,10 @@ public class StressDataModule extends ClonableProcessingModule {
 				return false;
 			}
 			
+			//TODO format message
 			@Override
-			public String printMessage(InputEvent ev, AtomData data) {
-				return toString();
+			public Tupel<String,String> printMessage(InputEvent ev, AtomData data) {
+				return new Tupel<String,String>("Stress value", toString());
 			}
 			
 			@Override

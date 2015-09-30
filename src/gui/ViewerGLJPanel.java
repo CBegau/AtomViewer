@@ -719,7 +719,9 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			if (picking){
 				Vec3 p;
 				indenter.setCenter(p=new Vec3(indent[1], indent[2], indent[3]));
-				indenter.setText(String.format("Cylindrical indenter (r=%f) at %s", indent[4], p.toString()));
+				indenter.setText("Cylindrical indenter",
+						CommonUtils.buildHTMLTableForKeyValue(new String[]{"Radius", "Position"},
+								new Object[]{indent[4], p.toString()}));
 			} 
 			
 			mvm.translate(indent[1], indent[2], indent[3]);
@@ -748,7 +750,9 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			if (picking){
 				Vec3 p;
 				indenter.setCenter(p=new Vec3(indent[1], indent[2], indent[3]));
-				indenter.setText(String.format("Spherical indenter (r=%f) at %s", indent[4], p.toString()));
+				indenter.setText("Spherical indenter",
+						CommonUtils.buildHTMLTableForKeyValue(new String[]{"Radius", "Position"},
+								new Object[]{indent[4], p.toString()}));
 			} 
 			
 			mvm.translate(indent[1], indent[2], indent[3]);
@@ -768,7 +772,8 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			
 			if (picking){
 				indenter.setCenter(new Vec3(hx/2f, hx/2f, indent[1]));
-				indenter.setText(String.format("Flat punch indenter at z=%f", indent[1]));
+				indenter.setText("Flat punch indenter",
+						CommonUtils.buildHTMLTableForKeyValue(new String[]{"z-coordinate"}, new Object[]{indent[1]}));
 			} 
 
 			mvm.translate(0, 0, indent[1] - indent[2]);
@@ -1667,7 +1672,8 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 				}
 			}
 			
-			JLogPanel.getJLogPanel().addLog(picked.printMessage(e, atomData));
+			Tupel<String, String> m = picked.printMessage(e, atomData);
+			JLogPanel.getJLogPanel().addInfo(m.o1, m.o2);
 			
 			if (picked.isHighlightable()){
 				if (!cleared) {

@@ -322,6 +322,7 @@ public class AtomData {
 	 * @return
 	 */
 	public StringBuilder plotNeighborsGraph(final Atom... atomsToPlot){
+		//TODO format message
 		StringBuilder sb = new StringBuilder();
 		final float d = defaultCrystalStructure.getNearestNeighborSearchRadius();
 		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(box, d, true);

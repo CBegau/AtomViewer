@@ -166,6 +166,23 @@ public class CommonUtils {
 		else return s;
 	}
 	
+	public static String buildHTMLTableForKeyValue(String[] keys, Object[] values){
+		assert (keys.length == values.length);
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append("<table>");
+		for (int i=0; i<keys.length; i++){
+			sb.append("<tr><td>");
+			sb.append(keys[i]); sb.append(":");
+			sb.append("</td></td>");
+			sb.append(values[i].toString());
+			sb.append("</td></tr>");
+		}
+		sb.append("</table>");
+		
+		return sb.toString();
+	}
+	
 	public static JLabel getWordWrappedJLabel(String s){
 		JLabel l = new JLabel();
 		l.setText(getWordWrappedString(s, l));

@@ -21,6 +21,7 @@ package processingModules.skeletonizer;
 import java.awt.event.InputEvent;
 import java.util.*;
 
+import common.Tupel;
 import common.Vec3;
 import crystalStructures.CrystalStructure;
 import model.*;
@@ -184,7 +185,7 @@ public class Dislocation implements Pickable{
 	
 	@Override
 	public String toString() {
-		String s = "Dislocation(" + id + ") Length " + getLength();
+		String s = "Length " + getLength();
 		if (this.bvInfo!=null){
 			Vec3 bv;
 			if (grain!=null){
@@ -283,9 +284,10 @@ public class Dislocation implements Pickable{
 		}
 	}
 	
+	//TODO format message
 	@Override
-	public String printMessage(InputEvent ev, AtomData data) {
-		return toString();
+	public Tupel<String,String> printMessage(InputEvent ev, AtomData data) {
+		return new Tupel<String,String>("Dislocation "+ id,toString());
 	}
 	
 	@Override

@@ -21,6 +21,7 @@ package processingModules.otherModules.dislocationDensity;
 import java.awt.event.InputEvent;
 import java.util.Collection;
 
+import common.Tupel;
 import common.Vec3;
 import model.AtomData;
 import model.BurgersVector;
@@ -180,9 +181,10 @@ public class DislocationDensityTensor implements Pickable{
 		return sb.toString();
 	}
 	
+	//TODO format message
 	@Override
-	public String printMessage(InputEvent ev, AtomData data) {
-		return toString();
+	public Tupel<String,String> printMessage(InputEvent ev, AtomData data) {
+		return new Tupel<String,String>("Dislocation density",toString());
 	}
 	
 	@Override

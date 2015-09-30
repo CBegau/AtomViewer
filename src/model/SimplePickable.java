@@ -21,6 +21,7 @@ package model;
 import java.awt.event.InputEvent;
 import java.util.Collection;
 
+import common.Tupel;
 import common.Vec3;
 
 /**
@@ -33,16 +34,19 @@ public class SimplePickable implements Pickable {
 	
 	private Vec3 center = new Vec3();
 	private String text ="";
+	private String detailText ="";
 	
 	public SimplePickable() {}
 	
-	public SimplePickable(String text, Vec3 center) {
+	public SimplePickable(String text, String detailText, Vec3 center) {
 		this.center = center;
 		this.text = text;
+		this.detailText = detailText;
 	}
 	
-	public void setText(String text) {
+	public void setText(String text, String detailText) {
 		this.text = text;
+		this.detailText = detailText;
 	}
 	
 	public void setCenter(Vec3 center) {
@@ -65,7 +69,7 @@ public class SimplePickable implements Pickable {
 	}
 	
 	@Override
-	public String printMessage(InputEvent ev, AtomData data) {
-		return text;
+	public Tupel<String, String> printMessage(InputEvent ev, AtomData data) {
+		return new Tupel<String, String>(text, detailText);
 	}
 }

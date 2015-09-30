@@ -23,6 +23,7 @@ import java.util.*;
 import java.util.concurrent.*;
 
 import common.ThreadPool;
+import common.Tupel;
 import common.Vec3;
 import crystalStructures.CrystalStructure;
 import model.*;
@@ -277,9 +278,10 @@ public class Grain implements Pickable{
 		return rots[bestConfig];
 	}
 	
+	//TODO format message
 	@Override
-	public String printMessage(InputEvent ev, AtomData data) {
-		return toString();
+	public Tupel<String,String> printMessage(InputEvent ev, AtomData data) {
+		return new Tupel<String,String>("Grain",toString());
 	}
 	
 	@Override

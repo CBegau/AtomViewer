@@ -22,6 +22,7 @@ import java.awt.event.InputEvent;
 import java.util.*;
 
 import common.CommonUtils;
+import common.Tupel;
 import common.Vec3;
 import crystalStructures.CrystalStructure;
 
@@ -210,51 +211,55 @@ public class Atom extends Vec3 implements Pickable {
 	}
 	
 	@Override
-	public String printMessage(InputEvent ev, AtomData data) {
-		StringBuilder sb = new StringBuilder();
+	public Tupel<String,String> printMessage(InputEvent ev, AtomData data) {
+		if (ev!=null && (ev.getModifiersEx() & InputEvent.CTRL_DOWN_MASK) == InputEvent.CTRL_DOWN_MASK){
+			return new Tupel<String, String>("Neighbors graph", data.plotNeighborsGraph(this).toString());
+		}
+		
+		ArrayList<String> keys = new ArrayList<String>();
+		ArrayList<String> values = new ArrayList<String>();
 		
 		Vec3 offset = data.getBox().getOffset();
-		sb.append(String.format("Nr=%d, ", getNumber()));
-		sb.append(String.format("xyz=( %.4f, %.4f, %.4f ),", x+offset.x, y+offset.y, z+offset.z));
-		sb.append(String.format(" (%s),", data.getCrystalStructure().getNameForType(getType())));
-		if (data.getNameOfElement(getElement()).isEmpty())
-			sb.append(String.format(" Element=%d,", getElement()));
-		else sb.append(String.format(" Element=%d (%s),", getElement(), data.getNameOfElement(getElement())));
+		keys.add("Nr"); values.add(Integer.toString(getNumber()));
+		keys.add("Position"); values.add(this.addClone(offset).toString());
+		keys.add("Structure"); values.add(data.getCrystalStructure().getNameForType(getType()));
 		
-		if (getGrain() != DEFAULT_GRAIN) 
-			sb.append(String.format(" Grain=%s", getGrain()==IGNORED_GRAIN?"None":Integer.toString(getGrain())));
+		keys.add("element");
+		if (data.getNameOfElement(getElement()).isEmpty())
+			values.add(Integer.toString(getElement()));
+		else values.add(Integer.toString(getElement())+" "+data.getNameOfElement(getElement()));
+		
+		if (getGrain() != DEFAULT_GRAIN){ 
+			keys.add("Grain"); values.add(getGrain()==IGNORED_GRAIN?"None":Integer.toString(getGrain()));
+		}
+		
 		if (getRBV()!=null) {
 			CrystalRotationTools crt = null;
 			
 			if (getGrain() == DEFAULT_GRAIN)
 				crt = data.getCrystalRotation();
 			else crt = data.getGrains(getGrain()).getCystalRotationTools();
-			
 			Vec3 bv = crt.getInCrystalCoordinates(this.getRBV().bv);
-			sb.append(String.format(" RBV=[ %.3f | %.3f | %.3f ],", bv.x, bv.y, bv.z));
-			sb.append(String.format(" Lenght=%.3f", this.getRBV().bv.getLength()));
 			Vec3 ld = crt.getInCrystalCoordinates(this.getRBV().lineDirection);
-			sb.append(String.format(" LineDir=[ %.3f | %.3f | %.3f ],", ld.x, ld.y, ld.z));
 			
+			keys.add("Resultant Burgers vector"); values.add(bv.toString());
+			keys.add("Resultant Burgers vector magnitude"); values.add(Float.toString(this.getRBV().bv.getLength()));
+			keys.add("Dislocation line tangent"); values.add(ld.toString());
 			BurgersVector tbv = crt.rbvToBurgersVector(this.getRBV());
-			sb.append(" TBV="+tbv.toString());
+			keys.add("True Burgers vector"); values.add(tbv.toString());
 		}
 		
 		List<DataColumnInfo> dci = data.getDataColumnInfos();
 		if (dataValues != null){
 			for (int i=0; i < dataValues.length; i++){
 				DataColumnInfo c = dci.get(i);
-				sb.append(String.format(" %s=%s%s", c.getName(), 
-						CommonUtils.outputDecimalFormatter.format(getData(i)),
-						c.getUnit()));	
+				keys.add(c.getName()); values.add(CommonUtils.outputDecimalFormatter.format(getData(i))+c.getUnit());
 			}
 		}
 		
-		if (ev!=null && (ev.getModifiersEx() & InputEvent.CTRL_DOWN_MASK) == InputEvent.CTRL_DOWN_MASK){
-			sb.append("\n");
-			sb.append(data.plotNeighborsGraph(this));
-		}
-		return sb.toString();
+		return new Tupel<String, String>("Atom "+atomNumber, 
+				CommonUtils.buildHTMLTableForKeyValue(
+						keys.toArray(new String[keys.size()]), values.toArray(new String[values.size()])));
 	}
 	
 	@Override

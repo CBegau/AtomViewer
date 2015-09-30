@@ -24,6 +24,8 @@ import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 import common.ColorTable;
+import common.CommonUtils;
+import common.Tupel;
 import common.Vec3;
 import model.AtomData;
 import model.BoxParameter;
@@ -377,8 +379,10 @@ public class LoadBalancingProcessingModule extends ClonableProcessingModule {
 			}
 			
 			@Override
-			public String printMessage(InputEvent ev, AtomData data) {
-				return String.format("CPU %d load: %.6f particles: %d volume: %.6f", cpu, load, particles, volume);
+			public Tupel<String,String> printMessage(InputEvent ev, AtomData data) {
+				return new Tupel<String,String>(String.format("Load on CPU %d = %.3f",cpu, load), 
+						CommonUtils.buildHTMLTableForKeyValue(new String[]{"CPU", "Load", "Particles", "Volume"},
+								new Object[]{cpu, load, particles, volume}));
 			}
 			
 			@Override
