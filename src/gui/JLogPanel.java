@@ -18,32 +18,63 @@
 
 package gui;
 
-import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import javax.swing.JButton;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTable;
+import javax.swing.JTextPane;
+import javax.swing.ListSelectionModel;
+import javax.swing.ScrollPaneConstants;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.table.AbstractTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
 
-import javax.swing.*;
-import javax.swing.text.BadLocationException;
 
 public class JLogPanel extends JPanel{
-	
 	private static final long serialVersionUID = 1L;
-	private JTextArea log = new JTextArea();
+	
+	private static final int MAX_EVENTS = 1000;
+	private static final LogEntry dummyEntry = new LogEntry("No messages", "", LogEntry.Type.INFO);
+
+	private JTextPane detailsPane = new JTextPane();
+	
+	private LogEntryTableModel model = new LogEntryTableModel();
+	private JTable logTable = new JTable(model);
 	private static JLogPanel logPanel = new JLogPanel();
-	private JScrollPane scrollPane = new JScrollPane(log);
+	
 	private JButton clearButton = new JButton("<html><body>Clear<br>Log</body></html>");
-	private static final int MAX_TEXT_LENGHT = 1000000;
 	
 	public static JLogPanel getJLogPanel(){
 		return logPanel;
 	}
 	
 	private JLogPanel() {
-		scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+		this.logTable.setDefaultRenderer(LogEntry.class, new ColorCellRenderer());
+		this.logTable.setTableHeader(null);
+		this.logTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		
+		JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+		
+		splitPane.add(new JScrollPane(logTable, ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS,
+				ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED));
+		splitPane.add(new JScrollPane(detailsPane, ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS,
+				ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED));
+		splitPane.setResizeWeight(0.2);
+		
 		this.setLayout(new BorderLayout());
-		this.add(scrollPane, BorderLayout.CENTER);
-		this.add(clearButton, BorderLayout.EAST);
-		this.log.setEditable(false);
+		this.add(splitPane, BorderLayout.CENTER);
+		this.add(clearButton, BorderLayout.WEST);
+		
+		this.detailsPane.setEditable(false);
 		this.clearButton.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -51,21 +82,165 @@ public class JLogPanel extends JPanel{
 			}
 		});
 		
-		scrollPane.setPreferredSize(new Dimension(400,300));
-	}
-	
-	public void clearLog(){
-		log.setText("");
-	}
-	
-	public void addLog(String s){
-		log.insert(s+"\n", 0);
-		log.setCaretPosition(0);
+		splitPane.setPreferredSize(new Dimension(400,300));
 		
-		if (log.getDocument().getLength() > MAX_TEXT_LENGHT) try {
-			log.getDocument().remove(MAX_TEXT_LENGHT, log.getDocument().getLength()-MAX_TEXT_LENGHT);
-		} catch (BadLocationException e) {
-			e.printStackTrace();
+		this.logTable.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+			@Override
+			public void valueChanged(ListSelectionEvent e) {
+				int index = logTable.getSelectedRow();
+				if (!e.getValueIsAdjusting() && index != -1){
+					detailsPane.setText(model.getEntry(index).detail);
+				}
+				if (index == -1){
+					detailsPane.setText("");
+				}
+			}
+		});
+	}
+	
+	/**
+	 * Adds an error message into the LogPanel.
+	 * The message should consist of a short title description that is shown in list of messages.
+	 * More details can be provided if necessary.
+	 * @param error A short error message
+	 * @param details optional detail, the text may be formatted using html.
+	 * Note: It is not required to wrap the message in html-tags, this is added automatically if needed
+	 */
+	public void addError(String error, String details){
+		model.insertEntry(new LogEntry(error, details, LogEntry.Type.ERROR));
+		logTable.getSelectionModel().setSelectionInterval(0, 0);
+	}
+	
+	/**
+	 * Adds an info message into the LogPanel.
+	 * The message should consist of a short title description that is shown in list of messages.
+	 * More details can be provided if necessary.
+	 * @param info A short info message
+	 * @param details optional detail, the text may be formatted using html.
+	 * Note: It is not required to wrap the message in html-tags, this is added automatically if needed
+	 */
+	public void addInfo(String info, String details){
+		model.insertEntry(new LogEntry(info, details, LogEntry.Type.INFO));
+		logTable.getSelectionModel().setSelectionInterval(0, 0);
+	}
+	
+	/**
+	 * Adds a warning message into the LogPanel.
+	 * The message should consist of a short title description that is shown in list of messages.
+	 * More details can be provided if necessary.
+	 * @param error A short warning message
+	 * @param details optional detail, the text may be formatted using html.
+	 * Note: It is not required to wrap the message in html-tags, this is added automatically if needed
+	 */
+	public void addWarning(String warning, String details){
+		model.insertEntry(new LogEntry(warning, details, LogEntry.Type.WARNING));
+		logTable.getSelectionModel().setSelectionInterval(0, 0);
+	}
+	
+	/**
+	 * Removes all entries from the log
+	 */
+	public void clearLog(){
+		model.clearLog();
+	}
+	
+	
+	@Deprecated
+	public void addLog(String s){
+		addInfo("Info",s);
+	}
+	
+	private static class LogEntry {
+		enum Type {INFO, WARNING, ERROR};
+		String info;
+		String detail;
+		Type type;
+		
+		public LogEntry(String info, String detail, Type t) {
+			this.type = t;
+			this.info = info;
+			//replace null by empty string
+			this.detail = (detail == null ? "" : detail);
+		}
+		
+		@Override
+		public String toString() {
+			return info;
 		}
 	}
+	
+	private static class ColorCellRenderer extends DefaultTableCellRenderer{
+		private static final long serialVersionUID = 1L;
+		private Color defaultColor = this.getForeground();
+		
+		@Override
+		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus,
+				int row, int column) {
+			LogEntry e = (LogEntry)value;
+			
+			if (e.type == LogEntry.Type.INFO || isSelected)
+				this.setForeground(defaultColor);
+			else if (e.type == LogEntry.Type.WARNING)
+				this.setForeground(Color.YELLOW);
+			else if (e.type == LogEntry.Type.ERROR)
+				this.setForeground(Color.RED);
+			
+			if (e.type == LogEntry.Type.INFO)
+				this.setForeground(Color.RED);
+			
+			return this;
+		}
+		
+	}
+	
+	private class LogEntryTableModel extends AbstractTableModel{
+		private static final long serialVersionUID = 1L;
+
+		private boolean noEntry = true;
+
+		private ArrayList<LogEntry> entries = new ArrayList<LogEntry>(MAX_EVENTS);
+		
+		public LogEntryTableModel() {
+			entries.add(dummyEntry);	//Empty list is filled with a dummy entry
+		}
+		
+		@Override
+		public int getColumnCount() {
+			return 1;
+		}
+
+		@Override
+		public int getRowCount() {
+			return entries.size();
+		}
+
+		@Override
+		public Object getValueAt(int rowIndex, int columnIndex) {
+			return getEntry(rowIndex);
+		}
+		
+		public void clearLog(){
+			model.entries.clear();
+			noEntry = true;
+			entries.add(dummyEntry);  //Empty list is filled with a dummy entry
+			logTable.setRowSelectionInterval(0, 0);
+			fireTableDataChanged();
+		}
+		
+		private void insertEntry(LogEntry e){
+			if (noEntry) {	//Remove the dummy entry
+				entries.clear();
+				noEntry = false;
+			}
+			if (entries.size() == MAX_EVENTS) entries.remove(0);
+			entries.add(e);
+			fireTableRowsInserted(0, 0);
+		}
+		
+		LogEntry getEntry(int index){
+			//Newest entries are at the end of the list, but should be shown in the first place
+			return entries.get(entries.size()-1-index);
+		}
+	}
+	
 }

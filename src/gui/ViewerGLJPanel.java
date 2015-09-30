@@ -1593,7 +1593,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	 * @param e 
 	 */
 	private void performPicking(MouseEvent e){
-		final int picksize = 7;
+		final int picksize = 3;
 		
 		if (atomData==null) return;
 		pickList.clear();
