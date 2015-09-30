@@ -37,6 +37,9 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.TableCellRenderer;
+import javax.swing.text.Document;
+import javax.swing.text.html.HTMLEditorKit;
+import javax.swing.text.html.StyleSheet;
 
 import model.RenderingConfiguration;
 
@@ -53,6 +56,7 @@ public class JLogPanel extends JPanel{
 	private JTable logTable;
 	private static JLogPanel logPanel = new JLogPanel();
 	
+	private Document detailDoc;
 	private JButton clearButton = new JButton("<html><body>Clear<br>Log</body></html>");
 	
 	public static JLogPanel getJLogPanel(){
@@ -82,6 +86,17 @@ public class JLogPanel extends JPanel{
 			}
 		};
 		
+		//Define formatting for the detail pane, by defining a style sheet
+		HTMLEditorKit kit = new HTMLEditorKit();
+		this.detailsPane.setEditorKit(kit);
+		this.detailsPane.setEditable(false);
+		StyleSheet styleSheet = new StyleSheet();
+		styleSheet.addRule(String.format("body {font-family:%s;}", this.detailsPane.getFont().getFamily()));
+		kit.setStyleSheet(styleSheet);
+		
+		detailDoc = kit.createDefaultDocument();
+		this.detailsPane.setDocument(detailDoc);
+		
 		this.logTable.setTableHeader(null);
 		this.logTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		
@@ -90,14 +105,13 @@ public class JLogPanel extends JPanel{
 		splitPane.add(new JScrollPane(logTable, ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS,
 				ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED));
 		splitPane.add(new JScrollPane(detailsPane, ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS,
-				ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED));
+				ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER));
 		splitPane.setResizeWeight(0.2);
 		
 		this.setLayout(new BorderLayout());
 		this.add(splitPane, BorderLayout.CENTER);
 		this.add(clearButton, BorderLayout.WEST);
 		
-		this.detailsPane.setEditable(false);
 		this.clearButton.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -108,11 +122,14 @@ public class JLogPanel extends JPanel{
 		splitPane.setPreferredSize(new Dimension(400,300));
 		
 		this.logTable.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+			String begin =  String.format("<html><body >");
+			String end = "</body></html>";
+					
 			@Override
 			public void valueChanged(ListSelectionEvent e) {
 				int index = logTable.getSelectedRow();
-				if (!e.getValueIsAdjusting() && index != -1){
-					detailsPane.setText(model.getEntry(index).detail);
+				if (!e.getValueIsAdjusting() && index != -1 && index < model.entries.size()){
+					detailsPane.setText(begin + model.getEntry(index).detail + end);
 				}
 				if (index == -1){
 					detailsPane.setText("");
@@ -125,12 +142,12 @@ public class JLogPanel extends JPanel{
 	 * Adds an error message into the LogPanel.
 	 * The message should consist of a short title description that is shown in list of messages.
 	 * More details can be provided if necessary.
-	 * @param error A short error message
+	 * @param error A short error message.
 	 * @param details optional detail, the text may be formatted using html.
 	 * Note: It is not required to wrap the message in html-tags, this is added automatically if needed
 	 */
 	public void addError(String error, String details){
-		model.insertEntry(new LogEntry(error, details, LogEntry.Type.ERROR));
+		model.insertEntry(new LogEntry("Error: "+error, details, LogEntry.Type.ERROR));
 		if (!RenderingConfiguration.isHeadless())
 			logTable.getSelectionModel().setSelectionInterval(0, 0);
 	}
@@ -158,7 +175,7 @@ public class JLogPanel extends JPanel{
 	 * Note: It is not required to wrap the message in html-tags, this is added automatically if needed
 	 */
 	public void addWarning(String warning, String details){
-		model.insertEntry(new LogEntry(warning, details, LogEntry.Type.WARNING));
+		model.insertEntry(new LogEntry("Warning: "+warning, details, LogEntry.Type.WARNING));
 		if (!RenderingConfiguration.isHeadless())
 			logTable.getSelectionModel().setSelectionInterval(0, 0);
 	}
@@ -242,7 +259,7 @@ public class JLogPanel extends JPanel{
 			//If running without user interface, print to stdout/stderr
 			if (RenderingConfiguration.isHeadless()){
 				if (e.type == LogEntry.Type.ERROR){
-					System.err.println("ERROR: "+e.info);
+					System.err.println(e.info);
 					System.err.println(e.detail);
 				} else {
 					System.out.println(e.info);
@@ -255,7 +272,8 @@ public class JLogPanel extends JPanel{
 		
 		LogEntry getEntry(int index){
 			//Newest entries are at the end of the list, but should be shown in the first place
-			return entries.get(entries.size()-1-index);
+			int i = entries.size()-1-index;
+			return entries.get(i);
 		}
 	}
 	
