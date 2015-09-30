@@ -38,13 +38,15 @@ import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
 
+import model.RenderingConfiguration;
+
 
 public class JLogPanel extends JPanel{
 	private static final long serialVersionUID = 1L;
 	
 	private static final int MAX_EVENTS = 1000;
 	private static final LogEntry dummyEntry = new LogEntry("No messages", "", LogEntry.Type.INFO);
-
+	
 	private JTextPane detailsPane = new JTextPane();
 	
 	private LogEntryTableModel model = new LogEntryTableModel();
@@ -108,7 +110,8 @@ public class JLogPanel extends JPanel{
 	 */
 	public void addError(String error, String details){
 		model.insertEntry(new LogEntry(error, details, LogEntry.Type.ERROR));
-		logTable.getSelectionModel().setSelectionInterval(0, 0);
+		if (!RenderingConfiguration.isHeadless())
+			logTable.getSelectionModel().setSelectionInterval(0, 0);
 	}
 	
 	/**
@@ -121,7 +124,8 @@ public class JLogPanel extends JPanel{
 	 */
 	public void addInfo(String info, String details){
 		model.insertEntry(new LogEntry(info, details, LogEntry.Type.INFO));
-		logTable.getSelectionModel().setSelectionInterval(0, 0);
+		if (!RenderingConfiguration.isHeadless())
+			logTable.getSelectionModel().setSelectionInterval(0, 0);
 	}
 	
 	/**
@@ -134,7 +138,8 @@ public class JLogPanel extends JPanel{
 	 */
 	public void addWarning(String warning, String details){
 		model.insertEntry(new LogEntry(warning, details, LogEntry.Type.WARNING));
-		logTable.getSelectionModel().setSelectionInterval(0, 0);
+		if (!RenderingConfiguration.isHeadless())
+			logTable.getSelectionModel().setSelectionInterval(0, 0);
 	}
 	
 	/**
@@ -223,8 +228,10 @@ public class JLogPanel extends JPanel{
 			model.entries.clear();
 			noEntry = true;
 			entries.add(dummyEntry);  //Empty list is filled with a dummy entry
-			logTable.setRowSelectionInterval(0, 0);
-			fireTableDataChanged();
+			if (!RenderingConfiguration.isHeadless()){
+				logTable.setRowSelectionInterval(0, 0);
+				fireTableDataChanged();
+			}
 		}
 		
 		private void insertEntry(LogEntry e){
@@ -234,7 +241,19 @@ public class JLogPanel extends JPanel{
 			}
 			if (entries.size() == MAX_EVENTS) entries.remove(0);
 			entries.add(e);
-			fireTableRowsInserted(0, 0);
+			
+			//If running without user interface, print to stdout/stderr
+			if (RenderingConfiguration.isHeadless()){
+				if (e.type == LogEntry.Type.ERROR){
+					System.err.println("ERROR: "+e.info);
+					System.err.println(e.detail);
+				} else {
+					System.out.println(e.info);
+					System.out.println(e.detail);
+				}
+			} else {
+				fireTableRowsInserted(0, 0);
+			}				
 		}
 		
 		LogEntry getEntry(int index){
