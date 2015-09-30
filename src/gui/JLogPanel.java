@@ -36,7 +36,7 @@ import javax.swing.ScrollPaneConstants;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
-import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.TableCellRenderer;
 
 import model.RenderingConfiguration;
 
@@ -50,7 +50,7 @@ public class JLogPanel extends JPanel{
 	private JTextPane detailsPane = new JTextPane();
 	
 	private LogEntryTableModel model = new LogEntryTableModel();
-	private JTable logTable = new JTable(model);
+	private JTable logTable;
 	private static JLogPanel logPanel = new JLogPanel();
 	
 	private JButton clearButton = new JButton("<html><body>Clear<br>Log</body></html>");
@@ -60,7 +60,28 @@ public class JLogPanel extends JPanel{
 	}
 	
 	private JLogPanel() {
-		this.logTable.setDefaultRenderer(LogEntry.class, new ColorCellRenderer());
+		
+		this.logTable = new JTable(model){
+			private static final long serialVersionUID = 1L;
+			private final Color defaultColor = this.getForeground();
+			private final Color warningColor = new Color(205, 193, 38);
+			private final Color errorColor = new Color(196, 38, 38);
+			
+			@Override
+			public Component prepareRenderer(TableCellRenderer renderer, int row, int column) {
+				//Enable different colors for messages/warnings/errors
+				Component c = super.prepareRenderer(renderer, row, column);
+				LogEntry e = model.getEntry(row);
+				if (e.type == LogEntry.Type.INFO || isRowSelected(row))
+					this.setForeground(defaultColor);
+				else if (e.type == LogEntry.Type.WARNING)
+					this.setForeground(warningColor);
+				else if (e.type == LogEntry.Type.ERROR)
+					this.setForeground(errorColor);
+				return c;
+			}
+		};
+		
 		this.logTable.setTableHeader(null);
 		this.logTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		
@@ -172,30 +193,6 @@ public class JLogPanel extends JPanel{
 		public String toString() {
 			return info;
 		}
-	}
-	
-	private static class ColorCellRenderer extends DefaultTableCellRenderer{
-		private static final long serialVersionUID = 1L;
-		private Color defaultColor = this.getForeground();
-		
-		@Override
-		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus,
-				int row, int column) {
-			LogEntry e = (LogEntry)value;
-			
-			if (e.type == LogEntry.Type.INFO || isSelected)
-				this.setForeground(defaultColor);
-			else if (e.type == LogEntry.Type.WARNING)
-				this.setForeground(Color.YELLOW);
-			else if (e.type == LogEntry.Type.ERROR)
-				this.setForeground(Color.RED);
-			
-			if (e.type == LogEntry.Type.INFO)
-				this.setForeground(Color.RED);
-			
-			return this;
-		}
-		
 	}
 	
 	private class LogEntryTableModel extends AbstractTableModel{
