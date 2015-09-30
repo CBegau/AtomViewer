@@ -68,7 +68,7 @@ public class JLogPanel extends JPanel{
 		this.logTable = new JTable(model){
 			private static final long serialVersionUID = 1L;
 			private final Color defaultColor = this.getForeground();
-			private final Color warningColor = new Color(205, 193, 38);
+			private final Color warningColor = new Color(199, 160, 8);
 			private final Color errorColor = new Color(196, 38, 38);
 			
 			@Override
@@ -77,11 +77,11 @@ public class JLogPanel extends JPanel{
 				Component c = super.prepareRenderer(renderer, row, column);
 				LogEntry e = model.getEntry(row);
 				if (e.type == LogEntry.Type.INFO || isRowSelected(row))
-					this.setForeground(defaultColor);
+					c.setForeground(defaultColor);
 				else if (e.type == LogEntry.Type.WARNING)
-					this.setForeground(warningColor);
+					c.setForeground(warningColor);
 				else if (e.type == LogEntry.Type.ERROR)
-					this.setForeground(errorColor);
+					c.setForeground(errorColor);
 				return c;
 			}
 		};
