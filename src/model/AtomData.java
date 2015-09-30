@@ -214,8 +214,8 @@ public class AtomData {
 					this.addAdditionalData(pr.getDataContainer());
 				
 				if (pr.getResultInfoString()!=null && !pr.getResultInfoString().isEmpty())
-					JLogPanel.getJLogPanel().addLog(String.format("Results from %s\n%s",
-						pm.getShortName(), pr.getResultInfoString()));
+					JLogPanel.getJLogPanel().addInfo(String.format("Results: %s", pm.getShortName()), 
+							pr.getResultInfoString());
 			}
 			if (pm.getDataColumnsInfo() != null){
 				for (DataColumnInfo dci : pm.getDataColumnsInfo())
@@ -304,8 +304,9 @@ public class AtomData {
 			}
 		}
 		if (warnings > 0){
-			JLogPanel.getJLogPanel().addLog(String.format("%d Atoms with a type-ID exceeding the total number of types defined"
-					+ " for this structure are detected. These atoms were reassigned to type 0.", warnings));
+			JLogPanel.getJLogPanel().addWarning("Type ID exceeds number of defined types.", 
+					String.format("%d atoms had a type ID that was larger than the number of types defined for the structure. "
+							+ "These atoms were reassigned to type 0.", warnings));
 		}
 		
 		for (int i=0; i<atoms.size();i++){

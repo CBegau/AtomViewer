@@ -1622,7 +1622,8 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		gl.glEnable(GL.GL_BLEND);
 		
 		if (pickList.size() > 16777214){
-			JLogPanel.getJLogPanel().addLog("Too many objects in the scene, show less objects to enable picking");
+			JLogPanel.getJLogPanel().addError("Picking not possible", "Too many objects in the scene. Only 2^24 objects can be visible for picking."
+					+ " Show less objects to enable picking");
 			pickList.clear();
 			return;
 		}

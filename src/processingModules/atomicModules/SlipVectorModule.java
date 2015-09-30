@@ -122,14 +122,13 @@ public class SlipVectorModule extends ClonableProcessingModule{
 		
 		if (data == referenceAtomData) return null;
 		
-		if (!data.getBox().getBoxSize()[0].equals(referenceAtomData.getBox().getBoxSize()[0]) || 
-				!data.getBox().getBoxSize()[1].equals(referenceAtomData.getBox().getBoxSize()[1]) || 
-				!data.getBox().getBoxSize()[2].equals(referenceAtomData.getBox().getBoxSize()[2])){
-			JLogPanel.getJLogPanel().addLog(String.format("Warning: Slip vectors may be inaccurate. "
-					+ "Box sizes of reference %s is different from %s", referenceAtomData.getName(), data.getName()));
+		if (!data.getBox().equals(referenceAtomData.getBox())){
+			JLogPanel.getJLogPanel().addWarning("Inaccurate slip vectors",  
+					String.format("Box sizes of reference %s is different from %s."
+							+ " Slip vectors may be inaccurate.", referenceAtomData.getName(), data.getName()));
 		}
 		
-		if (data.getAtoms().size() != referenceAtomData.getAtoms().size()) 
+		if (data.getAtoms().size() != referenceAtomData.getAtoms().size())
 			throw new RuntimeException(String.format("Cannot compute slip vectors: Number of atoms in %s and reference %s mismatch.", 
 					data.getName(), referenceAtomData.getName()));
 		

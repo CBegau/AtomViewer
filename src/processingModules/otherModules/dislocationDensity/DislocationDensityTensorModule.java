@@ -268,7 +268,8 @@ public class DislocationDensityTensorModule extends ClonableProcessingModule {
 			CuboidVolumeElement[][][] ve = new CuboidVolumeElement[gridSize[0]][gridSize[1]][gridSize[2]];
 			
 			if (!data.getBox().isOrtho())
-				JLogPanel.getJLogPanel().addLog("Simulation volume is not orthogonal, dislocation tensors are inaccurate");
+				JLogPanel.getJLogPanel().addWarning("Inaccurate dislocation densities",
+						"The simulation box is non-orthogonal. The computed dislocation densities are inaccurate");
 			
 			for (int i=0; i<gridSize[0]; i++){
 				for (int j=0;j<gridSize[1]; j++){

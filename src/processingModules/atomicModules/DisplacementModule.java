@@ -123,15 +123,16 @@ public class DisplacementModule extends ClonableProcessingModule {
 		final AtomData referenceAtomData = Toolchain.getReferenceData(data, referenceMode);
 		if (data == referenceAtomData) return null;
 		
-		if (!data.getBox().getBoxSize()[0].equals(referenceAtomData.getBox().getBoxSize()[0]) || 
-				!data.getBox().getBoxSize()[1].equals(referenceAtomData.getBox().getBoxSize()[1]) || 
-				!data.getBox().getBoxSize()[2].equals(referenceAtomData.getBox().getBoxSize()[2])){
-			JLogPanel.getJLogPanel().addLog(String.format("WARNING: Displacement vectors may be inaccurate. "
-					+ "Box sizes of reference %s is different from %s", referenceAtomData.getName(), data.getName()));
+		if (!data.getBox().equals(referenceAtomData.getBox())){
+			JLogPanel.getJLogPanel().addWarning("Inaccurate displacement vectors",  
+					String.format("Box sizes of reference %s is different from %s."
+							+ " Displacement vectors may be inaccurate.", referenceAtomData.getName(), data.getName()));
 		}
 		
 		if (data.getAtoms().size() != referenceAtomData.getAtoms().size()){ 
-			JLogPanel.getJLogPanel().addLog(String.format("WARNING: Displacement vectors may be inaccurate. Number of atoms in %s and reference %s mismatch.", 
+			JLogPanel.getJLogPanel().addWarning("Inaccurate displacement vectors", 
+					String.format("The number of atoms in %s and reference %s mismatch."
+							+ "Computed displacements between these file may be inaccurate", 
 					data.getName(), referenceAtomData.getName()));
 		}
 		
@@ -140,10 +141,12 @@ public class DisplacementModule extends ClonableProcessingModule {
 		for (Atom a : referenceAtomData.getAtoms())
 			atomsMap.put(a.getNumber(), a);
 		
-		if (atomsMap.size() != referenceAtomData.getAtoms().size())
-			throw new RuntimeException(
-					String.format("Cannot compute displacement vectors: IDs of atoms in %s are non-unique.",
-							referenceAtomData.getName()));
+		if (atomsMap.size() != referenceAtomData.getAtoms().size()){
+			String errorMessage = String.format("IDs of atoms in %s are non-unique", referenceAtomData.getName());
+			JLogPanel.getJLogPanel().addError("IDs of atoms in are non-unique",
+					String.format("Cannot compute displacement vectors from %s", referenceAtomData.getName()));
+			throw new RuntimeException(errorMessage);
+		}
 		
 		final int dx = data.getIndexForCustomColumn(cci[0]);
 		final int dy = data.getIndexForCustomColumn(cci[1]);
@@ -176,8 +179,10 @@ public class DisplacementModule extends ClonableProcessingModule {
 							a.setData(displ.getLength(), da);
 						} else {
 							if (!mismatchWarningShown.getAndSet(true)){
-								JLogPanel.getJLogPanel().addLog(String.format("WARNING: Some displacement vectors are inaccurate. "
-										+ "Some atoms could not be found in reference file %s.", referenceAtomData.getName()));
+								JLogPanel.getJLogPanel().addWarning("Inaccurate displacement vectors", 
+										String.format("Atom IDs in %s could not be matched to the reference %s."
+												+ "Computed  displacement vectors between these file may be inaccurate", 
+										data.getName(), referenceAtomData.getName()));
 							}
 							a.setData(0f, dx); a.setData(0f, dy); a.setData(0f, dz); a.setData(0f, da);
 						}

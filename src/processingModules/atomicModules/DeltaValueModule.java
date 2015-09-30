@@ -174,7 +174,9 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 		if (data == referenceAtomData) return null;
 		
 		if (data.getAtoms().size() != referenceAtomData.getAtoms().size()){ 
-			JLogPanel.getJLogPanel().addLog(String.format("Warning: Differences may inaccurate. Number of atoms in %s and reference %s mismatch.", 
+			JLogPanel.getJLogPanel().addWarning(String.format("Inaccurate differences for %s", this.toDeltaColumn.getName()), 
+					String.format("The number of atoms in %s and reference %s mismatch."
+							+ "Computed differences between these file may be inaccurate", 
 					data.getName(), referenceAtomData.getName()));
 		}
 		
@@ -183,15 +185,20 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 		for (Atom a : referenceAtomData.getAtoms()){
 			Atom oldValue = atomsMap.put(a.getNumber(), a);
 			if (oldValue != null){
-				JLogPanel.getJLogPanel().addLog(String.format("Duplicated IDs ID1: %s ID2: %s.", 
-						a.printMessage(null, data), oldValue.printMessage(null, referenceAtomData) ));
+				JLogPanel.getJLogPanel().addWarning("Duplicated IDs in data", 
+						String.format("The atom ID is %d is duplicated in %s."+
+								"The position of both atoms are (%.4f,%.4f,%.4f) and (%.4f,%.4f,%.4f)"
+						+ "Computed differences between these file may be inaccurate", 
+						referenceAtomData.getName(), a.getNumber(), a.x, a.y, a.y, oldValue.x, oldValue.y, oldValue.z));
 			}
 		}
 		
-		if (atomsMap.size() != referenceAtomData.getAtoms().size())
-			throw new RuntimeException(
-					String.format("Cannot compute difference values: IDs of atoms in %s are non-unique.",
-							referenceAtomData.getName()));
+		if (atomsMap.size() != referenceAtomData.getAtoms().size()){
+			String errorMessage = String.format("IDs of atoms in %s are non-unique", referenceAtomData.getName());
+			JLogPanel.getJLogPanel().addError(errorMessage,
+					String.format("Cannot compute difference of value %s", this.toDeltaColumn.getName()));
+			throw new RuntimeException(errorMessage);
+		}
 		
 		final int colValue = data.getIndexForCustomColumn(toDeltaColumn);
 		final int colValueRef = data.getIndexForCustomColumn(toDeltaColumn);
@@ -224,8 +231,10 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 							sum.add(value);
 						} else {
 							if (!mismatchWarningShown.getAndSet(true)){
-								JLogPanel.getJLogPanel().addLog(String.format("Warning: Some differences are inaccurate. "
-										+ "Some atoms could not be found in reference file %s.", referenceAtomData.getName()));
+								JLogPanel.getJLogPanel().addWarning(String.format("Inaccurate differences for %s", toDeltaColumn.getName()), 
+										String.format("Atom IDs in %s could not be matched to the reference %s."
+												+ "Computed differences between these file may be inaccurate", 
+										data.getName(), referenceAtomData.getName()));
 							}
 							a.setData(0f, deltaCol);
 						}
@@ -242,7 +251,7 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 		ThreadPool.executeParallel(parallelTasks);	
 		
 		ProgressMonitor.getProgressMonitor().stop();
-		String s = String.format("Total difference between file %s and %s in the value %s: %f", 
+		String s = String.format("Total difference between file %s and %s in %s: %f", 
 				referenceAtomData.getName(), data.getName(), toDeltaColumn.getName(), sumOfAllDeltas.getSum());
 		return new DataContainer.DefaultDataContainerProcessingResult(null, s);
 	}

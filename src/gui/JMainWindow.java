@@ -566,7 +566,8 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 							applyProcessWindowWithDisplay(Configuration.getCurrentAtomData(), pm.clone(), false);
 						}
 						Configuration.setCurrentAtomData(Configuration.getCurrentAtomData(), true, false);
-						JLogPanel.getJLogPanel().addLog("Applied toolchain");
+						JLogPanel.getJLogPanel().addInfo("Applied toolchain",
+								String.format("Applied toolchain %s", file.getName()));
 					}
 					
 					
@@ -598,7 +599,8 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 							}
 						}
 						Configuration.setCurrentAtomData(def, true, false);
-						JLogPanel.getJLogPanel().addLog("Applied toolchain");
+						JLogPanel.getJLogPanel().addInfo("Applied toolchain",
+								String.format("Applied toolchain %s", file.getName()));
 					}
 					
 					

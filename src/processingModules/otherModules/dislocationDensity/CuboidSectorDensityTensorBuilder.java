@@ -45,7 +45,8 @@ public class CuboidSectorDensityTensorBuilder {
 		this.rasterZ = rasterZ;
 		
 		if (!data.getBox().isOrtho())
-			JLogPanel.getJLogPanel().addLog("Box is non-orthogonal, dislocation densities are inaccurate");
+			JLogPanel.getJLogPanel().addWarning("Inaccurate dislocation densities",
+					"The simulation box is non-orthogonal. The computed dislocation densities are inaccurate");
 		
 		CrystalStructure cs = data.getCrystalStructure();
 		float[][] rot = data.getCrystalRotation().getDefaultRotationMatrix();

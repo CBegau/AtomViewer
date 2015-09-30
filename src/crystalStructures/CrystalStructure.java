@@ -115,11 +115,13 @@ public abstract class CrystalStructure{
 			for (File f : files){
 				if (f.getName().endsWith(".java")){
 					JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-					if (compiler == null) JLogPanel.getJLogPanel().addLog("No compiler installed, cannot compile "+f.getName());
+					if (compiler == null) JLogPanel.getJLogPanel().addWarning("Cannot compile plugin", 
+							"No compiler installed, cannot compile "+f.getName());
 					else {
 						int compilationResult = compiler.run(null, System.out, System.err, f.getAbsolutePath());
 					        if(compilationResult != 0){
-					            JLogPanel.getJLogPanel().addLog("Compilation failed for file "+f.getName());
+					            JLogPanel.getJLogPanel().addError("Compilation of plugin failed", 
+					            		"File "+f.getName()+" could not be compiled. Check the error stream for details.");
 					        }
 					}
 				}
