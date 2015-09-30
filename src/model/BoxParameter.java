@@ -1,5 +1,7 @@
 package model;
 
+import java.util.Arrays;
+
 import common.Vec3;
 
 public class BoxParameter {
@@ -151,5 +153,18 @@ public class BoxParameter {
 			pos.y -= i * boxSize[2].y;
 			pos.z -= i * boxSize[2].z;
 		}
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if (obj == this) return true;
+		if (!(obj instanceof BoxParameter)) return false;
+		BoxParameter b = (BoxParameter)obj;
+		if (!b.boxSize[0].equals(this.boxSize[0])) return false;
+		if (!b.boxSize[1].equals(this.boxSize[1])) return false;
+		if (!b.boxSize[2].equals(this.boxSize[2])) return false;
+		if (!Arrays.equals(b.pbc, this.pbc)) return false;
+		if (!b.offset.equals(this.offset)) return false;
+		return true;
 	}
 }
