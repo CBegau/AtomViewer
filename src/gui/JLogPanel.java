@@ -92,6 +92,7 @@ public class JLogPanel extends JPanel{
 		this.detailsPane.setEditable(false);
 		StyleSheet styleSheet = new StyleSheet();
 		styleSheet.addRule(String.format("body {font-family:%s;}", this.detailsPane.getFont().getFamily()));
+		styleSheet.addRule("table td {padding-left:5px; padding-right: 5px; padding-top: 0px; padding-bottom: 0px;}");
 		kit.setStyleSheet(styleSheet);
 		
 		detailDoc = kit.createDefaultDocument();
@@ -122,18 +123,21 @@ public class JLogPanel extends JPanel{
 		splitPane.setPreferredSize(new Dimension(400,300));
 		
 		this.logTable.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
-			String begin =  String.format("<html><body >");
+			String begin =  String.format("<html><head></head><body >");
 			String end = "</body></html>";
 					
 			@Override
 			public void valueChanged(ListSelectionEvent e) {
 				int index = logTable.getSelectedRow();
 				if (!e.getValueIsAdjusting() && index != -1 && index < model.entries.size()){
-					detailsPane.setText(begin + model.getEntry(index).detail + end);
+					if (model.getEntry(index).detail.startsWith("<html>"))
+						detailsPane.setText(model.getEntry(index).detail);
+					else detailsPane.setText(begin + model.getEntry(index).detail + end);
 				}
 				if (index == -1){
 					detailsPane.setText("");
 				}
+				detailsPane.setCaretPosition(0);
 			}
 		});
 	}
@@ -144,7 +148,7 @@ public class JLogPanel extends JPanel{
 	 * More details can be provided if necessary.
 	 * @param error A short error message.
 	 * @param details optional detail, the text may be formatted using html.
-	 * Note: It is not required to wrap the message in html-tags, this is added automatically if needed
+	 * Note: It is not required to wrap the message in html+body-tags, this is added automatically if needed
 	 */
 	public void addError(String error, String details){
 		model.insertEntry(new LogEntry("Error: "+error, details, LogEntry.Type.ERROR));
@@ -158,7 +162,7 @@ public class JLogPanel extends JPanel{
 	 * More details can be provided if necessary.
 	 * @param info A short info message
 	 * @param details optional detail, the text may be formatted using html.
-	 * Note: It is not required to wrap the message in html-tags, this is added automatically if needed
+	 * Note: It is not required to wrap the message in html+body-tags, this is added automatically if needed
 	 */
 	public void addInfo(String info, String details){
 		model.insertEntry(new LogEntry(info, details, LogEntry.Type.INFO));
@@ -172,7 +176,7 @@ public class JLogPanel extends JPanel{
 	 * More details can be provided if necessary.
 	 * @param error A short warning message
 	 * @param details optional detail, the text may be formatted using html.
-	 * Note: It is not required to wrap the message in html-tags, this is added automatically if needed
+	 * Note: It is not required to wrap the message in html+body-tags, this is added automatically if needed
 	 */
 	public void addWarning(String warning, String details){
 		model.insertEntry(new LogEntry("Warning: "+warning, details, LogEntry.Type.WARNING));
