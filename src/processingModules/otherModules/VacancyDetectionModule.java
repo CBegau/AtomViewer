@@ -410,11 +410,11 @@ public final class VacancyDetectionModule extends ClonableProcessingModule {
 			return false;
 		}
 
-		//TODO format message
 		@Override
 		public Tupel<String,String> printMessage(InputEvent ev, AtomData data) {
 			return new Tupel<String,String>("Vacancy site", 
-					String.format("Position ( %.6f, %.6f, %.6f) Dist: %6f", x, y, z, dist));
+					CommonUtils.buildHTMLTableForKeyValue(
+							new String[]{"Position", "Distance to atom"}, new Object[]{this, dist}));
 		}
 		
 		@Override

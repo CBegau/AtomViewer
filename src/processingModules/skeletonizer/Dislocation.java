@@ -21,6 +21,7 @@ package processingModules.skeletonizer;
 import java.awt.event.InputEvent;
 import java.util.*;
 
+import common.CommonUtils;
 import common.Tupel;
 import common.Vec3;
 import crystalStructures.CrystalStructure;
@@ -185,30 +186,37 @@ public class Dislocation implements Pickable{
 	
 	@Override
 	public String toString() {
-		String s = "Length " + getLength();
+		ArrayList<String> keys = new ArrayList<String>();
+		ArrayList<String> values = new ArrayList<String>();
+		
+		keys.add("Dislocation"); values.add(Integer.toString(id));
+		keys.add("Length"); values.add(Float.toString(getLength()));
+		
 		if (this.bvInfo!=null){
 			Vec3 bv;
 			if (grain!=null){
 				int grainNumber = polyline[0].getMappedAtoms().get(0).getGrain();
-				s += String.format(" Grain(%d)", grainNumber);
+				keys.add("Grain"); values.add(Integer.toString(grainNumber));
 				bv = grain.getCystalRotationTools().getInCrystalCoordinates(bvInfo.averageResultantBurgersVector);
 			} else bv = skel.getAtomData().getCrystalRotation().getInCrystalCoordinates(bvInfo.averageResultantBurgersVector);
-			s += String.format(" Avg. RBV ( %.3f | %.3f | %.3f )", bv.x, bv.y, bv.z);
-			s += " (Magnitude=" + bvInfo.averageResultantBurgersVector.getLength() +")";
+			keys.add("Avg. RBV"); values.add(bv.toString());
+			keys.add("Avg. RBV magnitude"); values.add(Float.toString(bvInfo.averageResultantBurgersVector.getLength()));
+			
 			if (bvInfo.burgersVector.isFullyDefined()) {
-				s += " Burgers Vector: " + bvInfo.burgersVector.toString();
+				keys.add("Burgers Vector"); values.add(bvInfo.burgersVector.toString() + (bvInfo.isComputed()?" (computed":""));
 			} else {
 				BurgersVector tbv;
 				if (grain != null){
 					tbv = grain.getCystalRotationTools().rbvToBurgersVector(bvInfo.averageResultantBurgersVector);
 				} else tbv = skel.getAtomData().getCrystalRotation().rbvToBurgersVector(bvInfo.averageResultantBurgersVector);
-				s += " Approximate Burgers Vector: " + tbv.toString();
+				keys.add("Approximate Burgers Vector"); values.add(tbv.toString());
 			}
-			if (bvInfo.isComputed())
-				s += " (computed)";
 		}
 		
-		return s;
+		String[] k = keys.toArray(new String[keys.size()]);
+		String[] v = values.toArray(new String[values.size()]);
+		
+		return CommonUtils.buildHTMLTableForKeyValue(k, v);
 	}
 	
 	public float getLength() {
@@ -284,7 +292,6 @@ public class Dislocation implements Pickable{
 		}
 	}
 	
-	//TODO format message
 	@Override
 	public Tupel<String,String> printMessage(InputEvent ev, AtomData data) {
 		return new Tupel<String,String>("Dislocation "+ id,toString());

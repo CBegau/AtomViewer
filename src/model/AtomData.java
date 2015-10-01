@@ -319,10 +319,9 @@ public class AtomData {
 	/**
 	 * Build a nearest neighbor graph and return the neighbor configuration
 	 * @param atomsToPlot
-	 * @return
+	 * @return The nearest neighbor graph, formatted using html 
 	 */
 	public StringBuilder plotNeighborsGraph(final Atom... atomsToPlot){
-		//TODO format message
 		StringBuilder sb = new StringBuilder();
 		final float d = defaultCrystalStructure.getNearestNeighborSearchRadius();
 		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(box, d, true);
@@ -338,27 +337,33 @@ public class AtomData {
 		};
 		nnb.addAll(atoms, filter);
 		
+		sb.append("<html><body>");
 		for (Atom a : atomsToPlot){
 			ArrayList<Tupel<Atom, Vec3>> t =nnb.getNeighAndNeighVec(a);
-			sb.append("#Neighbor configuration ");
-			sb.append(t.size());
-			sb.append("\n");	
-			sb.append("#number\t#dx\t#dy\t#dz\t#d\t#element");
-			sb.append("\n");	
+			sb.append(String.format("Neighbor configuration of atom %d"
+					+ "<br>Number of neighbors: %d", a.getNumber(), t.size()));
+			
+			sb.append("<table>");
+			sb.append("<tr> <td>number</td> <td>distance x</td> <td> distance y</td> "
+					+ "<td> distance z</td> <td>distance</td> <td>element</td> </tr>");
+
 			for (int i=0; i< t.size(); i++){
-				String s = String.format("%d\t%.6f\t%.6f\t%.6f\t%.6f\t%d", t.get(i).o1.getNumber(),
-						t.get(i).o2.x, t.get(i).o2.y, t.get(i).o2.z, t.get(i).o2.getLength(),
-						t.get(i).o1.getElement());
+				String s = String.format("<tr><td>%d</td><td>%f</td><td>%f</td><td>%f</td><td>%f</td><td>%d</td></tr>"
+						, t.get(i).o1.getNumber(),t.get(i).o2.x, t.get(i).o2.y, t.get(i).o2.z, 
+						t.get(i).o2.getLength(), t.get(i).o1.getElement());
 				sb.append(s);
-				sb.append("\n");
 			}
+			sb.append("</table>");
 			
 			int k=0;
-			sb.append("#Bond angles");
 			float[][] angles = new float[t.size()*(t.size()-1)/2][6];
-			sb.append(angles.length);
-			sb.append("\n");
-			sb.append("#number1\t#number2\t#angle\t#element1\t#center\t#element2\n");
+			sb.append("<p>");
+			sb.append("Bond angles: "+angles.length);
+			sb.append("</p>");
+			
+			sb.append("<table>");
+			sb.append("<tr> <td>number1</td> <td>number2</td> <td>angle</td>"
+					+ " <td>element1</td><td>center</td><td>element2</td> </tr>");
 			for (int i=0; i<t.size(); i++){
 				for (int j=i+1; j< t.size(); j++){
 					angles[k][0] = (float)Math.toDegrees(t.get(i).o2.getAngle(t.get(j).o2));
@@ -381,14 +386,15 @@ public class AtomData {
 			});
 			
 			for (int i=0; i<angles.length; i++){
-				String s = String.format("%d\t%d\t%.6f°\t%d\t%d\t%d", (int)angles[i][1], (int)angles[i][2],
+				String s = String.format("<tr> <td>%d</td> <td>%d</td> <td>%f°</td> "
+						+ "<td>%d</td> <td>%d</td> <td>%d</td> </tr>", (int)angles[i][1], (int)angles[i][2],
 						angles[i][0], (int)angles[i][3], (int)angles[i][4], (int)angles[i][5]);
 				sb.append(s);
-				sb.append("\n");
 			}
-			
-			
+			sb.append("</table>");
 		}
+		sb.append("</body></html>");
+		
 		return sb;
 	}
 	
