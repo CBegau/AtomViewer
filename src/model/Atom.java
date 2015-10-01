@@ -213,7 +213,7 @@ public class Atom extends Vec3 implements Pickable {
 	@Override
 	public Tupel<String,String> printMessage(InputEvent ev, AtomData data) {
 		if (ev!=null && (ev.getModifiersEx() & InputEvent.CTRL_DOWN_MASK) == InputEvent.CTRL_DOWN_MASK){
-			return new Tupel<String, String>("Neighbors graph", data.plotNeighborsGraph(this).toString());
+			return new Tupel<String, String>("Neighbors graph "+atomNumber, data.plotNeighborsGraph(this).toString());
 		}
 		
 		ArrayList<String> keys = new ArrayList<String>();
@@ -253,7 +253,17 @@ public class Atom extends Vec3 implements Pickable {
 		if (dataValues != null){
 			for (int i=0; i < dataValues.length; i++){
 				DataColumnInfo c = dci.get(i);
-				keys.add(c.getName()); values.add(CommonUtils.outputDecimalFormatter.format(getData(i))+c.getUnit());
+				if (!c.isVectorComponent()){
+					keys.add(c.getName()); values.add(CommonUtils.outputDecimalFormatter.format(getData(i))+c.getUnit());
+				} else if (c.isFirstVectorComponent()){
+					keys.add(c.getVectorName()+(!c.getUnit().isEmpty()?"("+c.getUnit()+")":""));
+					int index2 = data.getIndexForCustomColumn(c.getVectorComponents()[1]);
+					int index3 = data.getIndexForCustomColumn(c.getVectorComponents()[2]);
+					Vec3 vec = new Vec3(getData(i), getData(index2), getData(index3));
+					values.add(vec.toString());
+					keys.add("Magnitude of "+c.getVectorName()+(!c.getUnit().isEmpty()?"("+c.getUnit()+")":""));
+					values.add(Float.toString(vec.getLength()));
+				}
 			}
 		}
 		
