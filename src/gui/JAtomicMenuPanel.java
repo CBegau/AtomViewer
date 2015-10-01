@@ -419,9 +419,16 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		} else timeStepLabel.setText(""); 
 		
 		totalAtomsLabel.setText("#Atoms: "+atomData.getAtoms().size());
-		boxSizeLabel[0].setText("Size X: "+atomData.getBox().getHeight().x);
-		boxSizeLabel[1].setText("Size Y: "+atomData.getBox().getHeight().y);
-		boxSizeLabel[2].setText("Size Z: "+atomData.getBox().getHeight().z);
+		if (atomData.getBox().isOrtho()){
+			boxSizeLabel[0].setText("Size X: "+atomData.getBox().getHeight().x);
+			boxSizeLabel[1].setText("Size Y: "+atomData.getBox().getHeight().y);
+			boxSizeLabel[2].setText("Size Z: "+atomData.getBox().getHeight().z);
+		} else {
+			Vec3[] v = atomData.getBox().getBoxSize();
+			boxSizeLabel[0].setText("Size X: "+v[0].x+", "+v[0].y+", "+v[0].z);
+			boxSizeLabel[1].setText("Size Y: "+v[1].x+", "+v[1].y+", "+v[1].z);
+			boxSizeLabel[2].setText("Size Z: "+v[2].x+", "+v[2].y+", "+v[2].z);
+		}
 		crystalStructureLabel.setText("Structure: "+atomData.getCrystalStructure().toString());
 		
 		for (int i=0; i<numberOftypeLabels.length;i++){
