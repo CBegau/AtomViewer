@@ -435,15 +435,6 @@ public class StressDataModule extends ClonableProcessingModule {
 				if (stress == null || i<0 || i>6) return 0f;
 				return stress[i];
 			}
-			
-			@Override
-			public String toString(){
-				StringBuilder sb = new StringBuilder();
-				sb.append(String.format("Stress: Position  ( %.6f | %.6f | %.6f )", x, y, z));
-				sb.append(String.format("s_xx %.6f s_yy %.6f s_zz %.6f s_yz %.6f s_zx %.6f s_xy %.6f mises %.8f", 
-						stress[0], stress[1], stress[2], stress[3], stress[4], stress[5], stress[6]));
-				return sb.toString();
-			}
 
 			@Override
 			public Collection<?> getHighlightedObjects() {
@@ -455,10 +446,18 @@ public class StressDataModule extends ClonableProcessingModule {
 				return false;
 			}
 			
-			//TODO format message
 			@Override
 			public Tupel<String,String> printMessage(InputEvent ev, AtomData data) {
-				return new Tupel<String,String>("Stress value", toString());
+				String[] keys = {"Position", "Stress_xx", "Stress_yy", "Stress_zz", "Stress_yz", "Stress_zx"
+						, "Stress_xy", "von Mises stress"};
+				String[] values = {
+					this.toString(), Float.toString(stress[0]),
+					Float.toString(stress[1]), Float.toString(stress[2]),
+					Float.toString(stress[3]), Float.toString(stress[4]), 
+					Float.toString(stress[5]), Float.toString(stress[6])
+				};
+				
+				return new Tupel<String,String>("Stress value", CommonUtils.buildHTMLTableForKeyValue(keys, values));
 			}
 			
 			@Override

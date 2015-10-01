@@ -22,6 +22,7 @@ import java.awt.event.InputEvent;
 import java.util.*;
 import java.util.concurrent.*;
 
+import common.CommonUtils;
 import common.ThreadPool;
 import common.Tupel;
 import common.Vec3;
@@ -903,9 +904,10 @@ public class Mesh implements Callable<Void>, Pickable{
 		return this.getCentroid();
 	}
 
-	//TODO format message
 	@Override
 	public Tupel<String,String> printMessage(InputEvent ev, AtomData data) {
-		return new Tupel<String,String>("Mesh", String.format("Mesh volume=%g Surface Area=%g", getVolume(), getArea()));
+		String[] k = new String[]{"Mesh volume", "Surface Area"};
+		String[] v = new String[]{String.format("%g", getVolume()), String.format("%g", getArea())};
+		return new Tupel<String,String>("Mesh", CommonUtils.buildHTMLTableForKeyValue(k,v));
 	}
 }

@@ -24,6 +24,7 @@ import java.util.Map.Entry;
 
 import model.*;
 import model.polygrain.Grain;
+import common.CommonUtils;
 import common.Tupel;
 import common.Vec3;
 
@@ -387,7 +388,6 @@ public class PlanarDefect implements Pickable{
 		return centroid;
 	}
 	
-	//TODO format message
 	@Override
 	public Tupel<String,String> printMessage(InputEvent ev, AtomData data) {
 		Vec3 o;
@@ -399,8 +399,11 @@ public class PlanarDefect implements Pickable{
 		}
 		type = data.getCrystalStructure().getNameForType(getPlaneComposedOfType());
 		o.multiply(data.getCrystalStructure().getLatticeConstant());
-		String s = String.format("Planar defect (%d) Normal=(%.3f,%.3f,%.3f) in crystal axis=(%.3f,%.3f,%.3f) #Atoms=%d Area=%f Type: %s", 
-				id, normal.x, normal.y, normal.z, o.x, o.y, o.z, numberOfAtoms, getArea(), type); 
-		return new Tupel<String, String>("Stacking Fault", s);
+		String[] keys = {"Stacking Fault", "Normal (xyz)", "Normal (in crystal)", "Atoms", "Area", "Type"}; 
+		String[] values = {
+				Integer.toString(id), normal.toString(), o.toString(), Integer.toString(numberOfAtoms),
+				Float.toString(getArea()), type
+		};
+		return new Tupel<String, String>("Stacking Fault "+id, CommonUtils.buildHTMLTableForKeyValue(keys, values));
 	}
 }

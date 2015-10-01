@@ -21,6 +21,7 @@ package processingModules.otherModules.dislocationDensity;
 import java.awt.event.InputEvent;
 import java.util.Collection;
 
+import common.CommonUtils;
 import common.Tupel;
 import common.Vec3;
 import model.AtomData;
@@ -181,10 +182,17 @@ public class DislocationDensityTensor implements Pickable{
 		return sb.toString();
 	}
 	
-	//TODO format message
 	@Override
 	public Tupel<String,String> printMessage(InputEvent ev, AtomData data) {
-		return new Tupel<String,String>("Dislocation density",toString());
+		String[] keys = {"Dislocation density", "Sum of absolute GND tensor components", "Volume", "GND tensor"};
+		String[] values = {String.format("%.4g", density), String.format("%.4g", scalarDensity),
+				String.format("%.4f", volumeElement.getVolume()),
+				String.format("%.4g %.4g %.4g <br> %.4g %.4g %.4g <br> %.4g %.4g %.4g",
+						densityTensor[0][0], densityTensor[0][1], densityTensor[0][2],
+						densityTensor[1][0], densityTensor[1][1], densityTensor[1][2],
+						densityTensor[2][0], densityTensor[2][1], densityTensor[2][2])
+		};	
+		return new Tupel<String,String>("Dislocation density",CommonUtils.buildHTMLTableForKeyValue(keys, values));
 	}
 	
 	@Override
