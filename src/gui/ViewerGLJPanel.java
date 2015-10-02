@@ -101,7 +101,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	private float moveX = 0f, moveY = 0;
 	private Vec3 coordinateCenterOffset = new Vec3();
 	private float zoom = 1f;
-	private boolean mousePressed = false;
 	private Point startDragPosition;
 
 	private Vec3 globalMaxBounds = new Vec3();
@@ -1283,53 +1282,46 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 
 	public void mousePressed(MouseEvent arg0) {
 		this.requestFocusInWindow();
-		if (!mousePressed) {
-			this.dragMatrix = new GLMatrix();
-			this.dragMatrix.mult(rotMatrix);
-			arcBall.setRotationStartingPoint(arg0.getPoint());
-		}
-		mousePressed = true;
-		startDragPosition = arg0.getPoint();
+		this.dragMatrix = new GLMatrix();
+		this.dragMatrix.mult(rotMatrix);
+		this.arcBall.setRotationStartingPoint(arg0.getPoint());
+		this.startDragPosition = arg0.getPoint();
 	}
 
-	public void mouseReleased(MouseEvent arg0) {
-		mousePressed = false;
-	}
+	public void mouseReleased(MouseEvent arg0) {}
 
 	// endregion MouseListener
 
 	// region MouseMotionListener
 	@Override
 	public void mouseDragged(MouseEvent e) {
-		if (mousePressed) {
-			Point newDragPosition = e.getPoint();
-			if ((e.getModifiersEx() & InputEvent.ALT_DOWN_MASK) == InputEvent.ALT_DOWN_MASK){
-				zoom *= 1 + (newDragPosition.y - startDragPosition.y) / 50f;
-				if (zoom>400f) zoom = 400f;
-				if (zoom<0.05f) zoom = 0.05f;
-			} else if ((e.getModifiersEx() & InputEvent.CTRL_DOWN_MASK) == InputEvent.CTRL_DOWN_MASK){
-				moveX -= (newDragPosition.x - startDragPosition.x) / (globalMaxBounds.minComponent()*zoom);
-				moveY += (newDragPosition.y - startDragPosition.y) / (globalMaxBounds.minComponent()*zoom);
+		Point newDragPosition = e.getPoint();
+		if (e.isAltDown() || e.isAltGraphDown()){
+			zoom *= 1 + (newDragPosition.y - startDragPosition.y) / 50f;
+			if (zoom>400f) zoom = 400f;
+			if (zoom<0.05f) zoom = 0.05f;
+		} else if (e.isControlDown()){
+			moveX -= (newDragPosition.x - startDragPosition.x) / (globalMaxBounds.minComponent()*zoom);
+			moveY += (newDragPosition.y - startDragPosition.y) / (globalMaxBounds.minComponent()*zoom);
+		} else {
+			if (e.isShiftDown()){
+				GLMatrix mat = new GLMatrix();
+				mat.rotate(newDragPosition.x - startDragPosition.x, 0, 1, 0);
+				mat.mult(rotMatrix);
+				rotMatrix.loadIdentity();
+				rotMatrix.mult(mat);
 			} else {
-				if ((e.getModifiersEx() & InputEvent.SHIFT_DOWN_MASK) == InputEvent.SHIFT_DOWN_MASK){
-					GLMatrix mat = new GLMatrix();
-					mat.rotate(newDragPosition.x - startDragPosition.x, 0, 1, 0);
-					mat.mult(rotMatrix);
+				//ArcBall update
+				float[] quat = arcBall.drag(newDragPosition);
+				if (quat != null) {
 					rotMatrix.loadIdentity();
-					rotMatrix.mult(mat);
-				} else {
-					//ArcBall update
-					float[] quat = arcBall.drag(newDragPosition);
-					if (quat != null) {
-						rotMatrix.loadIdentity();
-					    rotMatrix.setRotationFromQuaternion(quat);   
-					    rotMatrix.mult(dragMatrix);
-					}
+				    rotMatrix.setRotationFromQuaternion(quat);   
+				    rotMatrix.mult(dragMatrix);
 				}
 			}
-			startDragPosition = newDragPosition;
-			this.reDraw();
 		}
+		startDragPosition = newDragPosition;
+		this.reDraw();
 	}
 	
 	public void mouseMoved(MouseEvent arg0) {}
