@@ -918,26 +918,20 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 						RenderingConfiguration.isNormalizedVectorData());
 			} else sphereRenderer.drawSpheres(gl, renderData, picking);
 		} else {
+			//Render as RBVs
 			gl.glDisable(GL.GL_BLEND);
-			float lsVectorLength = cs.getLatticeConstant()/3f;
-			float minLength = cs.getPerfectBurgersVectorLength() * 0.2f;
-			minLength *= minLength; 
-			float maxLength = cs.getPerfectBurgersVectorLength() * 2f;
-			maxLength *= maxLength;
-			for (int i=0; i<atomData.getAtoms().size(); i++){
+			final float[] lineDirColor = new float[]{0.5f, 0.5f, 0.5f};
+			for (int i=0, len = atomData.getAtoms().size(); i<len; i++){
 				Atom c = atomData.getAtoms().get(i);
-				if (c.getRBV()!=null && atomFilterSet.accept(c)){
-					float l = c.getRBV().bv.getLengthSqr();
-					if (l<minLength || l>maxLength) continue; 
-					
+				if (c.getRBV()!=null && atomFilterSet.accept(c)){ 					
 					float[] col;
 					if (picking) col = this.getNextPickingColor(c);
 					else col = cs.getGLColor(c.getType());
 
 					ArrowRenderer.renderArrow(gl, c, c.getRBV().bv, 0.1f, col, true);
-					if (!picking) col = new float[]{0.5f, 0.5f, 0.5f};
+					if (!picking) col = lineDirColor;
 					ArrowRenderer.renderArrow(gl, c,
-							c.getRBV().lineDirection.multiplyClone(lsVectorLength), 0.05f, col, true);
+							c.getRBV().lineDirection, 0.05f, col, true);
 				}
 			}
 		}
