@@ -21,6 +21,7 @@ package gui;
 import model.*;
 import model.Configuration.AtomDataChangedEvent;
 import model.Configuration.AtomDataChangedListener;
+import model.DataColumnInfo.Component;
 import model.mesh.Mesh;
 import model.polygrain.Grain;
 import processingModules.DataContainer;
@@ -872,6 +873,9 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 				}
 				colFunc.update();
 				
+				//Identify if individual particle radii are given
+				final int radiusColumn = atomData.getIndexForComponent(DataColumnInfo.Component.PARTICLE_RADIUS);
+						
 				Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
 				for (int i=0; i<ThreadPool.availProcessors(); i++){
 					final int j = i;
@@ -887,7 +891,9 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 									Atom c = cell.getObjects().get(j);
 									if (atomFilterSet.accept(c)) {
 										cell.getVisibiltyArray()[j] = true;
-										cell.getSizeArray()[j] = sphereSize[c.getElement() % numEle];
+										//Assign default or individual particle radius
+										cell.getSizeArray()[j] = radiusColumn == -1 ? sphereSize[c.getElement() % numEle] :
+											c.getData(radiusColumn) * sphereSize[c.getElement() % numEle];
 										float[] color = colFunc.getColor(c);
 										cell.getColorArray()[j*3+0] = color[0];
 										cell.getColorArray()[j*3+1] = color[1];
@@ -1372,6 +1378,12 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		
 		if (reinit){
 			setSphereSize(atomData.getCrystalStructure().getDistanceToNearestNeighbor()*0.55f);
+			//If individual sizes are given, use default multiplier of 1
+			for (DataColumnInfo cci : atomData.getDataColumnInfos()){
+				if (cci.getComponent() == Component.PARTICLE_RADIUS)
+					setSphereSize(1f);
+			}
+			
 			if (!atomData.isPolyCrystalline()) RenderOption.GRAINS.enabled = false;
 			
 			//Find global maximum boundaries

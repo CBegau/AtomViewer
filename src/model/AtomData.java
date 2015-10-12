@@ -469,6 +469,19 @@ public class AtomData {
 		return -1;
 	}
 	
+	/**
+	 * Returns the first index of DataColumnInfo having the given component.
+	 * If the component is not found, -1 is returned 
+	 * @param dci
+	 * @return
+	 */
+	public int getIndexForComponent(DataColumnInfo.Component component){
+		for (int i=0; i < dataColumns.size(); i++)
+			if (dataColumns.get(i).getComponent().equals(component))
+				return i;
+		return -1;
+	}
+	
 	public List<DataColumnInfo> getDataColumnInfos(){
 		return dataColumns;
 	}

@@ -27,7 +27,7 @@ public class DataColumnInfo {
 		STRESS_XX("Stress (xx)"), STRESS_YY("Stress (yy)"), STRESS_ZZ("Stress (zz)"), 
 		STRESS_YZ("Stress (yz)"), STRESS_ZX("Stress (zx)"), STRESS_XY("Stress (xy)"),
 		VELOCITY_X("Velocity (x)"), VELOCITY_Y("Velocity (y)"), VELOCITY_Z("Velocity (z)"),
-		FORCE_X("Force (x)"), FORCE_Y("Force (y)"), FORCE_Z("Force (z)"),
+		FORCE_X("Force (x)"), FORCE_Y("Force (y)"), FORCE_Z("Force (z)"), PARTICLE_RADIUS("Particle radius"),
 		OTHER("other");
 		
 		private boolean visible = true;

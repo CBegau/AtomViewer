@@ -647,6 +647,9 @@ public class Skeletonizer extends DataContainer {
 				if (maxSphereSize < sphereSize[i]) maxSphereSize = sphereSize[i];
 			}
 			
+			//Identify if individual particle radii are given
+			final int radiusColumn = data.getIndexForComponent(DataColumnInfo.Component.PARTICLE_RADIUS);
+			
 			for (int i=0; i<this.getDislocations().size(); i++) {
 				Dislocation dis = this.getDislocations().get(i);
 				if (viewer.getHighLightObjects().contains(dis)) {
@@ -657,7 +660,10 @@ public class Skeletonizer extends DataContainer {
 							if (j==0) color = new float[]{0f, 1f, 0f, 1f};
 							else if (j==dis.getLine().length-1) color = new float[]{0f, 0f, 1f, 1f};
 							else color = new float[]{1f, 0f, 0f, 1f};
-							objectsToRender.add(new RenderableObject<Atom>(a, color, sphereSize[a.getElement()%numEle]));
+							//Particle size, either per type or per particle
+							float s = radiusColumn == -1 ? sphereSize[a.getElement() % numEle] :
+								a.getData(radiusColumn) * sphereSize[a.getElement() % numEle];
+							objectsToRender.add(new RenderableObject<Atom>(a, color, s));
 							atomsToRender.add(a);
 						}
 					}
