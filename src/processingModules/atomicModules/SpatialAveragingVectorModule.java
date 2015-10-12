@@ -18,6 +18,7 @@
 
 package processingModules.atomicModules;
 
+import gui.JLogPanel;
 import gui.JPrimitiveVariablesPropertiesDialog;
 import gui.ProgressMonitor;
 import gui.PrimitiveProperty.*;
@@ -29,6 +30,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CyclicBarrier;
 
 import javax.swing.ButtonGroup;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JRadioButton;
@@ -41,6 +43,7 @@ import model.Atom;
 import model.AtomData;
 import model.DataColumnInfo;
 import model.NearestNeighborBuilder;
+import model.DataColumnInfo.Component;
 import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
 import processingModules.toolchain.Toolchain;
@@ -68,6 +71,9 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 	
 	@ExportableValue
 	private boolean useSmoothingKernel = true;
+	
+	@ExportableValue
+	private boolean weigthByMass = true;
 
 	public SpatialAveragingVectorModule() {}
 	
@@ -142,6 +148,13 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 		final int avz = data.getIndexForCustomColumn(averageColumn.getVectorComponents()[2]);
 		final int ava = data.getIndexForCustomColumn(averageColumn.getVectorComponents()[3]);
 		
+		final int massColumn = data.getIndexForComponent(Component.MASS);
+		final boolean scaleMass = weigthByMass && massColumn != -1;
+		if (weigthByMass && !scaleMass)
+			JLogPanel.getJLogPanel().addWarning("Mass not found",
+					String.format("Weightened averages for %s selected, but mass column is missing in %s", toAverageColumn.getName(),
+							data.getName()));
+		
 		ProgressMonitor.getProgressMonitor().start(2*data.getAtoms().size());
 		
 		nnb.addAll(data.getAtoms());
@@ -169,12 +182,17 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 							temp.y = a.getData(vy);
 							temp.z = a.getData(vz);
 							ArrayList<Atom> neigh = nnb.getNeigh(a);
+							float mass = scaleMass ? a.getData(massColumn) : 1f;
+							float sumMass = mass;
+							
 							for (Atom n : neigh){
-								temp.x += n.getData(vx);
-								temp.y += n.getData(vy);
-								temp.z += n.getData(vz);
+								mass = scaleMass ? a.getData(massColumn) : 1f;
+								temp.x += n.getData(vx) * mass;
+								temp.y += n.getData(vy) * mass;
+								temp.z += n.getData(vz) * mass;
+								sumMass += mass;
 							}
-							temp.divide(neigh.size()+1);
+							temp.divide(sumMass);
 							
 							a.setData(temp.x, avx);          
 							a.setData(temp.y, avy);          
@@ -183,18 +201,23 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 						}
 						ProgressMonitor.getProgressMonitor().addToCounter( 2*(end-start%1000));
 					} else {
-						//Compute density of all particles and temporarily store in the last data column
+						//Compute density of all particles and store in the data column
 						for (int i=start; i<end; i++){
 							if ((i-start)%1000 == 0)
 								ProgressMonitor.getProgressMonitor().addToCounter(1000);
 							Atom a = data.getAtoms().get(i);
-							ArrayList<Vec3> neigh = nnb.getNeighVec(a);
+							ArrayList<Tupel<Atom,Vec3>> neigh = nnb.getNeighAndNeighVec(a);
+							float mass = scaleMass ? a.getData(massColumn) : 1f;
+							
 							//Include central particle a with d = 0
-							float density = CommonUtils.getM4SmoothingKernelWeight(0f, halfR);
+							float density = mass*CommonUtils.getM4SmoothingKernelWeight(0f, halfR);
 							//Estimate local density based on distance to other particles
-							for (int k=0, len = neigh.size(); k<len; k++)
-								density += CommonUtils.getM4SmoothingKernelWeight(neigh.get(k).getLength(), halfR);
-								
+							for (int k=0, len = neigh.size(); k<len; k++){
+								Tupel<Atom,Vec3> n = neigh.get(k);
+								mass = scaleMass ? n.o1.getData(massColumn) : 1f;
+								density += mass * CommonUtils.getM4SmoothingKernelWeight(n.o2.getLength(), halfR);
+							}
+							//Temporarily store the density of the particle 
 							a.setData(density, ava);
 						}
 						ProgressMonitor.getProgressMonitor().addToCounter((end-start)%1000);
@@ -204,18 +227,18 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 						for (int i=start; i<end; i++){
 							if ((i-start)%1000 == 0)
 								ProgressMonitor.getProgressMonitor().addToCounter(1000);
-							
+
+							//Start with central particle with d = 0
 							Atom a = data.getAtoms().get(i);
 							temp.x = a.getData(vx); temp.y = a.getData(vy); temp.z = a.getData(vz);
-							float density = a.getData(ava);
+							float mass = scaleMass ? a.getData(massColumn) : 1f;
+							temp.multiply(mass * CommonUtils.getM4SmoothingKernelWeight(0f, halfR) / a.getData(ava));
 							
 							ArrayList<Tupel<Atom,Vec3>> neigh = nnb.getNeighAndNeighVec(a);
-							//Start with central particle with d = 0
-							temp.multiply(CommonUtils.getM4SmoothingKernelWeight(0f, halfR)).divide(density);
-							
 							for (Tupel<Atom,Vec3> n : neigh){
+								mass = scaleMass ? a.getData(massColumn) : 1f;
 								//Weighting based on distance and density
-								float w = CommonUtils.getM4SmoothingKernelWeight(n.getO2().getLength(), halfR);
+								float w = mass * CommonUtils.getM4SmoothingKernelWeight(n.getO2().getLength(), halfR);
 								w /= n.o1.getData(ava); //Divide by local density
 								temp.x += n.o1.getData(vx) * w;
 								temp.y += n.o1.getData(vy) * w;
@@ -277,16 +300,23 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 				+ "This implementation is using the cubic spline M4 kernel<br>";
 		smoothingButton.setToolTipText(CommonUtils.getWordWrappedString(smoothingTooltip, smoothingButton));
 		arithmeticButton.setToolTipText("Computes the arithmetic average over all nearby neighbors without weighting.");
+		
+		JCheckBox considerMassButton = new JCheckBox("Weigth by particle mass", false);
+		considerMassButton.setToolTipText("Weigth particles by their mass (if possible)");
+		if (data.getIndexForComponent(Component.MASS)==-1) considerMassButton.setEnabled(false);
+		
 		smoothingButton.setSelected(false);
 		arithmeticButton.setSelected(true);
 		dialog.addComponent(arithmeticButton);
 		dialog.addComponent(smoothingButton);
+		dialog.addComponent(considerMassButton);
 		bg.add(smoothingButton);
 		bg.add(arithmeticButton);
 		dialog.endGroup();
 		
 		boolean ok = dialog.showDialog();
 		if (ok){
+			this.weigthByMass = considerMassButton.isEnabled() && considerMassButton.isSelected();
 			this.useSmoothingKernel = smoothingButton.isSelected();
 			this.averageRadius = avRadius.getValue();
 			this.toAverageColumn = ((DataColumnInfo.VectorDataColumnInfo)averageComponentsComboBox.getSelectedItem()).getDci(); 
