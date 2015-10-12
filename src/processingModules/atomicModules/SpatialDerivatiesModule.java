@@ -18,6 +18,7 @@
 
 package processingModules.atomicModules;
 
+import gui.JLogPanel;
 import gui.JPrimitiveVariablesPropertiesDialog;
 import gui.ProgressMonitor;
 import gui.PrimitiveProperty.*;
@@ -27,6 +28,7 @@ import java.util.HashMap;
 import java.util.Vector;
 import java.util.concurrent.Callable;
 
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JSeparator;
@@ -38,6 +40,7 @@ import model.Atom;
 import model.AtomData;
 import model.DataColumnInfo;
 import model.NearestNeighborBuilder;
+import model.DataColumnInfo.Component;
 import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
 import processingModules.toolchain.Toolchain;
@@ -56,6 +59,8 @@ public class SpatialDerivatiesModule extends ClonableProcessingModule implements
 	
 	@ExportableValue
 	private float radius = 5f;
+	@ExportableValue
+	private boolean weigthByMass = true;
 	
 	private DataColumnInfo toDeriveColumn;
 	private DataColumnInfo gradientColumn;
@@ -134,6 +139,12 @@ public class SpatialDerivatiesModule extends ClonableProcessingModule implements
 		nnb.addAll(data.getAtoms());
 		
 		final float halfR = radius*0.5f;
+		final int massColumn = data.getIndexForComponent(Component.MASS);
+		final boolean scaleMass = weigthByMass && massColumn != -1;
+		if (weigthByMass && !scaleMass)
+			JLogPanel.getJLogPanel().addWarning("Mass not found",
+					String.format("Weightened spatial derivatives for %s selected, but mass column is missing in %s", 
+							toDeriveColumn.getName(), data.getName()));
 		
 		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
 		for (int i=0; i<ThreadPool.availProcessors(); i++){
@@ -153,18 +164,22 @@ public class SpatialDerivatiesModule extends ClonableProcessingModule implements
 						ArrayList<Tupel<Atom,Vec3>> neigh = nnb.getNeighAndNeighVec(a);
 
 						//Estimate local density
-						float density = CommonUtils.getM4SmoothingKernelWeight(0f, halfR);
-						for (int k=0, len = neigh.size(); k<len; k++)
-							density += CommonUtils.getM4SmoothingKernelWeight(neigh.get(k).o2.getLength(), halfR);
-						 
+						float mass = scaleMass ? a.getData(massColumn) : 1f;
+						float density = mass * CommonUtils.getM4SmoothingKernelWeight(0f, halfR);
 						
+						for (int k=0, len = neigh.size(); k<len; k++){
+							mass = scaleMass ? neigh.get(k).o1.getData(massColumn) : 1f;
+							density += mass * CommonUtils.getM4SmoothingKernelWeight(neigh.get(k).o2.getLength(), halfR);
+						}
+						 
 						Vec3 grad = new Vec3();
 						
 						float valueA = a.getData(v);
 						
 						for (Tupel<Atom,Vec3> n : neigh){
 							float valueB = n.o1.getData(v);
-							grad.add(CommonUtils.getM4SmoothingKernelDerivative(n.o2, halfR).multiply(valueB-valueA));
+							mass = scaleMass ? n.o1.getData(massColumn) : 1f;
+							grad.add(CommonUtils.getM4SmoothingKernelDerivative(n.o2, halfR).multiply(mass*(valueB-valueA)));
 						}
 						
 						grad.divide(density);
@@ -205,8 +220,14 @@ public class SpatialDerivatiesModule extends ClonableProcessingModule implements
 		dialog.addLabel("Select value to compute gradient");
 		dialog.addComponent(averageComponentsComboBox);
 		
+		JCheckBox considerMassButton = new JCheckBox("Weigth by particle mass", false);
+		considerMassButton.setToolTipText("Weigth particles by their mass (if possible)");
+		if (data.getIndexForComponent(Component.MASS)==-1) considerMassButton.setEnabled(false);
+		dialog.addComponent(considerMassButton);
+		
 		boolean ok = dialog.showDialog();
 		if (ok){
+			this.weigthByMass = considerMassButton.isEnabled() && considerMassButton.isSelected();
 			this.radius = avRadius.getValue();
 			this.toDeriveColumn = (DataColumnInfo)averageComponentsComboBox.getSelectedItem();
 		}
