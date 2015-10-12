@@ -38,6 +38,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.*;
+import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.Callable;
 
@@ -834,10 +835,11 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 					ColorTable.setColorBarScheme(scheme);
 					ColorTable.setColorBarSwapped(swapped);
 				} else if (RenderOption.LEGEND.isEnabled()){
+					DecimalFormat df = new DecimalFormat("#.######");
 					drawLegendThisFrame(
-							Float.toString(min)+" "+dataInfoColoring.getUnit(), 
-							Float.toString((max+min)*0.5f)+" "+dataInfoColoring.getUnit(),
-							Float.toString(max)+" "+dataInfoColoring.getUnit()
+							df.format(min)+" "+dataInfoColoring.getUnit(), 
+							df.format((max+min)*0.5)+" "+dataInfoColoring.getUnit(),
+							df.format(max)+" "+dataInfoColoring.getUnit()
 							);
 				}
 			}
