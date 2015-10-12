@@ -206,9 +206,9 @@ public class TemperatureModule extends ClonableProcessingModule{
 		}
 		
 		StringBuilder s = new StringBuilder();
-		s.append("Average temperatures for elements in "+data.getName()+"\n");
+		s.append("Average temperatures for elements in "+data.getName()+"<br>");
 		for (int i=0; i<tempPerElement.length; i++)
-			s.append(String.format("Element %d: %.6f\n", i, numPerElement[i]==0 ? 0. : tempPerElement[i]/numPerElement[i]));
+			s.append(String.format("Element %d: %.6f<br>", i, numPerElement[i]==0 ? 0. : tempPerElement[i]/numPerElement[i]));
 				
 		ProgressMonitor.getProgressMonitor().stop();
 
