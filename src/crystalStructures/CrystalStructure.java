@@ -560,7 +560,10 @@ public abstract class CrystalStructure{
 	}
 	
 	public float[] getDefaultSphereSizeScalings(){
-		return new float[]{1f};
+		float[] sizes = new float[this.getNumberOfElements()];
+		for (int i=0; i<sizes.length; i++)
+			sizes[i] = 1f;
+		return sizes;
 	}
 	
 	public Filter<Atom> getIgnoreAtomsDuringImportFilter(){
