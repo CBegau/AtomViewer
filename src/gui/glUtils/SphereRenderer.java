@@ -207,7 +207,7 @@ public class SphereRenderer {
 				int[] result = new int[1];
 				int q = j;
 				gl.glGetQueryObjectuiv(queries[q], GL3.GL_QUERY_RESULT, result, 0);
-				if (result[0] == 0) renderCell=false;
+				if (result[0] == GL3.GL_FALSE) renderCell=false;
 			}
 			
 			//Full renderer
@@ -295,9 +295,9 @@ public class SphereRenderer {
 //					
 //				gl.glPolygonMode(GL.GL_FRONT_AND_BACK, GL3.GL_LINE);
 				gl.glUniformMatrix4fv(visMvmpUniform, 1, false, m.getMatrix());
-				gl.glBeginQuery(GL3.GL_SAMPLES_PASSED, queries[j+cellRenderRingBuffer.size()]);
+				gl.glBeginQuery(GL3.GL_ANY_SAMPLES_PASSED, queries[j+cellRenderRingBuffer.size()]);
 				SimpleGeometriesRenderer.drawCubeWithoutNormals(gl);	//Bounding box
-				gl.glEndQuery(GL3.GL_SAMPLES_PASSED);
+				gl.glEndQuery(GL3.GL_ANY_SAMPLES_PASSED);
 //				gl.glPolygonMode(GL.GL_FRONT_AND_BACK, GL3.GL_FILL);
 			}
 		}
