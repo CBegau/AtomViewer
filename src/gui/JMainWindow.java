@@ -30,7 +30,6 @@ import java.io.*;
 import java.text.DecimalFormat;
 import java.util.Locale;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -597,8 +596,6 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 						AtomData def = Configuration.getCurrentAtomData();
 						for (ProcessingModule pm : tc.getProcessingModules()){
 							for (AtomData d : Configuration.getAtomDataIterable(Configuration.getCurrentAtomData())){
-								//TODO should not be needed anymore, test and remove if so
-								Configuration.setCurrentAtomData(d, false, false);
 								ProcessingModule pmc = pm.clone();
 								applyProcessWindowWithDisplay(d, pmc);
 							}
@@ -1099,7 +1096,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		applyProcessWindowWithDisplay(d, pm);
 	}
 	
-	public void applyProcessWindowWithDisplay(Collection<AtomData> data, ProcessingModule pm) {
+	public void applyProcessWindowWithDisplay(Iterable<AtomData> data, ProcessingModule pm) {
 		final SwingWorker<Void,Void> sw = new ProcessModuleWorker(pm, data);
 		ProgressMonitor.createNewProgressMonitor(sw);
 		final JProgressDisplayDialog progressDisplay = 
@@ -1241,13 +1238,12 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 	
 	private class ProcessModuleWorker extends SwingWorker<Void, Void>{
 		ProcessingModule pm;
-		Collection<AtomData> data;
-		boolean updateViewer;
+		Iterable<AtomData> data;
 		
-		ProcessModuleWorker(ProcessingModule pm, Collection<AtomData> data) {
+		
+		ProcessModuleWorker(ProcessingModule pm, Iterable<AtomData> data) {
 			this.pm = pm;
 			this.data = data;
-			this.updateViewer = data.size()>1;
 		}
 		
 		@Override
@@ -1255,14 +1251,12 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 			try {
 				for (AtomData d : data)
 					d.applyProcessingModule(pm);
-				if (updateViewer)
-					RenderingConfiguration.getViewer().updateAtoms();
 			} catch (Exception e) {
-				ProgressMonitor.getProgressMonitor().destroy();
-				JOptionPane.showMessageDialog(JMainWindow.this, e.getMessage());
+				JLogPanel.getJLogPanel().addError("Error in processing module", e.getMessage());
 				e.printStackTrace();
+			} finally {
+				ProgressMonitor.getProgressMonitor().destroy();
 			}
-			ProgressMonitor.getProgressMonitor().destroy();
 			return null;
 		}
 		
