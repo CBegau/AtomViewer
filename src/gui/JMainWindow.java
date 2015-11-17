@@ -1240,10 +1240,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		}
 		
 		@Override
-		protected Void doInBackground() throws Exception {
-			ProgressMonitor.getProgressMonitor().setCurrentFilename(data.getName());
-			ProgressMonitor.getProgressMonitor().setActivityName(pm.getShortName());
-	
+		protected Void doInBackground() throws Exception {	
 			try {
 				data.applyProcessingModule(pm);
 				if (updateViewer)

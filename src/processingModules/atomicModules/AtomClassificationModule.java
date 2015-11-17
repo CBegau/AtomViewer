@@ -93,6 +93,7 @@ public class AtomClassificationModule extends ClonableProcessingModule {
 		ThreadPool.executeParallel(tasks);
 		
 		ProgressMonitor.getProgressMonitor().stop();
+		data.countAtomTypes();
 		return null;
 	}
 	

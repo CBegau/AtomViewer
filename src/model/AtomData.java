@@ -113,6 +113,7 @@ public class AtomData {
 		
 		//Assign the names of elements if provided in the input file
 		this.elementNames = new String[maxNumElements];
+		this.atomsPerElement = new int[maxNumElements];
 		for (int i=0; i<maxNumElements;i++){
 			if (idc.elementNames.containsKey(i))
 				this.elementNames[i] = idc.elementNames.get(i);
@@ -205,6 +206,9 @@ public class AtomData {
 	 */
 	public void applyProcessingModule(ProcessingModule pm) throws Exception{
 		if (pm.isApplicable(this)){
+			ProgressMonitor.getProgressMonitor().setCurrentFilename(this.getName());
+			ProgressMonitor.getProgressMonitor().setActivityName(pm.getShortName());
+			
 			this.addDataColumnInfo(pm.getDataColumnsInfo());
 			
 			ProcessingResult pr = pm.process(this);
@@ -228,22 +232,24 @@ public class AtomData {
 	}
 	
 	private void processInputData(MDFileLoader.ImportDataContainer idc) throws Exception{
-		//Short circuit for empty files
-		if (this.atoms.size() == 0) return;
-		
-		{
-			Toolchain t = defaultCrystalStructure.getToolchainToApplyAtBeginningOfAnalysis();
-			if (t != null){
-				for (ProcessingModule pm : t.getProcessingModules())
-					this.applyProcessingModule(pm);
+		//Scale the data columns values of the remaining atoms
+		for (int i=0; i < dataColumns.size(); i++){
+			float scale = dataColumns.get(i).getScalingFactor();
+			if (scale != 1f){
+				for (Atom a : this.atoms)
+					a.setData(a.getData(i)*scale, i);
 			}
+		}
+		
+		Toolchain t = defaultCrystalStructure.getToolchainToApplyAtBeginningOfAnalysis();
+		if (t != null){
+			for (ProcessingModule pm : t.getProcessingModules())
+				this.applyProcessingModule(pm);
 		}
 		
 		//Bond Angle Analysis
 		if (!idc.atomTypesAvailable){
-			ProcessingModule pm = new AtomClassificationModule();
-			ProgressMonitor.getProgressMonitor().setActivityName(pm.getShortName());
-			this.applyProcessingModule(pm);
+			this.applyProcessingModule(new AtomClassificationModule());
 		}
 		
 		if (isGrainsImported()){
@@ -272,19 +278,10 @@ public class AtomData {
 					return a.getType() != defaultType;
 				}
 			}).process(this);
+			countAtomTypes();
 		}
 		
-		atomsPerElement = new int[maxNumElements];
-		countAtomTypes();
-		
-		this.atoms.trimToSize();		
-		
-		//Scale the data columns values of the remaining atoms
-		for (int i=0; i < dataColumns.size(); i++){
-			float scale = dataColumns.get(i).getScalingFactor();
-			for (Atom a : this.atoms)
-				a.setData(a.getData(i)*scale, i); 
-		}
+		this.atoms.trimToSize();
 	}
 
 	public void countAtomTypes() {
