@@ -91,7 +91,7 @@ public class SurfaceApproximationModule extends ClonableProcessingModule {
 		BooleanProperty clusterAtoms = dialog.addBoolean("cluster", "Identify cluster first", "", false);
 		IntegerProperty minClusterSize = dialog.addInteger("clusterSize", "Minimum atoms per cluster", "", 20, 1, 10000000);
 		FloatProperty clusterDetectionRadius = dialog.addFloat("clusterRadius", "Radius to find neighboring atoms during clustering", 
-				"", Configuration.getCurrentAtomData().getCrystalStructure().getNearestNeighborSearchRadius(), 0.001f, 100000f);
+				"", data.getCrystalStructure().getNearestNeighborSearchRadius(), 0.001f, 100000f);
 		dialog.endGroup();
 		
 		clusterAtoms.addDependentComponent(minClusterSize);

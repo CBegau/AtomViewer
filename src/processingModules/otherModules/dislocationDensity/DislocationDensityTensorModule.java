@@ -99,12 +99,9 @@ public class DislocationDensityTensorModule extends ClonableProcessingModule {
 	
 	@Override
 	public boolean isApplicable(AtomData data) {
-		boolean hasLatticeRotation = 
-				Configuration.getCurrentAtomData().getDataColumnInfos().containsAll(
-						Arrays.asList(new LatticeRotationModule().getDataColumnsInfo())
-						);
-		boolean hasSkeleton = (Configuration.getCurrentAtomData().getDataContainer(Skeletonizer.class)!=null);
-		
+		boolean hasLatticeRotation = data.getDataColumnInfos().containsAll(
+						Arrays.asList(new LatticeRotationModule().getDataColumnsInfo()));
+		boolean hasSkeleton = (data.getDataContainer(Skeletonizer.class)!=null);
 		
 		return hasLatticeRotation || hasSkeleton;
 	}

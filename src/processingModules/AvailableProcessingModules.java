@@ -27,7 +27,6 @@ import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
-import model.AtomData;
 import model.Configuration;
 import processingModules.atomicModules.*;
 import processingModules.otherModules.*;
@@ -84,7 +83,6 @@ private final static ArrayList<ProcessingModule> otherModules;
 		
 		private ProcessingModule selectedProcessingModule = null;
 		private SelectedState state = SelectedState.CANCEL;
-		private AtomData currentAtomData = null;
 		
 		
 		public JProcessingModuleDialog(JFrame frame){
@@ -93,10 +91,7 @@ private final static ArrayList<ProcessingModule> otherModules;
 		
 		public SelectedState showDialog(List<ProcessingModule> modules){
 			this.setTitle("Analysis modules");
-			
-			currentAtomData = Configuration.getCurrentAtomData();
-			
-			
+
 			GraphicsDevice gd = this.getOwner().getGraphicsConfiguration().getDevice();
 			
 			final JList moduleList = new JList(new Vector<ProcessingModule>(modules));
@@ -108,7 +103,7 @@ private final static ArrayList<ProcessingModule> otherModules;
 				public void actionPerformed(ActionEvent e) {
 					selectedProcessingModule = (ProcessingModule)moduleList.getSelectedValue();
 					if (selectedProcessingModule!=null && 
-							selectedProcessingModule.isApplicable(currentAtomData))
+							selectedProcessingModule.isApplicable(Configuration.getCurrentAtomData()))
 					state = SelectedState.ONE_FILE;
 					dispose();
 				}
@@ -215,7 +210,7 @@ private final static ArrayList<ProcessingModule> otherModules;
 			    {
 			        ProcessingModule m = (ProcessingModule)value;
 			        setText(m.getShortName());
-			        setEnabled(m.isApplicable(currentAtomData));
+			        setEnabled(m.isApplicable(Configuration.getCurrentAtomData()));
 			    }
 			    return this;
 			}
