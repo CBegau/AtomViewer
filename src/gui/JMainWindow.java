@@ -30,6 +30,7 @@ import java.io.*;
 import java.text.DecimalFormat;
 import java.util.Locale;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -476,16 +477,19 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 						boolean multipleFiles = (ok == JProcessingModuleDialog.SelectedState.ALL_FILES);
 						
 						boolean possible = pm.showConfigurationDialog(JMainWindow.this, data);
+						List<AtomData> toProcess = new ArrayList<AtomData>();
 						if (possible){
 							while (multipleFiles && data.getPrevious() != null)
 								data = data.getPrevious();
 							
 							do {
-								if (pm.isApplicable(data)){
-									applyProcessWindowWithDisplay(data, pm, multipleFiles);
-								}
+								if (pm.isApplicable(data))
+									toProcess.add(data);
 								if (multipleFiles) data = data.getNext();
 							} while (multipleFiles && data != null);
+							
+							
+							applyProcessWindowWithDisplay(toProcess, pm);
 							
 							Configuration.setCurrentAtomData(Configuration.getCurrentAtomData(), true, false);
 						}
@@ -563,7 +567,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 						FileInputStream f = new FileInputStream(file);
 						Toolchain tc = Toolchain.readToolchain(f);
 						for (ProcessingModule pm : tc.getProcessingModules()){
-							applyProcessWindowWithDisplay(Configuration.getCurrentAtomData(), pm.clone(), false);
+							applyProcessWindowWithDisplay(Configuration.getCurrentAtomData(), pm.clone());
 						}
 						Configuration.setCurrentAtomData(Configuration.getCurrentAtomData(), true, false);
 						JLogPanel.getJLogPanel().addInfo("Applied toolchain",
@@ -593,9 +597,10 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 						AtomData def = Configuration.getCurrentAtomData();
 						for (ProcessingModule pm : tc.getProcessingModules()){
 							for (AtomData d : Configuration.getAtomDataIterable(Configuration.getCurrentAtomData())){
+								//TODO should not be needed anymore, test and remove if so
 								Configuration.setCurrentAtomData(d, false, false);
 								ProcessingModule pmc = pm.clone();
-								applyProcessWindowWithDisplay(d, pmc, false);
+								applyProcessWindowWithDisplay(d, pmc);
 							}
 						}
 						Configuration.setCurrentAtomData(def, true, false);
@@ -1088,8 +1093,14 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		}
 	}
 	
-	public void applyProcessWindowWithDisplay(AtomData data, ProcessingModule pm, boolean multipleFiles) {
-		final SwingWorker<Void,Void> sw = new ProcessModuleWorker(pm, data, !multipleFiles);
+	public void applyProcessWindowWithDisplay(AtomData data, ProcessingModule pm) {
+		List<AtomData> d = new ArrayList<AtomData>();
+		d.add(data);
+		applyProcessWindowWithDisplay(d, pm);
+	}
+	
+	public void applyProcessWindowWithDisplay(Collection<AtomData> data, ProcessingModule pm) {
+		final SwingWorker<Void,Void> sw = new ProcessModuleWorker(pm, data);
 		ProgressMonitor.createNewProgressMonitor(sw);
 		final JProgressDisplayDialog progressDisplay = 
 				new JProgressDisplayDialog(sw, JMainWindow.this, false);
@@ -1230,19 +1241,20 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 	
 	private class ProcessModuleWorker extends SwingWorker<Void, Void>{
 		ProcessingModule pm;
-		AtomData data;
+		Collection<AtomData> data;
 		boolean updateViewer;
 		
-		ProcessModuleWorker(ProcessingModule pm, AtomData data, boolean updateViewer) {
+		ProcessModuleWorker(ProcessingModule pm, Collection<AtomData> data) {
 			this.pm = pm;
 			this.data = data;
-			this.updateViewer = updateViewer;
+			this.updateViewer = data.size()>1;
 		}
 		
 		@Override
 		protected Void doInBackground() throws Exception {	
 			try {
-				data.applyProcessingModule(pm);
+				for (AtomData d : data)
+					d.applyProcessingModule(pm);
 				if (updateViewer)
 					RenderingConfiguration.getViewer().updateAtoms();
 			} catch (Exception e) {
