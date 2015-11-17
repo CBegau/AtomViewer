@@ -40,7 +40,6 @@ import javax.xml.stream.XMLStreamWriter;
 import common.ThreadPool;
 import model.Atom;
 import model.AtomData;
-import model.Configuration;
 import model.DataColumnInfo;
 import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
@@ -293,14 +292,6 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 	public void importParameters(XMLStreamReader reader, Toolchain toolchain) throws Exception {
 		reader.next();
 		if (!reader.getLocalName().equals("toDeltaColumn")) throw new XMLStreamException("Illegal element detected");
-		String id = reader.getAttributeValue(null, "id");
-		
-		List<DataColumnInfo> dci = Configuration.getCurrentAtomData().getDataColumnInfos();
-		for (DataColumnInfo d : dci){
-			if (d.getId().equals(id)){
-				this.toDeltaColumn = d;
-				break;
-			}
-		}
+		this.toDeltaID = reader.getAttributeValue(null, "id");
 	}
 }
