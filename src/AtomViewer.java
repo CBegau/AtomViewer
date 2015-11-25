@@ -27,6 +27,6 @@ public class AtomViewer {
 			Configuration.experimentalFeatures = true;
 		}
 		
-		JMainWindow.main(args);
+		JMainWindow.startAtomViewer(args);
 	}
 }
