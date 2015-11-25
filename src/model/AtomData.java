@@ -250,6 +250,8 @@ public class AtomData {
 		//Bond Angle Analysis
 		if (!idc.atomTypesAvailable){
 			this.applyProcessingModule(new AtomClassificationModule());
+		} else {
+			countAtomTypes();
 		}
 		
 		if (isGrainsImported()){
