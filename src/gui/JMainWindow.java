@@ -341,28 +341,6 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		
 		menu.add(viewMenu);
 		
-		JMenu editMenu = new JMenu("Edit");
-		
-		JMenuItem dropAtomDataMenuItem = new JMenuItem("Drop atom data file");
-		editMenu.add(dropAtomDataMenuItem);
-		dropAtomDataMenuItem.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				AtomData atomData = Configuration.getCurrentAtomData();
-				if (atomData == null) return;
-				AtomData next = atomData.getNext();
-				AtomData pre = atomData.getPrevious();
-				if (pre != null) pre.setNext(next);
-				if (next != null) next.setPrevious(pre);
-				atomData.clear();
-				atomData = null;
-				if (next!=null) atomData = next;
-				else atomData = pre;
-				
-				Configuration.setCurrentAtomData(atomData, true, false);
-			}
-		});
-		
 		typeColorMenu = new JMenu("Atom type colors");
 		JMenuItem resetColorMenuItem = new JMenuItem("Reset colors of atom types");
 		resetColorMenuItem.addActionListener(new ActionListener() {
@@ -430,9 +408,8 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		});
 		typeColorMenu.add(loadColorMenuItem);
 		
-		editMenu.add(typeColorMenu);
+		viewMenu.add(typeColorMenu);
 		typeColorMenu.setEnabled(false);
-		menu.add(editMenu);
 		
 		final JMenu processingMenu = new JMenu("Analysis");
 		
@@ -540,7 +517,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 						Toolchain tc = Toolchain.readToolchain(f);
 						AtomData def = Configuration.getCurrentAtomData();
 						for (ProcessingModule pm : tc.getProcessingModules()){
-							for (AtomData d : Configuration.getAtomDataIterable(Configuration.getCurrentAtomData())){
+							for (AtomData d : Configuration.getAtomDataIterable()){
 								ProcessingModule pmc = pm.clone();
 								applyProcessWindowWithDisplay(d, pmc);
 							}
@@ -810,7 +787,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 				List<DataColumnInfo> dci = current.getDataColumnInfos();
 				//Identify which entries are common in all AtomData
 				if (exportAll.isSelected()){
-					for (AtomData d : Configuration.getAtomDataIterable(Configuration.getCurrentAtomData())){
+					for (AtomData d : Configuration.getAtomDataIterable()){
 						dci.retainAll(d.getDataColumnInfos());
 						if (exportGrain) exportGrain = d.isPolyCrystalline();
 						if (exportRBV) exportRBV = d.isRbvAvailable();
@@ -853,7 +830,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 						File path = chooser.getSelectedFile().getParentFile();
 						String prefix = chooser.getSelectedFile().getName();
 						int num = 0;
-						for (AtomData d : Configuration.getAtomDataIterable(Configuration.getCurrentAtomData())){
+						for (AtomData d : Configuration.getAtomDataIterable()){
 							String newName = current.getName();
 							newName = String.format("%s.%05d", prefix, num++);
 							
@@ -1128,6 +1105,8 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 				drawCoordinateSystemBoxMenu.doClick();
 			} else if (e.getActionCommand().equals("p")){
 				perspectiveCheckBoxMenu.doClick();
+			} else if (e.getActionCommand().equals("changeOrder")){
+				new JOrderAtomDataSet(JMainWindow.this);
 			}
 		}
 	}

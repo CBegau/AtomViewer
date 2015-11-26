@@ -94,6 +94,10 @@ public class Configuration {
 		return currentAtomData;
 	}
 	
+	public static Iterable<AtomData> getAtomDataIterable(){
+		return getAtomDataIterable(currentAtomData);
+	}
+	
 	public static Iterable<AtomData> getAtomDataIterable(final AtomData data){
 		return new Iterable<AtomData>() {
 			

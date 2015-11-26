@@ -62,6 +62,7 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 	
 	private JButton colorShiftButton = new JButton("Set element shading"); 
 	
+	private JButton orderButton = new JButton("change order");
 	private JButton forwardButton = new JButton(">");
 	private JButton rewindButton = new JButton("<");
 	private JButton fastForwardButton = new JButton(">>");
@@ -284,25 +285,32 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		
 		gbc.gridheight = GridBagConstraints.REMAINDER;
 		gbc.anchor = GridBagConstraints.SOUTH;
-		JPanel p = new JPanel();
-		p.setLayout(new GridLayout(1,4));
 		
-		p.add(fastRewindButton);
+		JPanel p = new JPanel();
+		p.setLayout(new GridLayout(2,1));
+		JPanel innerp = new JPanel();
+		innerp.setLayout(new GridLayout(1,4)); 
+		p.add(orderButton);
+		p.add(innerp);
+		orderButton.addActionListener(kba);
+		orderButton.setActionCommand("changeOrder");
+		orderButton.setEnabled(false);
+		innerp.add(fastRewindButton);
 		fastRewindButton.setToolTipText("First file in sequence (f)");
 		fastRewindButton.addActionListener(kba);
 		fastRewindButton.setActionCommand("f");
 		fastRewindButton.setEnabled(false);
-		p.add(rewindButton); 
+		innerp.add(rewindButton);
 		rewindButton.setToolTipText("Previous file in sequence (y or z)");
 		rewindButton.addActionListener(kba);
 		rewindButton.setActionCommand("z");
 		rewindButton.setEnabled(false);
-		p.add(forwardButton);
+		innerp.add(forwardButton);
 		forwardButton.setToolTipText("Next file in sequence (x)");
 		forwardButton.addActionListener(kba);
 		forwardButton.setActionCommand("x");
 		forwardButton.setEnabled(false);
-		p.add(fastForwardButton);
+		innerp.add(fastForwardButton);
 		fastForwardButton.setToolTipText("Last file in sequence (l)");
 		fastForwardButton.addActionListener(kba);
 		fastForwardButton.setActionCommand("l");
@@ -375,6 +383,12 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		this.dataPanel.removeAll();
 		dataPanelContraints.gridy = 0;
 		this.atomData = e.getNewAtomData();
+		
+		fastForwardButton.setEnabled(atomData != null && atomData.getNext() != null);
+		forwardButton.setEnabled(atomData != null && atomData.getNext() != null);
+		fastRewindButton.setEnabled(atomData != null && atomData.getPrevious() != null);
+		rewindButton.setEnabled(atomData != null && atomData.getPrevious() != null);
+		orderButton.setEnabled(atomData != null);
 		
 		if (this.atomData == null) {
 			this.revalidate();
@@ -533,11 +547,6 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		this.drawAsTypesButton.setVisible(atomData.getNumberOfElements() >= 2 ||
 				atomData.getDataColumnInfos().size() > 0 ||
 				atomData.isPolyCrystalline());
-		
-		if (fastForwardButton.isEnabled() != (atomData.getNext() != null)) fastForwardButton.setEnabled(atomData.getNext() != null);
-		if (forwardButton.isEnabled() != (atomData.getNext() != null)) forwardButton.setEnabled(atomData.getNext() != null);
-		if (fastRewindButton.isEnabled() != (atomData.getPrevious() != null)) fastRewindButton.setEnabled(atomData.getPrevious() != null);
-		if (rewindButton.isEnabled() != (atomData.getPrevious() != null))rewindButton.setEnabled(atomData.getPrevious() != null);
 		
 		this.colorShiftButton.setVisible(atomData.getNumberOfElements()>1);
 		

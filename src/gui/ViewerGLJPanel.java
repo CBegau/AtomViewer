@@ -1753,7 +1753,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 				ImageOutput.writeScreenshotFile(bi, type, new File(filename), this.atomData, this);
 			} else {
 				AtomData currentAtomData = this.atomData;
-				for (AtomData c : Configuration.getAtomDataIterable(currentAtomData)){
+				for (AtomData c : Configuration.getAtomDataIterable()){
 					this.setAtomData(c, false);
 					renderSceneIntoFBOs(gl, RenderOption.STEREO.isEnabled());
 					composeCompleteScene(gl, screenshotFBO);
