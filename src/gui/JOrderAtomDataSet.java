@@ -132,7 +132,7 @@ public class JOrderAtomDataSet extends JDialog {
 						current = model.atomDataList.get(0);
 					} else current = null;
 				}
-				Configuration.setCurrentAtomData(null, true, false);
+				Configuration.setCurrentAtomData(current, true, false);
 				dispose();
 			}
 		});
