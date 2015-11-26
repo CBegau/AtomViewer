@@ -342,22 +342,6 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		menu.add(viewMenu);
 		
 		JMenu editMenu = new JMenu("Edit");
-		JMenuItem editCrystalConf = new JMenuItem("Edit configuration");
-		editMenu.add(editCrystalConf);
-		editCrystalConf.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent arg0) {
-				if (Configuration.getCurrentAtomData()==null) return;
-				File selectedFile = new File(Configuration.getCurrentAtomData().getFullPathAndFilename());
-				
-				JCrystalConfigurationDialog ccd = 
-						new JCrystalConfigurationDialog(JMainWindow.this, 
-								Configuration.getLastOpenedFolder(), selectedFile, true);
-				if (ccd.isSavedSuccessfully()) {
-					JOptionPane.showMessageDialog(JMainWindow.this, "File(s) must be reloaded for changes to be effective");
-				}
-			}
-		});
 		
 		JMenuItem dropAtomDataMenuItem = new JMenuItem("Drop atom data file");
 		editMenu.add(dropAtomDataMenuItem);
@@ -379,7 +363,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 			}
 		});
 		
-		typeColorMenu = new JMenu("Colors");
+		typeColorMenu = new JMenu("Atom type colors");
 		JMenuItem resetColorMenuItem = new JMenuItem("Reset colors of atom types");
 		resetColorMenuItem.addActionListener(new ActionListener() {
 			@Override
@@ -493,39 +477,9 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		atomicModulesMenu.addActionListener(processingActionListener);
 		processingMenu.add(atomicModulesMenu);
 		
-		menu.add(processingMenu);
+
 		
-		final JMenuItem settingsMenu = new JMenu("Settings");
-		for (Options o : RenderingConfiguration.Options.values()){
-			settingsMenu.add(new JOptionCheckBoxMenuItem(o));
-		}
-		final JMenuItem selectFontMenuItem = new JMenuItem("Select font");
-		selectFontMenuItem.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(JMainWindow.this, "Select font");
-				JFontChooser fc = new JFontChooser();
-				JPanel panel = new JPanel(new GridLayout(1,1));
-				panel.add(fc);
-				dialog.addComponent(panel);
-				boolean ok = dialog.showDialog();
-				if (ok){
-					RenderingConfiguration.defaultFont = fc.getSelectedFontFamily();
-					RenderingConfiguration.defaultFontStyle = fc.getSelectedFontStyle();
-					RenderingConfiguration.defaultFontSize = fc.getSelectedFontSize();
-					RenderingConfiguration.saveProperties();
-					JOptionPane.showMessageDialog(JMainWindow.this, "AtomViewer must be restarted to change the font", "AtomViewer", JOptionPane.INFORMATION_MESSAGE);
-				}
-				
-			}
-		});
-		settingsMenu.add(selectFontMenuItem);
-		menu.add(settingsMenu);
-		
-		
-		final JMenuItem toolchainMenu = new JMenu("Toolchain");
-		
-		JMenuItem saveToolchainMenuItem = new JMenuItem("Save");
+		JMenuItem saveToolchainMenuItem = new JMenuItem("Save toolchain of data set");
 		saveToolchainMenuItem.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -544,7 +498,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 			}
 		});
 		
-		JMenuItem applyToolchainMenuItem = new JMenuItem("Apply");
+		JMenuItem applyToolchainMenuItem = new JMenuItem("Apply toolchain file");
 		applyToolchainMenuItem.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -572,7 +526,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 			}
 		});
 		
-		JMenuItem applyToAllToolchainMenuItem = new JMenuItem("Apply to all");
+		JMenuItem applyToAllToolchainMenuItem = new JMenuItem("Apply toolchain file to all data sets");
 		applyToAllToolchainMenuItem.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -604,12 +558,43 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 			}
 		});
 		
-		toolchainMenu.add(saveToolchainMenuItem);
-		toolchainMenu.add(applyToolchainMenuItem);
-		toolchainMenu.add(applyToAllToolchainMenuItem);
-		if (Configuration.experimentalFeatures)
-			menu.add(toolchainMenu);
 		
+		if (Configuration.experimentalFeatures){
+			final JMenuItem toolchainMenu = new JMenu("Toolchain");
+			toolchainMenu.add(saveToolchainMenuItem);
+			toolchainMenu.add(applyToolchainMenuItem);
+			toolchainMenu.add(applyToAllToolchainMenuItem);
+			processingMenu.add(toolchainMenu);
+		}
+		
+		menu.add(processingMenu);
+		
+		final JMenuItem settingsMenu = new JMenu("Settings");
+		for (Options o : RenderingConfiguration.Options.values()){
+			settingsMenu.add(new JOptionCheckBoxMenuItem(o));
+		}
+		final JMenuItem selectFontMenuItem = new JMenuItem("Select font");
+		selectFontMenuItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(JMainWindow.this, "Select font");
+				JFontChooser fc = new JFontChooser();
+				JPanel panel = new JPanel(new GridLayout(1,1));
+				panel.add(fc);
+				dialog.addComponent(panel);
+				boolean ok = dialog.showDialog();
+				if (ok){
+					RenderingConfiguration.defaultFont = fc.getSelectedFontFamily();
+					RenderingConfiguration.defaultFontStyle = fc.getSelectedFontStyle();
+					RenderingConfiguration.defaultFontSize = fc.getSelectedFontSize();
+					RenderingConfiguration.saveProperties();
+					JOptionPane.showMessageDialog(JMainWindow.this, "AtomViewer must be restarted to change the font", "AtomViewer", JOptionPane.INFORMATION_MESSAGE);
+				}
+				
+			}
+		});
+		settingsMenu.add(selectFontMenuItem);
+		menu.add(settingsMenu);
 		
 		final JMenuItem helpMenu = new JMenu("Help");
 		final JMenuItem helpMenuItem = new JMenuItem("Help");
