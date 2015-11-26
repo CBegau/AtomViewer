@@ -20,12 +20,15 @@ package processingModules;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.*;
-import java.util.List;
 
 import javax.swing.*;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
+import javax.swing.event.TreeSelectionEvent;
+import javax.swing.event.TreeSelectionListener;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeCellRenderer;
+import javax.swing.tree.TreeNode;
+import javax.swing.tree.TreePath;
+import javax.swing.tree.TreeSelectionModel;
 
 import model.Configuration;
 import processingModules.atomicModules.*;
@@ -34,48 +37,56 @@ import processingModules.otherModules.dislocationDensity.DislocationDensityTenso
 import crystalStructures.MonoclinicNiTi;
 
 public class AvailableProcessingModules {
-private final static ArrayList<ProcessingModule> atomicScaleModules;
-private final static ArrayList<ProcessingModule> otherModules;
+	private final static DefaultMutableTreeNode root = new DefaultMutableTreeNode("Analysis modules");
 	
 	static {
-		//Creating the list of all available processingModules
-		atomicScaleModules = new ArrayList<ProcessingModule>();
-		otherModules = new ArrayList<ProcessingModule>();
-		atomicScaleModules.add(new CentroSymmetryModule());
-		atomicScaleModules.add(new TemperatureModule());
-		atomicScaleModules.add(new LatticeRotationModule());
-		atomicScaleModules.add(new SpatialAveragingModule());
-		atomicScaleModules.add(new SlipVectorModule());
-		atomicScaleModules.add(new DisplacementModule());
-		atomicScaleModules.add(new DeltaValueModule());
-		atomicScaleModules.add(new CoordinationNumberModule());
-		atomicScaleModules.add(new ParticleDensityModule());
-		atomicScaleModules.add(new AtomicVolumeModule());
-		atomicScaleModules.add(new SpatialDerivatiesModule());
-		atomicScaleModules.add(new SpatialAveragingVectorModule());
-		atomicScaleModules.add(new DeltaVectorModule());
-		atomicScaleModules.add(new MonoclinicNiTi());
+		DefaultMutableTreeNode atomic = new DefaultMutableTreeNode("Per atom analysis");
+		root.add(atomic);
+		DefaultMutableTreeNode atomicGP = new DefaultMutableTreeNode("General");
+		atomic.add(atomicGP);
+		atomicGP.insert(new ModuleTreeWrapper(new CentroSymmetryModule()), 0);
+		atomicGP.insert(new ModuleTreeWrapper(new TemperatureModule()), 1);
+		atomicGP.insert(new ModuleTreeWrapper(new LatticeRotationModule()), 2);
+		atomicGP.insert(new ModuleTreeWrapper(new SlipVectorModule()), 3);
 		
-		otherModules.add(new FilterSurfaceModule());
-		otherModules.add(new RbvModule());
-		otherModules.add(new SkeletonizerModule());
-		otherModules.add(new VacancyDetectionModule());
-		otherModules.add(new SurfaceApproximationModule());
-		otherModules.add(new DislocationDensityTensorModule());
-		otherModules.add(new StressDataModule());
-		otherModules.add(new LoadBalancingProcessingModule());
-		otherModules.add(new GrainIdentificationModule());
-		otherModules.add(new RemoveInvisibleAtomsModule());
+		DefaultMutableTreeNode atomicDens = new DefaultMutableTreeNode("Densities & Volumes");
+		atomic.add(atomicDens);
+		atomicDens.insert(new ModuleTreeWrapper(new CoordinationNumberModule()), 0);
+		atomicDens.insert(new ModuleTreeWrapper(new ParticleDensityModule()), 1);
+		atomicDens.insert(new ModuleTreeWrapper(new AtomicVolumeModule()), 2);
+		          
+		DefaultMutableTreeNode atomicAvg = new DefaultMutableTreeNode("Averages & Differences");
+		atomic.add(atomicAvg);
+		atomicAvg.insert(new ModuleTreeWrapper(new DisplacementModule()), 0);
+		atomicAvg.insert(new ModuleTreeWrapper(new SpatialAveragingModule()), 1);
+		atomicAvg.insert(new ModuleTreeWrapper(new SpatialAveragingVectorModule()), 2);
+		atomicAvg.insert(new ModuleTreeWrapper(new DeltaValueModule()), 3);
+		atomicAvg.insert(new ModuleTreeWrapper(new DeltaVectorModule()), 4);
+		atomicAvg.insert(new ModuleTreeWrapper(new SpatialDerivatiesModule()), 5);
+		
+		DefaultMutableTreeNode filteratom = new DefaultMutableTreeNode("Filter");
+		atomic.add(filteratom);
+		filteratom.insert(new ModuleTreeWrapper(new FilterSurfaceModule()), 0);
+		filteratom.insert(new ModuleTreeWrapper(new RemoveInvisibleAtomsModule()), 1);
+		
+		DefaultMutableTreeNode atomicSpecial = new DefaultMutableTreeNode("Special");
+		atomic.add(atomicSpecial);
+		atomicSpecial.insert(new ModuleTreeWrapper(new MonoclinicNiTi()), 0);
+		
+		DefaultMutableTreeNode defect = new DefaultMutableTreeNode("Defect analysis");
+		root.add(defect);
+		defect.insert(new ModuleTreeWrapper(new RbvModule()), 0);
+		defect.insert(new ModuleTreeWrapper(new SkeletonizerModule()), 1);
+		defect.insert(new ModuleTreeWrapper(new VacancyDetectionModule()), 2);
+		defect.insert(new ModuleTreeWrapper(new DislocationDensityTensorModule()), 3);
+		defect.insert(new ModuleTreeWrapper(new GrainIdentificationModule()), 4);
+		defect.insert(new ModuleTreeWrapper(new SurfaceApproximationModule()), 5);
+		
+		DefaultMutableTreeNode external = new DefaultMutableTreeNode("Load from external data");
+		root.add(external);
+		external.insert(new ModuleTreeWrapper(new StressDataModule()), 0);
+		external.insert(new ModuleTreeWrapper(new LoadBalancingProcessingModule()), 1);
 	}
-	
-	public static java.util.List<ProcessingModule> getAtomicScaleProcessingModule() {
-		return Collections.unmodifiableList(atomicScaleModules);
-	}
-	
-	public static java.util.List<ProcessingModule> getOtherProcessingModule() {
-		return Collections.unmodifiableList(otherModules);
-	}
-	
 	
 	public static class JProcessingModuleDialog extends JDialog{
 		public enum SelectedState {CANCEL, ONE_FILE, ALL_FILES};
@@ -89,19 +100,21 @@ private final static ArrayList<ProcessingModule> otherModules;
 			super(frame, true);
 		}
 		
-		public SelectedState showDialog(List<ProcessingModule> modules){
+		public SelectedState showDialog(){
 			this.setTitle("Analysis modules");
 
 			GraphicsDevice gd = this.getOwner().getGraphicsConfiguration().getDevice();
 			
-			final JList moduleList = new JList(new Vector<ProcessingModule>(modules));
-			moduleList.setCellRenderer(new ProcessingModuleCellRenderer());
+			final JTree moduleTree = new JTree(root);
+			moduleTree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
+			moduleTree.setCellRenderer(new ProcessingModuleCellRenderer());
+			expandAll(moduleTree);
 			
 			final JButton applyButton = new JButton("Apply on current data sets");
 			applyButton.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
-					selectedProcessingModule = (ProcessingModule)moduleList.getSelectedValue();
+					selectedProcessingModule = ((ModuleTreeWrapper)moduleTree.getSelectionPath().getLastPathComponent()).module;
 					if (selectedProcessingModule!=null && 
 							selectedProcessingModule.isApplicable(Configuration.getCurrentAtomData()))
 					state = SelectedState.ONE_FILE;
@@ -113,7 +126,7 @@ private final static ArrayList<ProcessingModule> otherModules;
 			applyAllButton.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
-					selectedProcessingModule = (ProcessingModule)moduleList.getSelectedValue();
+					selectedProcessingModule = ((ModuleTreeWrapper)moduleTree.getSelectionPath().getLastPathComponent()).module;
 					if (selectedProcessingModule!=null)
 						state = SelectedState.ALL_FILES;
 					dispose();
@@ -129,7 +142,7 @@ private final static ArrayList<ProcessingModule> otherModules;
 				}
 			});
 			this.setLayout(new BorderLayout());
-			this.add(new JScrollPane(moduleList,
+			this.add(new JScrollPane(moduleTree,
 					JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED), BorderLayout.WEST);
 			
 			final JLabel descriptionlabel = new JLabel("");
@@ -143,7 +156,7 @@ private final static ArrayList<ProcessingModule> otherModules;
 			c.setLayout(new GridLayout(2,1));
 			
 			final Container descriptionContainer = new Container(); 
-			descriptionContainer.setPreferredSize(new Dimension(550, 400));
+			descriptionContainer.setPreferredSize(new Dimension(550, 320));
 			descriptionContainer.setLayout(new BoxLayout(descriptionContainer, BoxLayout.Y_AXIS));
 			descriptionContainer.add(new JLabel("Description"));
 			descriptionContainer.add(new JScrollPane(descriptionlabel,
@@ -151,7 +164,7 @@ private final static ArrayList<ProcessingModule> otherModules;
 			c.add(descriptionContainer);
 			
 			final Container requirementContainer = new Container();
-			requirementContainer.setPreferredSize(new Dimension(550, 400));
+			requirementContainer.setPreferredSize(new Dimension(550, 320));
 			requirementContainer.setLayout(new BoxLayout(requirementContainer, BoxLayout.Y_AXIS));
 			requirementContainer.add(new JLabel("Requirements"));
 			requirementContainer.add(new JScrollPane(requirementlabel,
@@ -172,11 +185,13 @@ private final static ArrayList<ProcessingModule> otherModules;
 			
 			this.add(c,BorderLayout.SOUTH);
 			
-			moduleList.addListSelectionListener(new ListSelectionListener() {
+			moduleTree.addTreeSelectionListener(new TreeSelectionListener() {
 				@Override
-				public void valueChanged(ListSelectionEvent e) {
-					ProcessingModule pm = (ProcessingModule) moduleList.getSelectedValue();
-					if (pm != null){
+				public void valueChanged(TreeSelectionEvent e) {
+					Object o = moduleTree.getSelectionPath().getLastPathComponent();
+					if (o instanceof ModuleTreeWrapper){
+						ProcessingModule pm = ((ModuleTreeWrapper)o).module;
+						
 						int size = Math.max(20, descriptionContainer.getSize().width-20);
 						String req = pm.getRequirementDescription();
 						if (req == null || req.isEmpty()) req = "none";
@@ -184,11 +199,18 @@ private final static ArrayList<ProcessingModule> otherModules;
 						descriptionlabel.setText("<html><table><tr><td width='"+size+"'>"+ pm.getFunctionDescription() +"</td></tr></table></html>");
 						
 						applyAllButton.setEnabled(pm.canBeAppliedToMultipleFilesAtOnce());
+						applyButton.setEnabled(true);
+					} else {
+						requirementlabel.setText("");
+						descriptionlabel.setText("");
+						applyAllButton.setEnabled(false);
+						applyButton.setEnabled(false);
 					}
 				}
 			});
 			
 			this.pack();
+			
 			this.setLocation( (gd.getDisplayMode().getWidth()-this.getWidth())>>1, 
 					(gd.getDisplayMode().getHeight()-this.getHeight())>>1);
 			this.setVisible(true);
@@ -196,25 +218,57 @@ private final static ArrayList<ProcessingModule> otherModules;
 			return state;
 		}
 		
+		private void expandAll(JTree tree) {
+			TreeNode root = (TreeNode) tree.getModel().getRoot();
+			expandAll(tree, new TreePath(root));
+		}
+
+		private void expandAll(JTree tree, TreePath parent) {
+			TreeNode node = (TreeNode) parent.getLastPathComponent();
+			for (int i = 0; i < node.getChildCount(); i++) {
+				TreeNode n = node.getChildAt(i);
+				TreePath path = parent.pathByAddingChild(n);
+				expandAll(tree, path);
+			}
+			tree.expandPath(parent);
+		}
+		
 		public ProcessingModule getSelectedProcessingModule() {
 			return selectedProcessingModule;
 		}
 		
-		class ProcessingModuleCellRenderer extends DefaultListCellRenderer{
+		class ProcessingModuleCellRenderer extends DefaultTreeCellRenderer{
 			private static final long serialVersionUID = 1L;
 			@Override
-			public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus)
-			{
-			    super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-			    if (value != null)
-			    {
-			        ProcessingModule m = (ProcessingModule)value;
-			        setText(m.getShortName());
-			        setEnabled(m.isApplicable(Configuration.getCurrentAtomData()));
-			    }
-			    return this;
+			public Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel, boolean expanded,
+					boolean leaf, int row, boolean hasFocus) {
+
+				super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
+				setIcon(null);
+				if (value != null) {
+					if (value instanceof ModuleTreeWrapper) {
+						ProcessingModule m = ((ModuleTreeWrapper) value).module;
+						setText(m.getShortName());
+						setEnabled(m.isApplicable(Configuration.getCurrentAtomData()));
+						
+					} else setText(value.toString());
+				}
+				return this;
 			}
-			
 		}
+	}
+
+	public static class ModuleTreeWrapper extends DefaultMutableTreeNode{
+		private static final long serialVersionUID = 1L;
+		private ProcessingModule module;
+	    
+	    private ModuleTreeWrapper(ProcessingModule module){
+	    	this.module = module;
+	    }
+	    
+	    @Override
+	    public String toString() {
+	    	return module.getShortName();
+	    }
 	}
 }

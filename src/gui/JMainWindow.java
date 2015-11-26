@@ -452,10 +452,8 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		
 		final JMenu processingMenu = new JMenu("Analysis");
 		
-		JMenuItem atomicModulesMenu = new JMenuItem("Atom based analyis");
-		atomicModulesMenu.setActionCommand("atomic");
-		JMenuItem otherModulesMenu = new JMenuItem("Other analyis");
-		otherModulesMenu.setActionCommand("other");
+		JMenuItem atomicModulesMenu = new JMenuItem("Add analyis");
+		atomicModulesMenu.setActionCommand("analysis");
 		
 		ActionListener processingActionListener = new ActionListener() {
 			@Override
@@ -465,12 +463,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 					AvailableProcessingModules.JProcessingModuleDialog dialog 
 						= new AvailableProcessingModules.JProcessingModuleDialog(JMainWindow.this);
 					
-					List<ProcessingModule> modules = null;
-					if (e.getActionCommand().equals("atomic"))
-						modules = AvailableProcessingModules.getAtomicScaleProcessingModule();
-					else modules = AvailableProcessingModules.getOtherProcessingModule();
-					
-					JProcessingModuleDialog.SelectedState ok = dialog.showDialog(modules);
+					JProcessingModuleDialog.SelectedState ok = dialog.showDialog();
 					ProcessingModule pm = dialog.getSelectedProcessingModule();
 					if (ok != JProcessingModuleDialog.SelectedState.CANCEL && pm!=null){
 						boolean multipleFiles = (ok == JProcessingModuleDialog.SelectedState.ALL_FILES);
@@ -498,10 +491,8 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 
 		};
 		atomicModulesMenu.addActionListener(processingActionListener);
-		otherModulesMenu.addActionListener(processingActionListener);
-		
 		processingMenu.add(atomicModulesMenu);
-		processingMenu.add(otherModulesMenu);
+		
 		menu.add(processingMenu);
 		
 		final JMenuItem settingsMenu = new JMenu("Settings");
