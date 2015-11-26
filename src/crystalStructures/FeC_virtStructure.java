@@ -18,6 +18,7 @@
 
 package crystalStructures;
 
+import gui.ColoringFilter;
 import gui.PrimitiveProperty.BooleanProperty;
 import gui.ViewerGLJPanel.AtomRenderType;
 
@@ -29,7 +30,6 @@ import javax.swing.JFrame;
 import common.ColorTable;
 import model.Atom;
 import model.AtomData;
-import model.ColoringFilter;
 import model.RenderingConfiguration;
 import model.ImportConfiguration;
 import model.DataColumnInfo;

@@ -17,6 +17,7 @@
 // with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
 package processingModules.otherModules;
 
+import gui.ColoringFilter;
 import gui.JColorSelectPanel;
 import gui.RenderRange;
 import gui.ViewerGLJPanel;
@@ -42,7 +43,6 @@ import javax.swing.event.ChangeListener;
 
 import common.Vec3;
 import model.BoxParameter;
-import model.ColoringFilter;
 import model.DataColumnInfo;
 import model.Pickable;
 import model.RenderingConfiguration;

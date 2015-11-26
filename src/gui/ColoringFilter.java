@@ -15,9 +15,10 @@
 //
 // You should have received a copy of the GNU General Public License along
 // with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
-package model;
+package gui;
 
 import common.Vec3;
+import model.Filter;
 
 /**
  * Combines a filter for atoms with a function to define a color per atom
