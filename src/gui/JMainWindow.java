@@ -1146,7 +1146,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 							try {
 								//Retrieve the results from the background worker
 								if (!worker.isCancelled())
-									Configuration.setCurrentAtomData(worker.get(), true, true);
+									Configuration.setCurrentAtomData(worker.get(), true, !ImportStates.APPEND_FILES.isActive());
 							} catch (Exception e) {
 								progressDisplay.dispose();
 								JOptionPane.showMessageDialog(null, e.toString());
