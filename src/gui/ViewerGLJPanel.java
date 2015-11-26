@@ -866,9 +866,9 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 				
 				final ColoringFilter<Atom> colFunc;
 				switch (atomRenderType){
-					case TYPE: colFunc = new TypeColoringAndFilter(); break;
-					case ELEMENTS: colFunc = new ElementColoringAndFilter(); break;
-					case GRAINS: colFunc = new GrainColoringAndFilter(); break;
+					case TYPE: colFunc = tf; break;
+					case ELEMENTS: colFunc = ef; break;
+					case GRAINS: colFunc = gf; break;
 					case DATA:
 					case VECTOR_DATA: colFunc = dataAtomFilter; break;
 					default: colFunc = null;
@@ -1982,6 +1982,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	private class TypeColoringAndFilter implements ColoringFilter<Atom> {
 		float[][] colors = null;
 		int numEleColors;
+		boolean[] typesIgnored = null;
 		
 		boolean isNeeded(){
 			for (int i=0; i<ignoreTypes.length;i++)
@@ -1989,9 +1990,13 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			return false;
 		}
 		
+		public TypeColoringAndFilter() {
+			update();
+		}
+		
 		@Override
 		public boolean accept(Atom a) {
-			return !isTypeIgnored(a.getType());
+			return !typesIgnored[a.getType()];
 		}
 		
 		@Override
@@ -2007,10 +2012,19 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 							atomData.getCrystalStructure(), colorShiftForElements);
 			colors = colorsAndNumElements.o1;
 			numEleColors = colorsAndNumElements.o2;
+			typesIgnored = new boolean[ignoreTypes.length];
+			for (int i=0; i<ignoreTypes.length; i++){
+				typesIgnored[i] = isTypeIgnored(i);
+			}
 		}
 	}
 	
 	private class GrainColoringAndFilter implements ColoringFilter<Atom> {
+		HashMap<Integer, Boolean> ignoredGrains;
+		public GrainColoringAndFilter() {
+			update();
+		}
+		
 		boolean isNeeded(){
 			for (boolean b : ignoreGrain.values())
 				if (b) return true;
@@ -2019,11 +2033,16 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		
 		@Override
 		public boolean accept(Atom a) {
-			return !isGrainIgnored(a.getGrain());
+			int grain = a.getGrain();
+			if (ignoredGrains.containsKey(grain))
+				return ignoredGrains.get(grain);
+			else return true;
 		}
 		
 		@Override
-		public void update() {}
+		public void update() {
+			this.ignoredGrains = new HashMap<Integer, Boolean>(ignoreGrain);
+		}
 		
 		public float[] getColor(Atom c) {
 			return getGrainColor(c.getGrain());
@@ -2032,6 +2051,11 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	
 	private class ElementColoringAndFilter implements ColoringFilter<Atom> {
 		float[][] colorTable = null;
+		boolean[] elementsIgnored = null;
+		
+		public ElementColoringAndFilter() {
+			update();
+		}
 		
 		boolean isNeeded(){
 			if (atomData.getNumberOfElements()==1) return false;
@@ -2042,7 +2066,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		
 		@Override
 		public boolean accept(Atom a) {
-			return !isElementIgnored(a.getElement());
+			return elementsIgnored[a.getElement()];
 		}
 		
 		@Override
@@ -2053,6 +2077,10 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		@Override
 		public void update() {
 			colorTable = ColorTable.getColorTableForElements(atomData.getNumberOfElements());
+			elementsIgnored = new boolean[atomData.getNumberOfElements()];
+			for (int i=0; i<elementsIgnored.length; i++){
+				elementsIgnored[i] = isElementIgnored(i);
+			}
 		}
 	}
 	
