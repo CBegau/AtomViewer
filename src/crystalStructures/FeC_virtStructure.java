@@ -197,15 +197,17 @@ public class FeC_virtStructure extends FeCStructure {
 			
 			@Override
 			public void update() {
-				dataInfo = RenderingConfiguration.getSelectedColumn();
-				selected = particleDataColumns.indexOf(dataInfo);
-				min = dataInfo.getLowerLimit();
-				max = dataInfo.getUpperLimit();
-				filterMin = RenderingConfiguration.isFilterMin();
-				filterMax = RenderingConfiguration.isFilterMax();
-				inversed = RenderingConfiguration.isFilterInversed();
-				
 				colorByValue = RenderingConfiguration.getViewer().getAtomRenderType() == AtomRenderType.DATA;
+				if (colorByValue){
+					dataInfo = RenderingConfiguration.getSelectedColumn();
+					selected = particleDataColumns.indexOf(dataInfo);
+					min = dataInfo.getLowerLimit();
+					max = dataInfo.getUpperLimit();
+					filterMin = RenderingConfiguration.isFilterMin();
+					filterMax = RenderingConfiguration.isFilterMax();
+					inversed = RenderingConfiguration.isFilterInversed();
+				}
+				
 			}
 			
 			@Override
