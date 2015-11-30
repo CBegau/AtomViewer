@@ -33,6 +33,7 @@ import model.AtomData;
 import model.RenderingConfiguration;
 import model.ImportConfiguration;
 import model.DataColumnInfo;
+import model.Filter;
 import model.NearestNeighborBuilder;
 import processingModules.ClonableProcessingModule;
 import processingModules.DataContainer;
@@ -43,12 +44,16 @@ import processingModules.toolchain.Toolchain;
 
 public class FeC_virtStructure extends FeCStructure {
 	
+	protected BooleanProperty skipPlaceholderProperty = 
+			new BooleanProperty("skipPlaceholders", "Do not import placeholders","", false);
 	protected BooleanProperty placeholderProperty = 
-			new BooleanProperty("placeholders", "handle Placeholders separately","", true);
+			new BooleanProperty("placeholders", "Handle placeholders separately","", true);
 	
 	
 	public FeC_virtStructure() {
 		super();
+		this.getCrystalProperties().add(skipPlaceholderProperty);
+		skipPlaceholderProperty.addDependentComponent(placeholderProperty, true);
 		this.getCrystalProperties().add(placeholderProperty);
 	}
 
@@ -120,6 +125,17 @@ public class FeC_virtStructure extends FeCStructure {
 		if (placeholderProperty.getValue())
 			t.addModule(new PlaceholderModule());			
 		return t;
+	}
+	
+	public Filter<Atom> getIgnoreAtomsDuringImportFilter(){
+		if (skipPlaceholderProperty.getValue())
+			return new Filter<Atom>() {
+				@Override
+				public boolean accept(Atom a) {
+					return (a.getElement()%3 != 2);
+				}
+			};
+		return null;
 	}
 	
 	private static final class PlaceholderModule extends ClonableProcessingModule{

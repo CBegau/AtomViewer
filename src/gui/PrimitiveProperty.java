@@ -23,6 +23,7 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import common.CommonUtils;
+import common.Tupel;
 
 public abstract class PrimitiveProperty<T> extends JPanel{
 	private static final long serialVersionUID = 1L;
@@ -300,7 +301,7 @@ public abstract class PrimitiveProperty<T> extends JPanel{
 		boolean value, defaultValue;
 		JCheckBox valueCheckbox;
 		
-		ArrayList<JComponent> dependentComponents = new ArrayList<JComponent>();
+		ArrayList<Tupel<JComponent, Boolean>> dependentComponents = new ArrayList<Tupel<JComponent, Boolean>>();
 		
 		public BooleanProperty(String id, String label, String tooltip, boolean defaultValue) {
 			this(id, label, tooltip, defaultValue, false);
@@ -320,8 +321,8 @@ public abstract class PrimitiveProperty<T> extends JPanel{
 				public void actionPerformed(ActionEvent arg0) {
 					value = valueCheckbox.isSelected();
 					
-					for (JComponent c: dependentComponents)
-						c.setEnabled(value);
+					for (Tupel<JComponent, Boolean> c: dependentComponents)
+						c.o1.setEnabled(value ^ c.o2);
 				}
 			});
 			super.initControlPanel(addDefaultButton);
@@ -351,8 +352,8 @@ public abstract class PrimitiveProperty<T> extends JPanel{
 		public  void setToDefault() {
 			this.value = this.defaultValue;
 			valueCheckbox.setSelected(this.value);
-			for (JComponent c: dependentComponents)
-				c.setEnabled(this.value);
+			for (Tupel<JComponent, Boolean> c: dependentComponents)
+				c.o1.setEnabled(this.value ^ c.o2);
 		}
 		
 		public void setDefaultValue(boolean defaultValue) {
@@ -360,14 +361,19 @@ public abstract class PrimitiveProperty<T> extends JPanel{
 		}
 		
 		public void addDependentComponent(JComponent p){
-			dependentComponents.add(p);
+			dependentComponents.add(new Tupel<JComponent, Boolean>(p, false));
+			p.setEnabled(valueCheckbox.isSelected());
+		}
+		
+		public void addDependentComponent(JComponent p, boolean invert){
+			dependentComponents.add(new Tupel<JComponent, Boolean>(p, invert));
 			p.setEnabled(valueCheckbox.isSelected());
 		}
 		
 		public void setEnabled(boolean enabled){
 			super.setEnabled(enabled);
-			for (JComponent c: dependentComponents)
-				c.setEnabled(enabled);
+			for (Tupel<JComponent, Boolean> c: dependentComponents)
+				c.o1.setEnabled(this.value ^ c.o2);
 		}
 		
 		@Override

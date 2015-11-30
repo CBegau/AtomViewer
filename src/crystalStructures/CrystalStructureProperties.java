@@ -25,6 +25,8 @@ import java.io.Writer;
 import java.util.Collection;
 import java.util.Properties;
 
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.JPanel;
 import javax.swing.border.EtchedBorder;
 import javax.swing.border.TitledBorder;
@@ -35,12 +37,17 @@ import gui.PrimitiveProperty;
 public class CrystalStructureProperties {
 	
 	public static JPanel createPropertyContainer(Collection<PrimitiveProperty<?>> properties){
-		JPanel configPanel = new JPanel(new GridLayout(properties.size(), 1));
+		JPanel configPanel = new JPanel();
+		configPanel.setLayout(new BoxLayout(configPanel, BoxLayout.Y_AXIS));
+		
+		JPanel innerPanel = new JPanel(new GridLayout(properties.size(), 1));
 		
 		configPanel.setBorder(new TitledBorder(new EtchedBorder(1), "Crystal structure options"));
 		for (final PrimitiveProperty<?> p : properties)
-			configPanel.add(p);
+			innerPanel.add(p);
 		
+		configPanel.add(innerPanel);
+		configPanel.add(Box.createVerticalGlue());
 		return configPanel;
 	}
 	
