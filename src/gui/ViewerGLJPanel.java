@@ -2035,7 +2035,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		public boolean accept(Atom a) {
 			int grain = a.getGrain();
 			if (ignoredGrains.containsKey(grain))
-				return ignoredGrains.get(grain);
+				return !ignoredGrains.get(grain);
 			else return true;
 		}
 		
@@ -2066,7 +2066,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		
 		@Override
 		public boolean accept(Atom a) {
-			return elementsIgnored[a.getElement()];
+			return !elementsIgnored[a.getElement()];
 		}
 		
 		@Override
