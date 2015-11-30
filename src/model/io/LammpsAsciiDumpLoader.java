@@ -49,17 +49,12 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 		FileFilter lammpsFileFilterBasic = new FileFilter() {
 			@Override
 			public String getDescription() {
-				return "Lammps ASCII dump file (*.dump)";
+				return "Lammps ASCII dump file (*.dump, *.*)";
 			}
 			
 			@Override
 			public boolean accept(File f) {
-				if (f.isDirectory()) return true;
-				String name = f.getName();
-				if (name.endsWith(".dump") || name.endsWith(".dump.gz")){
-					return true;
-				}
-				return false;
+				return true;
 			}
 		};
 		return lammpsFileFilterBasic;
