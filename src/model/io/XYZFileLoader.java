@@ -199,6 +199,7 @@ public class XYZFileLoader extends MDFileLoader {
 		for (String s : typeMap.keySet()){
 			idc.elementNames.put(typeMap.get(s), s);
 		}
+		idc.maxElementNumber = (byte)(typeMap.size());
 		
 		return new AtomData(previous, idc);
 	}
