@@ -106,7 +106,7 @@ public class JLogPanel extends JPanel{
 		splitPane.add(new JScrollPane(logTable, ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS,
 				ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED));
 		splitPane.add(new JScrollPane(detailsPane, ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS,
-				ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER));
+				ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED));
 		splitPane.setResizeWeight(0.2);
 		
 		this.setLayout(new BorderLayout());
