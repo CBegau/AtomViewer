@@ -16,6 +16,7 @@ import model.Atom;
 import model.AtomData;
 import model.DataColumnInfo;
 import model.Filter;
+import model.RenderingConfiguration;
 import model.DataColumnInfo.Component;
 import model.polygrain.Grain;
 
@@ -28,6 +29,8 @@ public class ImdFileWriter extends MDFileWriter {
 	private BooleanProperty compressedRBV = new PrimitiveProperty.BooleanProperty("compRBV", "Compress RBV",
 			"Use a compressed format to save RBVs, the resulting files are not compatible with the standard"
 			+ "IMD format", false);
+	private BooleanProperty useFilter = new PrimitiveProperty.BooleanProperty("use filter", "Export only visible particles",
+			"Only the particles not affected by the currently selected visibilty filter are exported", false);
 	
 	private boolean exportNumber = false;
 	private boolean exportElement = false;
@@ -64,6 +67,9 @@ public class ImdFileWriter extends MDFileWriter {
 
 	@Override
 	public void writeFile(File path, String filenamePrefix, AtomData data, Filter<Atom> filter) throws IOException {
+		if (useFilter.getValue() && filter == null)
+			filter = RenderingConfiguration.getAtomFilterset();			
+		
 		//Construct the file to export, based on options
 		String fullFilename = filenamePrefix;
 		if (gzippedExport.getValue()){
@@ -319,6 +325,10 @@ public class ImdFileWriter extends MDFileWriter {
 		} else {
 			if (data.isRbvAvailable())	//Otherwise just test this file
 				options.add(compressedRBV);
+			//TODO unclean solution. Only supporting a single file.
+			//Replace by a generic solution, where filter can be used for different files
+			//without risk of exceptions
+			options.add(useFilter);
 		}
 		
 		return options;
