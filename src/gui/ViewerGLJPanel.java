@@ -1303,8 +1303,11 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			if (zoom>400f) zoom = 400f;
 			if (zoom<0.05f) zoom = 0.05f;
 		} else if (e.isControlDown()){
-			moveX -= (newDragPosition.x - startDragPosition.x) / (globalMaxBounds.minComponent()*zoom);
-			moveY += (newDragPosition.y - startDragPosition.y) / (globalMaxBounds.minComponent()*zoom);
+			float v = (globalMaxBounds.maxComponent()/globalMaxBounds.minComponent())/zoom;
+			//TODO Modify this formula and the setup of the modelview matrix, breaking backwards compatibility
+			//The current implementation is just plain bad
+			moveX -= ((newDragPosition.x - startDragPosition.x)/(float)width) * v;
+			moveY += ((newDragPosition.y - startDragPosition.y)/(float)height) * v;
 		} else {
 			if (e.isShiftDown()){
 				GLMatrix mat = new GLMatrix();
