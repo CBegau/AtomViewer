@@ -218,17 +218,17 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 						try{ // Try reading additional lines, read each line until the next item
 							//and put everything into an array of floats
 							String label = s.substring(6);
-							ArrayList<Float> values = new ArrayList<Float>();
+							ArrayList<Double> values = new ArrayList<Double>();
 							s = lnr.readLine();
 							while (!s.startsWith("ITEM:")){
 								String[] parts = p.split(s);
 								
 								for (int i=0; i<parts.length; i++){
-									values.add(Float.parseFloat(parts[i]));
+									values.add(Double.parseDouble(parts[i]));
 								}
 								s = lnr.readLine();
 							}
-							float[] tmp = new float[values.size()];
+							double[] tmp = new double[values.size()];
 							for (int i=0; i<values.size(); i++)
 								tmp[i] = values.get(i); 
 							

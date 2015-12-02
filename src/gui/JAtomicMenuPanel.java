@@ -429,7 +429,13 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		}
 		
 		if (atomData.getFileMetaData("timestep") != null){
-			timeStepLabel.setText("Timestep: "+( (int)((float[])(atomData.getFileMetaData("timestep")))[0]) );
+			String text = "";
+			//Truncate trailing zero if the number is an integer
+			double step = ((double[]) (atomData.getFileMetaData("timestep")))[0];
+			if (step == (long) step) text = String.format("%d", (long) step);
+			else text = String.format("%f", step);
+			
+			timeStepLabel.setText("Timestep: "+text);
 		} else timeStepLabel.setText(""); 
 		
 		totalAtomsLabel.setText("#Atoms: "+atomData.getAtoms().size());

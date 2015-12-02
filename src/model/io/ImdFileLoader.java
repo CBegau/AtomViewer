@@ -696,9 +696,9 @@ public class ImdFileLoader extends MDFileLoader{
 							try{
 								s = s.substring(2);
 								String[] parts = p.split(s);
-								float[] info = new float[parts.length-1];
+								double[] info = new double[parts.length-1];
 								for (int i=1; i<parts.length; i++){
-									info[i-1] = Float.parseFloat(parts[i]);
+									info[i-1] = Double.parseDouble(parts[i]);
 								}
 								idc.fileMetaData.put(parts[0].toLowerCase(), info);
 							} catch (Exception e) {}

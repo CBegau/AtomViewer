@@ -180,15 +180,15 @@ public class ImdFileWriter extends MDFileWriter {
 				}
 			}
 			if (data.getFileMetaData("extpot") != null){
-				float[] indent = (float[]) data.getFileMetaData("extpot");
+				double[] indent = (double[]) data.getFileMetaData("extpot");
 				dos.writeBytes(String.format("##extpot %.4f %.4f %.4f %.4f %.4f\n", indent[0], indent[1], indent[2], indent[3], indent[4]));
 			}
 			if (data.getFileMetaData("wall") != null){
-				float[] wall = (float[]) data.getFileMetaData("wall");
+				double[] wall = (double[]) data.getFileMetaData("wall");
 				dos.writeBytes(String.format("##wall %.4f %.4f %.4f\n", wall[0], wall[1], wall[2]));
 			}
 			if (data.getFileMetaData("timestep") != null){
-				float[] timestep = (float[])data.getFileMetaData("timestep");
+				double[] timestep = (double[])data.getFileMetaData("timestep");
 				dos.writeBytes(String.format("##timestep %f\n", timestep[0]));
 			}
 			

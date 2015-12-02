@@ -714,18 +714,18 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		//Test indenter geometry, sphere or cylinder
 		Object o = atomData.getFileMetaData("extpot_cylinder");
 		if (o != null) {
-			float[] indent = null;
-			if (o instanceof float[]) indent = (float[])o;
+			double[] indent = null;
+			if (o instanceof double[]) indent = (double[])o;
 			else return;
+			Vec3 p = new Vec3Double(indent[1], indent[2], indent[3]).toVec3();
 			if (picking){
-				Vec3 p;
-				indenter.setCenter(p=new Vec3(indent[1], indent[2], indent[3]));
+				indenter.setCenter(p);
 				indenter.setText("Cylindrical indenter",
 						CommonUtils.buildHTMLTableForKeyValue(new String[]{"Radius", "Position"},
 								new Object[]{indent[4], p.toString()}));
 			} 
 			
-			mvm.translate(indent[1], indent[2], indent[3]);
+			mvm.translate(p.x, p.y, p.z);
 			
 			Vec3 bounds = atomData.getBox().getHeight();
 			float length = 0f;
@@ -738,33 +738,33 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			} else if (indent[3] == 0f){
 				length = bounds.z * 2f;
 			}
-			mvm.scale(indent[4], indent[4], length);
+			mvm.scale((float)indent[4], (float)indent[4], length);
 			
 			updateModelViewInShader(gl, BuiltInShader.ADS_UNIFORM_COLOR.getShader(), mvm, projectionMatrix);
 			SimpleGeometriesRenderer.drawCylinder(gl);
 		}
 		o = atomData.getFileMetaData("extpot");
 		if (o != null) {
-			float[] indent = null;
-			if (o instanceof float[]) indent = (float[])o;
+			double[] indent = null;
+			if (o instanceof double[]) indent = (double[])o;
 			else return;
+			Vec3 p = new Vec3Double(indent[1], indent[2], indent[3]).toVec3();
 			if (picking){
-				Vec3 p;
-				indenter.setCenter(p=new Vec3(indent[1], indent[2], indent[3]));
+				indenter.setCenter(p);
 				indenter.setText("Spherical indenter",
 						CommonUtils.buildHTMLTableForKeyValue(new String[]{"Radius", "Position"},
 								new Object[]{indent[4], p.toString()}));
 			} 
 			
-			mvm.translate(indent[1], indent[2], indent[3]);
-			mvm.scale(indent[4], indent[4], indent[4]);
+			mvm.translate(p.x, p.y, p.z);
+			mvm.scale((float)indent[4], (float)indent[4], (float)indent[4]);
 			updateModelViewInShader(gl, BuiltInShader.ADS_UNIFORM_COLOR.getShader(), mvm, projectionMatrix);
 			SimpleGeometriesRenderer.drawSphere(gl);
 		}
 		o = atomData.getFileMetaData("wall");
 		if (o != null) {
-			float[] indent = null;
-			if (o instanceof float[]) indent = (float[]) o;
+			double[] indent = null;
+			if (o instanceof double[]) indent = (double[]) o;
 			else return;
 			
 			Vec3[] box = atomData.getBox().getBoxSize();
@@ -772,13 +772,13 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			float hy = box[0].y + box[1].y + box[2].y;
 			
 			if (picking){
-				indenter.setCenter(new Vec3(hx/2f, hx/2f, indent[1]));
+				indenter.setCenter(new Vec3(hx/2f, hx/2f, (float)indent[1]));
 				indenter.setText("Flat punch indenter",
 						CommonUtils.buildHTMLTableForKeyValue(new String[]{"z-coordinate"}, new Object[]{indent[1]}));
 			} 
 
-			mvm.translate(0, 0, indent[1] - indent[2]);
-			mvm.scale(hx, hy, 3*indent[2]);
+			mvm.translate(0, 0, (float)(indent[1] - indent[2]));
+			mvm.scale(hx, hy, 3f*(float)indent[2]);
 			updateModelViewInShader(gl, BuiltInShader.ADS_UNIFORM_COLOR.getShader(), mvm, projectionMatrix);
 			SimpleGeometriesRenderer.drawCube(gl);
 		}
