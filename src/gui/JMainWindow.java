@@ -235,10 +235,12 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		changeSphereSizeMenuItem.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				final float min = 0.00001f;
+				final float max = 10000f;
 				JPrimitiveVariablesPropertiesDialog d = 
 						new JPrimitiveVariablesPropertiesDialog(JMainWindow.this, "Edit sphere size");
 				FloatProperty defSize = d.addFloat("scale", "Global scaling factor", "Adjust the scaling of all atoms",
-						RenderingConfiguration.getViewer().getSphereSize(), 0.001f, 1000f);
+						Math.min(min, Math.max(RenderingConfiguration.getViewer().getSphereSize(), max)), min, max);
 				
 				FloatProperty[] atomScales = new FloatProperty[0];
 				
