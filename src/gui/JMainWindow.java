@@ -240,7 +240,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 				JPrimitiveVariablesPropertiesDialog d = 
 						new JPrimitiveVariablesPropertiesDialog(JMainWindow.this, "Edit sphere size");
 				FloatProperty defSize = d.addFloat("scale", "Global scaling factor", "Adjust the scaling of all atoms",
-						Math.min(min, Math.max(RenderingConfiguration.getViewer().getSphereSize(), max)), min, max);
+						Math.max(min, Math.min(RenderingConfiguration.getViewer().getSphereSize(), max)), min, max);
 				
 				FloatProperty[] atomScales = new FloatProperty[0];
 				

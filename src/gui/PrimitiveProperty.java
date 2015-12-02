@@ -245,7 +245,9 @@ public abstract class PrimitiveProperty<T> extends JPanel{
 			this.defaultValue = defaultValue;
 			assert (value>=min && value<=max);
 			
-			valueSpinner = new JSpinner(new SpinnerNumberModel(value, min, max, (max-min)/1000.));
+			valueSpinner = new JSpinner(new SpinnerNumberModel(value, min, max, value/1000f));
+			JSpinner.NumberEditor numberEditor = new JSpinner.NumberEditor(valueSpinner,"0.######");
+			valueSpinner.setEditor(numberEditor);
 			valueSpinner.addChangeListener(new ChangeListener() {
 				@Override
 				public void stateChanged(ChangeEvent arg0) {
