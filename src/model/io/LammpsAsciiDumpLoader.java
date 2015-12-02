@@ -264,7 +264,7 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 					}
 
 					if (numberColumn != -1)
-						number = Integer.parseInt(parts[numberColumn]);
+						number = (int)Long.parseLong(parts[numberColumn]);
 
 					if (scaledCoords){
 						pos.x = Float.parseFloat(parts[xColumn + 0])*idc.boxSizeX.x - idc.offset.x;
