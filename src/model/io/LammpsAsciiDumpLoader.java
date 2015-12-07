@@ -132,12 +132,12 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 		Pattern p = Pattern.compile("\\s+");
 
 		ImportDataContainer idc = new ImportDataContainer();
+		int num=0;
 		try {
-			int num=0;
 			String s = lnr.readLine();
 			while (s != null) {
 				idc.fullPathAndFilename = f.getCanonicalPath();
-				idc.name = String.format("%s.%05d", f.getName(), num++);
+				idc.name = String.format("%s (%05d)", f.getName(), num++);
 				
 				boolean headerRead = false;
 				int atomsCount = 0;
@@ -293,6 +293,10 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 					
 					s = lnr.readLine();
 				}
+				//If there is only a single data set in the lammps dump, do not append numbers
+				if (num <= 1)
+					idc.name = f.getName();
+
 				previous = new AtomData(previous, idc);
 				idc = new ImportDataContainer();
 			}
