@@ -8,6 +8,7 @@ import java.awt.GraphicsDevice;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,7 +36,18 @@ public class JOrderAtomDataSet extends JDialog {
 		this.setPreferredSize(new Dimension(500, 400));
 		final AtomDataTableModel model = new AtomDataTableModel();
 		
-		final JTable atomDataTable = new JTable(model);
+		final JTable atomDataTable = new JTable(model){
+			private static final long serialVersionUID = 1L;
+
+			public String getToolTipText(MouseEvent e) {
+				java.awt.Point p = e.getPoint();
+		        int rowIndex = rowAtPoint(p);
+		        
+		        if (rowIndex == -1) return "";
+		        else return model.atomDataList.get(rowIndex).getFullPathAndFilename(); 
+			}
+		};
+		
 		JScrollPane tableScrollPane = new JScrollPane(atomDataTable, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, 
 				JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 		
@@ -193,6 +205,4 @@ public class JOrderAtomDataSet extends JDialog {
 			return atomDataList.get(arg0);
 		};
 	}
-
-	
 }
