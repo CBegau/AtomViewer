@@ -198,6 +198,18 @@ public class ColorTable {
 			this.name = name;
 			this.generalScheme = generalScheme;
 		}
+		
+		ColorBarScheme(double[][] bar, String name, boolean generalScheme){
+			float[][] fbar = new float[bar.length][3];
+			for (int i=0; i<bar.length; i++){
+				fbar[i][0] = (float)bar[i][0];
+				fbar[i][1] = (float)bar[i][1];
+				fbar[i][2] = (float)bar[i][2];
+			}
+			this.colorBar = fbar;
+			this.name = name;
+			this.generalScheme = generalScheme;
+		}
 	}
 	
 	public static final String ELEMENT_COLORS_ID = "elementColors"; 
