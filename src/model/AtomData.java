@@ -63,7 +63,7 @@ public class AtomData {
 	private List<DataColumnInfo> dataColumns = new ArrayList<DataColumnInfo>();
 	
 	//Some flags for imported or calculated values
-	private boolean rbvAvailable = false;
+	private RBVStorage rbvStorage = new RBVStorage();
 	private boolean grainsImported = false;
 	
 	/**
@@ -127,7 +127,7 @@ public class AtomData {
 			}
 		}
 		
-		this.rbvAvailable = idc.rbvAvailable;
+		this.rbvStorage = idc.rbvStorage;
 		this.grainsImported = idc.grainsImported;
 		this.fileMetaData = idc.fileMetaData;
 		this.name = idc.name;
@@ -550,12 +550,16 @@ public class AtomData {
 		this.previous = null;
 	}
 	
-	public void setRbvAvailable(boolean rbvAvailable) {
-		this.rbvAvailable = rbvAvailable;
+	public void setRbvStorage(RBVStorage rbvStorage) {
+		this.rbvStorage = rbvStorage;
+	}
+	
+	public RBVStorage getRbvStorage() {
+		return rbvStorage;
 	}
 	
 	public boolean isRbvAvailable() {
-		return rbvAvailable;
+		return !rbvStorage.isEmpty();
 	}
 	
 	private void addAdditionalData(DataContainer dc){

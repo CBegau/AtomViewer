@@ -16,6 +16,7 @@ import model.Atom;
 import model.AtomData;
 import model.DataColumnInfo;
 import model.Filter;
+import model.RBV;
 import model.RenderingConfiguration;
 import model.DataColumnInfo.Component;
 import model.polygrain.Grain;
@@ -225,21 +226,22 @@ public class ImdFileWriter extends MDFileWriter {
 					
 					if (exportRBV && data.isRbvAvailable()){
 						boolean writeRBV = false;
+						RBV rbv = data.getRbvStorage().getRBV(a);
 						if (compressedRBV.getValue()){
-							if (a.getRBV()!=null){
+							if (rbv!=null){
 								dos.writeInt(1);
 								writeRBV = true;
 							} else  dos.writeInt(0);
 						} else writeRBV = true;
 						
 						if (writeRBV){
-							if (a.getRBV()!=null){
-								dos.writeFloat(a.getRBV().lineDirection.x);
-								dos.writeFloat(a.getRBV().lineDirection.y);
-								dos.writeFloat(a.getRBV().lineDirection.z);
-								dos.writeFloat(a.getRBV().bv.x); 
-								dos.writeFloat(a.getRBV().bv.y); 
-								dos.writeFloat(a.getRBV().bv.z);
+							if (rbv!=null){
+								dos.writeFloat(rbv.lineDirection.x);
+								dos.writeFloat(rbv.lineDirection.y);
+								dos.writeFloat(rbv.lineDirection.z);
+								dos.writeFloat(rbv.bv.x); 
+								dos.writeFloat(rbv.bv.y); 
+								dos.writeFloat(rbv.bv.z);
 							} else {
 								dos.writeFloat(0); dos.writeFloat(0); dos.writeFloat(0);
 								dos.writeFloat(0); dos.writeFloat(0); dos.writeFloat(0);
@@ -273,18 +275,19 @@ public class ImdFileWriter extends MDFileWriter {
 					
 					if (exportRBV && data.isRbvAvailable()){
 						boolean writeRBV = false;
+						RBV rbv = data.getRbvStorage().getRBV(a);
 						if (compressedRBV.getValue()){
-							if (a.getRBV()!=null){
+							if (rbv!=null){
 								dos.writeBytes(" 1");
 								writeRBV = true;
 							} else  dos.writeBytes(" 0");
 						} else writeRBV = true;
 						
 						if (writeRBV){
-							if (a.getRBV()!=null){
+							if (rbv!=null){
 								dos.writeBytes(String.format(" %.4f %.4f %.4f %.4f %.4f %.4f",
-										a.getRBV().lineDirection.x, a.getRBV().lineDirection.y, a.getRBV().lineDirection.z,
-										a.getRBV().bv.x, a.getRBV().bv.y, a.getRBV().bv.z));
+										rbv.lineDirection.x, rbv.lineDirection.y, rbv.lineDirection.z,
+										rbv.bv.x, rbv.bv.y, rbv.bv.z));
 							} else {
 								dos.writeBytes(" 0. 0. 0. 0. 0. 0.");
 							}

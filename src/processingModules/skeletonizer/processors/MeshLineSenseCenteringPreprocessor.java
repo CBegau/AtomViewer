@@ -26,6 +26,7 @@ import Jama.Matrix;
 import common.ThreadPool;
 import common.Vec3;
 import model.Atom;
+import model.RBVStorage;
 import processingModules.skeletonizer.*;
 
 /**
@@ -80,13 +81,15 @@ public class MeshLineSenseCenteringPreprocessor implements SkeletonPreprocessor 
 		public Void call() throws Exception {
 			double defaultLength = 1./skel.getAtomData().getCrystalStructure().getPerfectBurgersVectorLength();
 			
+			RBVStorage storage = skel.getAtomData().getRbvStorage();
+			
 			for (int j=start; j<end;j++){
 				if (Thread.interrupted()) return null;
 				SkeletonNode n = nodes.get(j);
 				Atom central = n.getMappedAtoms().get(0);
 				
 				//Compute a orthogonal basis with the line direction as one normal
-				Vec3 line = central.getRBV().lineDirection;
+				Vec3 line = storage.getRBV(central).lineDirection;
 				Vec3 normalA;
 				if (Math.abs(line.x) < Math.abs(line.y) && Math.abs(line.x) < Math.abs(line.z)){
 					normalA = new Vec3(0f, line.y, -line.z);
@@ -104,7 +107,7 @@ public class MeshLineSenseCenteringPreprocessor implements SkeletonPreprocessor 
 				for (int i=0; i < n.getNeigh().size(); i++){
 					Atom neigh = n.getNeigh().get(i).getMappedAtoms().get(0);
 					
-					double w = Math.sqrt(neigh.getRBV().bv.getLengthSqr())*defaultLength;
+					double w = Math.sqrt(storage.getRBV(neigh).bv.getLengthSqr())*defaultLength;
 					
 					x[i*3+0][0] = normalA.x * w; x[i*3+0][1] = normalB.x * w;
 					x[i*3+1][0] = normalA.y * w; x[i*3+1][1] = normalB.y * w;

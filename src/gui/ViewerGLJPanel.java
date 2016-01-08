@@ -929,17 +929,18 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			//Render as RBVs
 			gl.glDisable(GL.GL_BLEND);
 			final float[] lineDirColor = new float[]{0.5f, 0.5f, 0.5f};
+			RBVStorage storage = atomData.getRbvStorage();
 			for (int i=0, len = atomData.getAtoms().size(); i<len; i++){
 				Atom c = atomData.getAtoms().get(i);
-				if (c.getRBV()!=null && atomFilterSet.accept(c)){ 					
+				RBV rbv = storage.getRBV(c);
+				if (rbv != null && atomFilterSet.accept(c)){ 					
 					float[] col;
 					if (picking) col = this.getNextPickingColor(c);
 					else col = cs.getGLColor(c.getType());
 
-					ArrowRenderer.renderArrow(gl, c, c.getRBV().bv, 0.1f, col, true);
+					ArrowRenderer.renderArrow(gl, c, rbv.bv, 0.1f, col, true);
 					if (!picking) col = lineDirColor;
-					ArrowRenderer.renderArrow(gl, c,
-							c.getRBV().lineDirection, 0.05f, col, true);
+					ArrowRenderer.renderArrow(gl, c, rbv.lineDirection, 0.05f, col, true);
 				}
 			}
 		}

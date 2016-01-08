@@ -35,7 +35,6 @@ public class Atom extends Vec3 implements Pickable {
 	public static final int IGNORED_GRAIN = Short.MAX_VALUE;
 	public static final int DEFAULT_GRAIN = Short.MAX_VALUE-1;
 	
-	private RBV rbv;
 	private float[] dataValues;
 	private int atomNumber;
 	//TODO pack the grain into dataValues
@@ -60,15 +59,6 @@ public class Atom extends Vec3 implements Pickable {
 		if (ImportConfiguration.getInstance().getDataColumns().size() != 0)
 			dataValues = new float[ImportConfiguration.getInstance().getDataColumns().size()];
 	}
-	
-	/**
-	 * The resultant burgers vector associated with this atom
-	 * @return the RBV or null no value exists
-	 */
-	public RBV getRBV() {
-		return rbv;
-	}
-	
 	
 	/**
 	 * Increase the size of the array dataValues by n values
@@ -99,23 +89,6 @@ public class Atom extends Vec3 implements Pickable {
 	    System.arraycopy(dataValues, 0, d, 0, index );
 	    System.arraycopy(dataValues, index+1, d, index, dataValues.length - index-1);
 		dataValues = d;
-	}
-	
-	
-	/**
-	 * Sets the values for the resultant Burgers vector and the line direction to this atom
-	 * If one of these values is null the existing reference is nulled
-	 * @param rbv The resultant Burgers vector
-	 * @param lineDirection the lineDirection, should be a unit vector.
-	 * If it is the null-vector, no reference to a RBV is created 
-	 */
-	public void setRBV( Vec3 rbv, Vec3 lineDirection ){
-		if (rbv == null || lineDirection == null){
-			this.rbv = null;
-		} else {
-			if (lineDirection.dot(lineDirection)>0)  
-				this.rbv = new model.RBV(rbv, lineDirection);
-		}
 	}
 	
 	/**
@@ -172,7 +145,6 @@ public class Atom extends Vec3 implements Pickable {
 		assert(grain>=0 && grain<Short.MAX_VALUE);
 		
 		this.grain = (short)grain;
-		if (grain == IGNORED_GRAIN) rbv = null;
 	}
 	
 	/**
@@ -233,21 +205,24 @@ public class Atom extends Vec3 implements Pickable {
 			keys.add("Grain"); values.add(getGrain()==IGNORED_GRAIN?"None":Integer.toString(getGrain()));
 		}
 		
-		if (getRBV()!=null) {
+		
+		RBV rbv = data.getRbvStorage().getRBV(this);
+		if (rbv != null){
 			CrystalRotationTools crt = null;
 			
 			if (getGrain() == DEFAULT_GRAIN)
 				crt = data.getCrystalRotation();
 			else crt = data.getGrains(getGrain()).getCystalRotationTools();
-			Vec3 bv = crt.getInCrystalCoordinates(this.getRBV().bv);
-			Vec3 ld = crt.getInCrystalCoordinates(this.getRBV().lineDirection);
+			Vec3 bv = crt.getInCrystalCoordinates(rbv.bv);
+			Vec3 ld = crt.getInCrystalCoordinates(rbv.lineDirection);
 			
 			keys.add("Resultant Burgers vector"); values.add(bv.toString());
-			keys.add("Resultant Burgers vector magnitude"); values.add(Float.toString(this.getRBV().bv.getLength()));
+			keys.add("Resultant Burgers vector magnitude"); values.add(Float.toString(bv.getLength()));
 			keys.add("Dislocation line tangent"); values.add(ld.toString());
-			BurgersVector tbv = crt.rbvToBurgersVector(this.getRBV());
+			BurgersVector tbv = crt.rbvToBurgersVector(rbv);
 			keys.add("True Burgers vector"); values.add(tbv.toString());
 		}
+		
 		
 		List<DataColumnInfo> dci = data.getDataColumnInfos();
 		if (dataValues != null){

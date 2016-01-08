@@ -613,12 +613,15 @@ public abstract class CrystalStructure{
 		ArrayList<Atom> defectAtoms = new ArrayList<Atom>();
 		if (!data.isRbvAvailable()) return defectAtoms;
 		
+		RBVStorage rbvStorage = data.getRbvStorage();
+		
 		float maxRBVLength = getPerfectBurgersVectorLength()*2.5f;
 		maxRBVLength *= maxRBVLength;
 		
 		for (Atom a : data.getAtoms()) {
-			if (a.getRBV()!=null){
-				float l = a.getRBV().bv.getLengthSqr();
+			RBV rbv = rbvStorage.getRBV(a);
+			if (rbv != null){
+				float l = rbv.bv.getLengthSqr();
 				if (l<maxRBVLength)
 					defectAtoms.add(a);
 			}

@@ -39,6 +39,7 @@ import model.AtomData;
 import model.DataColumnInfo;
 import model.Filter;
 import model.NearestNeighborBuilder;
+import model.RBVStorage;
 import model.polygrain.Grain;
 import common.*;
 import crystalStructures.CrystalStructure;
@@ -183,17 +184,15 @@ public class RbvModule extends ClonableProcessingModule{
 		ProgressMonitor.getProgressMonitor().start(infosList.size());
 		
 		Vector<AnalyseCallable> tasks = new Vector<AnalyseCallable>();
-		
 		for (int i = 0; i < ThreadPool.availProcessors(); i++) {
 			int start = (int)(((long)infosList.size() * i)/ThreadPool.availProcessors());
 			int end = (int)(((long)infosList.size() * (i+1))/ThreadPool.availProcessors());
-			tasks.add(new AnalyseCallable(start, end, infosList));
+			tasks.add(new AnalyseCallable(start, end, infosList, data.getRbvStorage()));
 		}
 		
 		ThreadPool.executeParallel(tasks);
 		
 		ProgressMonitor.getProgressMonitor().stop();
-		data.setRbvAvailable(true);
 	}
 
 	/**
@@ -613,11 +612,13 @@ public class RbvModule extends ClonableProcessingModule{
 		private int start, end;
 	
 		private List<RbvInfo<Atom>> infos;
+		private RBVStorage rbvStorage;
 		
-		public AnalyseCallable(int start, int end, List<RbvInfo<Atom>> atoms) {
+		public AnalyseCallable(int start, int end, List<RbvInfo<Atom>> atoms, RBVStorage rbvStorage) {
 			this.start = start;
 			this.end = end;
 			this.infos = atoms;
+			this.rbvStorage = rbvStorage;
 		}
 
 		public Void call() throws Exception{
@@ -629,7 +630,7 @@ public class RbvModule extends ClonableProcessingModule{
 				RbvInfo<Atom> info = infos.get(i); 
 				Tupel<Vec3,Vec3> rbv = info.calculateBurgersVector();
 				if (rbv != null)
-					info.atom.setRBV(rbv.o1, rbv.o2);
+					rbvStorage.addRBV(info.atom, rbv.o1, rbv.o2);
 			}
 			
 			ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
@@ -691,10 +692,7 @@ public class RbvModule extends ClonableProcessingModule{
 
 	@Override
 	public ProcessingResult process(AtomData data) throws Exception {
-		if (data.isRbvAvailable()){
-			for (Atom a : data.getAtoms())
-				a.setRBV(null, null);
-		}
+		data.getRbvStorage().clear();
 		
 		if (data.getGrains() == null || data.getGrains().size() == 0)
 			new RbvModule(data, data.getAtoms(), data.getCrystalStructure(), null, this);

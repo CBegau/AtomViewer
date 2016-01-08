@@ -99,6 +99,7 @@ public class BurgersVectorAnalyzer {
 	
 	private void calcAverages(){
 		//Create the average RBV for each dislocation
+		RBVStorage storage = skel.getAtomData().getRbvStorage();
 		for (Dislocation d : skel.getDislocations()){
 			Vec3 averageResultantBurgersVector = new Vec3();
 			d.setBurgersVectorInfo(new BurgersVectorInformation(cs, averageResultantBurgersVector));
@@ -115,7 +116,7 @@ public class BurgersVectorAnalyzer {
 				Vec3 averageOnNode = new Vec3();
 				
 				for (int j = 0; j < a.getMappedAtoms().size(); j++) {
-					RBV rbv = a.getMappedAtoms().get(j).getRBV();
+					RBV rbv = storage.getRBV(a.getMappedAtoms().get(j));
 					if (localDirection.dot(rbv.lineDirection)>0) averageOnNode.add(rbv.bv);
 					else  averageOnNode.sub(rbv.bv);
 				}
@@ -145,7 +146,7 @@ public class BurgersVectorAnalyzer {
 			SkeletonNode sn = d.getLine()[i];
 			for (int j = 0; j < sn.getMappedAtoms().size(); j++) {
 				Atom atom = sn.getMappedAtoms().get(j);
-				if (atom.getRBV().lineDirection.dot(localDirection) > 0)
+				if (skel.getAtomData().getRbvStorage().getRBV(atom).lineDirection.dot(localDirection) > 0)
 					positiveLineSense++;
 				else negativeLineSense++;
 			}
