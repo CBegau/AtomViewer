@@ -396,7 +396,7 @@ public class ImdFileLoader extends MDFileLoader{
 					rbv.x = dataColumnValues[header.dataColumns.length+3];
 					rbv.y = dataColumnValues[header.dataColumns.length+4];
 					rbv.z = dataColumnValues[header.dataColumns.length+5];
-					a.setRBV(rbv, lineDirection);
+					idc.rbvStorage.addRBV(a, rbv, lineDirection);
 				}
 				if (header.grainColumn!=-1) 
 					a.setGrain(grain);	//Assign grain number if found
@@ -521,9 +521,7 @@ public class ImdFileLoader extends MDFileLoader{
 						rbv.z = Float.parseFloat(parts[header.rbv_data+6]);
 					}
 				}
-
-				if (rbv.dot(rbv)>0f)
-					a.setRBV(rbv, lineDirection);
+				idc.rbvStorage.addRBV(a, rbv, lineDirection);
 			}
 			
 			s = lnr.readLine();

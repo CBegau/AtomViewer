@@ -129,6 +129,9 @@ public abstract class MDFileLoader{
 		
 		public Vec3 offset = new Vec3();
 		public boolean[] pbc = ImportConfiguration.getInstance().getPeriodicBoundaryConditions().clone();
+		
+		public RBVStorage rbvStorage = new RBVStorage();
+		
 		/**
 		 * All atoms are stored in this list 
 		 */

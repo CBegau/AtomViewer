@@ -174,11 +174,9 @@ public class B2NiTi extends BCCStructure{
 	private class MartensiteGrainDetectionCriteria implements GrainDetectionCriteria {
 
 		private CrystalStructure cs;
-		private float lattice;
 		
 		public MartensiteGrainDetectionCriteria(CrystalStructure cs){
 			this.cs = cs;
-			this.lattice = cs.getLatticeConstant()*cs.getLatticeConstant()*0.15f;
 		}
 		
 		@Override
@@ -198,10 +196,7 @@ public class B2NiTi extends BCCStructure{
 
 		@Override
 		public boolean includeAtom(Atom atom) {
-			if (( (atom.getType() == 3) &&
-					(atom.getRBV()==null || atom.getRBV().bv.getLengthSqr() < lattice)))
-				return true;
-			return false;
+			return atom.getType() == 3;
 		}
 
 		@Override

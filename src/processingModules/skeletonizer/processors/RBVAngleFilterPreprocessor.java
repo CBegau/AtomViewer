@@ -26,6 +26,7 @@ import java.util.concurrent.Callable;
 import common.ThreadPool;
 import common.Tupel;
 import model.RBV;
+import model.RBVStorage;
 import processingModules.skeletonizer.SkeletonNode;
 import processingModules.skeletonizer.Skeletonizer;
 
@@ -59,10 +60,11 @@ public class RBVAngleFilterPreprocessor implements SkeletonPreprocessor {
 			tasks.add(new Callable<Void>() {
 				@Override
 				public Void call() throws Exception {
+					RBVStorage storage = skel.getAtomData().getRbvStorage();
 					for (int j=start; j<end; j++){
 						SkeletonNode sn = skel.getNodes().get(j);
 						if (sn.getNeigh().size()<=2) continue;
-						RBV v = sn.getMappedAtoms().get(0).getRBV();
+						RBV v = storage.getRBV(sn.getMappedAtoms().get(0));
 						float l_v = v.bv.getLength();
 						
 						ArrayList<SkeletonNode> nei = sn.getNeigh();
@@ -71,7 +73,7 @@ public class RBVAngleFilterPreprocessor implements SkeletonPreprocessor {
 							SkeletonNode n = nei.get(i);
 							//Avoid performing the test twice for both atoms
 							if (n.getID() < sn.getID()){
-								RBV u = n.getMappedAtoms().get(0).getRBV();
+								RBV u = storage.getRBV(n.getMappedAtoms().get(0));
 								float l_u =  u.bv.getLength();
 								float angle = v.bv.dot(u.bv) / (l_u * l_v);
 								

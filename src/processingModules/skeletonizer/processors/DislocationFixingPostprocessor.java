@@ -23,6 +23,8 @@ import java.util.*;
 import common.Vec3;
 import model.Atom;
 import model.NearestNeighborBuilder;
+import model.RBV;
+import model.RBVStorage;
 import processingModules.skeletonizer.*;
 
 /**
@@ -258,6 +260,8 @@ public class DislocationFixingPostprocessor implements SkeletonDislocationPostpr
 		
 		double angle = o.getAngle(direction);
 		
+		RBVStorage storage = skeleton.getAtomData().getRbvStorage();
+		
 		if (skeleton.getAtomData().isRbvAvailable()){
 			Vec3 rbv1 = new Vec3();
 			Vec3 rbv2 = new Vec3();
@@ -265,12 +269,14 @@ public class DislocationFixingPostprocessor implements SkeletonDislocationPostpr
 			Vec3 ld2 = new Vec3();
 			
 			for (Atom a: origin.getMappedAtoms()){
-				rbv1.add(a.getRBV().bv);
-				ld1.add(a.getRBV().lineDirection);
+				RBV r = storage.getRBV(a);
+				rbv1.add(r.bv);
+				ld1.add(r.lineDirection);
 			}
 			for (Atom a: testNode.getMappedAtoms()){
-				rbv2.add(a.getRBV().bv);
-				ld2.add(a.getRBV().lineDirection);
+				RBV r = storage.getRBV(a);
+				rbv2.add(r.bv);
+				ld2.add(r.lineDirection);
 			}
 			
 			if (ld1.dot(ld2) < 0f)
