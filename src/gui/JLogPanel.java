@@ -25,6 +25,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+
 import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -64,7 +65,6 @@ public class JLogPanel extends JPanel{
 	}
 	
 	private JLogPanel() {
-		
 		this.logTable = new JTable(model){
 			private static final long serialVersionUID = 1L;
 			private final Color defaultColor = this.getForeground();
@@ -75,6 +75,7 @@ public class JLogPanel extends JPanel{
 			public Component prepareRenderer(TableCellRenderer renderer, int row, int column) {
 				//Enable different colors for messages/warnings/errors
 				Component c = super.prepareRenderer(renderer, row, column);
+				
 				LogEntry e = model.getEntry(row);
 				if (e.type == LogEntry.Type.INFO || isRowSelected(row))
 					c.setForeground(defaultColor);
@@ -85,13 +86,15 @@ public class JLogPanel extends JPanel{
 				return c;
 			}
 		};
+		//Modify size of each row. Does not scale automatically with the font size
+		logTable.setRowHeight( (int)(RenderingConfiguration.defaultFontSize*1.3));
 		
 		//Define formatting for the detail pane, by defining a style sheet
 		HTMLEditorKit kit = new HTMLEditorKit();
 		this.detailsPane.setEditorKit(kit);
 		this.detailsPane.setEditable(false);
 		StyleSheet styleSheet = new StyleSheet();
-		styleSheet.addRule(String.format("body {font-family:%s;}", this.detailsPane.getFont().getFamily()));
+		styleSheet.addRule(String.format("body {font-family:%s; font-size:%f}", this.detailsPane.getFont().getFamily(), this.detailsPane.getFont().getSize2D()));
 		styleSheet.addRule("table td {padding-left:5px; padding-right: 5px; padding-top: 0px; padding-bottom: 0px;}");
 		kit.setStyleSheet(styleSheet);
 		
