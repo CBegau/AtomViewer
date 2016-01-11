@@ -29,6 +29,7 @@ import javax.swing.filechooser.FileFilter;
 
 import common.CommonUtils;
 import common.Vec3;
+import gui.ProgressMonitor;
 import model.*;
 import model.DataColumnInfo.Component;
 
@@ -114,6 +115,7 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 	 * @throws IllegalAccessException
 	 */
 	private AtomData readFile(File f, AtomData previous, Filter<Atom> atomFilter) throws IOException {
+		ProgressMonitor.getProgressMonitor().setActivityName("Reading file");
 		LineNumberReader lnr = null;
 		if (CommonUtils.isFileGzipped(f)) {
 			// Directly read gzip-compressed files
