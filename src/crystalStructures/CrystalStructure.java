@@ -609,7 +609,7 @@ public abstract class CrystalStructure{
 	 * @param data
 	 * @return
 	 */
-	public final List<Atom> getDislocationDefectAtoms(AtomData data){
+	public List<Atom> getDislocationDefectAtoms(AtomData data){
 		ArrayList<Atom> defectAtoms = new ArrayList<Atom>();
 		if (!data.isRbvAvailable()) return defectAtoms;
 		
