@@ -803,6 +803,78 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			sphereSize[i] *= defaultSphereSize;
 			if (maxSphereSize < sphereSize[i]) maxSphereSize = sphereSize[i];
 		}
+		
+		//Update filterlists and the sets of atoms to be drawn if required
+		if (updateRenderContent){
+			DataColoringAndFilter dataAtomFilter = new DataColoringAndFilter(atomRenderType == AtomRenderType.VECTOR_DATA);
+			
+			atomFilterSet.clear();
+			//Test if types need to be filtered
+			TypeColoringAndFilter tf = new TypeColoringAndFilter();
+			if (tf.isNeeded()) atomFilterSet.addFilter(tf);
+			//Test if elements need to be filtered
+			ElementColoringAndFilter ef = new ElementColoringAndFilter();
+			if (ef.isNeeded()) atomFilterSet.addFilter(ef);
+			//Test if grains need to be filtered
+			GrainColoringAndFilter gf = new GrainColoringAndFilter();
+			if (gf.isNeeded()) atomFilterSet.addFilter(gf);
+			//Test if cutting planes are defined for filtering
+			if (!renderInterval.isNoLimiting()) atomFilterSet.addFilter(renderInterval);
+			//Test if data needs to be filtered
+			if ((RenderingConfiguration.isFilterMin() || RenderingConfiguration.isFilterMax()) 
+					&& !atomData.getDataColumnInfos().isEmpty())
+				atomFilterSet.addFilter(dataAtomFilter);
+			
+			final ColoringFilter<Atom> colFunc;
+			switch (atomRenderType){
+				case TYPE: colFunc = tf; break;
+				case ELEMENTS: colFunc = ef; break;
+				case GRAINS: colFunc = gf; break;
+				case DATA:
+				case VECTOR_DATA: colFunc = dataAtomFilter; break;
+				default: colFunc = null;
+			}
+			colFunc.update();
+			
+			//Identify if individual particle radii are given
+			final int radiusColumn = atomData.getIndexForComponent(DataColumnInfo.Component.PARTICLE_RADIUS);
+					
+			Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
+			for (int i=0; i<ThreadPool.availProcessors(); i++){
+				final int j = i;
+				parallelTasks.add(new Callable<Void>() {
+					@Override
+					public Void call() throws Exception {
+						final int start = (int)(((long)renderData.getRenderableCells().size() * j)/ThreadPool.availProcessors());
+						final int end = (int)(((long)renderData.getRenderableCells().size() * (j+1))/ThreadPool.availProcessors());
+						
+						for (int i = start; i < end; i++) {
+							ObjectRenderData<Atom>.Cell cell = renderData.getRenderableCells().get(i);
+							for (int j=0; j<cell.getNumObjects();j++){
+								Atom c = cell.getObjects().get(j);
+								if (atomFilterSet.accept(c)) {
+									cell.getVisibiltyArray()[j] = true;
+									//Assign default or individual particle radius
+									cell.getSizeArray()[j] = radiusColumn == -1 ? sphereSize[c.getElement() % numEle] :
+										c.getData(radiusColumn) * sphereSize[c.getElement() % numEle];
+									float[] color = colFunc.getColor(c);
+									cell.getColorArray()[j*3+0] = color[0];
+									cell.getColorArray()[j*3+1] = color[1];
+									cell.getColorArray()[j*3+2] = color[2];
+								} else {
+									cell.getVisibiltyArray()[j] = false;
+								}
+							}
+						}
+						return null;
+					}
+				});
+			}
+			
+			ThreadPool.executeParallel(parallelTasks);
+			
+			renderData.reinitUpdatedCells();
+		}
 			
 		if (!renderingAtomsAsRBV || !atomData.isRbvAvailable()){
 			DataColumnInfo dataInfo = null;
@@ -842,77 +914,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 							df.format(max)+" "+dataInfoColoring.getUnit()
 							);
 				}
-			}
-			
-			if (updateRenderContent){
-				DataColoringAndFilter dataAtomFilter = new DataColoringAndFilter(atomRenderType == AtomRenderType.VECTOR_DATA);
-				
-				atomFilterSet.clear();
-				//Test if types need to be filtered
-				TypeColoringAndFilter tf = new TypeColoringAndFilter();
-				if (tf.isNeeded()) atomFilterSet.addFilter(tf);
-				//Test if elements need to be filtered
-				ElementColoringAndFilter ef = new ElementColoringAndFilter();
-				if (ef.isNeeded()) atomFilterSet.addFilter(ef);
-				//Test if grains need to be filtered
-				GrainColoringAndFilter gf = new GrainColoringAndFilter();
-				if (gf.isNeeded()) atomFilterSet.addFilter(gf);
-				//Test if cutting planes are defined for filtering
-				if (!renderInterval.isNoLimiting()) atomFilterSet.addFilter(renderInterval);
-				//Test if data needs to be filtered
-				if ((RenderingConfiguration.isFilterMin() || RenderingConfiguration.isFilterMax()) 
-						&& !atomData.getDataColumnInfos().isEmpty())
-					atomFilterSet.addFilter(dataAtomFilter);
-				
-				final ColoringFilter<Atom> colFunc;
-				switch (atomRenderType){
-					case TYPE: colFunc = tf; break;
-					case ELEMENTS: colFunc = ef; break;
-					case GRAINS: colFunc = gf; break;
-					case DATA:
-					case VECTOR_DATA: colFunc = dataAtomFilter; break;
-					default: colFunc = null;
-				}
-				colFunc.update();
-				
-				//Identify if individual particle radii are given
-				final int radiusColumn = atomData.getIndexForComponent(DataColumnInfo.Component.PARTICLE_RADIUS);
-						
-				Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-				for (int i=0; i<ThreadPool.availProcessors(); i++){
-					final int j = i;
-					parallelTasks.add(new Callable<Void>() {
-						@Override
-						public Void call() throws Exception {
-							final int start = (int)(((long)renderData.getRenderableCells().size() * j)/ThreadPool.availProcessors());
-							final int end = (int)(((long)renderData.getRenderableCells().size() * (j+1))/ThreadPool.availProcessors());
-							
-							for (int i = start; i < end; i++) {
-								ObjectRenderData<Atom>.Cell cell = renderData.getRenderableCells().get(i);
-								for (int j=0; j<cell.getNumObjects();j++){
-									Atom c = cell.getObjects().get(j);
-									if (atomFilterSet.accept(c)) {
-										cell.getVisibiltyArray()[j] = true;
-										//Assign default or individual particle radius
-										cell.getSizeArray()[j] = radiusColumn == -1 ? sphereSize[c.getElement() % numEle] :
-											c.getData(radiusColumn) * sphereSize[c.getElement() % numEle];
-										float[] color = colFunc.getColor(c);
-										cell.getColorArray()[j*3+0] = color[0];
-										cell.getColorArray()[j*3+1] = color[1];
-										cell.getColorArray()[j*3+2] = color[2];
-									} else {
-										cell.getVisibiltyArray()[j] = false;
-									}
-								}
-							}
-							return null;
-						}
-					});
-				}
-				
-				ThreadPool.executeParallel(parallelTasks);
-				
-				renderData.reinitUpdatedCells();
 			}
 			
 			//Draw the spheres using the pre-computed render cells
