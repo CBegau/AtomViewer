@@ -18,11 +18,13 @@
 
 package model;
 
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Map;
 import common.Vec3;
 
 public class RBVStorage {
-	private HashMap<Atom, RBV> rbvData = new HashMap<Atom, RBV>();
+	private Map<Atom, RBV> rbvData = Collections.synchronizedMap(new HashMap<Atom, RBV>());
 	
 	/**
 	 * Sets the values for the resultant Burgers vector and the line direction to this atom
