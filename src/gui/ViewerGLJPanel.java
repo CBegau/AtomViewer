@@ -1436,9 +1436,9 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			j++;
 		}
 		if (atomData.getGrains(Atom.DEFAULT_GRAIN) == null)
-			grainColorTable.put(Atom.DEFAULT_GRAIN, colors[sortGrainIndices.size()-2]);
+			grainColorTable.put(Atom.DEFAULT_GRAIN, colors[colors.length-2]);
 		if (atomData.getGrains(Atom.IGNORED_GRAIN) == null)
-			grainColorTable.put(Atom.IGNORED_GRAIN, colors[sortGrainIndices.size()-1]);
+			grainColorTable.put(Atom.IGNORED_GRAIN, colors[colors.length-1]);
 	}
 	
 	public RenderRange getRenderRange(){
