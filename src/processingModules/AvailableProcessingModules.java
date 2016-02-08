@@ -111,6 +111,7 @@ public class AvailableProcessingModules {
 			expandAll(moduleTree);
 			
 			final JButton applyButton = new JButton("Apply on current data sets");
+			applyButton.setEnabled(false);
 			applyButton.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
@@ -123,6 +124,7 @@ public class AvailableProcessingModules {
 			});
 			
 			final JButton applyAllButton = new JButton("Apply on all opened data sets");
+			applyAllButton.setEnabled(false);
 			applyAllButton.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
@@ -198,8 +200,9 @@ public class AvailableProcessingModules {
 						requirementlabel.setText("<html><table><tr><td width='"+size+"'>"+ req +"</td></tr></table></html>");
 						descriptionlabel.setText("<html><table><tr><td width='"+size+"'>"+ pm.getFunctionDescription() +"</td></tr></table></html>");
 						
-						applyAllButton.setEnabled(pm.canBeAppliedToMultipleFilesAtOnce());
-						applyButton.setEnabled(true);
+						boolean applicable = pm.isApplicable(Configuration.getCurrentAtomData());
+						applyButton.setEnabled(applicable);
+						applyAllButton.setEnabled(pm.canBeAppliedToMultipleFilesAtOnce() && applicable);
 					} else {
 						requirementlabel.setText("");
 						descriptionlabel.setText("");

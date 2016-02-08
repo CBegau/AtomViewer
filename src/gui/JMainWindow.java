@@ -77,7 +77,6 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 	private final JGraphicOptionCheckBoxMenuItem drawCoordinateSystemBoxMenu;
 	private final JGraphicOptionCheckBoxMenuItem whiteBackgroundCheckBoxMenu;
 	private final JMenuItem editRangeMenuItem;
-	private final JMenuItem exportSkeletonFileMenuItem;
 	private final JMenu typeColorMenu;
 	
 	public JMainWindow() {
@@ -168,7 +167,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		exportAsciiFile.addActionListener(CursorController.createListener(this, exportFileListener));
 		fileMenu.add(exportAsciiFile);
 		
-		exportSkeletonFileMenuItem = new JMenuItem("Export dislocation network");
+		final JMenuItem exportSkeletonFileMenuItem = new JMenuItem("Export dislocation network");
 		exportSkeletonFileMenuItem.addActionListener(CursorController.createListener(this, new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
