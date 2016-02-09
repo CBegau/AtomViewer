@@ -41,9 +41,7 @@ import javax.media.opengl.GLProfile;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
-import processingModules.AvailableProcessingModules;
 import processingModules.DataContainer;
-import processingModules.AvailableProcessingModules.JProcessingModuleDialog;
 import processingModules.skeletonizer.Skeletonizer;
 import processingModules.ProcessingModule;
 import processingModules.toolchain.Toolchain;
@@ -127,7 +125,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		GridBagConstraints gbc = CommonUtils.getBasicGridBagConstraint();
 		gbc.weightx = 10;
 		cont.add(JLogPanel.getJLogPanel(),gbc);
-		gbc.gridx++; gbc.weightx = 1;
+		gbc.gridx++; gbc.weightx = 0.2;
 		cont.add(new DefaultPerspectivesButtonPanel(),gbc);
 		
 		splitPane.add(cont);
@@ -422,8 +420,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 			public void actionPerformed(ActionEvent e) {
 				AtomData data = Configuration.getCurrentAtomData();
 				if (data != null){
-					AvailableProcessingModules.JProcessingModuleDialog dialog 
-						= new AvailableProcessingModules.JProcessingModuleDialog(JMainWindow.this);
+					JProcessingModuleDialog dialog = new JProcessingModuleDialog(JMainWindow.this);
 					
 					JProcessingModuleDialog.SelectedState ok = dialog.showDialog();
 					ProcessingModule pm = dialog.getSelectedProcessingModule();
@@ -750,7 +747,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 			this.add(new ViewButton("+X", -90f, 0f, -90f, false),gbc); gbc.gridx++;
 			this.add(new ViewButton("-X", -90f, 0f, 90f, false),gbc);  gbc.gridx = 0; gbc.gridy++;
 			gbc.gridwidth = 2;
-			this.add(new ViewButton("Reset zoom and focus", 0f, 0f, 0f, true),gbc);
+			this.add(new ViewButton("<html><center>Reset zoom<br> and focus</center><html>", 0f, 0f, 0f, true),gbc);
 		}
 	}
 	

@@ -1077,9 +1077,11 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		updateModelViewInShader(gl, shader, mvm, pm);
 		
 		Vec3 o = new Vec3(0f, 0f, 0f);
-		float[] col = new float[]{0.5f,0.5f,0.5f, 1f};
+		float[] col = new float[]{0.8f,0.5f,0.5f, 1f};
 		ArrowRenderer.renderArrow(gl, o, atomData.getBox().getBoxSize()[0].normalizeClone(), 0.02f, col, false);
+		col = new float[]{0.5f,0.8f,0.5f, 1f};
 		ArrowRenderer.renderArrow(gl, o, atomData.getBox().getBoxSize()[1].normalizeClone(), 0.02f, col, false);
+		col = new float[]{0.5f,0.5f,0.8f, 1f};
 		ArrowRenderer.renderArrow(gl, o, atomData.getBox().getBoxSize()[2].normalizeClone(), 0.02f, col, false);
 		
 		boolean evenNumbers = true;
