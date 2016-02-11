@@ -85,6 +85,7 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 	
 	private JPanel dataPanel = new JPanel();
 	private GridBagConstraints dataPanelContraints = new GridBagConstraints();
+	private Container userInterfaceContainer;
 	
 	private AtomData atomData;
 	private JFrame parentFrame;
@@ -93,8 +94,9 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		this.parentFrame = parent;
 		Configuration.addAtomDataListener(this);
 		
-		Container cont = new Container();
-		cont.setLayout(new GridBagLayout());
+		userInterfaceContainer = new Container(); 
+		userInterfaceContainer.setLayout(new GridBagLayout());
+		userInterfaceContainer.setVisible(false);
 		
 		GridBagConstraints gbc = new GridBagConstraints();
 		
@@ -103,11 +105,11 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		gbc.gridwidth = 2;
 		gbc.weightx = 0.5;
 		
-		gbc.gridy = 0; cont.add(totalAtomsLabel = new JLabel(), gbc);
-		gbc.gridy++; cont.add(timeStepLabel, gbc);
-		gbc.gridy++; cont.add(boxSizeLabel[0] = new JLabel(), gbc);
-		gbc.gridy++; cont.add(boxSizeLabel[1] = new JLabel(), gbc);
-		gbc.gridy++; cont.add(boxSizeLabel[2] = new JLabel(), gbc);
+		gbc.gridy = 0; userInterfaceContainer.add(totalAtomsLabel = new JLabel(), gbc);
+		gbc.gridy++; userInterfaceContainer.add(timeStepLabel, gbc);
+		gbc.gridy++; userInterfaceContainer.add(boxSizeLabel[0] = new JLabel(), gbc);
+		gbc.gridy++; userInterfaceContainer.add(boxSizeLabel[1] = new JLabel(), gbc);
+		gbc.gridy++; userInterfaceContainer.add(boxSizeLabel[2] = new JLabel(), gbc);
 		gbc.gridy++;
 		
 		JPanel infoPanel = new JPanel();
@@ -127,7 +129,7 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		infoPanel.add(typeIgnoreContainer, gbcCont); gbcCont.gridx++;
 
 		rbvVisibleToogleButton.setVisible(false);
-		cont.add(infoPanel, gbc); gbc.gridy++;
+		userInterfaceContainer.add(infoPanel, gbc); gbc.gridy++;
 		
 		atomsVisibleToggleButton.addActionListener(new ActionListener() {
 			@Override
@@ -221,11 +223,11 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		drawAsVectorDataButton.addActionListener(al);
 		drawAsVectorDataButton.setActionCommand(drawAsVectorDataButton.getText());
 		
-		cont.add(drawAsTypesButton, gbc); gbc.gridy++;
-		cont.add(drawAsElementsButton, gbc); gbc.gridy++;
-		cont.add(drawAsGrainsButton, gbc); gbc.gridy++;
-		cont.add(drawAsDataButton, gbc); gbc.gridy++;
-		cont.add(drawAsVectorDataButton, gbc); gbc.gridy++;
+		userInterfaceContainer.add(drawAsTypesButton, gbc); gbc.gridy++;
+		userInterfaceContainer.add(drawAsElementsButton, gbc); gbc.gridy++;
+		userInterfaceContainer.add(drawAsGrainsButton, gbc); gbc.gridy++;
+		userInterfaceContainer.add(drawAsDataButton, gbc); gbc.gridy++;
+		userInterfaceContainer.add(drawAsVectorDataButton, gbc); gbc.gridy++;
 
 		drawAsTypesButton.setVisible(false);
 		drawAsElementsButton.setVisible(false);
@@ -238,15 +240,15 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		elementScrollPane.setBorder(new TitledBorder(new EtchedBorder(1), "Show Elements"));
 		elementScrollPane.setPreferredSize(new Dimension(10, 120));
 		elementScrollPane.setMinimumSize(new Dimension(10, 120));
-		cont.add(elementScrollPane, gbc); gbc.gridy++;
+		userInterfaceContainer.add(elementScrollPane, gbc); gbc.gridy++;
 		elementScrollPane.setVisible(false);
 		
 		dataColumnPanel = new JDataColumnControlPanel(this);
-		cont.add(dataColumnPanel, gbc); gbc.gridy++;
+		userInterfaceContainer.add(dataColumnPanel, gbc); gbc.gridy++;
 		dataColumnPanel.setVisible(false);
 		
 		vectorDataColumnPanel = new JVectorDataColumnControlPanel(this);
-		cont.add(vectorDataColumnPanel, gbc); gbc.gridy++;
+		userInterfaceContainer.add(vectorDataColumnPanel, gbc); gbc.gridy++;
 		vectorDataColumnPanel.setVisible(false);
 		
 		drawClusterCheckBox.addActionListener(new ActionListener() {
@@ -261,7 +263,7 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 				JAtomicMenuPanel.this.revalidate();	
 			}
 		});
-		cont.add(drawClusterCheckBox, gbc); gbc.gridy++;
+		userInterfaceContainer.add(drawClusterCheckBox, gbc); gbc.gridy++;
 		drawClusterCheckBox.setVisible(false);
 		
 		grainIgnoreContainer.setLayout(new GridBagLayout());
@@ -269,10 +271,10 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		grainScrollPane.setBorder(new TitledBorder(new EtchedBorder(1), "Show Grains"));
 		grainScrollPane.setPreferredSize(new Dimension(10, 120));
 		grainScrollPane.setMinimumSize(new Dimension(10, 120));
-		cont.add(grainScrollPane, gbc); gbc.gridy++;
+		userInterfaceContainer.add(grainScrollPane, gbc); gbc.gridy++;
 		grainScrollPane.setVisible(false);
 
-		cont.add(dataPanel, gbc); gbc.gridy++;
+		userInterfaceContainer.add(dataPanel, gbc); gbc.gridy++;
 		dataPanel.setVisible(true);
 		dataPanel.setLayout(new GridBagLayout());
 		dataPanelContraints.fill = GridBagConstraints.HORIZONTAL;
@@ -281,7 +283,7 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		dataPanelContraints.gridy = 0;
 		
 		gbc.weighty = 1.;
-		cont.add(new JLabel(), gbc); gbc.gridy++;
+		userInterfaceContainer.add(new JLabel(), gbc); gbc.gridy++;
 		
 		gbc.gridheight = GridBagConstraints.REMAINDER;
 		gbc.anchor = GridBagConstraints.SOUTH;
@@ -315,11 +317,11 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		fastForwardButton.addActionListener(kba);
 		fastForwardButton.setActionCommand("l");
 		fastForwardButton.setEnabled(false);
-		cont.add(p, gbc);
+		userInterfaceContainer.add(p, gbc);
 		
 		drawAsTypesButton.doClick(); //Set selected
 		
-		JScrollPane scrollPane = new JScrollPane(cont, 
+		JScrollPane scrollPane = new JScrollPane(userInterfaceContainer, 
 				ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 		this.setLayout(new GridLayout(1,1));
 		this.add(scrollPane);
@@ -399,13 +401,16 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 			boxSizeLabel[1].setText("");
 			boxSizeLabel[2].setText("");
 			crystalStructureLabel.setText("");
+			userInterfaceContainer.setVisible(false);
 			return;
 		} else if (e.getOldAtomData() != null && 
 				e.getNewAtomData().getCrystalStructure().getNumberOfTypes()!= 
 				e.getOldAtomData().getCrystalStructure().getNumberOfTypes()){
 			fillIgnoreBoxPanel();
 		}
-			
+		
+		userInterfaceContainer.setVisible(true);
+		
 		for (DataContainer dc: atomData.getAdditionalData()){
 			dc.getDataControlPanel().update(dc);
 			dataPanel.add(dc.getDataControlPanel(),dataPanelContraints);
