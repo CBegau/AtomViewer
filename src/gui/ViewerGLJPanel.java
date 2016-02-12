@@ -284,7 +284,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		this.arcBall.setSize(this.width, this.height);
 	}
 	
-	private GLMatrix setupProjectionOrthogonal() {
+	private GLMatrix createOrthogonalProjectionMatrix() {
 		GLMatrix pm = new GLMatrix();
 		// Correct the screen-aspect
 		float aspect = width / (float) height;
@@ -302,7 +302,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	 * 
 	 * @param eye -1: left eye,1 right eye, 0 centered (no shift) 
 	 */
-	private GLMatrix setupProjectionPerspective(int eye) {
+	private GLMatrix createPerspectiveProjectionMatrix(int eye) {
 		GLMatrix pm = new GLMatrix();
 		
 		float zNear = 1.2f;
@@ -334,13 +334,13 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
         return pm;
 	}
 
-	private GLMatrix setupProjectionFlatMatrix() {
+	private GLMatrix createFlatProjectionMatrix() {
 		GLMatrix pm = new GLMatrix();
 		pm.createOrtho(0f, width, 0f, height, -5f, +5f);
 		return pm;
 	}
 	
-	private GLMatrix setupModelView() {
+	private GLMatrix createModelViewMatrix() {
 		GLMatrix mv = new GLMatrix();
 		
 		mv.translate(-moveX, -moveY, 0);
@@ -392,7 +392,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			gl.glViewport(0, 0, width, height);
 		}
 		
-		GLMatrix proj = setupProjectionFlatMatrix();
+		GLMatrix proj = createFlatProjectionMatrix();
 		updateModelViewInShader(gl, BuiltInShader.ANAGLYPH_TEXTURED.getShader(), new GLMatrix(), proj);
 		
 		gl.glDisable(GL.GL_DEPTH_TEST);
@@ -453,14 +453,14 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		
 		
 		//setup modelview and projection matrices
-		modelViewMatrix = setupModelView();
+		modelViewMatrix = createModelViewMatrix();
 		
 		if (RenderOption.STEREO.isEnabled())
-			projectionMatrix = setupProjectionPerspective(eye);
+			projectionMatrix = createPerspectiveProjectionMatrix(eye);
 		else if (RenderOption.PERSPECTIVE.isEnabled())
-			projectionMatrix = setupProjectionPerspective(0);
+			projectionMatrix = createPerspectiveProjectionMatrix(0);
 		else 
-			projectionMatrix = setupProjectionOrthogonal();
+			projectionMatrix = createOrthogonalProjectionMatrix();
 		 
 		updateModelViewInAllShader(gl);
 		
@@ -526,7 +526,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	}
 
 	private void drawFromDeferredBuffer(GL3 gl, boolean picking, FrameBufferObject targetFbo) {
-		GLMatrix pm = setupProjectionFlatMatrix();
+		GLMatrix pm = createFlatProjectionMatrix();
 		FrameBufferObject ssaoFBO = null;
 		
 		gl.glActiveTexture(GL.GL_TEXTURE0+Shader.FRAG_COLOR);
@@ -1111,8 +1111,8 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			GLMatrix rotInverse = new GLMatrix(rotMatrix.getMatrix());
 			rotInverse.inverse();
 			mvm_new.mult(rotInverse);
-			if (evenNumbers) mvm_new.translate(-0.5f, 0.1f, 0f);
-			else mvm_new.translate(-0.05f, 0.1f, 0f);
+			if (evenNumbers) mvm_new.translate(-0.4f, 0.03f, 0f);
+			else mvm_new.translate(-0.05f, 0.03f, 0f);
 			
 			gl.glDisable(GL.GL_DEPTH_TEST);
 			textRenderer.beginRendering(gl, 0f, 0f, 0f, 1f, mvm_new, pm);
@@ -1132,7 +1132,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		gl.glDisable(GL.GL_DEPTH_TEST);
 		
 		GLMatrix mvm = new GLMatrix();
-		GLMatrix pm = setupProjectionFlatMatrix();
+		GLMatrix pm = createFlatProjectionMatrix();
 		updateModelViewInShader(gl, BuiltInShader.NO_LIGHTING.getShader(), mvm, pm);
 		
 		float[][] scale = ColorTable.getColorBarScheme().getColorBar();
@@ -1190,7 +1190,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		
 		gl.glDisable(GL.GL_DEPTH_TEST);
 		GLMatrix mvm = new GLMatrix();
-		GLMatrix pm = setupProjectionFlatMatrix();
+		GLMatrix pm = createFlatProjectionMatrix();
 		BuiltInShader.NO_LIGHTING.getShader().enable(gl);
 		updateModelViewInShader(gl, BuiltInShader.NO_LIGHTING.getShader(), mvm, pm);
 		
@@ -1805,7 +1805,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	
 		//Use a gray to gray color gradient as background, otherwise use pure white
 		GLMatrix mvm = new GLMatrix();
-		GLMatrix pm = setupProjectionFlatMatrix();
+		GLMatrix pm = createFlatProjectionMatrix();
 		
 		updateModelViewInShader(gl, BuiltInShader.NO_LIGHTING.getShader(), mvm, pm);
 		BuiltInShader.NO_LIGHTING.getShader().enable(gl);
