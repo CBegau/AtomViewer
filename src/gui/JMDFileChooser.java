@@ -199,8 +199,10 @@ public class JMDFileChooser extends JFileChooser{
 						Configuration.setCurrentFileLoader(loader);
 
 						//remove old file filter before adding a new one
-						JMDFileChooser.this.removeChoosableFileFilter(JMDFileChooser.this.getFileFilter());
+						JMDFileChooser.this.resetChoosableFileFilters();
+						JMDFileChooser.this.setFileFilter(null);
 						JMDFileChooser.this.setFileFilter(loader.getDefaultFileFilter());
+						
 						
 						optionsPanel.removeAll();
 						for (PrimitiveProperty<?> p : loader.getOptions()){
