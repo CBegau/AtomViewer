@@ -164,7 +164,7 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 		if (existingDeltaColumns.containsKey(toDeltaColumn)){
 			return existingDeltaColumns.get(toDeltaColumn).getVectorComponents();
 		} else {
-			String name = toDeltaColumn.getVectorName()+"(delta)";
+			String name = "Δ"+toDeltaColumn.getVectorName();
 			DataColumnInfo[] vec = toDeltaColumn.getVectorComponents();
 			DataColumnInfo deltaX = new DataColumnInfo("", vec[0].getId()+"_delta",vec[0].getUnit());
 			DataColumnInfo deltaY = new DataColumnInfo("", vec[1].getId()+"_delta", vec[0].getUnit());
@@ -174,7 +174,8 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 			deltaX.setAsFirstVectorComponent(deltaY, deltaZ, deltaA, name);
 			
 			DataColumnInfo deltaColumn = deltaX;
-			return existingDeltaColumns.put(toDeltaColumn, deltaColumn).getVectorComponents();
+			existingDeltaColumns.put(toDeltaColumn, deltaColumn);
+			return deltaColumn.getVectorComponents();
 		}
 	}
 
@@ -201,7 +202,7 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 						String.format("The atom ID is %d is duplicated in %s."+
 								"The position of both atoms are (%.4f,%.4f,%.4f) and (%.4f,%.4f,%.4f)"
 						+ "Computed differences between these file may be inaccurate", 
-						referenceAtomData.getName(), a.getNumber(), a.x, a.y, a.y, oldValue.x, oldValue.y, oldValue.z));
+						a.getNumber(), referenceAtomData.getName(), a.x, a.y, a.y, oldValue.x, oldValue.y, oldValue.z));
 			}
 		}
 		

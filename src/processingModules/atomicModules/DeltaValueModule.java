@@ -157,7 +157,7 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 		if (existingDeltaColumns.containsKey(toDeltaColumn)){
 			return new DataColumnInfo[]{existingDeltaColumns.get(toDeltaColumn)};
 		} else {
-			String name = toDeltaColumn.getName()+"(delta)";
+			String name = "Δ"+toDeltaColumn.getName();
 			String id = toDeltaColumn.getId()+"_delta";
 			DataColumnInfo deltaColumn = new DataColumnInfo(name, id, toDeltaColumn.getUnit());
 			existingDeltaColumns.put(toDeltaColumn, deltaColumn);
@@ -189,7 +189,7 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 						String.format("The atom ID is %d is duplicated in %s."+
 								"The position of both atoms are (%.4f,%.4f,%.4f) and (%.4f,%.4f,%.4f)"
 						+ "Computed differences between these file may be inaccurate", 
-						referenceAtomData.getName(), a.getNumber(), a.x, a.y, a.y, oldValue.x, oldValue.y, oldValue.z));
+						a.getNumber(), referenceAtomData.getName(), a.x, a.y, a.y, oldValue.x, oldValue.y, oldValue.z));
 			}
 		}
 		
