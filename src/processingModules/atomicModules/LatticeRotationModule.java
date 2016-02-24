@@ -44,10 +44,10 @@ import crystalStructures.CrystalStructure;
 public class LatticeRotationModule extends ClonableProcessingModule {
 	
 	private static DataColumnInfo[] cci = new DataColumnInfo[]{
-		new DataColumnInfo("Rotation_X-Axis", "rotX", "", -8f, +8f, false),
-		new DataColumnInfo("Rotation_Y-Axis", "rotY", "", -8f, +8f, false),
-		new DataColumnInfo("Rotation_Z-Axis", "rotZ", "", -8f, +8f, false),
-		new DataColumnInfo("Lattice_tilt", "tilt", "", 0f, +10f, false)
+		new DataColumnInfo("Rotation_X-Axis", "rotX", "°", -8f, +8f, false),
+		new DataColumnInfo("Rotation_Y-Axis", "rotY", "°", -8f, +8f, false),
+		new DataColumnInfo("Rotation_Z-Axis", "rotZ", "°", -8f, +8f, false),
+		new DataColumnInfo("Lattice_tilt", "tilt", "°", 0f, +10f, false)
 	};
 	
 	

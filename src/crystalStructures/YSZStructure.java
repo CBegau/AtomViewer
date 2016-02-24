@@ -38,7 +38,7 @@ public class YSZStructure extends FCCStructure {
 			new BooleanProperty("hasArtificialPlaceholder", "Has artificial placeholder particles",
 					"<html>The file contains artificial placeholders and thus<br>"
 					+ "consists of four types, not three.</html>",
-					true);
+					false);
 	
 	public YSZStructure() {
 		super();
