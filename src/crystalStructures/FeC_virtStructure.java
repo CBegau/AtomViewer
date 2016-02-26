@@ -45,7 +45,7 @@ import processingModules.toolchain.Toolchain;
 public class FeC_virtStructure extends FeCStructure {
 	
 	protected BooleanProperty skipPlaceholderProperty = 
-			new BooleanProperty("skipPlaceholders", "Do not import placeholders","", false);
+			new BooleanProperty("skipPlaceholders", "Do not import placeholders","", true);
 	protected BooleanProperty placeholderProperty = 
 			new BooleanProperty("placeholders", "Handle placeholders separately","", true);
 	
