@@ -680,7 +680,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			new Vec3(1f, 1f, 0f),	new Vec3(1f, 1f, 1f),
 		};
 		//Scale to actual coordiate system
-		for (int i=0; i<24; i++){
+		for (int i=0; i<v.length; i++){
 			float x = box[0].x * v[i].x + box[1].x * v[i].y + box[2].x * v[i].z;
 			float y = box[0].y * v[i].x + box[1].y * v[i].y + box[2].y * v[i].z;
 			float z = box[0].z * v[i].x + box[1].z * v[i].y + box[2].z * v[i].z;
@@ -690,7 +690,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		BuiltInShader.UNIFORM_COLOR_DEFERRED.getShader().enable(gl);
 		int colorUniform = gl.glGetUniformLocation(BuiltInShader.UNIFORM_COLOR_DEFERRED.getShader().getProgram(), "Color");
 		gl.glUniform4f(colorUniform, 0.7f, 0.7f, 0.7f, 1f);
-		for (int i=0; i<24; i+=2){
+		for (int i=0; i<v.length; i+=2){
 			ArrayList<Vec3> points = new ArrayList<Vec3>();
 			points.add(v[i]); points.add(v[i+1]);
 			TubeRenderer.drawTube(gl, points, atomData.getBox().getHeight().maxComponent()/200f);
