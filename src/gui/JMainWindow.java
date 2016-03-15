@@ -169,11 +169,16 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		exportSkeletonFileMenuItem.addActionListener(CursorController.createListener(this, new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				if (Configuration.getCurrentAtomData() == null)
+					return;
 				DataContainer dc = Configuration.getCurrentAtomData().getDataContainer(Skeletonizer.class);
 				Skeletonizer skel = null;
 				if (dc != null)
 					skel = (Skeletonizer)dc;
-				if (skel == null) return;
+				if (skel == null) {
+					JOptionPane.showMessageDialog(JMainWindow.this, "Dislocation network not available");
+					return;
+				}
 				
 				JFileChooser chooser = new JFileChooser();
 				int result = chooser.showSaveDialog(JMainWindow.this);
@@ -186,7 +191,6 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 				}
 			}
 		}));
-		exportSkeletonFileMenuItem.setEnabled(false);
 		fileMenu.add(exportSkeletonFileMenuItem);
 		
 		
