@@ -421,7 +421,12 @@ public class Skeletonizer extends DataContainer {
 				BurgersVectorInformation bvInfo = d.getBurgersVectorInfo();
 				if (bvInfo.getBurgersVector().getType() == BurgersVector.BurgersVectorType.UNDEFINED) {
 					CrystalRotationTools crt;
-					if (data.isPolyCrystalline()) crt = d.getGrain().getCystalRotationTools();
+					if (data.isPolyCrystalline()) {
+						if (d.getGrain() != null)
+							crt = d.getGrain().getCystalRotationTools();
+						else 
+							crt = data.getCrystalRotation();
+					}
 					else crt = data.getCrystalRotation();
 						
 					Vec3 abv = crt.getInCrystalCoordinates(bvInfo.getAverageResultantBurgersVector());
