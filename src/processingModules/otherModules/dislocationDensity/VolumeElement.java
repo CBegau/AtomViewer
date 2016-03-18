@@ -18,7 +18,7 @@
 
 package processingModules.otherModules.dislocationDensity;
 
-import javax.media.opengl.GL3;
+import com.jogamp.opengl.GL3;
 
 import common.Vec3;
 

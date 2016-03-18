@@ -21,7 +21,7 @@ package processingModules;
 import gui.RenderRange;
 import gui.ViewerGLJPanel;
 
-import javax.media.opengl.GL3;
+import com.jogamp.opengl.GL3;
 
 import model.BoxParameter;
 

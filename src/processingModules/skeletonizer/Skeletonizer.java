@@ -28,8 +28,8 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
 
-import javax.media.opengl.GL;
-import javax.media.opengl.GL3;
+import com.jogamp.opengl.GL;
+import com.jogamp.opengl.GL3;
 
 import common.FastDeletableArrayList;
 import common.ThreadPool;

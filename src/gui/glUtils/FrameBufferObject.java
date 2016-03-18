@@ -21,8 +21,8 @@ import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
 import java.nio.ByteBuffer;
 
-import javax.media.opengl.GL;
-import javax.media.opengl.GL3;
+import com.jogamp.opengl.GL;
+import com.jogamp.opengl.GL3;
 
 import com.jogamp.opengl.FBObject;
 
@@ -38,7 +38,7 @@ public class FrameBufferObject extends FBObject{
 	
 	public FrameBufferObject(int minWidth, int minHeight, GL3 gl, boolean deferredRendering, boolean depthBuffer){
 		super();
-		this.reset(gl, minWidth, minHeight);
+		this.init(gl, minWidth, minHeight, 0);
 		this.deferredRendering = deferredRendering;
 		
 		if(depthBuffer)

@@ -34,10 +34,10 @@ import java.util.List;
 import java.util.Map;
 
 import javax.imageio.ImageIO;
-import javax.media.opengl.GLCapabilities;
-//import javax.media.opengl.GLDrawableFactory;
-//import javax.media.opengl.GLOffscreenAutoDrawable;
-import javax.media.opengl.GLProfile;
+import com.jogamp.opengl.GLCapabilities;
+//import com.jogamp.opengl.GLDrawableFactory;
+//import com.jogamp.opengl.GLOffscreenAutoDrawable;
+import com.jogamp.opengl.GLProfile;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 

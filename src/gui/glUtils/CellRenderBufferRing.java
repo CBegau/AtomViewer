@@ -19,8 +19,8 @@ package gui.glUtils;
 
 import java.util.ArrayList;
 
-import javax.media.opengl.GL;
-import javax.media.opengl.GL3;
+import com.jogamp.opengl.GL;
+import com.jogamp.opengl.GL3;
 
 import common.RingBuffer;
 

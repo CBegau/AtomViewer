@@ -43,8 +43,8 @@ import java.util.*;
 import java.util.concurrent.Callable;
 
 import javax.imageio.ImageIO;
-import javax.media.opengl.*;
-import javax.media.opengl.awt.GLJPanel;
+import com.jogamp.opengl.*;
+import com.jogamp.opengl.awt.GLJPanel;
 
 import com.jogamp.opengl.util.texture.Texture;
 import com.jogamp.opengl.util.texture.awt.AWTTextureIO;
@@ -1721,13 +1721,13 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		gl.glViewport(0, 0, width, height);
 		this.makeFullScreenQuad(gl);
 		
-		if (fboDeferredBuffer != null) fboDeferredBuffer.reset(gl, width, height);
+		if (fboDeferredBuffer != null) fboDeferredBuffer.reset(gl, width, height, 0);
 		else fboDeferredBuffer = new FrameBufferObject(width, height, gl, true, true);
-		if (fboLeft != null) fboLeft.reset(gl, width, height);
+		if (fboLeft != null) fboLeft.reset(gl, width, height, 0);
 		else fboLeft = new FrameBufferObject(width, height, gl);
-		if (fboRight != null) fboRight.reset(gl, width, height);
+		if (fboRight != null) fboRight.reset(gl, width, height, 0);
 		else fboRight = new FrameBufferObject(width, height, gl);
-		if (fboBackground != null) fboBackground.reset(gl, width, height);
+		if (fboBackground != null) fboBackground.reset(gl, width, height, 0);
 		else fboBackground = new FrameBufferObject(width, height, gl, false, false);
 		
 		//Update resolution in shader

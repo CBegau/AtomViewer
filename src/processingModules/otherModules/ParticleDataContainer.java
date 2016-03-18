@@ -31,7 +31,7 @@ import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.media.opengl.GL3;
+import com.jogamp.opengl.GL3;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JSpinner;

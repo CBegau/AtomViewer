@@ -9,7 +9,7 @@ import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Stack;
 
-import javax.media.opengl.GL3;
+import com.jogamp.opengl.GL3;
 
 import com.jogamp.common.nio.Buffers;
 

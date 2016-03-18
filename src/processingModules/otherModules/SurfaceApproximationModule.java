@@ -17,7 +17,7 @@ import java.awt.event.ActionListener;
 import java.util.*;
 import java.util.concurrent.Callable;
 
-import javax.media.opengl.GL3;
+import com.jogamp.opengl.GL3;
 import javax.swing.*;
 import javax.swing.border.EtchedBorder;
 import javax.swing.border.TitledBorder;

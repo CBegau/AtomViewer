@@ -30,7 +30,7 @@ import java.util.Collection;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
 
-import javax.media.opengl.GL3;
+import com.jogamp.opengl.GL3;
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.event.*;

@@ -34,7 +34,7 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.Arrays;
 
-import javax.media.opengl.GL3;
+import com.jogamp.opengl.GL3;
 import javax.swing.*;
 import javax.swing.border.EtchedBorder;
 import javax.swing.border.TitledBorder;

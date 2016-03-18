@@ -24,7 +24,7 @@ import gui.glUtils.Shader;
 import gui.glUtils.SimpleGeometriesRenderer;
 import model.RenderingConfiguration;
 
-import javax.media.opengl.GL3;
+import com.jogamp.opengl.GL3;
 
 import common.Vec3;
 
