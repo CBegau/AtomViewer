@@ -290,9 +290,9 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		viewMenu.add(perspectiveCheckBoxMenu);
 		viewMenu.add(whiteBackgroundCheckBoxMenu);
 		viewMenu.add(drawBoundingBoxCheckBoxMenu);
-		viewMenu.add(drawTetraederCheckBoxMenu);
 		viewMenu.add(drawCoordinateSystemBoxMenu);
 		viewMenu.add(drawLengthScaleBoxMenu);
+		viewMenu.add(drawTetraederCheckBoxMenu);
 		viewMenu.add(drawIndentBoxMenu);
 		viewMenu.add(drawLegendMenuItem);
 		
@@ -402,8 +402,8 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		
 		final JMenu processingMenu = new JMenu("Analysis");
 		
-		JMenuItem atomicModulesMenu = new JMenuItem("Add analyis");
-		atomicModulesMenu.setActionCommand("analysis");
+		JMenuItem analysisModulesMenu = new JMenuItem("Add analyis");
+		analysisModulesMenu.setActionCommand("analysis");
 		
 		ActionListener processingActionListener = new ActionListener() {
 			@Override
@@ -439,10 +439,8 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 			}
 
 		};
-		atomicModulesMenu.addActionListener(processingActionListener);
-		processingMenu.add(atomicModulesMenu);
-		
-
+		analysisModulesMenu.addActionListener(processingActionListener);
+		processingMenu.add(analysisModulesMenu);
 		
 		JMenuItem saveToolchainMenuItem = new JMenuItem("Save toolchain of data set");
 		saveToolchainMenuItem.addActionListener(new ActionListener() {
@@ -538,6 +536,43 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		for (Options o : RenderingConfiguration.Options.values()){
 			settingsMenu.add(new JOptionCheckBoxMenuItem(o));
 		}
+		
+		JMenuItem exportPOVMenuItem = new JMenuItem("Export POV");
+		exportPOVMenuItem.setToolTipText("This option provides a string that can be used to restore the current point of view");
+		exportPOVMenuItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				float[] m = RenderingConfiguration.getViewer().getPov();
+				String s = "";
+				for (int i=0; i<m.length; i++)
+					s += m[i]+";";
+				String message = "This string represents the current point of view. To reproduce images later, please store this string."; 
+				JOptionPane.showInputDialog(JMainWindow.this, message, "Import POV", JOptionPane.PLAIN_MESSAGE, null, null, s);
+			}
+		});
+		
+		JMenuItem importPOVMenuItem = new JMenuItem("Import POV");
+		importPOVMenuItem.setToolTipText("Restore the point of view using a stored configuration");
+		importPOVMenuItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				String input = JOptionPane.showInputDialog(
+						JMainWindow.this, "Please insert the point of view", "Export POV",  JOptionPane.PLAIN_MESSAGE);
+				if (input != null && !input.isEmpty()){
+					try {
+					String[] split = input.trim().split(";");
+					float[] m = new float[split.length];
+					for (int i=0; i<split.length; i++)
+						m[i] = Float.parseFloat(split[i]);
+					RenderingConfiguration.getViewer().setPOV(m);
+					} catch (Exception ex){}
+				}
+			}
+		});
+		settingsMenu.add(exportPOVMenuItem);
+		settingsMenu.add(importPOVMenuItem);
+		
+		
 		final JMenuItem selectFontMenuItem = new JMenuItem("Select font");
 		selectFontMenuItem.addActionListener(new ActionListener() {
 			@Override
@@ -636,54 +671,32 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
 			    KeyStroke.getKeyStroke("pressed UP"), "first");
 		
-		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-			    KeyStroke.getKeyStroke(KeyEvent.VK_F3,0), "f3");
-		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-			    KeyStroke.getKeyStroke(KeyEvent.VK_F4,0), "f4");
-		
-		stereoCheckBoxMenu.setMnemonic(KeyEvent.VK_S);
-		stereoCheckBoxMenu.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, 0));
+		stereoCheckBoxMenu.setMnemonic(KeyEvent.VK_A);
+		stereoCheckBoxMenu.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_A, 0));
+		changeSphereSizeMenuItem.setMnemonic(KeyEvent.VK_S);
+		changeSphereSizeMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, 0));
 		editRangeMenuItem.setMnemonic(KeyEvent.VK_R);
 		editRangeMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_R, 0));
-		drawLegendMenuItem.setMnemonic(KeyEvent.VK_L);
-		drawLegendMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_L, 0));
+		drawLengthScaleBoxMenu.setMnemonic(KeyEvent.VK_E);
+		drawLengthScaleBoxMenu.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_E, 0));
 		perspectiveCheckBoxMenu.setMnemonic(KeyEvent.VK_P);
 		perspectiveCheckBoxMenu.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_P, 0));
 		whiteBackgroundCheckBoxMenu.setMnemonic(KeyEvent.VK_W);
 		whiteBackgroundCheckBoxMenu.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_W, 0));
 		drawCoordinateSystemBoxMenu.setMnemonic(KeyEvent.VK_C);
 		drawCoordinateSystemBoxMenu.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, 0));
+		drawBoundingBoxCheckBoxMenu.setMnemonic(KeyEvent.VK_B);
+		drawBoundingBoxCheckBoxMenu.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_B, 0));
+		exportPOVMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F3, 0));
+		importPOVMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F4, 0));
+		openFileMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0));
+		exportScreenShotMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F2, 0));
+		analysisModulesMenu.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0));
 		
 		rp.getActionMap().put("next", KeyActionCollection.getActionNextData());
 		rp.getActionMap().put("previous", KeyActionCollection.getActionPreviousData());
 		rp.getActionMap().put("first", KeyActionCollection.getActionFirstData());
 		rp.getActionMap().put("last", KeyActionCollection.getActionLastData());
-		
-		rp.getActionMap().put("f3", new AbstractAction() {
-			private static final long serialVersionUID = 1L;
-			@Override
-			public void actionPerformed(ActionEvent arg0) {
-				float[] m = RenderingConfiguration.getViewer().getPov();
-				String s = "";
-				for (int i=0; i<m.length; i++)
-					s += m[i]+";";
-				JOptionPane.showInputDialog(null, "POV", s);
-			}
-		});
-		rp.getActionMap().put("f4", new AbstractAction() {
-			private static final long serialVersionUID = 1L;
-			@Override
-			public void actionPerformed(ActionEvent arg0) {
-				String input = JOptionPane.showInputDialog("POV").trim();
-				if (input != null && !input.isEmpty()){ 
-					String[] split = input.split(";");
-					float[] m = new float[split.length];
-					for (int i=0; i<split.length; i++)
-						m[i] = Float.parseFloat(split[i]);
-					RenderingConfiguration.getViewer().setPOV(m);
-				}
-			}
-		});
 	}
 
 	//region WindowListener
@@ -714,6 +727,8 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		public JOptionCheckBoxMenuItem(Options o) {
 			super(o.getName());
 			this.option = o;
+			if (o.getKeyAccelerator() != null)
+				this.setAccelerator(o.getKeyAccelerator());
 			this.setSelected(o.isEnabled());
 			this.setToolTipText(o.getInfoMessage());
 			this.addActionListener(new ActionListener() {

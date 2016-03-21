@@ -304,22 +304,18 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		innerp.add(fastRewindButton);
 		fastRewindButton.setToolTipText("First file in sequence (f)");
 		fastRewindButton.addActionListener(KeyActionCollection.getActionFirstData());
-		fastRewindButton.setActionCommand("f");
 		fastRewindButton.setEnabled(false);
 		innerp.add(rewindButton);
 		rewindButton.setToolTipText("Previous file in sequence (y or z)");
 		rewindButton.addActionListener(KeyActionCollection.getActionPreviousData());
-		rewindButton.setActionCommand("z");
 		rewindButton.setEnabled(false);
 		innerp.add(forwardButton);
 		forwardButton.setToolTipText("Next file in sequence (x)");
 		forwardButton.addActionListener(KeyActionCollection.getActionNextData());
-		forwardButton.setActionCommand("x");
 		forwardButton.setEnabled(false);
 		innerp.add(fastForwardButton);
 		fastForwardButton.setToolTipText("Last file in sequence (l)");
 		fastForwardButton.addActionListener(KeyActionCollection.getActionLastData());
-		fastForwardButton.setActionCommand("l");
 		fastForwardButton.setEnabled(false);
 		userInterfaceContainer.add(p, gbc);
 		

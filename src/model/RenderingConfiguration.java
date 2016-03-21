@@ -21,11 +21,14 @@ package model;
 import gui.ViewerGLJPanel;
 
 import java.awt.Font;
+import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Properties;
+
+import javax.swing.KeyStroke;
 
 import common.ColorTable;
 import common.ColorTable.ColorBarScheme;
@@ -46,29 +49,41 @@ public class RenderingConfiguration {
 	 * Global options for AtomViewer, accessible in the settings-menu
 	 */
 	public static enum Options {
-		PERFECT_SPHERES(false, "Perfect spheres", "", "Renders perfect spheres, at the possible cost of performance."),
-		FXAA(true, "Anti-aliasing", "", "Using FXAA to smooth visible edges"),
-		ADS_SHADING(true, "Specular lighting", "", "Different lighting model"),
-		SSAO(false, "Ambient occlusion", "", "Enable ambient occlusion (may improve depth perception)"),
-		NO_SHADING(false, "Uniform atom color", "", "Each atom is uniformly colored and no lighting is applied");
+		NO_SHADING(false, "Uniform atom color", "", "Each atom is uniformly colored and no lighting is applied", 
+				KeyStroke.getKeyStroke(KeyEvent.VK_N, KeyEvent.SHIFT_DOWN_MASK)),
+		ADS_SHADING(true, "Specular lighting", "", "Different lighting model",
+				KeyStroke.getKeyStroke(KeyEvent.VK_S, KeyEvent.SHIFT_DOWN_MASK)),
+		SSAO(false, "Ambient occlusion", "", "Enable ambient occlusion (may improve depth perception)",
+				KeyStroke.getKeyStroke(KeyEvent.VK_A, KeyEvent.SHIFT_DOWN_MASK)),
+		FXAA(true, "Anti-aliasing", "", "Using FXAA to smooth visible edges", 
+				null),
+		PERFECT_SPHERES(true, "Perfect spheres", "", "Renders perfect spheres, at the possible cost of performance.",
+				null);
 		
-		private Options(boolean enabled, String name, String message, String infoMessage){
+		
+		private Options(boolean enabled, String name, String message, String infoMessage, KeyStroke keyAccelerator){
 			this.enabled = enabled;
 			this.name = name;
 			this.activateMessage = message;
 			this.infoMessage = infoMessage;
+			this.keyAccelerator = keyAccelerator;
 		}
 		
 		private boolean enabled;
 		private String activateMessage;
 		private String infoMessage;
 		private String name;
+		private KeyStroke keyAccelerator;
 		
 		public void setEnabled(boolean enabled){
 			this.enabled = enabled;
 			if (viewer != null) {
 				viewer.reDraw();
 			}
+		}
+		
+		public KeyStroke getKeyAccelerator() {
+			return keyAccelerator;
 		}
 		
 		public String getName() {
