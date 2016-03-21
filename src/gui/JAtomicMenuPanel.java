@@ -1,7 +1,7 @@
 // Part of AtomViewer: AtomViewer is a tool to display and analyse
 // atomistic simulations
 //
-// Copyright (C) 2015  ICAMS, Ruhr-Universität Bochum
+// Copyright (C) 2016  ICAMS, Ruhr-Universität Bochum
 //
 // AtomViewer is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,7 +19,6 @@
 package gui;
 
 import gui.JColorSelectPanel.ColorSelectPanelTypes;
-import gui.JMainWindow.KeyBoardAction;
 import gui.ViewerGLJPanel.AtomRenderType;
 import gui.ViewerGLJPanel.RenderOption;
 
@@ -90,7 +89,7 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 	private AtomData atomData;
 	private JFrame parentFrame;
 	
-	public JAtomicMenuPanel(KeyBoardAction kba, JFrame parent){
+	public JAtomicMenuPanel(final JFrame parent){
 		this.parentFrame = parent;
 		Configuration.addAtomDataListener(this);
 		
@@ -294,27 +293,32 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		innerp.setLayout(new GridLayout(1,4)); 
 		p.add(orderButton);
 		p.add(innerp);
-		orderButton.addActionListener(kba);
+		orderButton.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				new JOrderAtomDataSet(parent);
+			}
+		});
 		orderButton.setActionCommand("changeOrder");
 		orderButton.setEnabled(false);
 		innerp.add(fastRewindButton);
 		fastRewindButton.setToolTipText("First file in sequence (f)");
-		fastRewindButton.addActionListener(kba);
+		fastRewindButton.addActionListener(KeyActionCollection.getActionFirstData());
 		fastRewindButton.setActionCommand("f");
 		fastRewindButton.setEnabled(false);
 		innerp.add(rewindButton);
 		rewindButton.setToolTipText("Previous file in sequence (y or z)");
-		rewindButton.addActionListener(kba);
+		rewindButton.addActionListener(KeyActionCollection.getActionPreviousData());
 		rewindButton.setActionCommand("z");
 		rewindButton.setEnabled(false);
 		innerp.add(forwardButton);
 		forwardButton.setToolTipText("Next file in sequence (x)");
-		forwardButton.addActionListener(kba);
+		forwardButton.addActionListener(KeyActionCollection.getActionNextData());
 		forwardButton.setActionCommand("x");
 		forwardButton.setEnabled(false);
 		innerp.add(fastForwardButton);
 		fastForwardButton.setToolTipText("Last file in sequence (l)");
-		fastForwardButton.addActionListener(kba);
+		fastForwardButton.addActionListener(KeyActionCollection.getActionLastData());
 		fastForwardButton.setActionCommand("l");
 		fastForwardButton.setEnabled(false);
 		userInterfaceContainer.add(p, gbc);

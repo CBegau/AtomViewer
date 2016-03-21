@@ -67,14 +67,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 	
 	private static final long serialVersionUID = 1L;
 	
-	private KeyBoardAction keyAction = new KeyBoardAction();
-	
-	private final JAtomicMenuPanel atomicMenu;;
-	private final JGraphicOptionCheckBoxMenuItem stereoCheckBoxMenu;
-	private final JGraphicOptionCheckBoxMenuItem perspectiveCheckBoxMenu;
-	private final JGraphicOptionCheckBoxMenuItem drawCoordinateSystemBoxMenu;
-	private final JGraphicOptionCheckBoxMenuItem whiteBackgroundCheckBoxMenu;
-	private final JMenuItem editRangeMenuItem;
+	private final JAtomicMenuPanel atomicMenu;
 	private final JMenu typeColorMenu;
 	
 	public JMainWindow() {
@@ -140,7 +133,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		splitPane.getActionMap().setParent(this.getRootPane().getActionMap());
 		splitPane.getInputMap().setParent(this.getRootPane().getInputMap());
 		
-		this.atomicMenu = new JAtomicMenuPanel(keyAction, this);
+		this.atomicMenu = new JAtomicMenuPanel(this);
 		this.add(atomicMenu, BorderLayout.WEST);
 		
 		this.add(splitPane, BorderLayout.CENTER);
@@ -208,9 +201,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		
 		JMenu viewMenu = new JMenu("View");
 		
-		editRangeMenuItem = new JMenuItem("Edit visible range");
-		editRangeMenuItem.setMnemonic(KeyEvent.VK_R);
-		
+		JMenuItem editRangeMenuItem = new JMenuItem("Edit visible range");
 		editRangeMenuItem.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -224,13 +215,13 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		
 		final JCheckBoxMenuItem drawLegendMenuItem = new JCheckBoxMenuItem("Show legends");
 		drawLegendMenuItem.setSelected(RenderOption.LEGEND.isEnabled());
-		drawLegendMenuItem.setMnemonic(KeyEvent.VK_L);
 		drawLegendMenuItem.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
 				RenderOption.LEGEND.setEnabled(drawLegendMenuItem.isSelected());
 			}
 		});
+		
 		
 		JMenuItem changeSphereSizeMenuItem = new JMenuItem("Change sphere size");
 		changeSphereSizeMenuItem.addActionListener(new ActionListener() {
@@ -274,29 +265,24 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 			}
 		});
 		
-		perspectiveCheckBoxMenu = new JGraphicOptionCheckBoxMenuItem("Perspective projection", RenderOption.PERSPECTIVE);
-		perspectiveCheckBoxMenu.setToolTipText("Enable perspective projection instead of orthogonal");
-		perspectiveCheckBoxMenu.setMnemonic(KeyEvent.VK_P);
-		
-		stereoCheckBoxMenu = new JGraphicOptionCheckBoxMenuItem("Anaglyphic stereo", RenderOption.STEREO);
-		stereoCheckBoxMenu.setMnemonic(KeyEvent.VK_S);
-		
-		whiteBackgroundCheckBoxMenu = new JGraphicOptionCheckBoxMenuItem("White background", RenderOption.PRINTING_MODE);
-		whiteBackgroundCheckBoxMenu.setMnemonic(KeyEvent.VK_W);
-		
+		JGraphicOptionCheckBoxMenuItem perspectiveCheckBoxMenu = 
+				new JGraphicOptionCheckBoxMenuItem("Perspective projection", RenderOption.PERSPECTIVE, 
+						"Enable perspective projection instead of orthogonal");
+		JGraphicOptionCheckBoxMenuItem stereoCheckBoxMenu = 
+				new JGraphicOptionCheckBoxMenuItem("Anaglyphic stereo", RenderOption.STEREO, "");
+		JGraphicOptionCheckBoxMenuItem whiteBackgroundCheckBoxMenu = 
+				new JGraphicOptionCheckBoxMenuItem("White background", RenderOption.PRINTING_MODE, "");
 		JGraphicOptionCheckBoxMenuItem drawBoundingBoxCheckBoxMenu = 
-				new JGraphicOptionCheckBoxMenuItem("Bounding box", RenderOption.BOUNDING_BOX);
+				new JGraphicOptionCheckBoxMenuItem("Bounding box", RenderOption.BOUNDING_BOX, "");
 		JGraphicOptionCheckBoxMenuItem drawTetraederCheckBoxMenu = 
-				new JGraphicOptionCheckBoxMenuItem("Thompson Tetraeder", RenderOption.THOMPSON_TETRAEDER);
+				new JGraphicOptionCheckBoxMenuItem("Thompson Tetraeder", RenderOption.THOMPSON_TETRAEDER, "");
 		JGraphicOptionCheckBoxMenuItem drawLengthScaleBoxMenu = 
-				new JGraphicOptionCheckBoxMenuItem("Length scale", RenderOption.LENGTH_SCALE);
-		drawLengthScaleBoxMenu.setToolTipText("A lenght scale bar is only possible in othogonal projection"
-				+ ", but not in perspective projection");
+				new JGraphicOptionCheckBoxMenuItem("Length scale", RenderOption.LENGTH_SCALE, 
+						"A lenght scale bar is only possible in othogonal projection, but not in perspective projection");
 		JGraphicOptionCheckBoxMenuItem drawIndentBoxMenu = 
-				new JGraphicOptionCheckBoxMenuItem("Indenter (if available)", RenderOption.INDENTER);
-		
-		drawCoordinateSystemBoxMenu = new JGraphicOptionCheckBoxMenuItem("Coordinate System", RenderOption.COORDINATE_SYSTEM);
-		drawCoordinateSystemBoxMenu.setMnemonic(KeyEvent.VK_C);
+				new JGraphicOptionCheckBoxMenuItem("Indenter (if available)", RenderOption.INDENTER, "");
+		JGraphicOptionCheckBoxMenuItem drawCoordinateSystemBoxMenu = 
+				new JGraphicOptionCheckBoxMenuItem("Coordinate System", RenderOption.COORDINATE_SYSTEM, "");
 		
 		viewMenu.add(editRangeMenuItem);
 		viewMenu.add(changeSphereSizeMenuItem);
@@ -618,37 +604,61 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		this.pack();
 		this.setExtendedState(JFrame.MAXIMIZED_BOTH);
 		
+		//Hotkeys and accelerators 
+		
 		JRootPane rp = getRootPane();
 		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-		    KeyStroke.getKeyStroke(KeyEvent.VK_A,0), "keypressed");
+			    KeyStroke.getKeyStroke(KeyEvent.VK_X,0), "next");
 		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-			    KeyStroke.getKeyStroke(KeyEvent.VK_C,0), "keypressed");
+			    KeyStroke.getKeyStroke("pressed RIGHT"), "next");
 		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-			    KeyStroke.getKeyStroke(KeyEvent.VK_S,0), "keypressed");
-		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-			    KeyStroke.getKeyStroke(KeyEvent.VK_R,0), "keypressed");
-		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-			    KeyStroke.getKeyStroke(KeyEvent.VK_W,0), "keypressed");
-		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-			    KeyStroke.getKeyStroke(KeyEvent.VK_P,0), "keypressed");
+			    KeyStroke.getKeyStroke("pressed KP_RIGHT"), "next");
 		
 		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-			    KeyStroke.getKeyStroke(KeyEvent.VK_X,0), "keypressed");
+			    KeyStroke.getKeyStroke("pressed LEFT"), "previous");
 		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-			    KeyStroke.getKeyStroke(KeyEvent.VK_Z,0), "keypressed");
+			    KeyStroke.getKeyStroke("pressed KP_LEFT"), "previous");
 		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-			    KeyStroke.getKeyStroke(KeyEvent.VK_Y,0), "keypressed");
+			    KeyStroke.getKeyStroke(KeyEvent.VK_Z,0), "previous");
 		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-			    KeyStroke.getKeyStroke(KeyEvent.VK_L,0), "keypressed");
+			    KeyStroke.getKeyStroke(KeyEvent.VK_Y,0), "previous");
+		
 		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-			    KeyStroke.getKeyStroke(KeyEvent.VK_F,0), "keypressed");
+			    KeyStroke.getKeyStroke(KeyEvent.VK_L,0), "last");
+		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
+			    KeyStroke.getKeyStroke("pressed KP_DOWN"), "last");
+		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
+			    KeyStroke.getKeyStroke("pressed DOWN"), "last");
+		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
+			    KeyStroke.getKeyStroke(KeyEvent.VK_F,0), "first");
+		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
+			    KeyStroke.getKeyStroke("pressed KP_UP"), "first");
+		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
+			    KeyStroke.getKeyStroke("pressed UP"), "first");
 		
 		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
 			    KeyStroke.getKeyStroke(KeyEvent.VK_F3,0), "f3");
 		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
 			    KeyStroke.getKeyStroke(KeyEvent.VK_F4,0), "f4");
 		
-		rp.getActionMap().put("keypressed", keyAction);
+		stereoCheckBoxMenu.setMnemonic(KeyEvent.VK_S);
+		stereoCheckBoxMenu.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, 0));
+		editRangeMenuItem.setMnemonic(KeyEvent.VK_R);
+		editRangeMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_R, 0));
+		drawLegendMenuItem.setMnemonic(KeyEvent.VK_L);
+		drawLegendMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_L, 0));
+		perspectiveCheckBoxMenu.setMnemonic(KeyEvent.VK_P);
+		perspectiveCheckBoxMenu.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_P, 0));
+		whiteBackgroundCheckBoxMenu.setMnemonic(KeyEvent.VK_W);
+		whiteBackgroundCheckBoxMenu.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_W, 0));
+		drawCoordinateSystemBoxMenu.setMnemonic(KeyEvent.VK_C);
+		drawCoordinateSystemBoxMenu.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, 0));
+		
+		rp.getActionMap().put("next", KeyActionCollection.getActionNextData());
+		rp.getActionMap().put("previous", KeyActionCollection.getActionPreviousData());
+		rp.getActionMap().put("first", KeyActionCollection.getActionFirstData());
+		rp.getActionMap().put("last", KeyActionCollection.getActionLastData());
+		
 		rp.getActionMap().put("f3", new AbstractAction() {
 			private static final long serialVersionUID = 1L;
 			@Override
@@ -1071,48 +1081,6 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		progressDisplay.setVisible(true);
 	}
 	
-	protected class KeyBoardAction extends AbstractAction{
-		private static final long serialVersionUID = 1L;
-
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			
-			if (e.getActionCommand().equals("s")){
-				stereoCheckBoxMenu.doClick();
-			} else if (e.getActionCommand().equals("x")){
-				if (Configuration.getCurrentAtomData().getNext()!=null){
-					AtomData next = Configuration.getCurrentAtomData().getNext();
-					Configuration.setCurrentAtomData(next, true, false);
-				}
-			} else if (e.getActionCommand().equals("y") || e.getActionCommand().equals("z")){
-				if (Configuration.getCurrentAtomData().getPrevious() != null) {
-					AtomData previous = Configuration.getCurrentAtomData().getPrevious();
-					Configuration.setCurrentAtomData(previous, true, false);
-				}
-			} else if (e.getActionCommand().equals("f")){
-				AtomData first = Configuration.getCurrentAtomData();
-				while (first.getPrevious() != null)
-					first = first.getPrevious();
-				Configuration.setCurrentAtomData(first, true, false);
-			} else if (e.getActionCommand().equals("l")){
-				AtomData last = Configuration.getCurrentAtomData();
-				while (last.getNext() != null)
-					last = last.getNext();
-				Configuration.setCurrentAtomData(last, true, false);
-			} else if (e.getActionCommand().equals("r")){
-				editRangeMenuItem.doClick();
-			} else if (e.getActionCommand().equals("w")){
-				whiteBackgroundCheckBoxMenu.doClick();
-			} else if (e.getActionCommand().equals("c")){
-				drawCoordinateSystemBoxMenu.doClick();
-			} else if (e.getActionCommand().equals("p")){
-				perspectiveCheckBoxMenu.doClick();
-			} else if (e.getActionCommand().equals("changeOrder")){
-				new JOrderAtomDataSet(JMainWindow.this);
-			}
-		}
-	}
-	
 	private class OpenMenuListener implements ActionListener{
 		@Override
 		public void actionPerformed(ActionEvent e) {
@@ -1223,9 +1191,10 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		private static final long serialVersionUID = 1L;
 		final RenderOption ro;
 		
-		public JGraphicOptionCheckBoxMenuItem(String label, RenderOption option) {
+		public JGraphicOptionCheckBoxMenuItem(String label, RenderOption option, String tooltip) {
 			super(label);
 			this.ro = option;
+			this.setToolTipText(tooltip);
 			this.setSelected(ro.isEnabled());
 			this.addActionListener(new ActionListener() {
 				@Override
