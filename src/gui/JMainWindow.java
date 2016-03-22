@@ -148,10 +148,10 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		
 		JMenuItem exportScreenShotMenuItem = new JMenuItem("Save Screenshot");
 		exportScreenShotMenuItem.setActionCommand("Screenshot");
-		exportScreenShotMenuItem.addActionListener(new ExportScreenshotActionListener()); //TODO wrap by SwingWorker
+		exportScreenShotMenuItem.addActionListener(new ExportScreenshotActionListener());
 		fileMenu.add(exportScreenShotMenuItem);
 		
-		JMenuItem exportAsciiFile = new JMenuItem("Export as IMD-Checkpoint"); //TODO wrap by SwingWorker
+		JMenuItem exportAsciiFile = new JMenuItem("Export as IMD-Checkpoint");
 		exportAsciiFile.addActionListener(new ExportFileActionListener());
 		fileMenu.add(exportAsciiFile);
 		
@@ -950,19 +950,19 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		public void actionPerformed(ActionEvent e) {
 			assert Configuration.getCurrentAtomData()!=null : "current AtomData is null";
 			
-			JFileChooser chooser = new JFileChooser();
+			final JFileChooser chooser = new JFileChooser();
 			JPanel optionPanel = new JPanel();
 			optionPanel.setLayout(new BoxLayout(optionPanel, BoxLayout.Y_AXIS));
 			final JCheckBox exportAll = new JCheckBox("Export all files at once");
 			optionPanel.add(exportAll);
 			chooser.setAccessory(optionPanel);
 			
-			MDFileWriter writer = new ImdFileWriter();
+			final MDFileWriter writer = new ImdFileWriter();
 			
 			int result = chooser.showSaveDialog(JMainWindow.this);
 			if (result == JFileChooser.APPROVE_OPTION){
 				
-				AtomData current = Configuration.getCurrentAtomData();
+				final AtomData current = Configuration.getCurrentAtomData();
 				
 				JPrimitiveVariablesPropertiesDialog configDialog = 
 						new JPrimitiveVariablesPropertiesDialog(JMainWindow.this, "Configure export");
@@ -1017,25 +1017,59 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 				
 				writer.setDataToExport(eNum.getValue(), eEle.getValue(), etype.getValue(),
 						erbv.getValue(), eg.getValue(), toExport.toArray(new DataColumnInfo[toExport.size()]));
-				try {
-					if (exportAll.isSelected()){
-						File path = chooser.getSelectedFile().getParentFile();
-						String prefix = chooser.getSelectedFile().getName();
-						int num = 0;
-						for (AtomData d : Configuration.getAtomDataIterable()){
-							String newName = current.getName();
-							newName = String.format("%s.%05d", prefix, num++);
-							
-							writer.writeFile(path, newName, d, null);
-						}
-					} else {
-						String filename = chooser.getSelectedFile().getAbsolutePath();
-						writer.writeFile(null, filename, current, null);
-					}
-				} catch (IOException e1) {
-					e1.printStackTrace();
-				}
 				
+				final SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>(){
+					protected Void doInBackground(){
+						ProgressMonitor pm = null;
+						try {
+							pm = ProgressMonitor.createNewProgressMonitor(this);
+							pm.setActivityName("Exporting");
+							if (exportAll.isSelected()){
+								File path = chooser.getSelectedFile().getParentFile();
+								String prefix = chooser.getSelectedFile().getName();
+								int num = 0;
+								for (AtomData d : Configuration.getAtomDataIterable()){
+									pm.setCurrentFilename(d.getName());
+									
+									String newName = current.getName();
+									newName = String.format("%s.%05d", prefix, num++);
+									
+									writer.writeFile(path, newName, d, null);
+								}
+							} else {
+								String filename = chooser.getSelectedFile().getAbsolutePath();
+								pm.setCurrentFilename(filename);
+								writer.writeFile(null, filename, current, null);
+							}
+						} catch (final Exception e){
+							SwingUtilities.invokeLater(new Runnable() {
+								@Override
+								public void run() {
+									JOptionPane.showMessageDialog(null, e.getLocalizedMessage());
+								}
+							});
+						} finally {
+							if (pm!=null) pm.destroy();
+						}
+						return null;
+					};
+				};
+				
+				final JProgressDisplayDialog progressDisplay = new JProgressDisplayDialog(worker, JMainWindow.this, false);
+				progressDisplay.setTitle("Exporting IMD files");
+				
+				PropertyChangeListener pcl = new PropertyChangeListener() {
+					@Override
+					public void propertyChange(PropertyChangeEvent arg0) {
+						if ( worker.isDone() || worker.isCancelled()){
+							worker.removePropertyChangeListener(this);
+							progressDisplay.dispose();
+						}
+					}
+				};
+				worker.addPropertyChangeListener(pcl);
+				worker.execute();
+				progressDisplay.setVisible(true);
 			}
 		}
 	}
