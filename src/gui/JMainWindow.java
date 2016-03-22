@@ -139,35 +139,30 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		this.add(splitPane, BorderLayout.CENTER);
 		addWindowListener(this);
 		
-		OpenMenuListener oml = new OpenMenuListener();
 		
 		JMenuBar menu = new JMenuBar();
 		JMenu fileMenu = new JMenu("File");
 		JMenuItem openFileMenuItem = new JMenuItem("Open file");
-		openFileMenuItem.addActionListener(CursorController.createListener(this, oml));
+		openFileMenuItem.addActionListener(new OpenMenuListener());
 		fileMenu.add(openFileMenuItem);
 		
 		JMenuItem exportScreenShotMenuItem = new JMenuItem("Save Screenshot");
 		exportScreenShotMenuItem.setActionCommand("Screenshot");
-		exportScreenShotMenuItem.addActionListener(CursorController.createListener(this, new ExportActionListener()));
+		exportScreenShotMenuItem.addActionListener(new ExportScreenshotActionListener()); //TODO wrap by SwingWorker
 		fileMenu.add(exportScreenShotMenuItem);
 		
-		ExportFileActionListener exportFileListener = new ExportFileActionListener();
-		
-		JMenuItem exportAsciiFile = new JMenuItem("Export as IMD-Checkpoint");
-		exportAsciiFile.addActionListener(CursorController.createListener(this, exportFileListener));
+		JMenuItem exportAsciiFile = new JMenuItem("Export as IMD-Checkpoint"); //TODO wrap by SwingWorker
+		exportAsciiFile.addActionListener(new ExportFileActionListener());
 		fileMenu.add(exportAsciiFile);
 		
 		final JMenuItem exportSkeletonFileMenuItem = new JMenuItem("Export dislocation network");
-		exportSkeletonFileMenuItem.addActionListener(CursorController.createListener(this, new ActionListener() {
+		exportSkeletonFileMenuItem.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (Configuration.getCurrentAtomData() == null)
 					return;
 				DataContainer dc = Configuration.getCurrentAtomData().getDataContainer(Skeletonizer.class);
-				Skeletonizer skel = null;
-				if (dc != null)
-					skel = (Skeletonizer)dc;
+				Skeletonizer skel = (dc != null)? (Skeletonizer)dc: null;
 				if (skel == null) {
 					JOptionPane.showMessageDialog(JMainWindow.this, "Dislocation network not available");
 					return;
@@ -183,7 +178,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 					}
 				}
 			}
-		}));
+		});
 		fileMenu.add(exportSkeletonFileMenuItem);
 		
 		
@@ -222,48 +217,8 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 			}
 		});
 		
-		
 		JMenuItem changeSphereSizeMenuItem = new JMenuItem("Change sphere size");
-		changeSphereSizeMenuItem.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				final float min = 0.00001f;
-				final float max = 10000f;
-				JPrimitiveVariablesPropertiesDialog d = 
-						new JPrimitiveVariablesPropertiesDialog(JMainWindow.this, "Edit sphere size");
-				FloatProperty defSize = d.addFloat("scale", "Global scaling factor", "Adjust the scaling of all atoms",
-						Math.max(min, Math.min(RenderingConfiguration.getViewer().getSphereSize(), max)), min, max);
-				
-				FloatProperty[] atomScales = new FloatProperty[0];
-				
-				if (Configuration.getCurrentAtomData() != null){
-					CrystalStructure cs = Configuration.getCurrentAtomData().getCrystalStructure();
-					defSize.setDefaultValue(cs.getDistanceToNearestNeighbor()*0.55f);
-					
-					if (cs.getNumberOfElements() > 1){
-						float[] defsizes = cs.getDefaultSphereSizeScalings();
-						float[] sizes = cs.getSphereSizeScalings();
-						String[] names = cs.getNamesOfElements();
-						atomScales = new FloatProperty[sizes.length];
-						d.add(new JSeparator());
-						d.startGroup("Clustering");
-				
-						d.addLabel("Individual scaling");
-						for (int i=0; i<sizes.length; i++){
-							atomScales[i] = d.addFloat("", names[i], "", sizes[i], 0.001f, 1000f);
-							atomScales[i].setDefaultValue(defsizes[i]); 
-						}
-						d.endGroup();
-					}
-				}
-				boolean ok = d.showDialog();
-				if (ok){
-					for (int i=0; i<atomScales.length; i++)
-						Configuration.getCurrentAtomData().getCrystalStructure().setSphereSizeScalings(i, atomScales[i].value);
-					RenderingConfiguration.getViewer().setSphereSize(defSize.value);
-				}
-			}
-		});
+		changeSphereSizeMenuItem.addActionListener(new JChangeSphereSizeActionListener());
 		
 		JGraphicOptionCheckBoxMenuItem perspectiveCheckBoxMenu = 
 				new JGraphicOptionCheckBoxMenuItem("Perspective projection", RenderOption.PERSPECTIVE, 
@@ -428,7 +383,6 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 									toProcess.add(data);
 								if (multipleFiles) data = data.getNext();
 							} while (multipleFiles && data != null);
-							
 							
 							applyProcessWindowWithDisplay(toProcess, pm);
 							
@@ -779,171 +733,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 			this.add(new ViewButton("<html><center>Reset zoom<br> and focus</center><html>", 0f, 0f, 0f, true),gbc);
 		}
 	}
-	
-	private class ExportFileActionListener implements ActionListener {
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			assert Configuration.getCurrentAtomData()!=null : "current AtomData is null";
-			
-			JFileChooser chooser = new JFileChooser();
-			JPanel optionPanel = new JPanel();
-			optionPanel.setLayout(new BoxLayout(optionPanel, BoxLayout.Y_AXIS));
-			final JCheckBox exportAll = new JCheckBox("Export all files at once");
-			optionPanel.add(exportAll);
-			chooser.setAccessory(optionPanel);
-			
-			MDFileWriter writer = new ImdFileWriter();
-			
-			int result = chooser.showSaveDialog(JMainWindow.this);
-			if (result == JFileChooser.APPROVE_OPTION){
-				
-				AtomData current = Configuration.getCurrentAtomData();
-				
-				JPrimitiveVariablesPropertiesDialog configDialog = 
-						new JPrimitiveVariablesPropertiesDialog(JMainWindow.this, "Configure export");
-				List<PrimitiveProperty<?>> options = 
-						writer.getAdditionalProperties(current, exportAll.isSelected()); 
-				if (options != null && options.size()>0){
-					configDialog.startGroup("Options");
-					for (PrimitiveProperty<?> p : options) configDialog.addComponent(p);
-					configDialog.endGroup();
-				}
-				
-				boolean exportGrain = current.isPolyCrystalline();
-				boolean exportRBV = current.isRbvAvailable();
-				List<DataColumnInfo> dci = current.getDataColumnInfos();
-				//Identify which entries are common in all AtomData
-				if (exportAll.isSelected()){
-					for (AtomData d : Configuration.getAtomDataIterable()){
-						dci.retainAll(d.getDataColumnInfos());
-						if (exportGrain) exportGrain = d.isPolyCrystalline();
-						if (exportRBV) exportRBV = d.isRbvAvailable();
-					}
-				}
-				
-				BooleanProperty eNum = new BooleanProperty("num", "Atom number", "Export atom number", true);
-				BooleanProperty eEle = new BooleanProperty("ele", "Element", "Export atom element", true);
-				BooleanProperty eg = new BooleanProperty("grains", "Grain number", "Export Grain number per atom", true);
-				BooleanProperty erbv = new BooleanProperty("rbv", "RBV", "Export RBV per atom", true);
-				BooleanProperty etype = new BooleanProperty("Type", "Structure type", "Export classified type", true);
-				BooleanProperty[] dciEnabled = new BooleanProperty[dci.size()];
-				
-				configDialog.startGroup("Include values in output");
-				configDialog.addComponent(eNum);
-				configDialog.addComponent(eEle);
-				configDialog.addComponent(etype);
-				if (exportGrain) configDialog.addComponent(eg);
-				if (exportRBV) configDialog.addComponent(erbv);
-				
-				for (int i=0; i<dci.size(); i++){
-					DataColumnInfo d = dci.get(i);
-					BooleanProperty bp = new BooleanProperty(d.getId(), d.getName(), "", true);
-					configDialog.addComponent(bp);
-					dciEnabled[i] = bp;
-				}
-				configDialog.endGroup();
-				
-				boolean ok = configDialog.showDialog();
-				if (!ok) return;
-				
-				List<DataColumnInfo> toExport = new ArrayList<DataColumnInfo>();
-				for (int i=0; i<dciEnabled.length; i++)
-					if (dciEnabled[i].getValue()) toExport.add(dci.get(i));
-				
-				writer.setDataToExport(eNum.getValue(), eEle.getValue(), etype.getValue(),
-						erbv.getValue(), eg.getValue(), toExport.toArray(new DataColumnInfo[toExport.size()]));
-				try {
-					if (exportAll.isSelected()){
-						File path = chooser.getSelectedFile().getParentFile();
-						String prefix = chooser.getSelectedFile().getName();
-						int num = 0;
-						for (AtomData d : Configuration.getAtomDataIterable()){
-							String newName = current.getName();
-							newName = String.format("%s.%05d", prefix, num++);
-							
-							writer.writeFile(path, newName, d, null);
-						}
-					} else {
-						String filename = chooser.getSelectedFile().getAbsolutePath();
-						writer.writeFile(null, filename, current, null);
-					}
-				} catch (IOException e1) {
-					e1.printStackTrace();
-				}
-				
-			}
-		}
-	}
-	
-	private class ExportActionListener implements ActionListener{
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			if (Configuration.getCurrentAtomData()!=null){
-				JFileChooser chooser = new JFileChooser();
-				if (Configuration.getLastOpenedExportFolder() !=null) 
-					chooser.setCurrentDirectory(Configuration.getLastOpenedExportFolder());
-				String fileEnding = "";
-				
-				chooser.setDialogTitle("Export screenshot");
-				chooser.setFileFilter(new FileNameExtensionFilter("Portable network graphic (*.png)","png"));
-				if (ImageIO.getImageWritersBySuffix("jpg").hasNext())
-					chooser.addChoosableFileFilter(new FileNameExtensionFilter("JPEG file (*.jpg)", "jpg"));				
-				chooser.setAcceptAllFileFilterUsed(false);
-				
-				chooser.setSelectedFile(new File(Configuration.getCurrentAtomData().getName()));
-				
-				JPanel imageSizeDialogExtension = new JPanel(new GridBagLayout());
-				GridBagConstraints gbc = CommonUtils.getBasicGridBagConstraint();
-				
-				gbc.gridwidth = 2;
-				final JCheckBox exportAll = new JCheckBox("Export all");
-				imageSizeDialogExtension.add(exportAll, gbc); gbc.gridy++;
-				imageSizeDialogExtension.add(new JLabel("Image size (pixel)"), gbc); gbc.gridy++;
-				gbc.weighty = 0.1;
-				imageSizeDialogExtension.add(new JLabel(""), gbc); gbc.gridy++;
-				gbc.gridwidth = 1; gbc.weighty = 0;
-				imageSizeDialogExtension.add(new JLabel("Width"), gbc); gbc.gridx++;
-				imageSizeDialogExtension.add(new JLabel("Height"), gbc); gbc.gridy++; gbc.gridx = 0;
-				
-				gbc.fill = GridBagConstraints.HORIZONTAL;
-				JFormattedTextField widthTextField = new JFormattedTextField(new DecimalFormat("#"));
-				widthTextField.setValue(RenderingConfiguration.getViewer().getWidth());
-				imageSizeDialogExtension.add(widthTextField, gbc); gbc.gridx++;
-				
-				JFormattedTextField heightTextField = new JFormattedTextField(new DecimalFormat("#"));
-				heightTextField.setValue(RenderingConfiguration.getViewer().getHeight());
-				imageSizeDialogExtension.add(heightTextField, gbc); gbc.gridy++;
-				
-				gbc.weighty = 1;
-				imageSizeDialogExtension.add(new JLabel(""), gbc);
-				
-				chooser.setAccessory(imageSizeDialogExtension);
-				
-				int result = chooser.showSaveDialog(JMainWindow.this);
-				if (result == JFileChooser.APPROVE_OPTION){
-					fileEnding = ((FileNameExtensionFilter)chooser.getFileFilter()).getExtensions()[0];
-					Configuration.setLastOpenedExportFolder(chooser.getSelectedFile().getParentFile());
-					String filename = chooser.getSelectedFile().getAbsolutePath();
-					//Add ending only if not a sequence, otherwise the name is just a prefix for the automatically
-					//generated filename
-					boolean sequence = exportAll.isSelected();
-					if (!filename.endsWith(fileEnding) && !sequence) filename += "."+fileEnding;
-					try {
-						int width = ((Number)widthTextField.getValue()).intValue();
-						int height = ((Number)heightTextField.getValue()).intValue();
-						
-						if (width<=0) width = 1;
-						if (height<=0) height = 1;
-							
-						RenderingConfiguration.getViewer().makeScreenshot(filename, fileEnding, sequence, width, height);
-					} catch (Exception e1) {
-						JOptionPane.showMessageDialog(null, e1.getLocalizedMessage());
-					}
-				}
-			}
-		}
-	}
-	
+		
 	@Override
 	public void atomDataChanged(AtomDataChangedEvent e) {
 		if (e.getNewAtomData() == null)
@@ -1078,7 +868,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 	
 	public void applyProcessWindowWithDisplay(Iterable<AtomData> data, ProcessingModule pm) {
 		final SwingWorker<Void,Void> sw = new ProcessModuleWorker(pm, data);
-		ProgressMonitor.createNewProgressMonitor(sw);
+		
 		final JProgressDisplayDialog progressDisplay = 
 				new JProgressDisplayDialog(sw, JMainWindow.this, false);
 		progressDisplay.setTitle("Analysis");
@@ -1155,24 +945,167 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		}
 	}
 
-	public static final class CursorController {
-		public final static Cursor busyCursor = Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR);
-		public final static Cursor defaultCursor = Cursor.getDefaultCursor();
-
-		private CursorController() {}
-
-		public static ActionListener createListener(final Component component, final ActionListener mainActionListener) {
-			ActionListener actionListener = new ActionListener() {
-				public void actionPerformed(ActionEvent ae) {
-					try {
-						component.setCursor(busyCursor);
-						mainActionListener.actionPerformed(ae);
-					} finally {
-						component.setCursor(defaultCursor);
+	private class ExportFileActionListener implements ActionListener {
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			assert Configuration.getCurrentAtomData()!=null : "current AtomData is null";
+			
+			JFileChooser chooser = new JFileChooser();
+			JPanel optionPanel = new JPanel();
+			optionPanel.setLayout(new BoxLayout(optionPanel, BoxLayout.Y_AXIS));
+			final JCheckBox exportAll = new JCheckBox("Export all files at once");
+			optionPanel.add(exportAll);
+			chooser.setAccessory(optionPanel);
+			
+			MDFileWriter writer = new ImdFileWriter();
+			
+			int result = chooser.showSaveDialog(JMainWindow.this);
+			if (result == JFileChooser.APPROVE_OPTION){
+				
+				AtomData current = Configuration.getCurrentAtomData();
+				
+				JPrimitiveVariablesPropertiesDialog configDialog = 
+						new JPrimitiveVariablesPropertiesDialog(JMainWindow.this, "Configure export");
+				List<PrimitiveProperty<?>> options = 
+						writer.getAdditionalProperties(current, exportAll.isSelected()); 
+				if (options != null && options.size()>0){
+					configDialog.startGroup("Options");
+					for (PrimitiveProperty<?> p : options) configDialog.addComponent(p);
+					configDialog.endGroup();
+				}
+				
+				boolean exportGrain = current.isPolyCrystalline();
+				boolean exportRBV = current.isRbvAvailable();
+				List<DataColumnInfo> dci = current.getDataColumnInfos();
+				//Identify which entries are common in all AtomData
+				if (exportAll.isSelected()){
+					for (AtomData d : Configuration.getAtomDataIterable()){
+						dci.retainAll(d.getDataColumnInfos());
+						if (exportGrain) exportGrain = d.isPolyCrystalline();
+						if (exportRBV) exportRBV = d.isRbvAvailable();
 					}
 				}
-			};
-			return actionListener;
+				
+				BooleanProperty eNum = new BooleanProperty("num", "Atom number", "Export atom number", true);
+				BooleanProperty eEle = new BooleanProperty("ele", "Element", "Export atom element", true);
+				BooleanProperty eg = new BooleanProperty("grains", "Grain number", "Export Grain number per atom", true);
+				BooleanProperty erbv = new BooleanProperty("rbv", "RBV", "Export RBV per atom", true);
+				BooleanProperty etype = new BooleanProperty("Type", "Structure type", "Export classified type", true);
+				BooleanProperty[] dciEnabled = new BooleanProperty[dci.size()];
+				
+				configDialog.startGroup("Include values in output");
+				configDialog.addComponent(eNum);
+				configDialog.addComponent(eEle);
+				configDialog.addComponent(etype);
+				if (exportGrain) configDialog.addComponent(eg);
+				if (exportRBV) configDialog.addComponent(erbv);
+				
+				for (int i=0; i<dci.size(); i++){
+					DataColumnInfo d = dci.get(i);
+					BooleanProperty bp = new BooleanProperty(d.getId(), d.getName(), "", true);
+					configDialog.addComponent(bp);
+					dciEnabled[i] = bp;
+				}
+				configDialog.endGroup();
+				
+				boolean ok = configDialog.showDialog();
+				if (!ok) return;
+				
+				List<DataColumnInfo> toExport = new ArrayList<DataColumnInfo>();
+				for (int i=0; i<dciEnabled.length; i++)
+					if (dciEnabled[i].getValue()) toExport.add(dci.get(i));
+				
+				writer.setDataToExport(eNum.getValue(), eEle.getValue(), etype.getValue(),
+						erbv.getValue(), eg.getValue(), toExport.toArray(new DataColumnInfo[toExport.size()]));
+				try {
+					if (exportAll.isSelected()){
+						File path = chooser.getSelectedFile().getParentFile();
+						String prefix = chooser.getSelectedFile().getName();
+						int num = 0;
+						for (AtomData d : Configuration.getAtomDataIterable()){
+							String newName = current.getName();
+							newName = String.format("%s.%05d", prefix, num++);
+							
+							writer.writeFile(path, newName, d, null);
+						}
+					} else {
+						String filename = chooser.getSelectedFile().getAbsolutePath();
+						writer.writeFile(null, filename, current, null);
+					}
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+				
+			}
+		}
+	}
+	
+	private class ExportScreenshotActionListener implements ActionListener{
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			if (Configuration.getCurrentAtomData()!=null){
+				JFileChooser chooser = new JFileChooser();
+				if (Configuration.getLastOpenedExportFolder() !=null) 
+					chooser.setCurrentDirectory(Configuration.getLastOpenedExportFolder());
+				String fileEnding = "";
+				
+				chooser.setDialogTitle("Export screenshot");
+				chooser.setFileFilter(new FileNameExtensionFilter("Portable network graphic (*.png)","png"));
+				if (ImageIO.getImageWritersBySuffix("jpg").hasNext())
+					chooser.addChoosableFileFilter(new FileNameExtensionFilter("JPEG file (*.jpg)", "jpg"));				
+				chooser.setAcceptAllFileFilterUsed(false);
+				
+				chooser.setSelectedFile(new File(Configuration.getCurrentAtomData().getName()));
+				
+				JPanel imageSizeDialogExtension = new JPanel(new GridBagLayout());
+				GridBagConstraints gbc = CommonUtils.getBasicGridBagConstraint();
+				
+				gbc.gridwidth = 2;
+				final JCheckBox exportAll = new JCheckBox("Export all");
+				imageSizeDialogExtension.add(exportAll, gbc); gbc.gridy++;
+				imageSizeDialogExtension.add(new JLabel("Image size (pixel)"), gbc); gbc.gridy++;
+				gbc.weighty = 0.1;
+				imageSizeDialogExtension.add(new JLabel(""), gbc); gbc.gridy++;
+				gbc.gridwidth = 1; gbc.weighty = 0;
+				imageSizeDialogExtension.add(new JLabel("Width"), gbc); gbc.gridx++;
+				imageSizeDialogExtension.add(new JLabel("Height"), gbc); gbc.gridy++; gbc.gridx = 0;
+				
+				gbc.fill = GridBagConstraints.HORIZONTAL;
+				JFormattedTextField widthTextField = new JFormattedTextField(new DecimalFormat("#"));
+				widthTextField.setValue(RenderingConfiguration.getViewer().getWidth());
+				imageSizeDialogExtension.add(widthTextField, gbc); gbc.gridx++;
+				
+				JFormattedTextField heightTextField = new JFormattedTextField(new DecimalFormat("#"));
+				heightTextField.setValue(RenderingConfiguration.getViewer().getHeight());
+				imageSizeDialogExtension.add(heightTextField, gbc); gbc.gridy++;
+				
+				gbc.weighty = 1;
+				imageSizeDialogExtension.add(new JLabel(""), gbc);
+				
+				chooser.setAccessory(imageSizeDialogExtension);
+				
+				int result = chooser.showSaveDialog(JMainWindow.this);
+				if (result == JFileChooser.APPROVE_OPTION){
+					fileEnding = ((FileNameExtensionFilter)chooser.getFileFilter()).getExtensions()[0];
+					Configuration.setLastOpenedExportFolder(chooser.getSelectedFile().getParentFile());
+					String filename = chooser.getSelectedFile().getAbsolutePath();
+					//Add ending only if not a sequence, otherwise the name is just a prefix for the automatically
+					//generated filename
+					boolean sequence = exportAll.isSelected();
+					if (!filename.endsWith(fileEnding) && !sequence) filename += "."+fileEnding;
+					try {
+						int width = ((Number)widthTextField.getValue()).intValue();
+						int height = ((Number)heightTextField.getValue()).intValue();
+						
+						if (width<=0) width = 1;
+						if (height<=0) height = 1;
+							
+						RenderingConfiguration.getViewer().makeScreenshot(filename, fileEnding, sequence, width, height);
+					} catch (Exception e1) {
+						JOptionPane.showMessageDialog(null, e1.getLocalizedMessage());
+					}
+				}
+			}
 		}
 	}
 	
@@ -1184,6 +1117,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		ProcessModuleWorker(ProcessingModule pm, Iterable<AtomData> data) {
 			this.pm = pm;
 			this.data = data;
+			ProgressMonitor.createNewProgressMonitor(this);
 		}
 		
 		@Override
@@ -1194,12 +1128,15 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 			} catch (Exception e) {
 				JLogPanel.getJLogPanel().addError("Error in processing module", e.getMessage());
 				e.printStackTrace();
-			} finally {
-				ProgressMonitor.getProgressMonitor().destroy();
 			}
 			return null;
 		}
 		
+		@Override
+		protected void done() {
+			super.done();
+			ProgressMonitor.getProgressMonitor().destroy();
+		}
 	}
 	
 	private class JGraphicOptionCheckBoxMenuItem extends JCheckBoxMenuItem{
@@ -1217,6 +1154,47 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 					ro.setEnabled(JGraphicOptionCheckBoxMenuItem.this.isSelected());
 				}
 			});
+		}
+	}
+	
+	private class JChangeSphereSizeActionListener implements ActionListener{
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			final float min = 0.00001f;
+			final float max = 10000f;
+			JPrimitiveVariablesPropertiesDialog d = 
+					new JPrimitiveVariablesPropertiesDialog(JMainWindow.this, "Edit sphere size");
+			FloatProperty defSize = d.addFloat("scale", "Global scaling factor", "Adjust the scaling of all atoms",
+					Math.max(min, Math.min(RenderingConfiguration.getViewer().getSphereSize(), max)), min, max);
+			
+			FloatProperty[] atomScales = new FloatProperty[0];
+			
+			if (Configuration.getCurrentAtomData() != null){
+				CrystalStructure cs = Configuration.getCurrentAtomData().getCrystalStructure();
+				defSize.setDefaultValue(cs.getDistanceToNearestNeighbor()*0.55f);
+				
+				if (cs.getNumberOfElements() > 1){
+					float[] defsizes = cs.getDefaultSphereSizeScalings();
+					float[] sizes = cs.getSphereSizeScalings();
+					String[] names = cs.getNamesOfElements();
+					atomScales = new FloatProperty[sizes.length];
+					d.add(new JSeparator());
+					d.startGroup("Clustering");
+			
+					d.addLabel("Individual scaling");
+					for (int i=0; i<sizes.length; i++){
+						atomScales[i] = d.addFloat("", names[i], "", sizes[i], 0.001f, 1000f);
+						atomScales[i].setDefaultValue(defsizes[i]); 
+					}
+					d.endGroup();
+				}
+			}
+			boolean ok = d.showDialog();
+			if (ok){
+				for (int i=0; i<atomScales.length; i++)
+					Configuration.getCurrentAtomData().getCrystalStructure().setSphereSizeScalings(i, atomScales[i].value);
+				RenderingConfiguration.getViewer().setSphereSize(defSize.value);
+			}
 		}
 	}
 }
