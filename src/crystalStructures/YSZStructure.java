@@ -60,7 +60,7 @@ public class YSZStructure extends FCCStructure {
 	
 	@Override
 	public int getNumberOfTypes() {
-		return 8;
+		return 9;
 	}
 	
 	@Override
@@ -92,7 +92,7 @@ public class YSZStructure extends FCCStructure {
 				neigh.add(neighAtoms.get(i).o2);
 		}
 		if (neigh.size()<10){
-			if (neigh.size()<6) return 7;
+			if (neigh.size()<6) return 8;
 			//Test if all atoms are located almost in a half-space of the center atom
 			//Compute the sum of all neighbor vectors and negate 
 			Vec3 con = new Vec3();
@@ -107,14 +107,14 @@ public class YSZStructure extends FCCStructure {
 				if (con.dot(n.normalizeClone())>0.35f)
 					surface = false;
 			}
-			if (surface) return 6;
+			if (surface) return 7;
 		}
-		if (neigh.size()<12) return 4;
-		if (neigh.size()>12) return 5;
+		if (neigh.size()>12) return 6;
 		
 		int co_x0 = 0;
 		int co_x1 = 0;
 		int co_x2 = 0;
+		int co_x3 = 0;
 		for (int i = 0; i < neigh.size(); i++) {
 			Vec3 v = neigh.get(i);
 			float v_length = v.getLength();
@@ -126,25 +126,30 @@ public class YSZStructure extends FCCStructure {
 				if (a < -0.945f) co_x0++; // 0.945
 				else if (a < -.915f) co_x1++;
 				else if (a < -.775f) co_x2++; // 0.755
+				else if (a < 0.573576436f) co_x3++;
+				
 			}
 		}
 		
 		if (co_x0 == 6) return 1;
-		else if (co_x0 == 3 && co_x1 <= 1 && co_x2 > 2) return 2;
-		else return 3;
+		else if (co_x0 == 5 && co_x3>=3) return 2;
+		else if (co_x0 == 3 && co_x1 <= 1 && co_x2 > 2) return 3;
+		else if (neigh.size()<12) return 5;
+		else return 4;
 	}
 
 	@Override
 	public String getNameForType(int i) {
 		switch(i){
 		case 0 : return "Oxygen";
-		case 1 : return "FCC";
-		case 2 : return "HCP";
-		case 3 : return "12 neigbors";
-		case 4 : return "<12 neighbors";
-		case 5 : return ">12 neighbors";
-		case 6 : return "surface";
-		case 7 : return "<6 neighbors";
+		case 1 : return "Cubic YSZ";
+		case 2 : return "Tetra. YSZ (?)";
+		case 3 : return "HCP";
+		case 4 : return "12 neigbors";
+		case 5 : return "<12 neighbors";
+		case 6 : return ">12 neighbors";
+		case 7 : return "surface";
+		case 8 : return "<6 neighbors";
 		default: return "unknown";
 		}
 	}
