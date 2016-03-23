@@ -89,7 +89,7 @@ public class CellRenderBufferRing {
 			gl.glGenBuffers(1, buf, 0);
 	
 			gl.glBindBuffer(bufferType, buf[0]);
-			gl.glBufferData(bufferType, size, null, GL3.GL_STREAM_DRAW);
+			gl.glBufferData(bufferType, size, null, GL3.GL_DYNAMIC_DRAW);
 			gl.glBindBuffer(bufferType, 0);
 	
 			this.buffer = buf[0];
