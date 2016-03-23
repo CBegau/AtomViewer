@@ -9,7 +9,7 @@ import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Stack;
 
-import javax.media.opengl.GL3;
+import com.jogamp.opengl.GL3;
 
 import com.jogamp.common.nio.Buffers;
 
@@ -22,16 +22,17 @@ public class Shader {
 	public final static int ATTRIB_CUSTOM1 = 5;
 	public final static int ATTRIB_CUSTOM2 = 6;
 	public final static int ATTRIB_CUSTOM3 = 7;	
-	public final static int ATTRIB_VERTEX_OFFSET = 7;
+	public final static int ATTRIB_VERTEX_OFFSET = 8;
 	
 	public final static int FRAG_COLOR = 0;
 	public final static int FRAG_NORMAL = 1;
 	public final static int FRAG_POSITION = 2;
 	
-	private static String[] vertexArrayColorUniformVertexShader = {
-		"#version 150\n"+
+	private final static String defaultVertexShaderUniformColor = 
 		"in vec3 v;" +
+		"in vec2 Tex;" +
 		"out vec4 FrontColor;" +
+		"out vec2 TexCoord0;" +
 		
 		"uniform vec4 Color;" +
 		"uniform mat4 mvpm;"+
@@ -40,11 +41,11 @@ public class Shader {
 		"{"+
 		"gl_Position = mvpm * vec4(v,1);"+
 		"FrontColor  = Color;"+
+		"TexCoord0   = Tex;"+
 		"}"
-	};
+	;
 	
-	private static String[] defaultVertexShader = {
-		"#version 150\n"+
+	private final static String defaultVertexShader = 
 		"in vec4 Color;" +
 		"in vec3 v;" +
 		"in vec2 Tex;" +
@@ -59,10 +60,9 @@ public class Shader {
 		"FrontColor  = Color;"+
 		"TexCoord0   = Tex;"+
 		"}"
-	};
+	;
 	
-	private static String[] anaglyphFragmentShader = {
-		"#version 150\n"+
+	private final static String anaglyphFragmentShader = 
 		"uniform sampler2D left;"+
 		"uniform sampler2D right;"+
 		"uniform sampler2D back;"+
@@ -84,31 +84,29 @@ public class Shader {
 		   "vFragColor.a = 1.0;"+
 		"}"+
 		"}"
-	};
+	;
 		
-	private static String[] simpleColorFragmentShader = {
-		"#version 150\n"+
+	private final static String simpleColorFragmentShader = 
 		"in vec4 FrontColor;"+
 		"out vec4 vFragColor;"+
 		
 		"void main(void) {"+
 			"vFragColor   = FrontColor;"+
 		"}"
-	};
+	;
 	
-	private static String[] simpleTextureShader = {
-		"#version 150\n"+
+	private final static String simpleTextureShader = 
 		"uniform sampler2D Texture0;"+
+		"in vec4 FrontColor;" +
 		"in vec2 TexCoord0;"+
 		"out vec4 vFragColor;"+
 		
 		"void main(void) {"+
-			"vFragColor   = texture(Texture0, TexCoord0.xy);"+
+			"vFragColor   = texture(Texture0, TexCoord0.xy)*FrontColor;"+
 		"}"
-	};	
+	;	
 	
-	private static String[] defaultPPLVertexShaderUniformColor = {
-		"#version 150\n"+
+	private final static String defaultPPLVertexShaderUniformColor = 
 		"in vec3 v;"+
 		"in vec3 norm;"+
 		"uniform vec4 Color;"+
@@ -128,11 +126,9 @@ public class Shader {
 		"  lightvec       = normalize(lightPos - v);\n"+
 		"  gl_Position    = mvpm * vp;\n"+
 		"}"
-	};
+	;
 	
-	private static String[] passThroughDeferredVertexShader = {
-		"#version 150\n"+
-	
+	private final static String passThroughDeferredVertexShader = 
 		"in vec3 v;"+
 		"in vec3 norm;"+
 		"uniform vec4 Color;"+
@@ -150,56 +146,63 @@ public class Shader {
 		"  normal         = normalize(nm*norm);\n"+
 		"  gl_Position    = mvpm * position;\n"+
 		"}"
-	};
+	;
 	
-	private static String[] pplFragmentwithADSShader = {
-		"#version 150\n"+
+	private final static String passThroughDeferredColorVertexShader = 
+		"in vec3 v;"+
+		"in vec3 norm;"+
+		"in vec3 Color;"+
+		
+		"out vec4 FrontColor;"+
+		"out vec3 normal;"+
+		"out vec4 position;"+
+		
+		"uniform mat3 nm;"+
+		"uniform mat4 mvpm;"+
+
+		"void main(void) {"+
+		"  FrontColor     = vec4(Color,1.);\n"+
+		"  position       = vec4(v, 1.);\n"+
+		"  normal         = normalize(nm*norm);\n"+
+		"  gl_Position    = mvpm * position;\n"+
+		"}"
+	;
+	
+	private final static String pplFragmentwithADSShader = 
 		"in vec3 lightvec;"+
 		"in vec3 normal;"+
 		"in vec4 FrontColor;"+
 		"out vec4 vFragColor;"+
 		
-		"uniform int picking;"+
+		"uniform int noShading;"+
 		"uniform int ads;"+
-		
+			
 		"void main(void) {"+
-		"  if (picking == 1){\n"+
-		"    vFragColor = FrontColor;\n"+
-		"  } else { \n"+
+		"  vFragColor = FrontColor;\n"+
+		"  if (noShading != 1){\n"+
 		"    vec3 norm = normalize(normal);"+
 		"    vec3 lv = normalize(lightvec);"+
-		
+		"    float ambient = 0.5 - ads*0.2;"+
 		"    if (ads == 1){\n"+
 		"      float diff = max(0.0, dot(norm, lv));"+
-		"      vFragColor = vec4(diff+0.3,diff+0.3,diff+0.3, 1.) * FrontColor;"+
 		"      vec3 vReflection = normalize(reflect(-lv, norm));"+
 		"      float spec = max(0.0, dot(norm, vReflection));"+
 		"      float fSpec = pow(spec, 96.0);"+
-		"      vFragColor.rgb += vec3(fSpec, fSpec, fSpec);"+
+		"      vFragColor.rgb *= vec3(diff+ambient);"+
+		"      vFragColor.rgb += vec3(fSpec);"+
 		"    } else {\n"+
-		"      vFragColor.rgb = (max(dot(norm, lv), 0.) + 0.5) * FrontColor.rgb;"+
-		"      vFragColor.a = FrontColor.a;"+
+		"      vFragColor.rgb *= (max(dot(norm, lv), 0.) + ambient);"+
 		"    }\n"+
 		"  }\n"+
 		"}"
-	};
+	;
 	
-	
-	private static String[] deferredADSFragmentShader = {
-		"#version 150\n"+
-
-		"uniform sampler2D posTexture;"+
+	private final static String ssaoFragmentShader = 
 		"uniform sampler2D normalTexture;"+
 		"uniform sampler2D colorTexture;"+
 		
 		"in vec2 TexCoord0;"+
 		"out vec4 vFragColor;"+
-		
-		"uniform int picking;"+
-		"uniform int ads;"+
-		
-		"uniform mat4 mvm;"+
-		"uniform vec3 lightPos;"+
 		
 		//SSAO uniforms
         "uniform sampler2D noiseTexture;"+
@@ -209,8 +212,6 @@ public class Shader {
         "uniform float ssaoRad;\n"+
         "uniform float ssaoOffset = 5.25;"+
         
-		"uniform int ambientOcclusion;\n"+
-		
 		"const int SAMPLES = 10;"+
 		"const float invSamples = 1.0/SAMPLES;"+
 		
@@ -258,40 +259,94 @@ public class Shader {
 		
 		"void main(void) {"+
 		"  vec4 FrontColor = texture(colorTexture, TexCoord0.st);"+
-		"  vec4 normTexel;"+
-		"  gl_FragDepth = 1.;"+
-		"  if (FrontColor.a < 0.05) {"+
-		"    return;"+
-		"  } else {"+
-		"    normTexel = texture(normalTexture, TexCoord0.st);"+
-		"    gl_FragDepth = normTexel[3];"+			// normal[3] is the depth value
-		"  }"+
+		"  vec4 normTexel = texture(normalTexture, TexCoord0.st);"+
+		"  vFragColor.a = 1.;"+
+		//Assign color if alpha > 0.05, otherwise the value is 0.
+		"  vFragColor.rgb = vec3(occlusion(normTexel) * FrontColor.a) * step(0.05, FrontColor.a);"+
+		"}"
+	;
+	
+	
+	private final static String blurShader = 
+		"in vec2 TexCoord0;"+
+		"out vec4 vFragColor;"+
+
+		//declare uniforms
+		"uniform sampler2D tex; "+
+		"uniform vec2 resolution; "+
+		"uniform float radius; "+
+		"uniform vec2 dir; \n"+
+
+		"void main() {																					"+
+		"    vec4 sum = vec4(0.0);                                                                      "+
+        "                                                                                               "+
+		"    vec2 tc =TexCoord0;                                                                        "+
+        "                                                                                               "+
+		"    float blur = radius/dot(resolution,dir);                                                   "+
+        "                                                                                               "+
+		"    float hstep = dir.x;                                                                       "+
+		"    float vstep = dir.y;                                                                       "+
+        "                                                                                               "+
+		"    sum += texture(tex, vec2(tc.x - 4.0*blur*hstep, tc.y - 4.0*blur*vstep)) * 0.0162162162;    "+
+		"    sum += texture(tex, vec2(tc.x - 3.0*blur*hstep, tc.y - 3.0*blur*vstep)) * 0.0540540541;    "+
+		"    sum += texture(tex, vec2(tc.x - 2.0*blur*hstep, tc.y - 2.0*blur*vstep)) * 0.1216216216;    "+
+		"    sum += texture(tex, vec2(tc.x - 1.0*blur*hstep, tc.y - 1.0*blur*vstep)) * 0.1945945946;    "+
+        "                                                                                               "+
+		"    sum += texture(tex, vec2(tc.x, tc.y)) * 0.2270270270;                                      "+
+        "                                                                                               "+
+		"    sum += texture(tex, vec2(tc.x + 1.0*blur*hstep, tc.y + 1.0*blur*vstep)) * 0.1945945946;    "+
+		"    sum += texture(tex, vec2(tc.x + 2.0*blur*hstep, tc.y + 2.0*blur*vstep)) * 0.1216216216;    "+
+		"    sum += texture(tex, vec2(tc.x + 3.0*blur*hstep, tc.y + 3.0*blur*vstep)) * 0.0540540541;    "+
+		"    sum += texture(tex, vec2(tc.x + 4.0*blur*hstep, tc.y + 4.0*blur*vstep)) * 0.0162162162;    "+
+        "                                                                                               "+
+		"    vFragColor = vec4(sum.rgb, 1.0);                                                           "+
+		"}                                                                                              "
+	;
+	
+	private final static String deferredADSFragmentShader = 
+		"uniform sampler2D posTexture;"+
+		"uniform sampler2D normalTexture;"+
+		"uniform sampler2D colorTexture;"+
 		
-		"  if (picking == 1){\n"+
-		"    vFragColor = FrontColor;\n"+
-		"  } else { \n"+
+		"in vec2 TexCoord0;"+
+		"out vec4 vFragColor;"+
+		
+		"uniform int noShading;"+
+		"uniform int ads;"+
+		
+		"uniform mat4 mvm;"+
+		"uniform vec3 lightPos;"+
+		
+		"uniform int ambientOcclusion = 0;"+
+		"uniform sampler2D occlusionTexture;"+
+			
+		"void main(void) {"+
+		"  vec4 FrontColor = texture(colorTexture, TexCoord0.st);"+
+		"  vec4 normTexel = texture(normalTexture, TexCoord0.st);"+
+		"  vFragColor = FrontColor;\n"+
+		"  gl_FragDepth = 1.;"+
+		
+		"  if (noShading != 1) { \n"+
 		"    vec4 position = texture(posTexture, TexCoord0.st);"+
 		"    vec3 norm = normTexel.xyz;"+
-		"    float occ = 0.; if (ambientOcclusion==1) occ = occlusion(normTexel) ;"+
 		"    vec3 v = (mvm*position).xyz;"+
 		"    vec3 lv = normalize(lightPos - v);"+
-		"    if (ads == 1){\n"+
-		"      float diff = max(0.0, dot(norm, lv)-occ);"+
-		"      vFragColor = vec4(diff+0.3,diff+0.3,diff+0.3, 1.) * FrontColor;"+
-		"      float spec = max(0.0, dot(norm, reflect(-lv, norm))-occ);"+
-		"      float fSpec = pow(spec, 96.0);"+
-		"      vFragColor.rgb += vec3(fSpec, fSpec, fSpec);"+
-		"    } else {\n"+
-		"      vFragColor.rgb = (max(dot(norm, lv)-occ, 0.) + 0.5) * FrontColor.rgb;"+
-		"      vFragColor.a = FrontColor.a;"+
-		"    }\n"+
-		"  }\n"+
-		"}"
-	};
-	
-	private static String[] toGBufferFragmentShader = {
-		"#version 150\n"+
+		//ambient, diffusion and occlusion factors for lighting
+		"	 float occ = ambientOcclusion==1 ? texture(occlusionTexture, TexCoord0.st).r : 0.;"+
+		"    float diff = max(0.0, dot(norm, lv));"+
+		//In case of specular lighting use an ambient factor of 0.5 otherwise 0.3
+		"    float ambient = 0.5 - ads*0.2;"+
+		//Multiply specular value with the ads uniform, disables effect if required
+		"    float spec = max(0.0, dot(norm, reflect(-lv, norm)))*ads;"+
+		"    float fSpec = pow(spec, 96.0);"+
+		"    vFragColor.rgb = (vFragColor.rgb*(diff+ambient) + fSpec)-occ;"+
 		
+		"  }\n"+
+		"  gl_FragDepth = FrontColor.a>0 ? normTexel[3] : 1.;"+			// normal[3] is the depth value
+		"}"
+	;
+	
+	private final static String toGBufferFragmentShader = 
 		"in vec3 normal;"+
 		"in vec4 FrontColor;"+
 		"in vec4 position;"+
@@ -304,17 +359,22 @@ public class Shader {
 		"  vFragNormal = vec4(normalize(normal), gl_FragCoord.z);"+
 		"  vFragPosition = position;\n"+		
 		"}"
-	};
+	;
 	
-	private static String[] translateBillboardVertexInstancedShaderDeferred = {
-		"#version 150\n"+
-		"in vec4 Move;"+
-		"in vec4 Color;"+
+	private final static String translateBillboardVertexShaderDeferred = 
+		"#ifdef INSTANCED\n"+
+		"  in vec4 Move;"+
+		"  in vec4 Color;\n"+
+		"#else\n"+
+		"  uniform vec4 Move;"+
+		"  uniform vec4 Color;\n"+
+		"#endif\n"+		
+
 		"in vec3 p;"+
 		"in vec2 tex;"+
-		"out vec2 vTexCoord;"+
-		"out vec4 FrontColor;"+
-		"out vec4 pos;"+
+		"noperspective out vec2 vTexCoord;"+
+		"flat out vec4 FrontColor;"+
+		"flat out vec4 pos;"+
 		
 		"uniform mat4 mvpm;"+
 
@@ -324,32 +384,15 @@ public class Shader {
 		"  vTexCoord      = tex;"+
 		"  pos            = Move;"+
 		"}"
-	};
+	;
 	
-	private static String[] translateBillboardVertexShaderDeferred = {
-		"#version 150\n"+
-		"uniform vec4 Move;"+
-		"uniform vec4 Color;"+
-		"in vec3 p;"+
-		"in vec2 tex;"+
-		"out vec2 vTexCoord;"+
-		"out vec4 FrontColor;"+
-		"uniform mat4 mvpm;"+
-		"out vec4 pos;"+
-
-		"void main(void) {"+
-		"  FrontColor     = Color;"+
-		"  gl_Position    = mvpm * (vec4(p*Move[3] + Move.xyz,1.));"+
-		"  vTexCoord      = tex;"+
-		"  pos            = Move;"+
-		"}"
-	};
-	
-	private static String[] billboardFragmentShaderDeferred = {
-		"#version 150\n"+
-		"in vec4 pos;"+
-		"in vec2 vTexCoord;"+
-		"in vec4 FrontColor;"+
+	private final static String billboardFragmentShaderDeferred = 
+		"#if __VERSION__>=420\n"+	
+		"layout(early_fragment_tests) in;\n"+
+		"#endif\n"+
+		"flat in vec4 pos;"+
+		"flat in vec4 FrontColor;"+
+		"noperspective in vec2 vTexCoord;"+
 		
 		"out vec4 vFragNormal;"+
 		"out vec4 vFragColor;"+
@@ -366,12 +409,15 @@ public class Shader {
 		"  vFragPosition = vec4(pos.xyz ,1.) ;\n"+
 		"  vFragNormal   = vec4(normal, gl_FragCoord.z);\n"+
 		"}"
-	};
+	;
 	
-	private static String [] billboardFragmentShaderDeferredPerfectSphereBase = {
-		"in vec4 pos;"+
-		"in vec2 vTexCoord;"+
-		"in vec4 FrontColor;"+
+	private final static String billboardFragmentShaderDeferredPerfectSphere = 
+		"#if __VERSION__>=420\n"+	
+		"layout (depth_less) out float gl_FragDepth;\n"+
+		"#endif\n"+
+		"flat in vec4 pos;"+
+		"flat in vec4 FrontColor;"+
+		"noperspective in vec2 vTexCoord;"+
 		
 		"out vec4 vFragNormal;"+
 		"out vec4 vFragColor;"+
@@ -405,21 +451,9 @@ public class Shader {
 		
 		"  vFragNormal   = vec4(normal, depth);\n"+
 		"}"
-	};
+	;
 	
-	private static String[] billboardFragmentShaderDeferredPerfectSphere = {
-		"#version 150\n"+
-		billboardFragmentShaderDeferredPerfectSphereBase[0]
-	};
-	
-	private static String[] billboardFragmentShaderDeferredPerfectSphereGL42 = {
-		"#version 420\n"+
-		"layout (depth_less) out float gl_FragDepth;"+
-		billboardFragmentShaderDeferredPerfectSphereBase[0]
-	};
-	
-	private static String[] arrowVertexShader = {
-		"#version 150\n"+
+	private final static String arrowVertexShader = 
 		"uniform vec3 Direction;"+
 		"uniform vec3 Origin;"+
 		"uniform vec4 Color;"+
@@ -442,15 +476,18 @@ public class Shader {
 		
 		"  vec3 u;\n"+
 		"  vec3 d = normalize(Direction);\n"+
-		"  if (abs(d[0]) >= abs(d[1])){\n"+
-		"    u[0] = d[2];\n"+
-		"    u[1] = 0.;\n"+
-		"    u[2] = -d[0];\n"+
-		"  } else {\n"+
-		"    u[0] = 0.;\n"+
-		"    u[1] = d[2];\n"+
-		"    u[2] = -d[1];\n"+
-		"  }\n"+
+
+		//Create a normal vector u on d, that is not the null vector 
+		//unless d is the null vector
+//		Implementation using branching		
+//		"  if (abs(d[0]) >= abs(d[1])) u = vec3(d[2], 0., -d[0]);"
+//		"  else u = vec3(0, d[2], u[2]);"
+		//Implementation without branching
+		"  float s = step(d[1], d[0]);"+
+		"  u[0] = ( d[2] * s) + (  0.  * (1.-s));\n"+
+		"  u[1] = (  0.  * s) + ( d[2] * (1.-s));\n"+
+		"  u[2] = (-d[0] * s) + (-d[1] * (1.-s));\n"+
+		
 		"  u = normalize(u);\n"+
 		"  vec3 v = normalize(cross(Direction,u));\n"+
 		"  vec3 shift = d * (Dimensions[3]-2.*Dimensions[1]);\n"+
@@ -466,38 +503,45 @@ public class Shader {
 		"  lightvec       = normalize(lightPos - vert);\n"+
 		"  gl_Position    = mvpm * vec4(vp,1.);\n"+
 		"}"
-	};
+	;
 	
-	private static String[] arrowVertexShaderDeferred = {
-		"#version 150\n"+
-		"uniform vec3 Direction;"+
-		"uniform vec3 Origin;"+
-		"uniform vec4 Color;"+
-		"uniform vec4 Dimensions;"+
-		"uniform mat3 nm;"+
-		"uniform mat4 mvpm;"+
-		
+	private final static String arrowVertexShaderDeferred = 
+		"#ifdef INSTANCED\n"+
+		"  in vec3 Direction;"+
+		"  in vec3 Origin;"+
+		"  in vec4 Color;"+
+		"  in vec4 Dimensions;\n"+
+		"#else\n"+
+		"  uniform vec3 Direction;"+
+		"  uniform vec3 Origin;"+
+		"  uniform vec4 Color;"+
+		"  uniform vec4 Dimensions;\n"+
+		"#endif\n"+
 		"in vec2 p;"+
 		"in vec3 norm;"+
 		"in vec4 scalings;"+
 		"out vec4 position;"+
 		"out vec3 normal;"+
 		"out vec4 FrontColor;"+
+		"uniform mat3 nm;"+
+		"uniform mat4 mvpm;"+
 		
 		"void main(void) {"+
 		
 		"  vec3 u;\n"+
 		"  vec3 d = normalize(Direction);\n"+
-		"  if (abs(d[0]) >= abs(d[1])){\n"+
-		"    u[0] = d[2];\n"+
-		"    u[1] = 0.;\n"+
-		"    u[2] = -d[0];\n"+
-		"  } else {\n"+
-		"    u[0] = 0.;\n"+
-		"    u[1] = d[2];\n"+
-		"    u[2] = -d[1];\n"+
-		"  }\n"+
+		//Create a normal vector u on d, that is not the null vector 
+		//unless d is the null vector
+//		Implementation using branching		
+//		"  if (abs(d[0]) >= abs(d[1])) u = vec3(d[2], 0., -d[0]);"
+//		"  else u = vec3(0, d[2], u[2]);"
+		//Implementation without branching
+		"  float s = step(d[1], d[0]);"+
+		"  u[0] = ( d[2] * s) + (  0.  * (1.-s));\n"+
+		"  u[1] = (  0.  * s) + ( d[2] * (1.-s));\n"+
+		"  u[2] = (-d[0] * s) + (-d[1] * (1.-s));\n"+
 		"  u = normalize(u);\n"+
+		
 		"  vec3 v = normalize(cross(Direction,u));\n"+
 		"  vec3 shift = d * (Dimensions[3]-2.*Dimensions[1]);\n"+
 		
@@ -511,47 +555,46 @@ public class Shader {
 		"  position       = vec4(vp,1.);\n"+
 		"  gl_Position    = mvpm * position;\n"+
 		"}"
-	};
+	;
 	
+	private final static String instancedMacro =
+		"#define INSTANCED 1\n"
+	;
 	
-	private static String[] fxaaVertexShader = {
-		"#version 150\n"+
+	private final static String fxaaVertexShader =
 		"in vec3 v;" +
 		"in vec2 Tex;" +
 		"out vec2 TexCoord0;" +
 		"out vec4 posPos;"+
+		"out vec2 rcpFrame;"+
 		
 		"uniform mat4 mvpm;"+
 		
 		"uniform float FXAA_SUBPIX_SHIFT = 1.0/4.0;"+
-		"uniform float rt_w;"+
-		"uniform float rt_h;"+
+		"uniform vec2 resolution; "+
 		
 		"void main(void)"+
 		"{"+
 		"gl_Position = mvpm * vec4(v,1);"+
 		"TexCoord0   = Tex;"+
-		"vec2 rcpFrame = vec2(1.0/rt_w, 1.0/rt_h);"+
+		"rcpFrame = 1.0/resolution;"+
 		"posPos.xy = TexCoord0.xy;"+
 		"posPos.zw = TexCoord0.xy - (rcpFrame * (0.5 + FXAA_SUBPIX_SHIFT));"+
 		"}"
-	};
+	;
 	
-	private static String[] fxaaFragmentShader = {
-		"#version 150\n"+
-		
+	private final static String fxaaFragmentShader =
 		"in vec2 TexCoord0;"+
 		"in vec4 posPos;\n"+
+		"in vec2 rcpFrame;"+
 		"out vec4 vFragColor;"+
 		
 		"uniform sampler2D Texture0;"+
 		
-		"uniform float rt_w; \n"+
-		"uniform float rt_h; \n"+
+		"uniform vec2 resolution; "+
 		"uniform float FXAA_SPAN_MAX = 8.0;\n"+
 		"uniform float FXAA_REDUCE_MUL = 1.0/8.0;\n"+
 
-		
 		"#define FxaaInt2 ivec2\n"+
 		"#define FxaaFloat2 vec2\n"+
 		
@@ -607,7 +650,6 @@ public class Shader {
 		"vec4 PostFX(sampler2D tex, vec2 uv)\n"+
 		"{\n"+
 		"  vec4 c = vec4(0.0);\n"+
-		"  vec2 rcpFrame = vec2(1.0/rt_w, 1.0/rt_h);\n"+
 		"  c.rgb = FxaaPixelShader(posPos, tex, rcpFrame);\n"+
 		"  c.a = 1.0;\n"+
 		"  return c;\n"+
@@ -618,12 +660,12 @@ public class Shader {
 		"vFragColor =  PostFX(Texture0, TexCoord0.st);"+
 		"vFragColor.a =  1.0;"+
 		"}"
-	};
+	;
 
 	private static Shader lastUsedShader = null;
 	
-	private static Stack<Shader> shaderStack = new Stack<Shader>();
-	private static ArrayList<Shader> allKnownShader = new ArrayList<Shader>();
+	private static final Stack<Shader> shaderStack = new Stack<Shader>();
+	private static final ArrayList<Shader> allKnownShader = new ArrayList<Shader>();
 	
 	private static boolean initializedShader = false;
 	
@@ -631,7 +673,7 @@ public class Shader {
 	private String[] vertexShader, fragmentShader;
 	private int[] indices;
 	private String[] attribs;
-	private double minGLversion = 3.2f;
+	private int alternatePathGLSLVersion = 150;
 	
 	public Shader(String[] vertexShader, String[] fragmentShader, int[] indices, String[] attribs){
 		this.vertexShader = vertexShader;
@@ -640,25 +682,25 @@ public class Shader {
 		this.attribs = attribs;
 	}
 	
-	public Shader(String[] vertexShader, String[] fragmentShader, int[] indices, String[] attribs, double minGLVersion){
+	public Shader(String[] vertexShader, String[] fragmentShader, int[] indices, String[] attribs, int alternatePathGLSLVersion){
 		this(vertexShader, fragmentShader, indices,attribs);
-		this.minGLversion = minGLVersion;
+		this.alternatePathGLSLVersion = alternatePathGLSLVersion;
 	}
 	
 	public void compile(GL3 gl){
 		String glVersion = gl.glGetString(GL3.GL_VERSION);
 		glVersion = glVersion.substring(0, 3);
-		double openGLVersion = Double.parseDouble(glVersion);
-		if (openGLVersion >= minGLversion)
-			shaderProgram = createShaderProgram(vertexShader, fragmentShader, gl, indices, attribs);
+		int openGLVersion = (int)(Double.parseDouble(glVersion)*100);
+		
+		int version = 150;
+		if (openGLVersion >= alternatePathGLSLVersion)
+			version = alternatePathGLSLVersion;
+			
+		shaderProgram = createShaderProgram(vertexShader, fragmentShader, gl, indices, attribs, version);
 	}
 	
 	public void delete(GL3 gl){
 		if (shaderProgram != -1) gl.glDeleteProgram(shaderProgram);
-	}
-	
-	public boolean isAvailable(){
-		return (shaderProgram!=-1);
 	}
 	
 	public int getProgram(){
@@ -676,14 +718,24 @@ public class Shader {
 	
 	public void enable(GL3 gl){
 		if (lastUsedShader == this) return;
-		disableLastUsedShader(gl);
+		
+		//Figure out which VertexAttribArrays must be enabled and which disabled
+		ArrayList<Integer> toEnable = new ArrayList<Integer>();
+		ArrayList<Integer> toDisable = new ArrayList<Integer>();
+		if (lastUsedShader!=null) for (int i: lastUsedShader.indices) toDisable.add(i);
+		for (int i: this.indices) toEnable.add(i);
+
+		toDisable.removeAll(toEnable);
+		toEnable.removeAll(toDisable);
+
+		for (int i: toDisable)
+			gl.glDisableVertexAttribArray(i);
+		
+		for (int i: toEnable)
+			gl.glEnableVertexAttribArray(i);
 		
 		gl.glUseProgram(this.shaderProgram);
 		lastUsedShader = this;
-		
-		for (int i: indices){
-			gl.glEnableVertexAttribArray(i);
-		}
 	}
 	
 	public static Shader popShader(){
@@ -718,10 +770,9 @@ public class Shader {
 			allKnownShader.clear();
 		}
 		
-		for (BuiltInShader s : BuiltInShader.values()){ 
+		for (BuiltInShader s : BuiltInShader.values()){			
 			s.getShader().compile(gl);
-			if (s.getShader().isAvailable())
-				allKnownShader.add(s.getShader());
+			allKnownShader.add(s.getShader());
 		}
 		
 		initializedShader = true;
@@ -741,22 +792,34 @@ public class Shader {
 	}
 	
 	private static int createShaderProgram(String[] vertexShader, String[] fragmentShader, GL3 gl){
-		return createShaderProgram(vertexShader, fragmentShader, gl, new int[0], new String[0]);
+		return createShaderProgram(vertexShader, fragmentShader, gl, new int[0], new String[0], 150);
 	}
 	
 	
-	private static int createShaderProgram(String[] vertexShader, String[] fragmentShader, GL3 gl, int[] indices, String[] attribs){
+	private static int createShaderProgram(String[] vertexShader, String[] fragmentShader, GL3 gl,
+			int[] indices, String[] attribs, int version){
 		if (indices.length != attribs.length){
 			System.out.println("Number of  indices mismatches number of attributes");
 			System.exit(1);
 		}
-			
+
+		//Include shader version at the first position
+		String[] vs = new String[vertexShader.length+1];
+		String[] fs = new String[fragmentShader.length+1];
+		vs[0] = "#version "+Integer.toString(version)+"\n";
+		fs[0] = "#version "+Integer.toString(version)+"\n";
+		
+		for (int i=1; i<vs.length; i++) 
+			vs[i] = vertexShader[i-1];
+		for (int i=1; i<fs.length; i++) 
+			fs[i] = fragmentShader[i-1];
+		
 		int v = gl.glCreateShader(GL3.GL_VERTEX_SHADER);
 		int f = gl.glCreateShader(GL3.GL_FRAGMENT_SHADER);
 		int program = gl.glCreateProgram();
-		gl.glShaderSource(v, 1, vertexShader, null);
+		gl.glShaderSource(v, vs.length, vs, null);
 		gl.glCompileShader(v);
-		gl.glShaderSource(f, 1, fragmentShader, null);
+		gl.glShaderSource(f, fs.length, fs, null);
 		gl.glCompileShader(f);
 		gl.glAttachShader(program, v);
 		gl.glAttachShader(program, f);
@@ -772,9 +835,9 @@ public class Shader {
 		gl.glLinkProgram(program);
 		gl.glValidateProgram(program);
 		
-		checkShaderLogInfo(gl,v,vertexShader);
-		checkShaderLogInfo(gl,f,fragmentShader);
-		checkShaderLinkingLogInfo(gl, program, vertexShader, fragmentShader);
+		checkShaderLogInfo(gl,v,vs);
+		checkShaderLogInfo(gl,f,fs);
+		checkShaderLinkingLogInfo(gl, program, vs, fs);
 		
 		gl.glDeleteShader(v);
 		gl.glDeleteShader(f);
@@ -800,7 +863,8 @@ public class Shader {
 				System.out.println("ERROR: Shader Compilation Error\n");
 				System.out.print(out);
 				System.out.println();
-				System.out.print(shaderCode[0]);
+				for (String s : shaderCode)
+					System.out.print(s);
 				System.exit(0);
 			}
 		}
@@ -823,8 +887,10 @@ public class Shader {
 				System.out.println("ERROR: Shader Linking Error\n");
 				System.out.print(out);
 				System.out.println();
-				System.out.print(vShaderCode[0]);
-				System.out.print(vShaderCode[1]);
+				for (String s : vShaderCode)
+					System.out.print(s);
+				for (String s : fShaderCode)
+					System.out.print(s);
 				System.exit(0);
 			}
 		}
@@ -865,48 +931,111 @@ public class Shader {
 	
 	public enum BuiltInShader {
 		//Shader for forward rendering
-		VERTEX_ARRAY_COLOR_UNIFORM(vertexArrayColorUniformVertexShader, simpleColorFragmentShader,
-				new int[]{ATTRIB_VERTEX}, new String[]{"v"}),
-		NO_LIGHTING(defaultVertexShader, simpleColorFragmentShader,
-				new int[]{ATTRIB_VERTEX, ATTRIB_COLOR}, new String[]{"v", "Color"}),
-		PLAIN_TEXTURED(defaultVertexShader, simpleTextureShader,
-				new int[]{ATTRIB_VERTEX, ATTRIB_TEX0}, new String[]{"v", "Tex"}),
-		ADS_UNIFORM_COLOR(defaultPPLVertexShaderUniformColor, pplFragmentwithADSShader,
-				new int[]{ATTRIB_VERTEX, ATTRIB_NORMAL}, new String[]{"v", "norm"}),
+		VERTEX_ARRAY_COLOR_UNIFORM(
+				new String[]{defaultVertexShaderUniformColor}, 
+				new String[]{simpleColorFragmentShader},
+				new int[]{ATTRIB_VERTEX}, 
+				new String[]{"v"}),
+		NO_LIGHTING(
+				new String[]{defaultVertexShader},
+				new String[]{simpleColorFragmentShader},
+				new int[]{ATTRIB_VERTEX, ATTRIB_COLOR}, 
+				new String[]{"v", "Color"}),
+		PLAIN_TEXTURED(
+				new String[]{defaultVertexShaderUniformColor},
+				new String[]{simpleTextureShader},
+				new int[]{ATTRIB_VERTEX, ATTRIB_TEX0},
+				new String[]{"v", "Tex"}),
+		ADS_UNIFORM_COLOR(
+				new String[]{defaultPPLVertexShaderUniformColor},
+				new String[]{pplFragmentwithADSShader},
+				new int[]{ATTRIB_VERTEX, ATTRIB_NORMAL},
+				new String[]{"v", "norm"}),
+		ADS_VERTEX_COLOR(
+				new String[]{defaultVertexShader},
+				new String[]{pplFragmentwithADSShader},
+				new int[]{ATTRIB_VERTEX, ATTRIB_NORMAL, ATTRIB_COLOR},
+				new String[]{"v", "norm", "Color"}),
 		
 		//Render from deferred buffers
-		DEFERRED_ADS_RENDERING(defaultVertexShader, deferredADSFragmentShader,
-						new int[]{ATTRIB_VERTEX, ATTRIB_TEX0}, new String[]{"v", "Tex"}),
+		DEFERRED_ADS_RENDERING(
+				new String[]{defaultVertexShader},
+				new String[]{deferredADSFragmentShader},
+				new int[]{ATTRIB_VERTEX, ATTRIB_TEX0},
+				new String[]{"v", "Tex"}),
 		//Rendering into deferred buffer
-		UNIFORM_COLOR_DEFERRED(passThroughDeferredVertexShader, toGBufferFragmentShader,
-				new int[]{ATTRIB_VERTEX, ATTRIB_NORMAL}, new String[]{"v", "norm"}),
-				
+		UNIFORM_COLOR_DEFERRED(
+				new String[]{passThroughDeferredVertexShader},
+				new String[]{toGBufferFragmentShader},
+				new int[]{ATTRIB_VERTEX, ATTRIB_NORMAL},
+				new String[]{"v", "norm"}),
+		VERTEX_COLOR_DEFERRED(
+				new String[]{passThroughDeferredColorVertexShader},
+				new String[]{toGBufferFragmentShader},
+				new int[]{ATTRIB_VERTEX, ATTRIB_NORMAL, ATTRIB_COLOR},
+				new String[]{"v", "norm", "Color"}),		
 		
-		//Shader for specialized objects like spheres and arrows
-		BILLBOARD_INSTANCED_DEFERRED(translateBillboardVertexInstancedShaderDeferred, billboardFragmentShaderDeferred, 
-				new int[]{ATTRIB_VERTEX, ATTRIB_COLOR, ATTRIB_VERTEX_OFFSET, ATTRIB_TEX0}, new String[]{"p", "Color", "Move", "tex"}),
-		BILLBOARD_DEFERRED(translateBillboardVertexShaderDeferred, billboardFragmentShaderDeferred, 
-				new int[]{ATTRIB_VERTEX, ATTRIB_TEX0}, new String[]{"p", "tex"}),
-				
-		BILLBOARD_INSTANCED_DEFERRED_PERFECT(translateBillboardVertexInstancedShaderDeferred, 
-				billboardFragmentShaderDeferredPerfectSphere, 
-				new int[]{ATTRIB_VERTEX, ATTRIB_COLOR, ATTRIB_VERTEX_OFFSET, ATTRIB_TEX0}, new String[]{"p", "Color", "Move", "tex"}),
-		BILLBOARD_INSTANCED_DEFERRED_PERFECT_GL4(translateBillboardVertexInstancedShaderDeferred, 
-				billboardFragmentShaderDeferredPerfectSphereGL42, 
-				new int[]{ATTRIB_VERTEX, ATTRIB_COLOR, ATTRIB_VERTEX_OFFSET, ATTRIB_TEX0}, new String[]{"p", "Color", "Move", "tex"}, 4.2),
-		BILLBOARD_DEFERRED_PERFECT(translateBillboardVertexShaderDeferred, billboardFragmentShaderDeferredPerfectSphere, 
-				new int[]{ATTRIB_VERTEX, ATTRIB_TEX0}, new String[]{"p", "tex"}),
+		//Shader for billboarded spheres, depth coordinate approximated by polygon meshes
+		SPHERE_INSTANCED_DEFERRED(
+				new String[]{instancedMacro, translateBillboardVertexShaderDeferred}, 
+				new String[]{billboardFragmentShaderDeferred}, 
+				new int[]{ATTRIB_VERTEX, ATTRIB_COLOR, ATTRIB_VERTEX_OFFSET, ATTRIB_TEX0}, 
+				new String[]{"p", "Color", "Move", "tex"}),
+		SPHERE_DEFERRED(
+				new String[]{translateBillboardVertexShaderDeferred},
+				new String[]{billboardFragmentShaderDeferred}, 
+				new int[]{ATTRIB_VERTEX, ATTRIB_TEX0},
+				new String[]{"p", "tex"}),
+		//Shader for billboarded spheres, depth coordinate computed accurately by distance to center
+		SPHERE_INSTANCED_DEFERRED_PERFECT(
+				new String[]{instancedMacro, translateBillboardVertexShaderDeferred},
+				new String[]{billboardFragmentShaderDeferredPerfectSphere}, 
+				new int[]{ATTRIB_VERTEX, ATTRIB_COLOR, ATTRIB_VERTEX_OFFSET, ATTRIB_TEX0}, 
+				new String[]{"p", "Color", "Move", "tex"}, 
+				420),
+		SPHERE_DEFERRED_PERFECT(
+				new String[]{translateBillboardVertexShaderDeferred},
+				new String[]{billboardFragmentShaderDeferredPerfectSphere}, 
+				new int[]{ATTRIB_VERTEX, ATTRIB_TEX0},
+				new String[]{"p", "tex"}),
 		
-		ARROW(arrowVertexShader, pplFragmentwithADSShader,
-				new int[]{ATTRIB_VERTEX, ATTRIB_CUSTOM1, ATTRIB_CUSTOM0}, new String[]{"p", "norm", "scalings"}),
-		ARROW_DEFERRED(arrowVertexShaderDeferred, toGBufferFragmentShader,
-				new int[]{ATTRIB_VERTEX, ATTRIB_CUSTOM1, ATTRIB_CUSTOM0}, new String[]{"p", "norm", "scalings"}),
-		
-		//Postprocessing shader
-		ANAGLYPH_TEXTURED(defaultVertexShader, anaglyphFragmentShader,
-				new int[]{ATTRIB_VERTEX, ATTRIB_TEX0}, new String[]{"v", "Tex"}),
-		FXAA(fxaaVertexShader, fxaaFragmentShader,
-						new int[]{ATTRIB_VERTEX, ATTRIB_TEX0}, new String[]{"v", "Tex"}),
+		//Different shaders for arrows
+		ARROW(
+				new String[]{arrowVertexShader},
+				new String[]{pplFragmentwithADSShader},
+				new int[]{ATTRIB_VERTEX, ATTRIB_CUSTOM1, ATTRIB_CUSTOM0}, 
+				new String[]{"p", "norm", "scalings"}),
+		ARROW_DEFERRED(
+				new String[]{arrowVertexShaderDeferred},
+				new String[]{toGBufferFragmentShader},
+				new int[]{ATTRIB_VERTEX, ATTRIB_CUSTOM1, ATTRIB_CUSTOM0},
+				new String[]{"p", "norm", "scalings"}),
+		ARROW_INSTANCED_DEFERRED(
+				new String[]{instancedMacro, arrowVertexShaderDeferred},
+				new String[]{toGBufferFragmentShader},
+				new int[]{ATTRIB_VERTEX, ATTRIB_CUSTOM1, ATTRIB_CUSTOM0, ATTRIB_COLOR, ATTRIB_VERTEX_OFFSET, ATTRIB_CUSTOM2, ATTRIB_CUSTOM3}, 
+				new String[]{"p", "norm", "scalings", "Color", "Origin", "Direction", "Dimensions"}),
+		//Full screen processing shader
+		ANAGLYPH_TEXTURED(
+				new String[]{defaultVertexShader},
+				new String[]{anaglyphFragmentShader},
+				new int[]{ATTRIB_VERTEX, ATTRIB_TEX0},
+				new String[]{"v", "Tex"}),
+		FXAA(
+				new String[]{fxaaVertexShader},
+				new String[]{fxaaFragmentShader},
+				new int[]{ATTRIB_VERTEX, ATTRIB_TEX0},
+				new String[]{"v", "Tex"}),
+		SSAO(
+				new String[]{defaultVertexShader},
+				new String[]{ssaoFragmentShader},
+				new int[]{ATTRIB_VERTEX, ATTRIB_TEX0},
+				new String[]{"v", "Tex"}),
+		BLUR(
+				new String[]{defaultVertexShader},
+				new String[]{blurShader},
+				new int[]{ATTRIB_VERTEX, ATTRIB_TEX0},
+				new String[]{"v", "Tex"}),
 		;
 		private Shader s;
 		
@@ -914,8 +1043,8 @@ public class Shader {
 			s = new Shader(vertexShader, fragmentShader, indices, attribs);
 		}
 		
-		private BuiltInShader(String[] vertexShader, String[] fragmentShader, int[] indices, String[] attribs, double minGL){
-			s = new Shader(vertexShader, fragmentShader, indices, attribs, minGL);
+		private BuiltInShader(String[] vertexShader, String[] fragmentShader, int[] indices, String[] attribs, int glslVersion){
+			s = new Shader(vertexShader, fragmentShader, indices, attribs, glslVersion);
 		}
 		
 		public Shader getShader(){

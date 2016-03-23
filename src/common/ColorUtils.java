@@ -20,7 +20,6 @@ package common;
 
 import java.awt.Color;
 
-import model.Configuration;
 import crystalStructures.CrystalStructure;
 
 public class ColorUtils {
@@ -110,12 +109,12 @@ public class ColorUtils {
         return rgb;
     }
 	
-	public static Tupel<float[][],Integer> getColorShift(boolean shiftColorsForVTypes, CrystalStructure cs, Vec3 colorShift){
-		final int realTypes = Configuration.getCrystalStructure().getNumberOfElements();
+	public static Tupel<float[][],Integer> getColorShift(int numVirtElements, boolean shiftColorsForVTypes, CrystalStructure cs, Vec3 colorShift){
+		final int realTypes = cs.getNumberOfElements();
 		int numEleColors;
 		if (shiftColorsForVTypes){
-			numEleColors = Configuration.getNumElements()/realTypes;
-			if (Configuration.getNumElements()%realTypes!=0) numEleColors++;
+			numEleColors = numVirtElements/realTypes;
+			if (numVirtElements%realTypes!=0) numEleColors++;
 		} else numEleColors = realTypes;
 		
 		//Fill array of color per type and per element

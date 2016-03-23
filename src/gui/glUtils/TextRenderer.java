@@ -1,7 +1,7 @@
 // Part of AtomViewer: AtomViewer is a tool to display and analyse
 // atomistic simulations
 //
-// Copyright (C) 2014  ICAMS, Ruhr-Universität Bochum
+// Copyright (C) 2015  ICAMS, Ruhr-Universität Bochum
 //
 // AtomViewer is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -27,9 +27,9 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.LinkedList;
 
-import javax.media.opengl.GL;
-import javax.media.opengl.GL3;
-import javax.media.opengl.GLProfile;
+import com.jogamp.opengl.GL;
+import com.jogamp.opengl.GL3;
+import com.jogamp.opengl.GLProfile;
 
 import com.jogamp.opengl.util.texture.Texture;
 import com.jogamp.opengl.util.texture.awt.AWTTextureIO;
@@ -39,7 +39,6 @@ public class TextRenderer {
 	private static final int CACHE_SIZE = 20; 
 	
 	private Font font;
-	private Color color;
 	private GLProfile glp;
 	private FontMetrics fm;
 	
@@ -61,20 +60,29 @@ public class TextRenderer {
 		textureCacheTextures.clear();
 	}
 	
-	public void setColor(GL3 gl, float r, float g, float b, float a){
-		Color c = new Color(r, g, b, a);
-		if (color == null || !c.equals(color)){
-			this.dispose(gl);
-			this.color = c;
-		}
-	}
-	
-	public void beginRendering(GL3 gl){
+	/**
+	 * Initialize rendering strings with the given color in rgba and the projection given in the model view
+	 * and projection matrix
+	 * This changes the state of the {@link Shader.BuiltInShader.#PLAIN_TEXTURED} shader.
+	 * @param gl
+	 * @param r
+	 * @param g
+	 * @param b
+	 * @param a
+	 * @param mvm Modelview matrix
+	 * @param pm Projection matrix
+	 */
+	public void beginRendering(GL3 gl, float r, float g, float b, float a, GLMatrix mvm, GLMatrix pm){
 		Shader.pushShader();
 		gl.glEnable(GL3.GL_BLEND);
 		gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_LINEAR);
 	    gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_LINEAR);
-		Shader.BuiltInShader.PLAIN_TEXTURED.getShader().enable(gl);
+		Shader s = Shader.BuiltInShader.PLAIN_TEXTURED.getShader();
+		s.enable(gl);		
+		gl.glUniform4f(gl.glGetUniformLocation(s.getProgram(), "Color"), r, g, b, a);
+		GLMatrix pmvp = pm.clone();
+		pmvp.mult(mvm);
+		gl.glUniformMatrix4fv(gl.glGetUniformLocation(s.getProgram(), "mvpm"), 1, false, pmvp.getMatrix());
 		gl.glActiveTexture(GL3.GL_TEXTURE0);
 	}
 	
@@ -149,7 +157,7 @@ public class TextRenderer {
 			BufferedImage bi = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
 			Graphics2D g = (Graphics2D)bi.getGraphics();
 	
-			g.setColor(color);
+			g.setColor(Color.WHITE);
 			g.setFont(font);
 			g.drawString(str, 0, h-font.getSize()/2);
 			

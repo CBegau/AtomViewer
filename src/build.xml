@@ -9,6 +9,7 @@
 	<!-- define path where to write the final jar file -->
 	<property name="jarDir" value="./../" />
 	
+	<property name="git.Date" value="noGitAvailable" />
 	
 	<path id="libs.classpath">
 		<pathelement path="${libDir}jogamp/jar/gluegen-rt.jar"/>
@@ -16,6 +17,8 @@
 		<pathelement path="${libDir}jogamp/jar/jogl-all.jar"/>
 		<pathelement path="${libDir}libs/Quickhull3d/quickhull3d.jar"/>
 	 </path>	
+	
+	
 	
 	<target name="compile">
 		 <mkdir dir="${binDir}" />
@@ -31,7 +34,44 @@
 
 	<target name="makeViewer" depends="compile">
 		<delete file="${jarDir}/AtomViewer.jar" />
-
+		<tstamp>
+		    <format property="TODAY" pattern="dd.MM.yyyy" />
+		</tstamp>
+		
+		<property name="git.date" value="-" />
+		<available file=".git" type="dir" property="git.present"/>	
+	    <exec executable="git" outputproperty="git.revision" failifexecutionfails="false" errorproperty="">
+		        <arg value="describe"/>
+		        <arg value="--tags"/>
+		        <arg value="--always"/>
+		        <arg value="HEAD"/>
+		</exec>
+		<condition property="repository.version" value="${git.revision}" else="">
+		    <and>
+		        <isset property="git.revision"/>
+		        <length string="${git.revision}" trim="yes" length="0" when="greater"/>
+		    </and>
+		</condition>
+		<exec executable="git" outputproperty="git.date" failifexecutionfails="false" errorproperty="">
+		        <arg value="show"/>
+		        <arg value="-s"/>
+		        <arg value="--format=%cD"/>
+		        <arg value="HEAD"/>
+		</exec>
+		
+		<!--Remove linebreak from the git date -->
+		 <script language="javascript">
+		  project.setProperty('git.date', project.getProperty('git.date').
+		   replace("\n", ""));
+		 </script>
+		
+		<condition property="repository.date" value="${git.date}" else="${TODAY}">
+		    <and>
+		        <isset property="git.date"/>
+		        <length string="${git.date}" trim="yes" length="0" when="greater"/>
+		    </and>
+		</condition>
+		
 		<jar destfile="${jarDir}/AtomViewer.jar">
 			<fileset dir="${binDir}">
 				<include name="**/*.class" />
@@ -42,8 +82,10 @@
 				<include name="**/resources/*.*"/>
 			</fileset>
 			<manifest>
-				<attribute name="Main-Class" value="gui.JMainWindow" />
+				<attribute name="Main-Class" value="AtomViewer" />
 				<attribute name="Class-Path" value="jogamp/jar/gluegen-rt.jar jogamp/jar/jogl-all.jar libs/Jama/Jama.jar libs/Quickhull3d/quickhull3d.jar" />
+				<attribute name="Build-Date" value="${repository.date}"/>
+				<attribute name="Revision" value="${repository.version}"/>
 			</manifest>
 		</jar>
 		

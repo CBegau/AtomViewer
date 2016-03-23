@@ -21,8 +21,8 @@ package gui.glUtils;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 
-import javax.media.opengl.GL;
-import javax.media.opengl.GL3;
+import com.jogamp.opengl.GL;
+import com.jogamp.opengl.GL3;
 
 public final class VertexDataStorageDirect extends VertexDataStorage {
 
@@ -271,6 +271,14 @@ public final class VertexDataStorageDirect extends VertexDataStorage {
 	@Override
 	public void dispose(GL3 gl) {
 		gl.glDeleteBuffers(2, boundBuffer, 0);
+	}
+	
+	public int getArrayBufferIndex(){
+		return boundBuffer[0];
+	}
+	
+	public int getElementArrayBufferIndex(){
+		return boundBuffer[1];
 	}
 
 }

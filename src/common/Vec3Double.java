@@ -169,6 +169,10 @@ public class Vec3Double{
 		return Math.min(x, Math.min(y, z));
 	}
 	
+	public final Vec3 toVec3(){
+		return new Vec3((float)x, (float)y, (float)z);
+	}
+	
 	/**
 	 * Return the value of the smallest component in the vector
 	 * @return

@@ -25,10 +25,9 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.*;
 import java.text.DecimalFormat;
-import java.text.NumberFormat;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import javax.swing.*;
@@ -37,6 +36,7 @@ import javax.swing.border.TitledBorder;
 
 import model.Configuration;
 import model.DataColumnInfo;
+import model.DataColumnInfo.Component;
 import common.CommonUtils;
 import common.Vec3;
 import crystalStructures.*;
@@ -44,7 +44,7 @@ import crystalStructures.*;
 public class JCrystalConfigurationDialog extends JDialog{
 	private static final long serialVersionUID = 1L;
 
-	private DecimalFormat decimalFormat = new DecimalFormat("0.###");
+	private DecimalFormat decimalFormat = new DecimalFormat();
 	private JFormattedTextField latticeConstTextField = new JFormattedTextField(decimalFormat);
 	private JFormattedTextField[][] crystalOrientation = new JFormattedTextField[3][3];
 	private JComboBox crystalStructureComboBox = new JComboBox();
@@ -56,8 +56,8 @@ public class JCrystalConfigurationDialog extends JDialog{
 	private CrystalConfContent t;
 	
 	private JTextField[] nameTextFields, idTextFields, unitTextFields;
-	private JFormattedTextField[] scalingFactorFields, averagingRadiusFields;
-	private JCheckBox[] activeCheckBoxes, averageCheckBoxes;
+	private JFormattedTextField[] scalingFactorFields;
+	private JCheckBox[] activeCheckBoxes;
 	private JComponentComboBox[] componentComboBoxes;
 	
 	private boolean isSavedSuccessfully = false;
@@ -111,16 +111,8 @@ public class JCrystalConfigurationDialog extends JDialog{
 		this.add(new JLabel("Crystal structure"), gbc); gbc.gridx++;
 		this.add(crystalStructureComboBox, gbc); gbc.gridx = 0; gbc.gridy++;
 		
-		if (Configuration.Options.SIMPLE.isEnabled()){
-			crystalStructureComboBox.addItem(new FCCStructure());
-			crystalStructureComboBox.addItem(new BCCStructure());
-			crystalStructureComboBox.addItem(new B2());
-			crystalStructureComboBox.addItem(new DiamondCubicStructure());
-			crystalStructureComboBox.addItem(new UndefinedCrystalStructure());
-		} else {
-			for (CrystalStructure cs : CrystalStructure.getCrystalStructures())
-				crystalStructureComboBox.addItem(cs);
-		}
+		for (CrystalStructure cs : CrystalStructure.getCrystalStructures())
+			crystalStructureComboBox.addItem(cs);
 		
 		this.add(new JLabel("Lattice constant"), gbc); gbc.gridx++;
 		this.add(latticeConstTextField, gbc); gbc.gridy++;
@@ -143,7 +135,7 @@ public class JCrystalConfigurationDialog extends JDialog{
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				try {
-					readRawValueTable();
+					readDataValueTable();
 					writeConfigurationFile(folder);
 				} catch (IOException e1) {
 					JOptionPane.showMessageDialog(null, "Error writing crystal.conf", "Error", JOptionPane.ERROR_MESSAGE);
@@ -202,19 +194,19 @@ public class JCrystalConfigurationDialog extends JDialog{
 		}
 		
 		
-		String[] h;
+		String[][] h;
 		boolean headerReadable = false;
 		if (selectedFile != null){
 			try {
-				h = Configuration.currentFileLoader.getColumnsNamesFromHeader(selectedFile);
+				h = Configuration.getCurrentFileLoader().getColumnNamesUnitsFromHeader(selectedFile);
 				headerReadable = true;
 			} catch (IOException e1) {
-				h = new String[0];
+				h = new String[0][];
 			}
 		} else {
-			h = new String[0];
+			h = new String[0][];
 		}
-		final String[] valuesInHeader = h;
+		final String[][] valuesUnitsInHeader = h;
 		
 		String warningMessage = "";
 		if (!headerReadable){
@@ -225,7 +217,7 @@ public class JCrystalConfigurationDialog extends JDialog{
 		}
 		final String warning = warningMessage; 
 		
-		createTable(valuesInHeader, warning);
+		createTable(valuesUnitsInHeader, warning);
 		JScrollPane sp = new JScrollPane(tableContainer);
 		sp.setMinimumSize(new Dimension(600,300));
 		sp.setPreferredSize(new Dimension(600,300));
@@ -233,14 +225,12 @@ public class JCrystalConfigurationDialog extends JDialog{
 		gbc.gridwidth = 2;
 		this.add(sp, gbc); gbc.gridy++;
 		
-		if (!Configuration.Options.SIMPLE.isEnabled()){
-			createCrystalPropertiesContainer();
-			sp = new JScrollPane(crystalPropertiesContainer);
-			sp.setMinimumSize(new Dimension(600,300));
-			sp.setPreferredSize(new Dimension(600,300));
-			gbc.gridwidth = 2;
-			this.add(sp, gbc); gbc.gridy++;
-		}
+		createCrystalPropertiesContainer();
+		sp = new JScrollPane(crystalPropertiesContainer);
+		sp.setMinimumSize(new Dimension(600,300));
+		sp.setPreferredSize(new Dimension(600,300));
+		gbc.gridwidth = 2;
+		this.add(sp, gbc); gbc.gridy++;	
 		
 		gbc.gridwidth = 1;
 		
@@ -263,16 +253,12 @@ public class JCrystalConfigurationDialog extends JDialog{
 		this.setVisible(true);
 	}
 	
-	
-	
-	private void createTable(String[] valuesFromHeader, String warning){
+	private void createTable(String[][] valuesUnitsFromHeader, String warning){
 		ArrayList<JTextField> nameTextFieldsList = new ArrayList<JTextField>();
 		ArrayList<JTextField> idTextFieldsList =  new ArrayList<JTextField>();
 		ArrayList<JTextField> unitTextFieldsList =  new ArrayList<JTextField>();
 		ArrayList<JFormattedTextField> scalingFactorFieldsList =  new ArrayList<JFormattedTextField>();
 		ArrayList<JCheckBox> activeCheckBoxesList = new ArrayList<JCheckBox>();
-		ArrayList<JCheckBox> averageCheckBoxesList = new ArrayList<JCheckBox>();
-		ArrayList<JFormattedTextField> averagingRadiusFieldsList = new ArrayList<JFormattedTextField>();
 		ArrayList<JComponentComboBox> componentComboBox = new ArrayList<JComponentComboBox>();
 		
 		tableContainer.removeAll();
@@ -285,7 +271,7 @@ public class JCrystalConfigurationDialog extends JDialog{
 		gbc.weightx = 1;
 		
 		if (!warning.isEmpty()){
-			gbc.gridwidth = 7;
+			gbc.gridwidth = 5;
 			this.add(new JLabel(warning), gbc); gbc.gridy++;
 			gbc.gridwidth = 1;
 		}
@@ -297,40 +283,46 @@ public class JCrystalConfigurationDialog extends JDialog{
 		tableContainer.add(new JLabel("Unit"), gbc); gbc.gridx++;
 		tableContainer.add(new JLabel("<html>Scaling<br>factor</html>"), gbc); gbc.gridx++;
 		tableContainer.add(new JLabel("Data"), gbc); gbc.gridx++;
-		tableContainer.add(new JLabel("<html>Compute<br>spatial<br>averages</html>"), gbc); gbc.gridx++;
-		tableContainer.add(new JLabel("<html>Spatial<br>averaging<br>radius</html>"), gbc);
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridy++; gbc.gridx = 0;
 		
 		List<String> values = new ArrayList<String>();
-		if (valuesFromHeader.length != 0)
-			values = Arrays.asList(valuesFromHeader);
+		List<String> units = new ArrayList<String>();
+		if (valuesUnitsFromHeader.length != 0){
+			for (String[] vu : valuesUnitsFromHeader){
+				values.add(vu[0]);
+				units.add(vu[1]);
+			}
+		}
 		
 		boolean[] inHeader = new boolean[values.size()];
 		
-		for (int i=0; i<t.rawColumns.size(); i++){
-			int index = values.indexOf(t.rawColumns.get(i).getId());
+		Map<String, Component> nameToComponentMap = Configuration.getCurrentFileLoader().getDefaultNamesForComponents();
+		
+		for (int i=0; i<t.dataColumns.size(); i++){
+			int index = values.indexOf(t.dataColumns.get(i).getId());
 			if (index != -1)
 				inHeader[index] = true;
 			
-			nameTextFieldsList.add(new JTextField(t.rawColumns.get(i).getName()));
-			JTextField id = new JTextField(t.rawColumns.get(i).getId());
+			nameTextFieldsList.add(new JTextField(t.dataColumns.get(i).getName()));
+			JTextField id = new JTextField(t.dataColumns.get(i).getId());
 			id.setEditable(false);
 			idTextFieldsList.add(id);
-			unitTextFieldsList.add(new JTextField(t.rawColumns.get(i).getUnit()));
+			unitTextFieldsList.add(new JTextField(t.dataColumns.get(i).getUnit()));
 			
-			JFormattedTextField ftf = new JFormattedTextField(NumberFormat.getNumberInstance());
-			ftf.setValue(t.rawColumns.get(i).getScalingFactor());
+			JFormattedTextField ftf = new JFormattedTextField("#.########");
+			ftf.setValue(t.dataColumns.get(i).getScalingFactor());
 			scalingFactorFieldsList.add(ftf);
 			activeCheckBoxesList.add(new JCheckBox("", true));
-			
-			float averageValue = t.rawColumns.get(i).getSpatiallyAveragingRadius();
-			averageCheckBoxesList.add(new JCheckBox("", averageValue>0f));
-			ftf = new JFormattedTextField(NumberFormat.getNumberInstance());
-			ftf.setValue(averageValue);
-			averagingRadiusFieldsList.add(ftf);
+
 			JComponentComboBox box = new JComponentComboBox();
-			box.setSelectedItem(t.rawColumns.get(i).getComponent());
+			Component selectedComponent = t.dataColumns.get(i).getComponent(); 
+			if (selectedComponent == Component.OTHER){
+				if (nameToComponentMap.containsKey(t.dataColumns.get(i).getId()))
+					selectedComponent = nameToComponentMap.get(t.dataColumns.get(i).getId());
+			}
+			box.setSelectedItem(selectedComponent);
+			
 			componentComboBox.add(box);
 		}
 		for (int i=0; i < values.size(); i++){
@@ -340,16 +332,18 @@ public class JCrystalConfigurationDialog extends JDialog{
 			JTextField id = new JTextField(values.get(i));
 			id.setEditable(false);
 			idTextFieldsList.add(id);
-			unitTextFieldsList.add(new JTextField(""));
-			JFormattedTextField ftf = new JFormattedTextField(NumberFormat.getNumberInstance());
+			unitTextFieldsList.add(new JTextField(units.get(i)));
+			JFormattedTextField ftf = new JFormattedTextField(new DecimalFormat("#.########"));
 			ftf.setValue(1);
 			scalingFactorFieldsList.add(ftf);
 			activeCheckBoxesList.add(new JCheckBox("", false));
-			averageCheckBoxesList.add(new JCheckBox("", false));
-			ftf = new JFormattedTextField(NumberFormat.getNumberInstance());
-			ftf.setValue(0f);
-			averagingRadiusFieldsList.add(ftf);
-			componentComboBox.add(new JComponentComboBox());
+			JComponentComboBox box = new JComponentComboBox();
+			Component selectedComponent = Component.OTHER; 
+			if (nameToComponentMap.containsKey(values.get(i)))
+				selectedComponent = nameToComponentMap.get(values.get(i));
+			box.setSelectedItem(selectedComponent);
+			
+			componentComboBox.add(box);
 		}
 		
 		int size = nameTextFieldsList.size();
@@ -362,14 +356,10 @@ public class JCrystalConfigurationDialog extends JDialog{
 			tableContainer.add(unitTextFieldsList.get(i), gbc); gbc.gridx++;
 			tableContainer.add(scalingFactorFieldsList.get(i), gbc); gbc.gridx++;
 			tableContainer.add(componentComboBox.get(i), gbc); gbc.gridx++;
-			gbc.fill = GridBagConstraints.NONE;
-			tableContainer.add(averageCheckBoxesList.get(i), gbc); gbc.gridx++;
-			gbc.fill = GridBagConstraints.BOTH;
-			tableContainer.add(averagingRadiusFieldsList.get(i), gbc);
 			gbc.gridx = 0; gbc.gridy++;
 		}
 	
-		gbc.gridwidth = 7;
+		gbc.gridwidth = 5;
 		if (size==0)
 			tableContainer.add(new JLabel("No extra columns in file"), gbc);
 		tableContainer.invalidate();
@@ -379,8 +369,6 @@ public class JCrystalConfigurationDialog extends JDialog{
 		unitTextFields = unitTextFieldsList.toArray(new JTextField[size]);
 		scalingFactorFields = scalingFactorFieldsList.toArray(new JFormattedTextField[size]);
 		activeCheckBoxes = activeCheckBoxesList.toArray(new JCheckBox[size]);
-		averageCheckBoxes = averageCheckBoxesList.toArray(new JCheckBox[size]);
-		averagingRadiusFields = averagingRadiusFieldsList.toArray(new JFormattedTextField[size]);
 		componentComboBoxes = componentComboBox.toArray(new JComponentComboBox[size]);
 		
 		this.validate();
@@ -389,13 +377,14 @@ public class JCrystalConfigurationDialog extends JDialog{
 	private void createCrystalPropertiesContainer(){
 		crystalPropertiesContainer.removeAll();
 		crystalPropertiesContainer.setLayout(new GridLayout(1,1));
-		crystalPropertiesContainer.add(CrystalStructureProperties.createPropertyContainer(crystalStructure.getCrystalProperties()));
+		crystalPropertiesContainer.add(
+				CrystalStructureProperties.createPropertyContainer(crystalStructure.getCrystalProperties()));
 		crystalPropertiesContainer.invalidate();
 		this.validate();
 	}
 	
-	private void readRawValueTable(){
-		t.rawColumns.clear();
+	private void readDataValueTable(){
+		t.dataColumns.clear();
 		
 		for (int i=0; i<nameTextFields.length; i++){
 			if (activeCheckBoxes[i].isSelected()){
@@ -403,16 +392,15 @@ public class JCrystalConfigurationDialog extends JDialog{
 				String id = idTextFields[i].getText();
 				String unit = unitTextFields[i].getText();
 				float scaling = ((Number)scalingFactorFields[i].getValue()).floatValue();
-				float averagingRadius = 0f;
-				if (averageCheckBoxes[i].isSelected())
-					averagingRadius = ((Number)averagingRadiusFields[i].getValue()).floatValue();
-				
-				DataColumnInfo cci = new DataColumnInfo(name, id, unit, scaling, averagingRadius);
+
+				DataColumnInfo cci = new DataColumnInfo(name, id, unit);
+				cci.setScalingFactor(scaling);
 				cci.setComponent((DataColumnInfo.Component)componentComboBoxes[i].getSelectedItem());
-				t.rawColumns.add(cci);
+				t.dataColumns.add(cci);
 			}
 		}
 	}
+	
 	
 	public static CrystalConfContent readConfigurationFile(File confFile) throws IOException{
 		CrystalStructure cs;
@@ -468,26 +456,15 @@ public class JCrystalConfigurationDialog extends JDialog{
 						
 						
 					}
-				} else if (parts[0].toLowerCase().equals("raw")){
-					if (parts.length>=3){
-						DataColumnInfo cci;
-						if (parts.length>=6){
-							cci = new DataColumnInfo(parts[1], parts[2], parts[3],
-									Float.parseFloat(parts[4]), Float.parseFloat(parts[5]));
-							if (parts.length>=7)
-								for (DataColumnInfo.Component c : DataColumnInfo.Component.values()){
-									if (c.name().equals(parts[6]))
-										cci.setComponent(c);
-								}
+				} else if (parts[0].toLowerCase().equals("import_column")){
+					if (parts.length>=6){
+						DataColumnInfo cci = new DataColumnInfo(parts[1], parts[2], parts[3]);
+						
+						for (DataColumnInfo.Component c : DataColumnInfo.Component.values()){
+							if (c.name().equals(parts[5]))
+								cci.setComponent(c);
 						}
-						else if (parts.length>=6)
-							cci = new DataColumnInfo(parts[1], parts[2], parts[3],
-									Float.parseFloat(parts[4]), Float.parseFloat(parts[5]));
-						else if (parts.length>=5)
-							cci = new DataColumnInfo(parts[1], parts[2], parts[3], Float.parseFloat(parts[4]));
-						else if (parts.length>=4)
-							cci = new DataColumnInfo(parts[1], parts[2], parts[3], 1f);
-						else cci = new DataColumnInfo(parts[1], parts[2], "", 1f);
+						cci.setScalingFactor(Float.parseFloat(parts[4]));
 						dataColumns.add(cci);
 					}
 				}
@@ -526,26 +503,39 @@ public class JCrystalConfigurationDialog extends JDialog{
 			update();
 		}
 		
-		
 		private void update(){
-			int[] x = new int[3];
-			int[] y = new int[3];
+			float[] x = new float[3];
+			float[] y = new float[3];
 			
-			x[0] = ((Number) crystalOrientation[0][0].getValue()).intValue();
-			x[1] = ((Number) crystalOrientation[0][1].getValue()).intValue();
-			x[2] = ((Number) crystalOrientation[0][2].getValue()).intValue();
+			x[0] = ((Number) crystalOrientation[0][0].getValue()).floatValue();
+			x[1] = ((Number) crystalOrientation[0][1].getValue()).floatValue();
+			x[2] = ((Number) crystalOrientation[0][2].getValue()).floatValue();
 			
-			y[0] = ((Number) crystalOrientation[1][0].getValue()).intValue();
-			y[1] = ((Number) crystalOrientation[1][1].getValue()).intValue();
-			y[2] = ((Number) crystalOrientation[1][2].getValue()).intValue();
+			y[0] = ((Number) crystalOrientation[1][0].getValue()).floatValue();
+			y[1] = ((Number) crystalOrientation[1][1].getValue()).floatValue();
+			y[2] = ((Number) crystalOrientation[1][2].getValue()).floatValue();
 			
-			int[] z = new int[]{ x[1]*y[2]-x[2]*y[1],
+			float[] z = new float[]{ x[1]*y[2]-x[2]*y[1],
 					             x[2]*y[0]-x[0]*y[2],
 					             x[0]*y[1]-x[1]*y[0]};
 			
-			int gcd = CommonUtils.gcd(z);
-			if (gcd != 0){
-				z[0] /= gcd; z[1] /= gcd; z[2] /= gcd;
+			//Handle the special case of even numbers, here values can be reduced
+			boolean evenNumbers = true;
+			for (int i=0; i<3; i++){
+				float xi = (int)Math.round(x[i]);
+				if (Math.abs(xi-x[i]) > 1e-5f) evenNumbers = false;
+				float yi = (int)Math.round(y[i]);
+				if (Math.abs(yi-y[i]) > 1e-5f) evenNumbers = false;
+			}
+			if (evenNumbers){
+				int[] zint = {(int)Math.round(z[0]), (int)Math.round(z[1]), (int)Math.round(z[2])};
+				int gcd = CommonUtils.greatestCommonDivider(zint);
+				if (gcd != 0){
+					zint[0] /= gcd; zint[1] /= gcd; zint[2] /= gcd;
+				}
+				z[0] = zint[0];
+				z[1] = zint[1];
+				z[2] = zint[2];
 			}
 			
 			crystalOrientation[2][0].setValue(z[0]);
@@ -563,33 +553,21 @@ public class JCrystalConfigurationDialog extends JDialog{
 		if (!f.canWrite()) return;
 		PrintWriter pw = new PrintWriter(f);
 		
-		int[] l = new int[3];
-		l[0] = ((Number) crystalOrientation[0][0].getValue()).intValue();
-		l[1] = ((Number) crystalOrientation[0][1].getValue()).intValue();
-		l[2] = ((Number) crystalOrientation[0][2].getValue()).intValue();
-		int gcd = CommonUtils.gcd(l);
-		if (gcd != 0){
-			l[0] /= gcd; l[1] /= gcd; l[2] /= gcd;
-		}
-		pw.println(String.format("orientation_x %d %d %d", l[0],l[1], l[2]));
+		Vec3 l = new Vec3();
+		l.x = ((Number) crystalOrientation[0][0].getValue()).floatValue();
+		l.y = ((Number) crystalOrientation[0][1].getValue()).floatValue();
+		l.z = ((Number) crystalOrientation[0][2].getValue()).floatValue();
+		pw.println(String.format("orientation_x %f %f %f", l.x,l.y, l.z));
 		
-		l[0] = ((Number) crystalOrientation[1][0].getValue()).intValue();
-		l[1] = ((Number) crystalOrientation[1][1].getValue()).intValue();
-		l[2] = ((Number) crystalOrientation[1][2].getValue()).intValue();
-		gcd = CommonUtils.gcd(l);
-		if (gcd != 0){
-			l[0] /= gcd; l[1] /= gcd; l[2] /= gcd;
-		}
-		pw.println(String.format("orientation_y %d %d %d", l[0],l[1], l[2]));
+		l.x = ((Number) crystalOrientation[1][0].getValue()).floatValue();
+		l.y = ((Number) crystalOrientation[1][1].getValue()).floatValue();
+		l.z = ((Number) crystalOrientation[1][2].getValue()).floatValue();
+		pw.println(String.format("orientation_y %f %f %f", l.x,l.y, l.z));
 		
-		l[0] = ((Number) crystalOrientation[2][0].getValue()).intValue();
-		l[1] = ((Number) crystalOrientation[2][1].getValue()).intValue();
-		l[2] = ((Number) crystalOrientation[2][2].getValue()).intValue();
-		gcd = CommonUtils.gcd(l);
-		if (gcd != 0){
-			l[0] /= gcd; l[1] /= gcd; l[2] /= gcd;
-		}
-		pw.println(String.format("orientation_z %d %d %d", l[0],l[1], l[2]));
+		l.x = ((Number) crystalOrientation[2][0].getValue()).floatValue();
+		l.y = ((Number) crystalOrientation[2][1].getValue()).floatValue();
+		l.z = ((Number) crystalOrientation[2][2].getValue()).floatValue();
+		pw.println(String.format("orientation_z %f %f %f", l.x,l.y, l.z));
 		
 		CrystalStructure cs = (CrystalStructure)crystalStructureComboBox.getSelectedItem();
 		
@@ -604,17 +582,10 @@ public class JCrystalConfigurationDialog extends JDialog{
 		pw.println(String.format("# Modify slighty if needed"));
 		pw.println(String.format("nearestneighcutoff %.4f", nnbDist));
 		
-		for (int i=0; i<t.rawColumns.size(); i++){
-			DataColumnInfo c = t.rawColumns.get(i);
-			if (!c.isSpecialColoumn()){
-				if (c.isValueToBeSpatiallyAveraged()){
-					pw.println(String.format("raw %s %s %s %f %f %s", c.getName(), c.getId(), c.getUnit().isEmpty()?"-":c.getUnit(),
-							c.getScalingFactor(), c.getSpatiallyAveragingRadius(), c.getComponent().name()));
-				} else {
-					pw.println(String.format("raw %s %s %s %f 0. %s", c.getName(), c.getId(), c.getUnit().isEmpty()?"-":c.getUnit(),
-							c.getScalingFactor(), c.getComponent().name()));
-				}
-			}
+		for (int i=0; i<t.dataColumns.size(); i++){
+			DataColumnInfo c = t.dataColumns.get(i);
+			pw.println(String.format("import_column %s %s %s %e %s", c.getName(), c.getId(), c.getUnit().isEmpty()?"-":c.getUnit(),
+					c.getScalingFactor(), c.getComponent().name()));
 		}
 		
 		CrystalStructureProperties.storeProperties(crystalStructure.getCrystalProperties(), pw);
@@ -625,11 +596,11 @@ public class JCrystalConfigurationDialog extends JDialog{
 	public static class CrystalConfContent{
 		Vec3[] orientation;
 		CrystalStructure cs;
-		ArrayList<DataColumnInfo> rawColumns;
+		ArrayList<DataColumnInfo> dataColumns;
 		public CrystalConfContent(Vec3[] orientation, CrystalStructure cs, ArrayList<DataColumnInfo> rawColumns) {
 			this.orientation = orientation;
 			this.cs = cs;
-			this.rawColumns = rawColumns;
+			this.dataColumns = rawColumns;
 		}
 		
 		public CrystalStructure getCrystalStructure() {
@@ -641,7 +612,7 @@ public class JCrystalConfigurationDialog extends JDialog{
 		}
 		
 		public ArrayList<DataColumnInfo> getRawColumns() {
-			return rawColumns;
+			return dataColumns;
 		}
 	}
 	
@@ -653,7 +624,7 @@ public class JCrystalConfigurationDialog extends JDialog{
 				if (c.isVisibleOption())
 					this.addItem(c);
 			
-			this.setSelectedItem(DataColumnInfo.Component.UNDEFINED);
+			this.setSelectedItem(DataColumnInfo.Component.OTHER);
 		}
 	}
 }

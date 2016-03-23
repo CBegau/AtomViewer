@@ -209,4 +209,9 @@ public class Vec3{
 		Vec3 v = (Vec3)obj;
 		return (v.x == x && v.y == y && v.z == z);
 	}
+	
+	@Override
+	public String toString() {
+		return String.format("(%f, %f, %f)", x,y,z);
+	}
 }

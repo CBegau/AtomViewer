@@ -22,6 +22,7 @@ import java.awt.event.InputEvent;
 import java.util.*;
 
 import common.CommonUtils;
+import common.Tupel;
 import common.Vec3;
 import crystalStructures.CrystalStructure;
 
@@ -34,56 +35,60 @@ public class Atom extends Vec3 implements Pickable {
 	public static final int IGNORED_GRAIN = Short.MAX_VALUE;
 	public static final int DEFAULT_GRAIN = Short.MAX_VALUE-1;
 	
-	private RBV rbv;
 	private float[] dataValues;
 	private int atomNumber;
+	//TODO pack the grain into dataValues
 	private short grain = DEFAULT_GRAIN;
 	private byte type, element;
 	
 	/**
 	 * Creates a new atom
 	 * @param p The position of the atom in space
-	 * @param type its type, required for many steps in the postprocessing routines.
-	 * May be a default value if it is later characterized and set by {@link #setType(int)} 
 	 * @param num The numeric ID of the atom. Not used internally, thus must not be unique. 
 	 * @param element The atoms element. Uses the value of {@link CrystalStructure#getNumberOfElements()}
 	 * to distinguish physical elements from logical elements by computing the modulo of both values 
 	 */
-	public Atom(Vec3 p, byte type, int num, byte element) {
+	public Atom(Vec3 p, int num, byte element) {
 		this.x = p.x;
 		this.y = p.y;
 		this.z = p.z;
 
-		this.type = type;
 		this.atomNumber = num;
 		this.element = element;
 		
-		if (Configuration.getSizeDataColumns() != 0)
-			dataValues = new float[Configuration.getSizeDataColumns()];
+		if (ImportConfiguration.getInstance().getDataColumns().size() != 0)
+			dataValues = new float[ImportConfiguration.getInstance().getDataColumns().size()];
 	}
 	
 	/**
-	 * The resultant burgers vector associated with this atom
-	 * @return the RBV or null no value exists
+	 * Increase the size of the array dataValues by n values
+	 * New entries are initialized with 0f.  
+	 * @param n 
 	 */
-	public RBV getRBV() {
-		return rbv;
+	void extendDataValuesFields(int n){
+		assert (n>=0);
+		if (dataValues == null)
+			dataValues = new float[n];
+		else
+			dataValues = Arrays.copyOf(dataValues, dataValues.length+n);
 	}
 	
 	/**
-	 * Sets the values for the resultant Burgers vector and the line direction to this atom
-	 * If one of these values is null the existing reference is nulled
-	 * @param rbv The resultant Burgers vector
-	 * @param lineDirection the lineDirection, should be a unit vector.
-	 * If it is the null-vector, no reference to a RBV is created 
+	 * Remove the entry in dataValue at the given index
+	 * All following entries are shifted by one
+	 * @param index
 	 */
-	public void setRBV( Vec3 rbv, Vec3 lineDirection ){
-		if (rbv == null || lineDirection == null){
-			this.rbv = null;
-		} else {
-			if (lineDirection.dot(lineDirection)>0)  
-				this.rbv = new model.RBV(rbv, lineDirection);
+	void deleteDataValueField(int index){
+		assert (index < dataValues.length);
+		if (dataValues.length == 1){
+			dataValues = null;
+			return;
 		}
+		//Create a copy of the array not containing the value at the index
+		float[] d = new float[dataValues.length-1];
+	    System.arraycopy(dataValues, 0, d, 0, index );
+	    System.arraycopy(dataValues, index+1, d, index, dataValues.length - index-1);
+		dataValues = d;
 	}
 	
 	/**
@@ -140,7 +145,6 @@ public class Atom extends Vec3 implements Pickable {
 		assert(grain>=0 && grain<Short.MAX_VALUE);
 		
 		this.grain = (short)grain;
-		if (grain == IGNORED_GRAIN) rbv = null;
 	}
 	
 	/**
@@ -179,55 +183,77 @@ public class Atom extends Vec3 implements Pickable {
 	}
 	
 	@Override
-	public String printMessage(InputEvent ev) {
-		StringBuilder sb = new StringBuilder();
-		
-		Vec3 offset = Configuration.getCurrentAtomData().getBox().getOffset();
-		sb.append(String.format("Nr=%d, ", getNumber()));
-		sb.append(String.format("xyz=( %.4f, %.4f, %.4f ),", x+offset.x, y+offset.y, z+offset.z));
-		sb.append(String.format(" (%s),", Configuration.getCrystalStructure().getNameForType(getType())));
-		if (Configuration.getNumElements()>1) sb.append(String.format(" Element=%d,", getElement()));
-		if (ImportStates.POLY_MATERIAL.isActive() && getGrain() != DEFAULT_GRAIN) 
-			sb.append(String.format(" Grain=%s", getGrain()==IGNORED_GRAIN?"None":Integer.toString(getGrain())));
-		if (getRBV()!=null) {
-			CrystalRotationTools crt = null;
-			if (ImportStates.POLY_MATERIAL.isActive()){
-				//Poly crystal
-				if (getGrain() == DEFAULT_GRAIN)
-					crt = Configuration.getCrystalRotationTools();
-				else crt = Configuration.getCurrentAtomData().getGrains(getGrain()).getCystalRotationTools();
-			} else {
-				//Single crystal
-				crt = Configuration.getCrystalRotationTools();
-			}
-			
-			Vec3 bv = crt.getInCrystalCoordinates(this.getRBV().bv);
-			sb.append(String.format(" RBV=[ %.3f | %.3f | %.3f ],", bv.x, bv.y, bv.z));
-			sb.append(String.format(" Lenght=%.3f", this.getRBV().bv.getLength()));
-			Vec3 ld = crt.getInCrystalCoordinates(this.getRBV().lineDirection);
-			sb.append(String.format(" LineDir=[ %.3f | %.3f | %.3f ],", ld.x, ld.y, ld.z));
-			
-			BurgersVector tbv = crt.rbvToBurgersVector(this.getRBV());
-			sb.append(" TBV="+tbv.toString());
-		}
-		
-		for (int i=0; i< Configuration.getSizeDataColumns(); i++){
-			DataColumnInfo c = Configuration.getDataColumnInfo(i);
-			if (!c.isSpecialColoumn())
-				sb.append(String.format(" %s=%s%s", c.getName(), 
-						CommonUtils.outputDecimalFormatter.format(getData(i)),
-						c.getUnit()));	
-		}
-		
+	public Tupel<String,String> printMessage(InputEvent ev, AtomData data) {
 		if (ev!=null && (ev.getModifiersEx() & InputEvent.CTRL_DOWN_MASK) == InputEvent.CTRL_DOWN_MASK){
-			sb.append("\n");
-			sb.append(Configuration.getCurrentAtomData().plotNeighborsGraph(this));
+			return new Tupel<String, String>("Neighbors graph "+atomNumber, data.plotNeighborsGraph(this).toString());
 		}
-		return sb.toString();
+		
+		ArrayList<String> keys = new ArrayList<String>();
+		ArrayList<String> values = new ArrayList<String>();
+		
+		Vec3 offset = data.getBox().getOffset();
+		keys.add("Nr"); values.add(Integer.toString(getNumber()));
+		keys.add("Position"); values.add(this.addClone(offset).toString());
+		keys.add("Structure"); values.add(data.getCrystalStructure().getNameForType(getType()));
+		
+		keys.add("element");
+		if (data.getNameOfElement(getElement()).isEmpty())
+			values.add(Integer.toString(getElement()));
+		else values.add(Integer.toString(getElement())+" "+data.getNameOfElement(getElement()));
+		
+		if (getGrain() != DEFAULT_GRAIN){ 
+			keys.add("Grain"); values.add(getGrain()==IGNORED_GRAIN?"None":Integer.toString(getGrain()));
+		}
+		
+		
+		RBV rbv = data.getRbvStorage().getRBV(this);
+		if (rbv != null){
+			CrystalRotationTools crt = null;
+			
+			if (getGrain() == DEFAULT_GRAIN)
+				crt = data.getCrystalRotation();
+			else crt = data.getGrains(getGrain()).getCystalRotationTools();
+			Vec3 bv = crt.getInCrystalCoordinates(rbv.bv);
+			Vec3 ld = crt.getInCrystalCoordinates(rbv.lineDirection);
+			
+			keys.add("Resultant Burgers vector"); values.add(bv.toString());
+			keys.add("Resultant Burgers vector magnitude"); values.add(Float.toString(bv.getLength()));
+			keys.add("Dislocation line tangent"); values.add(ld.toString());
+			BurgersVector tbv = crt.rbvToBurgersVector(rbv);
+			keys.add("True Burgers vector"); values.add(tbv.toString());
+		}
+		
+		
+		List<DataColumnInfo> dci = data.getDataColumnInfos();
+		if (dataValues != null){
+			for (int i=0; i < dataValues.length; i++){
+				DataColumnInfo c = dci.get(i);
+				if (!c.isVectorComponent()){
+					keys.add(c.getName()); values.add(CommonUtils.outputDecimalFormatter.format(getData(i))+c.getUnit());
+				} else if (c.isFirstVectorComponent()){
+					keys.add(c.getVectorName()+(!c.getUnit().isEmpty()?"("+c.getUnit()+")":""));
+					int index2 = data.getIndexForCustomColumn(c.getVectorComponents()[1]);
+					int index3 = data.getIndexForCustomColumn(c.getVectorComponents()[2]);
+					Vec3 vec = new Vec3(getData(i), getData(index2), getData(index3));
+					values.add(vec.toString());
+					keys.add("Magnitude of "+c.getVectorName()+(!c.getUnit().isEmpty()?"("+c.getUnit()+")":""));
+					values.add(Float.toString(vec.getLength()));
+				}
+			}
+		}
+		
+		return new Tupel<String, String>("Atom "+atomNumber, 
+				CommonUtils.buildHTMLTableForKeyValue(
+						keys.toArray(new String[keys.size()]), values.toArray(new String[values.size()])));
 	}
 	
 	@Override
 	public boolean equals(Object obj) {
 		return this == obj;
+	}
+	
+	@Override
+	public Vec3 getCenterOfObject() {
+		return this.clone();
 	}
 }

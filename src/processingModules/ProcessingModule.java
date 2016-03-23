@@ -18,10 +18,12 @@
 
 package processingModules;
 
+import javax.swing.JFrame;
+
 import model.AtomData;
 import model.DataColumnInfo;
 
-public interface ProcessingModule {
+public interface ProcessingModule extends Cloneable {
 	
 	/**
 	 * A short name for the module that can be displayed in a list
@@ -42,14 +44,33 @@ public interface ProcessingModule {
 	public String getRequirementDescription();
 	
 	/**
-	 * Test if the module can be applied in the currently defined toolchain
+	 * Test if the module can be applied in an instance of AtomData
 	 * @return
 	 */
-	public boolean isApplicable();
+	public boolean isApplicable(final AtomData data);
+	
+	/**
+	 * Return if the module can be applied to multiple files at once.
+	 * Processing modules that are dependent on e.g. external files that
+	 * differ for each set of AtomData will return false 
+	 * @return
+	 */
+	public boolean canBeAppliedToMultipleFilesAtOnce();
+	
+	/**
+	 * Creates a dialog to set parameters necessary for processing by a user
+	 * @return true if the parameters are properly set and the data can be processed
+	 * false if the processing is cancelled for any reason
+	 * @param frame the parent frame to show dialogs
+	 * @param data The current Atom data
+	 */
+	public boolean showConfigurationDialog(JFrame frame, AtomData data);
 	
 	/**
 	 * Return the data columns that this module will produce.
-	 * Can be null if no extra column is created 
+	 * Can be null if no extra column is created
+	 * If the array is not null, the same instances of DataColumnInfo must be
+	 * returned on every call
 	 * @return
 	 */
 	public DataColumnInfo[] getDataColumnsInfo();
@@ -57,7 +78,15 @@ public interface ProcessingModule {
 	/**
 	 * Apply the module on data
 	 * @param data
+	 * @return An instance of ProcessingResults if any information needs to be displayed on screen
+	 * if no results are needed, returning null is possible
 	 * @throws Exception
 	 */
-	public void process(final AtomData data) throws Exception;
+	public ProcessingResult process(final AtomData data) throws Exception;
+	
+	/**
+	 * Creates a clone of this module
+	 * @return
+	 */
+	public ProcessingModule clone();
 }

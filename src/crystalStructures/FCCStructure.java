@@ -21,14 +21,13 @@ package crystalStructures;
 import java.util.*;
 
 import common.Vec3;
-import crystalStructures.CrystalStructureProperties.BooleanCrystalProperty;
-import crystalStructures.CrystalStructureProperties.FloatCrystalProperty;
+import gui.PrimitiveProperty.BooleanProperty;
 import model.*;
 import model.BurgersVector.BurgersVectorType;
 import model.polygrain.grainDetection.AtomToGrainObject;
 import model.polygrain.grainDetection.GrainDetectionCriteria;
-import model.skeletonizer.processors.*;
-import model.skeletonizer.processors.BurgersVectorAnalyzer.ClassificationPattern;
+import processingModules.skeletonizer.processors.*;
+import processingModules.skeletonizer.processors.BurgersVectorAnalyzer.RBVToBVPattern;
 
 public class FCCStructure extends CrystalStructure {
 
@@ -52,56 +51,46 @@ public class FCCStructure extends CrystalStructure {
 		new Vec3(0.5f , -0.5f, 0f)
 	};
 	
-	private static final ArrayList<ClassificationPattern> bvClassifcationPattern = new ArrayList<ClassificationPattern>();
+	private static final ArrayList<RBVToBVPattern> bvClassifcationPattern = new ArrayList<RBVToBVPattern>();
 	static{
 		//Shockley partial <211> with two adjacent stacking fault planes
-		bvClassifcationPattern.add(new ClassificationPattern(211, 4, 9, 211, 6, 2, 2, BurgersVectorType.PARTIAL));
+		bvClassifcationPattern.add(new RBVToBVPattern(211, 4, 9, 211, 6, 2, 2, BurgersVectorType.PARTIAL));
 		//Shockley partial <211> with more than two adjacent stacking fault planes e.g. thin separated cores
-		bvClassifcationPattern.add(new ClassificationPattern(211, 5, 7, 211, 6, 0, 100, BurgersVectorType.PARTIAL));
+		bvClassifcationPattern.add(new RBVToBVPattern(211, 5, 7, 211, 6, 0, 100, BurgersVectorType.PARTIAL));
 		//Perfect <110> with no adjacent stacking fault planes
-		bvClassifcationPattern.add(new ClassificationPattern(110, 1, 3, 110, 2, 0, 0, BurgersVectorType.PERFECT));
+		bvClassifcationPattern.add(new RBVToBVPattern(110, 1, 3, 110, 2, 0, 0, BurgersVectorType.PERFECT));
 		//Ideal Shockley partials, where the adjacent stacking faults are not precisely identified 
-		bvClassifcationPattern.add(new ClassificationPattern(211, 6, 6, 211, 6, 0, 10, BurgersVectorType.PARTIAL));
+		bvClassifcationPattern.add(new RBVToBVPattern(211, 6, 6, 211, 6, 0, 10, BurgersVectorType.PARTIAL));
 		//Slightly disordered partial <211> recognized as <632>
-		bvClassifcationPattern.add(new ClassificationPattern(632, 10, 30, 211, 6, 2, 3, BurgersVectorType.PARTIAL));
+		bvClassifcationPattern.add(new RBVToBVPattern(632, 10, 30, 211, 6, 2, 3, BurgersVectorType.PARTIAL));
 //		//Slightly disordered partial <211> recognized as 1/5<211> or 1/8<211> 
 //		bvClassifcationPattern.add(new ClassificationPattern(211, 5, 8, 211, 6, 2, 2, BurgersVectorType.PARTIAL));
 		//More severed disordered partial <211> recognized as 1/5<211> or 1/11<211> but with correct number of adjacent stacking faults
-		bvClassifcationPattern.add(new ClassificationPattern(211, 5, 11, 211, 6, 2, 2, BurgersVectorType.PARTIAL));
+		bvClassifcationPattern.add(new RBVToBVPattern(211, 5, 11, 211, 6, 2, 2, BurgersVectorType.PARTIAL));
 		//Stair Rod <100> with extremely clear signals
-		bvClassifcationPattern.add(new ClassificationPattern(100, 3, 6, 100, 3, 4, 4, BurgersVectorType.STAIR_ROD));
+		bvClassifcationPattern.add(new RBVToBVPattern(100, 3, 6, 100, 3, 4, 4, BurgersVectorType.STAIR_ROD));
 		//Stair Rod 1/3<101> with perfect signals
-		bvClassifcationPattern.add(new ClassificationPattern(110, 3, 3, 110, 3, 4, 10, BurgersVectorType.STAIR_ROD));
+		bvClassifcationPattern.add(new RBVToBVPattern(110, 3, 3, 110, 3, 4, 10, BurgersVectorType.STAIR_ROD));
 		//Stair Rod 1/6<101> with perfect signals
-		bvClassifcationPattern.add(new ClassificationPattern(110, 6, 8, 110, 6, 4, 10, BurgersVectorType.STAIR_ROD));
+		bvClassifcationPattern.add(new RBVToBVPattern(110, 6, 8, 110, 6, 4, 10, BurgersVectorType.STAIR_ROD));
 		//Stair Rod 1/6<101> with not so close signals, but correct number of adjacent surfaces
-		bvClassifcationPattern.add(new ClassificationPattern(110, 6, 11, 110, 6, 4, 4, BurgersVectorType.STAIR_ROD));
+		bvClassifcationPattern.add(new RBVToBVPattern(110, 6, 11, 110, 6, 4, 4, BurgersVectorType.STAIR_ROD));
 		//Stair Rod 1/6<310> with perfect signals
-		bvClassifcationPattern.add(new ClassificationPattern(310, 6, 8, 310, 6, 4, 4, BurgersVectorType.STAIR_ROD));
+		bvClassifcationPattern.add(new RBVToBVPattern(310, 6, 8, 310, 6, 4, 4, BurgersVectorType.STAIR_ROD));
 		//Stair Rod 1/6<123> with perfect signals
-		bvClassifcationPattern.add(new ClassificationPattern(123, 6, 8, 123, 6, 4, 4, BurgersVectorType.STAIR_ROD));
+		bvClassifcationPattern.add(new RBVToBVPattern(123, 6, 8, 123, 6, 4, 4, BurgersVectorType.STAIR_ROD));
 		//Frank partial 1/3<111> with perfect signals
-		bvClassifcationPattern.add(new ClassificationPattern(111, 3, 3, 111, 3, 0, 4, BurgersVectorType.FRANK_PARTIAL));
+		bvClassifcationPattern.add(new RBVToBVPattern(111, 3, 3, 111, 3, 0, 4, BurgersVectorType.FRANK_PARTIAL));
 	}
 	
-	
-	private FloatCrystalProperty grainBoundaryFilterDistanceProperty = 
-			new FloatCrystalProperty("gbFilterDist", "Grain boundary filter distance",
-					"<html>If grain boundaries are to be detected,"
-					+ "atoms in their vicinity can be excluded from dislocation networks."
-					+ "This value defines the maximum distance at which atoms are excluded."
-					+ "<br>If set to zero, the feature is disabled completely."
-					+ "<br>IMPORTANT: This feature can be very time consuming."
-					+ "<br>Min: 0, Max: 25</html>", 0f, 0f, 25f);
-	protected BooleanCrystalProperty highTempProperty = 
-			new BooleanCrystalProperty("highTempADA", "optimize defect classification for >150K",
+	protected BooleanProperty highTempProperty = 
+			new BooleanProperty("highTempADA", "optimize defect classification for >150K",
 					"<html>Modifies the thresholds to classify atoms.<br>"
 					+ "Typically reduces the number of false classifications.</html>",
 					false);
 	
 	public FCCStructure() {
 		super();
-		crystalProperties.add(grainBoundaryFilterDistanceProperty);
 		crystalProperties.add(highTempProperty);
 	}
 	
@@ -118,11 +107,6 @@ public class FCCStructure extends CrystalStructure {
 	@Override
 	public float getDefaultNearestNeighborSearchScaleFactor(){
 		return 0.848f;
-	}
-	
-	@Override
-	public float getPerfectBurgersVectorLength(){
-		return latticeConstant*0.7071067f;
 	}
 	
 	@Override
@@ -191,7 +175,7 @@ public class FCCStructure extends CrystalStructure {
 		ArrayList<Atom> sfAtoms = new ArrayList<Atom>();
 		for (int i=0; i<data.getAtoms().size(); i++){
 			Atom a = data.getAtoms().get(i);
-			if (a.getType() == HCP && (!ImportStates.POLY_MATERIAL.isActive() || a.getGrain() != Atom.IGNORED_GRAIN))
+			if (a.getType() == HCP && a.getGrain() != Atom.IGNORED_GRAIN)
 				sfAtoms.add(a);
 		}
 		return sfAtoms;
@@ -199,7 +183,7 @@ public class FCCStructure extends CrystalStructure {
 
 	@Override
 	public boolean isRBVToBeCalculated(Atom a) {
-		if (ImportStates.POLY_MATERIAL.isActive() && a.getGrain() == Atom.IGNORED_GRAIN) return false;
+		if (a.getGrain() == Atom.IGNORED_GRAIN) return false;
 		
 		int type = a.getType();
 		if (type != FCC && type != HCP && type != 6) return true;
@@ -233,17 +217,7 @@ public class FCCStructure extends CrystalStructure {
 	}
 	
 	@Override
-	public float getRBVIntegrationRadius() {
-		return 0.707107f*latticeConstant;
-	}
-	
-	@Override
-	public int getNumberOfNearestNeighbors() {
-		return 12;
-	}
-	
-	@Override
-	public ArrayList<ClassificationPattern> getBurgersVectorClassificationPattern() {
+	public ArrayList<RBVToBVPattern> getBurgersVectorClassificationPattern() {
 		return bvClassifcationPattern;
 	}
 	
@@ -264,12 +238,6 @@ public class FCCStructure extends CrystalStructure {
 	public int getSurfaceType() {
 		return 6;
 	}
-	
-	@Override
-	public float getGrainBoundaryFilterDistance() {
-		return grainBoundaryFilterDistanceProperty.getValue();
-	}
-	
 	
 	@Override
 	public GrainDetectionCriteria getGrainDetectionCriteria() {

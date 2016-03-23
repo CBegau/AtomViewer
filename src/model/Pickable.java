@@ -21,6 +21,9 @@ package model;
 import java.awt.event.InputEvent;
 import java.util.Collection;
 
+import common.Tupel;
+import common.Vec3;
+
 public interface Pickable {
 	public Collection<?> getHighlightedObjects();
 	public boolean isHighlightable();
@@ -30,7 +33,15 @@ public interface Pickable {
 	 * It is possible to adjust the text if certain keys are pressed
 	 * as indicated in the inputModifier.  
 	 * @param ev The input event when the message is requested. May be null
+	 * @param ev An instance of AtomData to which the object to print a message belongs to
+	 * @return Two strings, the first is a short info message, the second one is more detailed and can be enriched by html-tags
+	 */
+	public Tupel<String, String> printMessage(InputEvent ev, AtomData data);
+	
+	/**
+	 * Returns the centroid or a similiar property of the object that can be focuses on
+	 * May return null if the operation is not supported by this kind of object 
 	 * @return
 	 */
-	public String printMessage(InputEvent ev);
+	public Vec3 getCenterOfObject();
 }

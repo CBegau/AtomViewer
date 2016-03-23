@@ -22,6 +22,8 @@ import javax.swing.SwingWorker;
 
 public class ProgressMonitor {
 	
+	private static ProgressMonitor currentMonitor = new ProgressMonitor(null);
+	
 	private SwingWorker<?,?> worker;
 	private int updateInterval = 100;
 	
@@ -30,27 +32,39 @@ public class ProgressMonitor {
 	private boolean destroyed = false;
 	private boolean started = false;
 	
-	public ProgressMonitor(SwingWorker<?,?> worker) {
-		if (worker == null) return;
+	public static ProgressMonitor getProgressMonitor(){
+		return currentMonitor;
+	}
+	
+	public static ProgressMonitor createNewProgressMonitor(SwingWorker<?,?> worker){
+		if (currentMonitor != null) currentMonitor.destroy();
+		currentMonitor = new ProgressMonitor(worker);
+		return currentMonitor;
+	}
+	
+	private ProgressMonitor(SwingWorker<?,?> worker) {
 		this.worker = worker;
-		Thread t = new Thread(new Runnable() {
-			@Override
-			public void run() {
-				long oldValue = counter;
-				while(true){
-					if (destroyed) return;
-					if (started)
-						if (oldValue != counter){
-							ProgressMonitor.this.worker.firePropertyChange("operation_progress", null, (counter*100)/max);
-							oldValue = counter;
-						}
-					try {
-						Thread.sleep(updateInterval);
-					} catch (InterruptedException e) {}
+		if (worker != null){
+			Thread t = new Thread(new Runnable() {
+				@Override
+				public void run() {
+					long oldValue = counter;
+					while(true){
+						if (destroyed) return;
+						if (started)
+							if (oldValue != counter){
+								if (max>0)
+									ProgressMonitor.this.worker.firePropertyChange("operation_progress", null, (counter*100)/max);
+								oldValue = counter;
+							}
+						try {
+							Thread.sleep(updateInterval);
+						} catch (InterruptedException e) {}
+					}
 				}
-			}
-		});
-		t.start();
+			});
+			t.start();
+		}
 	}
 	
 	public synchronized void setUpdateInterval(int interval){
@@ -95,6 +109,8 @@ public class ProgressMonitor {
 	}
 	
 	public synchronized void destroy(){
+		if (worker != null)
+			worker.firePropertyChange("destroy", null, null);
 		this.destroyed = true;
 	}
 }

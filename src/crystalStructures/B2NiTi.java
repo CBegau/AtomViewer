@@ -25,35 +25,24 @@ import common.Vec3;
 import model.*;
 import model.BurgersVector.BurgersVectorType;
 import model.polygrain.grainDetection.*;
-import model.skeletonizer.processors.*;
-import model.skeletonizer.processors.BurgersVectorAnalyzer.ClassificationPattern;
+import processingModules.skeletonizer.processors.*;
+import processingModules.skeletonizer.processors.BurgersVectorAnalyzer.RBVToBVPattern;
 
 public class B2NiTi extends BCCStructure{
 
-	private static final ArrayList<ClassificationPattern> bvClassifcationPattern = new ArrayList<ClassificationPattern>();
+	private static final ArrayList<RBVToBVPattern> bvClassifcationPattern = new ArrayList<RBVToBVPattern>();
 	
 	static{
 		//1/2<111>
-		bvClassifcationPattern.add(new ClassificationPattern(111, 2, 4, 111, 2, BurgersVectorType.PARTIAL));
+		bvClassifcationPattern.add(new RBVToBVPattern(111, 2, 4, 111, 2, BurgersVectorType.PARTIAL));
 		//<100>
-		bvClassifcationPattern.add(new ClassificationPattern(100, 1, 2, 100, 1, BurgersVectorType.PERFECT));
+		bvClassifcationPattern.add(new RBVToBVPattern(100, 1, 2, 100, 1, BurgersVectorType.PERFECT));
 		//1/2<111> identified as 1/4<112>
-		bvClassifcationPattern.add(new ClassificationPattern(112, 4, 4, 111, 2, BurgersVectorType.PARTIAL));
+		bvClassifcationPattern.add(new RBVToBVPattern(112, 4, 4, 111, 2, BurgersVectorType.PARTIAL));
 	}
 	
 	public B2NiTi() {
 		super();
-		crystalProperties.remove(grainBoundaryFilterDistanceProperty);
-		
-		this.minRBVLength.setDefaultValue(0.35f);
-		this.dislocationMeshRadius.setDefaultValue(1.28f);
-		this.grainBoundaryMeshSize.setDefaultValue(2f);
-		this.orderGrainsBySize.defaultValue = true;
-	}
-	
-	@Override
-	public float getGrainBoundaryFilterDistance() {
-		return 0f;
 	}
 	
 	@Override
@@ -125,15 +114,8 @@ public class B2NiTi extends BCCStructure{
 	}
 	
 	@Override
-	public float[] getSphereSizeScalings(){
-		float[] size = new float[getNumberOfElements()];
-		size[0] = 1f;
-		size[1] = 0.85f;
-		return size;
-	}
-	
-	public float getPerfectBurgersVectorLength(){
-		return latticeConstant;
+	public float[] getDefaultSphereSizeScalings(){
+		return new float[]{1f, 0.85f};
 	}
 	
 	@Override
@@ -152,13 +134,18 @@ public class B2NiTi extends BCCStructure{
 	}
 	
 	@Override
-	public ArrayList<ClassificationPattern> getBurgersVectorClassificationPattern() {
+	public ArrayList<RBVToBVPattern> getBurgersVectorClassificationPattern() {
 		return bvClassifcationPattern;
 	}
 	
 	@Override
 	public int getNumberOfElements(){
 		return 2;
+	}
+	
+	@Override
+	public String[] getNamesOfElements(){
+		return new String[]{"Ni", "Ti"};
 	}
 	
 	@Override
@@ -176,24 +163,20 @@ public class B2NiTi extends BCCStructure{
 		return list;
 	}
 	
-	@Override
-	public boolean skeletonizeOverMultipleGrains(){
-		return true;
+	public float getDefaultSkeletonizerMeshingThreshold(){
+		return 1.28f;
 	}
 	
-	@Override
-	public boolean createRBVbeforeGrains(){
-		return true;
+	public float getDefaultSkeletonizerRBVThreshold(){
+		return 0.35f;
 	}
 	
 	private class MartensiteGrainDetectionCriteria implements GrainDetectionCriteria {
 
 		private CrystalStructure cs;
-		private float lattice;
 		
 		public MartensiteGrainDetectionCriteria(CrystalStructure cs){
 			this.cs = cs;
-			this.lattice = cs.getLatticeConstant()*cs.getLatticeConstant()*0.15f;
 		}
 		
 		@Override
@@ -213,19 +196,14 @@ public class B2NiTi extends BCCStructure{
 
 		@Override
 		public boolean includeAtom(Atom atom) {
-			if (( (atom.getType() == 3) &&
-					(atom.getRBV()==null || atom.getRBV().bv.getLengthSqr() < lattice)))
-				return true;
-			return false;
+			return atom.getType() == 3;
 		}
 
 		@Override
 		public boolean includeAtom(AtomToGrainObject atom, List<AtomToGrainObject> neighbors) {		
 			return neighbors.size()>9;
 		}
-
 	}
-	
 	
 	public GrainDetectionCriteria getGrainDetectionCriteria(){
 		return new MartensiteGrainDetectionCriteria(this);

@@ -62,8 +62,6 @@ public class GLMatrix {
 	}
 	
 	public void scale(float x, float y, float z){
-		assert (x!=0f && y!=0 && z!=0);
-		
 		float[] t = new float[16];
 		t[0]= x;
 		t[5]= y;
@@ -122,31 +120,29 @@ public class GLMatrix {
 		
 	public void mult(float[] m){
 		float[] copy = new float[16];
-		float[] newMatrix = new float[16];
 		this.m.get(copy);
 		this.m.rewind();
 		
-		newMatrix[0] =  m[0] *  copy[0] + m[1] *  copy[4] + m[2] *  copy[8] +  m[3] *  copy[12]; 
-		newMatrix[1] =  m[0] *  copy[1] + m[1] *  copy[5] + m[2] *  copy[9] +  m[3] *  copy[13];
-		newMatrix[2] =  m[0] *  copy[2] + m[1] *  copy[6] + m[2] *  copy[10] + m[3] *  copy[14];
-		newMatrix[3] =  m[0] *  copy[3] + m[1] *  copy[7] + m[2] *  copy[11] + m[3] *  copy[15];
-		                
-		newMatrix[4] =  m[4] *  copy[0] + m[5] *  copy[4] + m[6] *  copy[8] +  m[7] *  copy[12]; 
-		newMatrix[5] =  m[4] *  copy[1] + m[5] *  copy[5] + m[6] *  copy[9] +  m[7] *  copy[13];
-		newMatrix[6] =  m[4] *  copy[2] + m[5] *  copy[6] + m[6] *  copy[10] + m[7] *  copy[14];
-		newMatrix[7] =  m[4] *  copy[3] + m[5] *  copy[7] + m[6] *  copy[11] + m[7] *  copy[15];
-		                
-		newMatrix[8] =  m[8] *  copy[0] + m[9] *  copy[4] + m[10] * copy[8] +  m[11] * copy[12]; 
-		newMatrix[9] =  m[8] *  copy[1] + m[9] *  copy[5] + m[10] * copy[9] +  m[11] * copy[13];
-		newMatrix[10] = m[8] *  copy[2] + m[9] *  copy[6] + m[10] * copy[10] + m[11] * copy[14];
-		newMatrix[11] = m[8] *  copy[3] + m[9] *  copy[7] + m[10] * copy[11] + m[11] * copy[15];
-		                
-		newMatrix[12] = m[12] * copy[0] + m[13] * copy[4] + m[14] * copy[8] +  m[15] * copy[12]; 
-		newMatrix[13] = m[12] * copy[1] + m[13] * copy[5] + m[14] * copy[9] +  m[15] * copy[13];
-		newMatrix[14] = m[12] * copy[2] + m[13] * copy[6] + m[14] * copy[10] + m[15] * copy[14];
-		newMatrix[15] = m[12] * copy[3] + m[13] * copy[7] + m[14] * copy[11] + m[15] * copy[15];
+		this.m.put(m[0] *  copy[0] + m[1] *  copy[4] + m[2] *  copy[8] +  m[3] *  copy[12]); 
+		this.m.put(m[0] *  copy[1] + m[1] *  copy[5] + m[2] *  copy[9] +  m[3] *  copy[13]);
+		this.m.put(m[0] *  copy[2] + m[1] *  copy[6] + m[2] *  copy[10] + m[3] *  copy[14]);
+		this.m.put(m[0] *  copy[3] + m[1] *  copy[7] + m[2] *  copy[11] + m[3] *  copy[15]);
 		
-		this.m.put(newMatrix);
+		this.m.put(m[4] *  copy[0] + m[5] *  copy[4] + m[6] *  copy[8] +  m[7] *  copy[12]); 
+		this.m.put(m[4] *  copy[1] + m[5] *  copy[5] + m[6] *  copy[9] +  m[7] *  copy[13]);
+		this.m.put(m[4] *  copy[2] + m[5] *  copy[6] + m[6] *  copy[10] + m[7] *  copy[14]);
+		this.m.put(m[4] *  copy[3] + m[5] *  copy[7] + m[6] *  copy[11] + m[7] *  copy[15]);
+		
+		this.m.put(m[8] *  copy[0] + m[9] *  copy[4] + m[10] * copy[8] +  m[11] * copy[12]); 
+		this.m.put(m[8] *  copy[1] + m[9] *  copy[5] + m[10] * copy[9] +  m[11] * copy[13]);
+		this.m.put(m[8] *  copy[2] + m[9] *  copy[6] + m[10] * copy[10] + m[11] * copy[14]);
+		this.m.put(m[8] *  copy[3] + m[9] *  copy[7] + m[10] * copy[11] + m[11] * copy[15]);
+		
+		this.m.put(m[12] * copy[0] + m[13] * copy[4] + m[14] * copy[8] +  m[15] * copy[12]); 
+		this.m.put(m[12] * copy[1] + m[13] * copy[5] + m[14] * copy[9] +  m[15] * copy[13]);
+		this.m.put(m[12] * copy[2] + m[13] * copy[6] + m[14] * copy[10] + m[15] * copy[14]);
+		this.m.put(m[12] * copy[3] + m[13] * copy[7] + m[14] * copy[11] + m[15] * copy[15]);
+		
 		this.m.rewind();
 	}
 	

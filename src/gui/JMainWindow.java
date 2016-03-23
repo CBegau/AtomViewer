@@ -18,6 +18,8 @@
 
 package gui;
 
+import gui.PrimitiveProperty.BooleanProperty;
+import gui.PrimitiveProperty.FloatProperty;
 import gui.ViewerGLJPanel.RenderOption;
 
 import java.awt.*;
@@ -27,47 +29,60 @@ import java.beans.PropertyChangeListener;
 import java.io.*;
 import java.text.DecimalFormat;
 import java.util.Locale;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import javax.imageio.ImageIO;
-import javax.media.opengl.GLCapabilities;
-//import javax.media.opengl.GLDrawableFactory;
-//import javax.media.opengl.GLOffscreenAutoDrawable;
-import javax.media.opengl.GLProfile;
+import com.jogamp.opengl.GLCapabilities;
+//import com.jogamp.opengl.GLDrawableFactory;
+//import com.jogamp.opengl.GLOffscreenAutoDrawable;
+import com.jogamp.opengl.GLProfile;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
+
+import processingModules.DataContainer;
+import processingModules.skeletonizer.Skeletonizer;
+import processingModules.ProcessingModule;
+import processingModules.toolchain.Toolchain;
 
 import com.jogamp.opengl.JoglVersion;
 
 import common.ColorTable;
 import common.ColorTable.ColorBarScheme;
+import common.CommonUtils;
+import common.Vec3;
 import crystalStructures.CrystalStructure;
 import model.*;
 import model.io.*;
-import model.io.MDFileLoader.InputFormat;
-import model.Configuration.Options;
-import model.dataContainer.DataContainer;
+import model.Configuration.AtomDataChangedEvent;
+import model.Configuration.AtomDataChangedListener;
+import model.ImportConfiguration.ImportStates;
+import model.RenderingConfiguration.Options;
 
-public class JMainWindow extends JFrame implements WindowListener {
+public class JMainWindow extends JFrame implements WindowListener, AtomDataChangedListener {
 
-	public static final String VERSION = "2.1"; 
-	public static final String SUBVERSION = "1944";
+	public static final String VERSION = "3.0 devel"; 
+	public static String buildVersion = "";
 	
 	private static final long serialVersionUID = 1L;
-	private ViewerGLJPanel viewer;
 	
-	private KeyBoardAction keyAction = new KeyBoardAction();
-	
-	private final JAtomicMenuPanel atomicMenu = new JAtomicMenuPanel(keyAction, this);
-	private final JGraphicOptionCheckBoxMenuItem stereoCheckBoxMenu;
-	private final JGraphicOptionCheckBoxMenuItem perspectiveCheckBoxMenu;
-	private final JGraphicOptionCheckBoxMenuItem drawCoordinateSystemBoxMenu;
-	private final JGraphicOptionCheckBoxMenuItem whiteBackgroundCheckBoxMenu;
-	private final JMenuItem editRangeMenuItem;
-	private final JMenuItem exportSkeletonFileMenuItem;
-	private final JMenuItem editCrystalConf = new JMenuItem("Edit configuration");
+	private final JAtomicMenuPanel atomicMenu;
 	private final JMenu typeColorMenu;
 	
 	public JMainWindow() {
+		//Set fonts
+		for (Map.Entry<Object, Object> entry : javax.swing.UIManager.getDefaults().entrySet()) {
+		    Object key = entry.getKey();
+		    Object value = javax.swing.UIManager.get(key);
+		    if (value != null && value instanceof javax.swing.plaf.FontUIResource) {
+		        javax.swing.plaf.FontUIResource fr=(javax.swing.plaf.FontUIResource)value;
+		        javax.swing.plaf.FontUIResource f = new javax.swing.plaf.FontUIResource(RenderingConfiguration.defaultFont, 
+		        		fr.getStyle(), RenderingConfiguration.defaultFontSize);
+		        javax.swing.UIManager.put(key, f);
+		    }
+		}
+		
 		//Load the icon
 		try {
 			final String resourcesPath = "resources/icon.png";
@@ -77,6 +92,7 @@ public class JMainWindow extends JFrame implements WindowListener {
 		} catch (IOException e2) {}
 		
 		this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+		Configuration.addAtomDataListener(this);
 		
 		//Disable that ToolTips disappear automatically after short time
 		ToolTipManager.sharedInstance().setDismissDelay(Integer.MAX_VALUE);
@@ -84,7 +100,7 @@ public class JMainWindow extends JFrame implements WindowListener {
 		GLProfile maxProfile = GLProfile.getMaxProgrammableCore(true);
 		GLCapabilities glCapabilities = new GLCapabilities(maxProfile);
 		
-		viewer = new ViewerGLJPanel(650, 650, glCapabilities);
+		ViewerGLJPanel viewer = new ViewerGLJPanel(650, 650, glCapabilities);
 		viewer.setFocusable(true);
 		viewer.requestFocus(); // the viewer now has focus, so receives key events
 		this.setTitle("AtomViewer");
@@ -97,14 +113,13 @@ public class JMainWindow extends JFrame implements WindowListener {
 		splitPane.add(renderPane);
 		
 		//Combine view buttons and the log panel into a container 
-		Container cont = new Container();
+		JPanel cont = new JPanel();
 		cont.setLayout(new GridBagLayout());
-		GridBagConstraints gbc = new GridBagConstraints();
-		gbc.gridx = 0; gbc.gridy = 0;
-		gbc.fill = GridBagConstraints.BOTH; gbc.weightx = 10; gbc.weighty = 1;
+		GridBagConstraints gbc = CommonUtils.getBasicGridBagConstraint();
+		gbc.weightx = 10;
 		cont.add(JLogPanel.getJLogPanel(),gbc);
-		gbc.gridx++; gbc.weightx = 1;
-		cont.add(new DefaultPerspectivesButtonContainer(),gbc);;
+		gbc.gridx++; gbc.weightx = 0.2;
+		cont.add(new DefaultPerspectivesButtonPanel(),gbc);
 		
 		splitPane.add(cont);
 		splitPane.setDividerLocation(0.9);
@@ -115,59 +130,55 @@ public class JMainWindow extends JFrame implements WindowListener {
 			}
 		});
 		
+		splitPane.getActionMap().setParent(this.getRootPane().getActionMap());
+		splitPane.getInputMap().setParent(this.getRootPane().getInputMap());
+		
+		this.atomicMenu = new JAtomicMenuPanel(this);
 		this.add(atomicMenu, BorderLayout.WEST);
 		
 		this.add(splitPane, BorderLayout.CENTER);
 		addWindowListener(this);
 		
-		OpenMenuListener oml = new OpenMenuListener();
 		
 		JMenuBar menu = new JMenuBar();
 		JMenu fileMenu = new JMenu("File");
-		JMenuItem openIMDMenuItem = new JMenuItem("Open IMD file");
-		openIMDMenuItem.setActionCommand(InputFormat.IMD.name());
-		openIMDMenuItem.addActionListener(CursorController.createListener(this, oml));
-		fileMenu.add(openIMDMenuItem);
-		JMenuItem openLammpsMenuItem = new JMenuItem("Open Lammps file");
-		openLammpsMenuItem.setActionCommand(InputFormat.LAMMPS.name());
-		openLammpsMenuItem.addActionListener(CursorController.createListener(this, oml));
-		fileMenu.add(openLammpsMenuItem);
+		JMenuItem openFileMenuItem = new JMenuItem("Open file");
+		openFileMenuItem.addActionListener(new OpenMenuListener());
+		fileMenu.add(openFileMenuItem);
 		
 		JMenuItem exportScreenShotMenuItem = new JMenuItem("Save Screenshot");
 		exportScreenShotMenuItem.setActionCommand("Screenshot");
-		exportScreenShotMenuItem.addActionListener(CursorController.createListener(this, new ExportActionListener()));
+		exportScreenShotMenuItem.addActionListener(new ExportScreenshotActionListener());
 		fileMenu.add(exportScreenShotMenuItem);
 		
-		ExportFileActionListener exportFileListener = new ExportFileActionListener();
-		
-		JMenuItem exportAsciiFile = new JMenuItem("Export Data as ada-file (ASCII)");
-		exportAsciiFile.addActionListener(CursorController.createListener(this, exportFileListener));
-		exportAsciiFile.setActionCommand("ascii");
+		JMenuItem exportAsciiFile = new JMenuItem("Export as IMD-Checkpoint");
+		exportAsciiFile.addActionListener(new ExportFileActionListener());
 		fileMenu.add(exportAsciiFile);
 		
-		JMenuItem exportBinaryFile = new JMenuItem("Export Data as ada-file (Binary)");
-		exportBinaryFile.addActionListener(CursorController.createListener(this, exportFileListener));
-		exportBinaryFile.setActionCommand("binary");
-		fileMenu.add(exportBinaryFile);
-		
-		exportSkeletonFileMenuItem = new JMenuItem("Export dislocation network");
-		exportSkeletonFileMenuItem.addActionListener(CursorController.createListener(this, new ActionListener() {
+		final JMenuItem exportSkeletonFileMenuItem = new JMenuItem("Export dislocation network");
+		exportSkeletonFileMenuItem.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				assert Configuration.getCurrentAtomData().getSkeletonizer() != null : "No Skeleton";
+				if (Configuration.getCurrentAtomData() == null)
+					return;
+				DataContainer dc = Configuration.getCurrentAtomData().getDataContainer(Skeletonizer.class);
+				Skeletonizer skel = (dc != null)? (Skeletonizer)dc: null;
+				if (skel == null) {
+					JOptionPane.showMessageDialog(JMainWindow.this, "Dislocation network not available");
+					return;
+				}
 				
 				JFileChooser chooser = new JFileChooser();
 				int result = chooser.showSaveDialog(JMainWindow.this);
 				if (result == JFileChooser.APPROVE_OPTION){
 					try {
-						Configuration.getCurrentAtomData().getSkeletonizer().writeDislocationSkeleton(chooser.getSelectedFile());
+						skel.writeDislocationSkeleton(chooser.getSelectedFile());
 					} catch (IOException e1) {
 						e1.printStackTrace();
 					}
 				}
 			}
-		}));
-		exportSkeletonFileMenuItem.setEnabled(false);
+		});
 		fileMenu.add(exportSkeletonFileMenuItem);
 		
 		
@@ -185,23 +196,20 @@ public class JMainWindow extends JFrame implements WindowListener {
 		
 		JMenu viewMenu = new JMenu("View");
 		
-		editRangeMenuItem = new JMenuItem("Edit visible range");
-		editRangeMenuItem.setMnemonic(KeyEvent.VK_R);
-		
+		JMenuItem editRangeMenuItem = new JMenuItem("Edit visible range");
 		editRangeMenuItem.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (Configuration.getCurrentAtomData() != null){
-					RenderRange rr = viewer.getRenderRange();
+					RenderRange rr = RenderingConfiguration.getViewer().getRenderRange();
 					new JRenderedIntervalEditorDialog(JMainWindow.this, rr);
-					viewer.updateAtoms();
+					RenderingConfiguration.getViewer().updateAtoms();
 				}
 			}
 		});
 		
 		final JCheckBoxMenuItem drawLegendMenuItem = new JCheckBoxMenuItem("Show legends");
 		drawLegendMenuItem.setSelected(RenderOption.LEGEND.isEnabled());
-		drawLegendMenuItem.setMnemonic(KeyEvent.VK_L);
 		drawLegendMenuItem.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
@@ -210,45 +218,26 @@ public class JMainWindow extends JFrame implements WindowListener {
 		});
 		
 		JMenuItem changeSphereSizeMenuItem = new JMenuItem("Change sphere size");
-		changeSphereSizeMenuItem.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				String str = JOptionPane.showInputDialog(null, "Enter new sphere size (current "+Float.toString(viewer.getSphereSize()) +"): ", 
-						"Enter sphere size", JOptionPane.QUESTION_MESSAGE);
-				try {
-					if (str!=null){
-						float f = Float.parseFloat(str);
-						viewer.setSphereSize(f);
-					}
-				} catch (Exception ex) {
-					JOptionPane.showMessageDialog(null, "Please enter a valid number", "Warning", JOptionPane.WARNING_MESSAGE);
-				}
-			}
-		});
+		changeSphereSizeMenuItem.addActionListener(new JChangeSphereSizeActionListener());
 		
-		perspectiveCheckBoxMenu = new JGraphicOptionCheckBoxMenuItem("Perspective projection", RenderOption.PERSPECTIVE);
-		perspectiveCheckBoxMenu.setToolTipText("Enable perspective projection instead of orthogonal");
-		perspectiveCheckBoxMenu.setMnemonic(KeyEvent.VK_P);
-		
-		stereoCheckBoxMenu = new JGraphicOptionCheckBoxMenuItem("Anaglyphic stereo", RenderOption.STEREO);
-		stereoCheckBoxMenu.setMnemonic(KeyEvent.VK_S);
-		
-		whiteBackgroundCheckBoxMenu = new JGraphicOptionCheckBoxMenuItem("White background", RenderOption.PRINTING_MODE);
-		whiteBackgroundCheckBoxMenu.setMnemonic(KeyEvent.VK_W);
-		
+		JGraphicOptionCheckBoxMenuItem perspectiveCheckBoxMenu = 
+				new JGraphicOptionCheckBoxMenuItem("Perspective projection", RenderOption.PERSPECTIVE, 
+						"Enable perspective projection instead of orthogonal");
+		JGraphicOptionCheckBoxMenuItem stereoCheckBoxMenu = 
+				new JGraphicOptionCheckBoxMenuItem("Anaglyphic stereo", RenderOption.STEREO, "");
+		JGraphicOptionCheckBoxMenuItem whiteBackgroundCheckBoxMenu = 
+				new JGraphicOptionCheckBoxMenuItem("White background", RenderOption.PRINTING_MODE, "");
 		JGraphicOptionCheckBoxMenuItem drawBoundingBoxCheckBoxMenu = 
-				new JGraphicOptionCheckBoxMenuItem("Bounding box", RenderOption.BOUNDING_BOX);
+				new JGraphicOptionCheckBoxMenuItem("Bounding box", RenderOption.BOUNDING_BOX, "");
 		JGraphicOptionCheckBoxMenuItem drawTetraederCheckBoxMenu = 
-				new JGraphicOptionCheckBoxMenuItem("Thompson Tetraeder", RenderOption.THOMPSON_TETRAEDER);
+				new JGraphicOptionCheckBoxMenuItem("Thompson Tetraeder", RenderOption.THOMPSON_TETRAEDER, "");
 		JGraphicOptionCheckBoxMenuItem drawLengthScaleBoxMenu = 
-				new JGraphicOptionCheckBoxMenuItem("Length scale", RenderOption.LENGTH_SCALE);
-		drawLengthScaleBoxMenu.setToolTipText("A lenght scale bar is only possible in othogonal projection"
-				+ ", but not in perspective projection");
+				new JGraphicOptionCheckBoxMenuItem("Length scale", RenderOption.LENGTH_SCALE, 
+						"A lenght scale bar is only possible in othogonal projection, but not in perspective projection");
 		JGraphicOptionCheckBoxMenuItem drawIndentBoxMenu = 
-				new JGraphicOptionCheckBoxMenuItem("Indenter (if available)", RenderOption.INDENTER);
-		
-		drawCoordinateSystemBoxMenu = new JGraphicOptionCheckBoxMenuItem("Coordinate System", RenderOption.COORDINATE_SYSTEM);
-		drawCoordinateSystemBoxMenu.setMnemonic(KeyEvent.VK_C);
+				new JGraphicOptionCheckBoxMenuItem("Indenter (if available)", RenderOption.INDENTER, "");
+		JGraphicOptionCheckBoxMenuItem drawCoordinateSystemBoxMenu = 
+				new JGraphicOptionCheckBoxMenuItem("Coordinate System", RenderOption.COORDINATE_SYSTEM, "");
 		
 		viewMenu.add(editRangeMenuItem);
 		viewMenu.add(changeSphereSizeMenuItem);
@@ -256,10 +245,10 @@ public class JMainWindow extends JFrame implements WindowListener {
 		viewMenu.add(perspectiveCheckBoxMenu);
 		viewMenu.add(whiteBackgroundCheckBoxMenu);
 		viewMenu.add(drawBoundingBoxCheckBoxMenu);
-		viewMenu.add(drawTetraederCheckBoxMenu);
 		viewMenu.add(drawCoordinateSystemBoxMenu);
 		viewMenu.add(drawLengthScaleBoxMenu);
-		if (!Configuration.Options.SIMPLE.isEnabled()) viewMenu.add(drawIndentBoxMenu);
+		viewMenu.add(drawTetraederCheckBoxMenu);
+		viewMenu.add(drawIndentBoxMenu);
 		viewMenu.add(drawLegendMenuItem);
 		
 		JMenu legendStyleMenu = new JMenu("Legend style");
@@ -269,8 +258,8 @@ public class JMainWindow extends JFrame implements WindowListener {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
 				ColorTable.setColorBarSwapped(swapLegend.isSelected());
-				viewer.updateAtoms();
-				Configuration.Options.saveProperties();
+				RenderingConfiguration.getViewer().updateAtoms();
+				RenderingConfiguration.saveProperties();
 			}
 		});
 		legendStyleMenu.add(swapLegend);
@@ -286,8 +275,8 @@ public class JMainWindow extends JFrame implements WindowListener {
 					@Override
 					public void actionPerformed(ActionEvent arg0) {
 						ColorTable.setColorBarScheme(scheme);
-						Configuration.Options.saveProperties();
-						viewer.updateAtoms();
+						RenderingConfiguration.saveProperties();
+						RenderingConfiguration.getViewer().updateAtoms();
 					}
 				});
 			}
@@ -296,33 +285,16 @@ public class JMainWindow extends JFrame implements WindowListener {
 		
 		menu.add(viewMenu);
 		
-		JMenu editMenu = new JMenu("Edit");
-		editMenu.add(editCrystalConf);
-		editCrystalConf.setEnabled(false);
-		editCrystalConf.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent arg0) {
-				File selectedFile = new File(Configuration.getCurrentAtomData().getFullPathAndFilename());
-				
-				JCrystalConfigurationDialog ccd = 
-						new JCrystalConfigurationDialog(JMainWindow.this, 
-								Configuration.getLastOpenedFolder(), selectedFile, true);
-				if (ccd.isSavedSuccessfully()) {
-					JOptionPane.showMessageDialog(JMainWindow.this, "File(s) must be reloaded for changes to be effective");
-				}
-			}
-		});
-		
-		typeColorMenu = new JMenu("Colors");
+		typeColorMenu = new JMenu("Atom type colors");
 		JMenuItem resetColorMenuItem = new JMenuItem("Reset colors of atom types");
 		resetColorMenuItem.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
-				CrystalStructure c = Configuration.getCrystalStructure();
+				CrystalStructure c = Configuration.getCurrentAtomData().getCrystalStructure();
 				if (c!=null) {
 					c.resetColors();
 					atomicMenu.updateValues();
-					viewer.updateAtoms();
+					RenderingConfiguration.getViewer().updateAtoms();
 				}
 			}
 		});
@@ -341,7 +313,7 @@ public class JMainWindow extends JFrame implements WindowListener {
 						if(!f.getAbsolutePath().endsWith(".color")){
 						    f = new File(f.getAbsolutePath() + ".color");
 						}
-						CrystalStructure cs = Configuration.getCrystalStructure();
+						CrystalStructure cs = Configuration.getCurrentAtomData().getCrystalStructure();
 						int numCol = cs.getNumberOfTypes();
 						float[][] currentColors = new float[numCol][];
 						for (int i=0; i<numCol; i++)
@@ -365,13 +337,13 @@ public class JMainWindow extends JFrame implements WindowListener {
 					int result = chooser.showOpenDialog(JMainWindow.this);
 					if (result == JFileChooser.APPROVE_OPTION){
 						float[][] colors = ColorTable.loadColorsFromFile(chooser.getSelectedFile());
-						CrystalStructure cs = Configuration.getCrystalStructure();
+						CrystalStructure cs = Configuration.getCurrentAtomData().getCrystalStructure();
 						for (int i = 0; i<colors.length && i<cs.getNumberOfTypes(); i++){
 							cs.setGLColors(i, colors[i]);
 						}
 						
 						atomicMenu.updateValues();
-						viewer.updateAtoms();
+						RenderingConfiguration.getViewer().updateAtoms();
 					}
 				} catch (IOException e1) {
 					JOptionPane.showMessageDialog(JMainWindow.this, e1.getMessage());
@@ -380,31 +352,202 @@ public class JMainWindow extends JFrame implements WindowListener {
 		});
 		typeColorMenu.add(loadColorMenuItem);
 		
-		editMenu.add(typeColorMenu);
+		viewMenu.add(typeColorMenu);
 		typeColorMenu.setEnabled(false);
-		menu.add(editMenu);
 		
-		final JMenuItem extrasMenu = new JMenu("Extras");
-		for (final DataContainer dc : DataContainer.getDataContainer()){
-			final JMenuItem extraMenuItem = new JMenuItem(dc.getName());
-			extraMenuItem.addActionListener(new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent arg0) {
-					if (Configuration.getCurrentAtomData() != null){
-						Configuration.getCurrentAtomData().addAdditionalData(dc);
-						atomicMenu.setAtomData(Configuration.getCurrentAtomData(), viewer, false);
-						viewer.reDraw();
+		final JMenu processingMenu = new JMenu("Analysis");
+		
+		JMenuItem analysisModulesMenu = new JMenuItem("Add analyis");
+		analysisModulesMenu.setActionCommand("analysis");
+		
+		ActionListener processingActionListener = new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				AtomData data = Configuration.getCurrentAtomData();
+				if (data != null){
+					JProcessingModuleDialog dialog = new JProcessingModuleDialog(JMainWindow.this);
+					
+					JProcessingModuleDialog.SelectedState ok = dialog.showDialog();
+					ProcessingModule pm = dialog.getSelectedProcessingModule();
+					if (ok != JProcessingModuleDialog.SelectedState.CANCEL && pm!=null){
+						boolean multipleFiles = (ok == JProcessingModuleDialog.SelectedState.ALL_FILES);
+						
+						boolean possible = pm.showConfigurationDialog(JMainWindow.this, data);
+						List<AtomData> toProcess = new ArrayList<AtomData>();
+						if (possible){
+							while (multipleFiles && data.getPrevious() != null)
+								data = data.getPrevious();
+							
+							do {
+								if (pm.isApplicable(data))
+									toProcess.add(data);
+								if (multipleFiles) data = data.getNext();
+							} while (multipleFiles && data != null);
+							
+							applyProcessWindowWithDisplay(toProcess, pm);
+							
+							Configuration.setCurrentAtomData(Configuration.getCurrentAtomData(), true, false);
+						}
 					}
 				}
-			});
-			extrasMenu.add(extraMenuItem);
+			}
+
+		};
+		analysisModulesMenu.addActionListener(processingActionListener);
+		processingMenu.add(analysisModulesMenu);
+		
+		JMenuItem saveToolchainMenuItem = new JMenuItem("Save toolchain of data set");
+		saveToolchainMenuItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				JFileChooser chooser = new JFileChooser();
+				chooser.setFileFilter(new FileNameExtensionFilter("Toolchainfile (*.tcf)","tcf"));
+				int result = chooser.showSaveDialog(JMainWindow.this);
+				if (result == JFileChooser.APPROVE_OPTION){
+					File file = chooser.getSelectedFile();
+					try {
+						FileOutputStream f = new FileOutputStream(file);
+						Configuration.getCurrentAtomData().getToolchain().saveToolchain(f);
+					} catch (Exception e1) {
+						e1.printStackTrace();
+					}
+				}
+			}
+		});
+		
+		JMenuItem applyToolchainMenuItem = new JMenuItem("Apply toolchain file");
+		applyToolchainMenuItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					JFileChooser chooser = new JFileChooser();
+					chooser.setFileFilter(new FileNameExtensionFilter("Toolchainfile (*.tcf)","tcf"));
+					int result = chooser.showOpenDialog(JMainWindow.this);
+					if (result == JFileChooser.APPROVE_OPTION){
+						File file = chooser.getSelectedFile();
+						FileInputStream f = new FileInputStream(file);
+						Toolchain tc = Toolchain.readToolchain(f);
+						for (ProcessingModule pm : tc.getProcessingModules()){
+							applyProcessWindowWithDisplay(Configuration.getCurrentAtomData(), pm.clone());
+						}
+						Configuration.setCurrentAtomData(Configuration.getCurrentAtomData(), true, false);
+						JLogPanel.getJLogPanel().addInfo("Applied toolchain",
+								String.format("Applied toolchain %s", file.getName()));
+					}
+					
+					
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
+				
+			}
+		});
+		
+		JMenuItem applyToAllToolchainMenuItem = new JMenuItem("Apply toolchain file to all data sets");
+		applyToAllToolchainMenuItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					JFileChooser chooser = new JFileChooser();
+					chooser.setFileFilter(new FileNameExtensionFilter("Toolchainfile (*.tcf)","tcf"));
+					int result = chooser.showOpenDialog(JMainWindow.this);
+					if (result == JFileChooser.APPROVE_OPTION){
+						File file = chooser.getSelectedFile();
+						FileInputStream f = new FileInputStream(file);
+						Toolchain tc = Toolchain.readToolchain(f);
+						AtomData def = Configuration.getCurrentAtomData();
+						for (ProcessingModule pm : tc.getProcessingModules()){
+							for (AtomData d : Configuration.getAtomDataIterable()){
+								ProcessingModule pmc = pm.clone();
+								applyProcessWindowWithDisplay(d, pmc);
+							}
+						}
+						Configuration.setCurrentAtomData(def, true, false);
+						JLogPanel.getJLogPanel().addInfo("Applied toolchain",
+								String.format("Applied toolchain %s", file.getName()));
+					}
+					
+					
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
+				
+			}
+		});
+		
+		
+		if (Configuration.experimentalFeatures){
+			final JMenuItem toolchainMenu = new JMenu("Toolchain");
+			toolchainMenu.add(saveToolchainMenuItem);
+			toolchainMenu.add(applyToolchainMenuItem);
+			toolchainMenu.add(applyToAllToolchainMenuItem);
+			processingMenu.add(toolchainMenu);
 		}
-		menu.add(extrasMenu);
+		
+		menu.add(processingMenu);
 		
 		final JMenuItem settingsMenu = new JMenu("Settings");
-		for (Options o : Configuration.Options.values()){
+		for (Options o : RenderingConfiguration.Options.values()){
 			settingsMenu.add(new JOptionCheckBoxMenuItem(o));
 		}
+		
+		JMenuItem exportPOVMenuItem = new JMenuItem("Export POV");
+		exportPOVMenuItem.setToolTipText("This option provides a string that can be used to restore the current point of view");
+		exportPOVMenuItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				float[] m = RenderingConfiguration.getViewer().getPov();
+				String s = "";
+				for (int i=0; i<m.length; i++)
+					s += m[i]+";";
+				String message = "This string represents the current point of view. To reproduce images later, please store this string."; 
+				JOptionPane.showInputDialog(JMainWindow.this, message, "Import POV", JOptionPane.PLAIN_MESSAGE, null, null, s);
+			}
+		});
+		
+		JMenuItem importPOVMenuItem = new JMenuItem("Import POV");
+		importPOVMenuItem.setToolTipText("Restore the point of view using a stored configuration");
+		importPOVMenuItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				String input = JOptionPane.showInputDialog(
+						JMainWindow.this, "Please insert the point of view", "Export POV",  JOptionPane.PLAIN_MESSAGE);
+				if (input != null && !input.isEmpty()){
+					try {
+					String[] split = input.trim().split(";");
+					float[] m = new float[split.length];
+					for (int i=0; i<split.length; i++)
+						m[i] = Float.parseFloat(split[i]);
+					RenderingConfiguration.getViewer().setPOV(m);
+					} catch (Exception ex){}
+				}
+			}
+		});
+		settingsMenu.add(exportPOVMenuItem);
+		settingsMenu.add(importPOVMenuItem);
+		
+		
+		final JMenuItem selectFontMenuItem = new JMenuItem("Select font");
+		selectFontMenuItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(JMainWindow.this, "Select font");
+				JFontChooser fc = new JFontChooser();
+				JPanel panel = new JPanel(new GridLayout(1,1));
+				panel.add(fc);
+				dialog.addComponent(panel);
+				boolean ok = dialog.showDialog();
+				if (ok){
+					RenderingConfiguration.defaultFont = fc.getSelectedFontFamily();
+					RenderingConfiguration.defaultFontStyle = fc.getSelectedFontStyle();
+					RenderingConfiguration.defaultFontSize = fc.getSelectedFontSize();
+					RenderingConfiguration.saveProperties();
+					JOptionPane.showMessageDialog(JMainWindow.this, "AtomViewer must be restarted to change the font", "AtomViewer", JOptionPane.INFORMATION_MESSAGE);
+				}
+				
+			}
+		});
+		settingsMenu.add(selectFontMenuItem);
 		menu.add(settingsMenu);
 		
 		final JMenuItem helpMenu = new JMenu("Help");
@@ -417,7 +560,8 @@ public class JMainWindow extends JFrame implements WindowListener {
 				"Press mouse button -> Rotate <br>"+
 				"Press mouse button + Shift-> Rotate around axis<br>"+
 				"Press mouse button + Ctrl -> Move<br>"+
-				"Press mouse button + Alt -> Zoom in/out"+
+				"Press mouse button + Alt+Ctrl -> Zoom in/out<br>"+
+				"Hold Shift+Ctrl+Click on object -> Focus on this object"+
 				"</body></html>";
 				JOptionPane.showMessageDialog(JMainWindow.this, message, "AtomViewer", JOptionPane.INFORMATION_MESSAGE);
 			}
@@ -427,9 +571,9 @@ public class JMainWindow extends JFrame implements WindowListener {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				String message = "<html><body>" +
-						"AtomViewer  Copyright (C) 2014, ICAMS, Ruhr-Universtät Bochum <br>" +
+						"AtomViewer  Copyright (C) 2015, ICAMS, Ruhr-Universtät Bochum <br>" +
 						"AtomViewer is a tool to display and analyse atomistic simulations<br><br>" +
-						"AtomViewer Version "+JMainWindow.VERSION+"-"+JMainWindow.SUBVERSION+"<br>"+
+						"AtomViewer Version "+JMainWindow.VERSION+" "+JMainWindow.buildVersion+"<br>"+
 						"Available OpenGL version on this machine: "+ViewerGLJPanel.openGLVersion +"<br><br>" +
 						"Using Jogl Version "+JoglVersion.getInstance().getSpecificationVersion()+"<br>"+
 						"This program comes with ABSOLUTELY NO WARRANTY <br>" +
@@ -449,75 +593,77 @@ public class JMainWindow extends JFrame implements WindowListener {
 		this.pack();
 		this.setExtendedState(JFrame.MAXIMIZED_BOTH);
 		
+		//Hotkeys and accelerators 
+		
 		JRootPane rp = getRootPane();
 		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-		    KeyStroke.getKeyStroke(KeyEvent.VK_A,0), "keypressed");
+			    KeyStroke.getKeyStroke(KeyEvent.VK_X,0), "next");
 		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-			    KeyStroke.getKeyStroke(KeyEvent.VK_C,0), "keypressed");
+			    KeyStroke.getKeyStroke("pressed RIGHT"), "next");
 		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-			    KeyStroke.getKeyStroke(KeyEvent.VK_S,0), "keypressed");
-		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-			    KeyStroke.getKeyStroke(KeyEvent.VK_R,0), "keypressed");
-		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-			    KeyStroke.getKeyStroke(KeyEvent.VK_W,0), "keypressed");
-		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-			    KeyStroke.getKeyStroke(KeyEvent.VK_P,0), "keypressed");
+			    KeyStroke.getKeyStroke("pressed KP_RIGHT"), "next");
 		
 		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-			    KeyStroke.getKeyStroke(KeyEvent.VK_X,0), "keypressed");
+			    KeyStroke.getKeyStroke("pressed LEFT"), "previous");
 		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-			    KeyStroke.getKeyStroke(KeyEvent.VK_Z,0), "keypressed");
+			    KeyStroke.getKeyStroke("pressed KP_LEFT"), "previous");
 		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-			    KeyStroke.getKeyStroke(KeyEvent.VK_Y,0), "keypressed");
+			    KeyStroke.getKeyStroke(KeyEvent.VK_Z,0), "previous");
 		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-			    KeyStroke.getKeyStroke(KeyEvent.VK_L,0), "keypressed");
-		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-			    KeyStroke.getKeyStroke(KeyEvent.VK_F,0), "keypressed");
+			    KeyStroke.getKeyStroke(KeyEvent.VK_Y,0), "previous");
 		
 		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-			    KeyStroke.getKeyStroke(KeyEvent.VK_F3,0), "f3");
+			    KeyStroke.getKeyStroke(KeyEvent.VK_L,0), "last");
 		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
-			    KeyStroke.getKeyStroke(KeyEvent.VK_F4,0), "f4");
+			    KeyStroke.getKeyStroke("pressed KP_DOWN"), "last");
+		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
+			    KeyStroke.getKeyStroke("pressed DOWN"), "last");
+		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
+			    KeyStroke.getKeyStroke(KeyEvent.VK_F,0), "first");
+		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
+			    KeyStroke.getKeyStroke("pressed KP_UP"), "first");
+		rp.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT).put(
+			    KeyStroke.getKeyStroke("pressed UP"), "first");
 		
-		rp.getActionMap().put("keypressed", keyAction);
-		rp.getActionMap().put("f3", new AbstractAction() {
-			private static final long serialVersionUID = 1L;
-			@Override
-			public void actionPerformed(ActionEvent arg0) {
-				float[] m = viewer.getPov();
-				String s = "";
-				for (int i=0; i<m.length; i++)
-					s += m[i]+";";
-				JOptionPane.showInputDialog(null, "POV", s);
-			}
-		});
-		rp.getActionMap().put("f4", new AbstractAction() {
-			private static final long serialVersionUID = 1L;
-			@Override
-			public void actionPerformed(ActionEvent arg0) {
-				String input = JOptionPane.showInputDialog("POV").trim();
-				if (input != null && !input.isEmpty()){ 
-					String[] split = input.split(";");
-					float[] m = new float[split.length];
-					for (int i=0; i<split.length; i++)
-						m[i] = Float.parseFloat(split[i]);
-					viewer.setPOV(m);
-				}
-			}
-		});
+		stereoCheckBoxMenu.setMnemonic(KeyEvent.VK_A);
+		stereoCheckBoxMenu.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_A, 0));
+		changeSphereSizeMenuItem.setMnemonic(KeyEvent.VK_S);
+		changeSphereSizeMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, 0));
+		editRangeMenuItem.setMnemonic(KeyEvent.VK_R);
+		editRangeMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_R, 0));
+		drawLengthScaleBoxMenu.setMnemonic(KeyEvent.VK_E);
+		drawLengthScaleBoxMenu.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_E, 0));
+		perspectiveCheckBoxMenu.setMnemonic(KeyEvent.VK_P);
+		perspectiveCheckBoxMenu.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_P, 0));
+		whiteBackgroundCheckBoxMenu.setMnemonic(KeyEvent.VK_W);
+		whiteBackgroundCheckBoxMenu.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_W, 0));
+		drawCoordinateSystemBoxMenu.setMnemonic(KeyEvent.VK_C);
+		drawCoordinateSystemBoxMenu.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, 0));
+		drawBoundingBoxCheckBoxMenu.setMnemonic(KeyEvent.VK_B);
+		drawBoundingBoxCheckBoxMenu.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_B, 0));
+		exportPOVMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F3, 0));
+		importPOVMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F4, 0));
+		openFileMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0));
+		exportScreenShotMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F2, 0));
+		analysisModulesMenu.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0));
+		
+		rp.getActionMap().put("next", KeyActionCollection.getActionNextData());
+		rp.getActionMap().put("previous", KeyActionCollection.getActionPreviousData());
+		rp.getActionMap().put("first", KeyActionCollection.getActionFirstData());
+		rp.getActionMap().put("last", KeyActionCollection.getActionLastData());
 	}
 
 	//region WindowListener
 	public void windowActivated(WindowEvent e) {
-		viewer.repaint();
+		RenderingConfiguration.getViewer().repaint();
 	}
 
 	public void windowDeiconified(WindowEvent e) {
-		viewer.repaint();
+		RenderingConfiguration.getViewer().repaint();
 	}
 	
 	public void windowOpened(WindowEvent e) {
-		viewer.repaint();
+		RenderingConfiguration.getViewer().repaint();
 	}
 	
 	public void windowDeactivated(WindowEvent e) {}
@@ -535,6 +681,8 @@ public class JMainWindow extends JFrame implements WindowListener {
 		public JOptionCheckBoxMenuItem(Options o) {
 			super(o.getName());
 			this.option = o;
+			if (o.getKeyAccelerator() != null)
+				this.setAccelerator(o.getKeyAccelerator());
 			this.setSelected(o.isEnabled());
 			this.setToolTipText(o.getInfoMessage());
 			this.addActionListener(new ActionListener() {
@@ -543,188 +691,62 @@ public class JMainWindow extends JFrame implements WindowListener {
 					option.setEnabled(JOptionCheckBoxMenuItem.this.isSelected());
 					if (!option.getActivateMessage().isEmpty())
 						JOptionPane.showMessageDialog(JMainWindow.this, option.getActivateMessage());
-					Options.saveProperties();
+					RenderingConfiguration.saveProperties();
 				}
 			});
 		}
 	}
 	
-	private class DefaultPerspectivesButtonContainer extends Container{
+	private class DefaultPerspectivesButtonPanel extends JPanel{
 		private static final long serialVersionUID = 1L;
 
-		DefaultPerspectivesButtonContainer() {
-			this.setLayout(new GridLayout(4,1));
-			final JButton topViewButton = new JButton("Top");
-			final JButton frontViewButton = new JButton("Front");
-			final JButton sideViewButton = new JButton("Side");
-			final JButton resetZoomViewButton = new JButton("Reset zoom");
+		class ViewButton extends JButton implements ActionListener{
+			private static final long serialVersionUID = 1L;
+			Vec3 pov;
+			boolean resetZoom;
 			
-			ActionListener al = new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent arg0) {
-					if (viewer != null) {
-						if (arg0.getSource() == topViewButton) {
-							if ((arg0.getModifiers() & ActionEvent.SHIFT_MASK) != 0) viewer.setPOV(180f, 0f, 0f);
-							else viewer.setPOV(0f, 0f, 0f);
-						} else if (arg0.getSource() == frontViewButton) {
-							if ((arg0.getModifiers() & ActionEvent.SHIFT_MASK) != 0) viewer.setPOV(-90f, 0f, 180f);
-							else viewer.setPOV(-90f, 0f, 0f);
-						} else if (arg0.getSource() == sideViewButton){
-							if ((arg0.getModifiers() & ActionEvent.SHIFT_MASK) != 0) viewer.setPOV(-90f, 0f, -90f);
-							else viewer.setPOV(-90f, 0f, 90f);
-						} else if (arg0.getSource() == resetZoomViewButton){
-							viewer.resetZoom();
-						}
-					}
-				}
-			};
+			ViewButton(String text, float x, float y, float z, boolean resetZoom){
+				super(text);
+				this.pov = new Vec3(x,y,z);
+				this.resetZoom = resetZoom;
+				this.addActionListener(this);
+			}
 			
-			topViewButton.addActionListener(al);
-			frontViewButton.addActionListener(al);
-			sideViewButton.addActionListener(al);
-			resetZoomViewButton.addActionListener(al);
-			
-			this.add(topViewButton);
-			this.add(frontViewButton);
-			this.add(sideViewButton);
-			this.add(resetZoomViewButton);
-		}
-	}
-	
-	private class ExportFileActionListener implements ActionListener {
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			assert Configuration.getCurrentAtomData()!=null : "current AtomData is null";
-			
-			boolean binary = e.getActionCommand().equals("binary");
-			JFileChooser chooser = new JFileChooser();
-			JPanel optionPanel = new JPanel();
-			final JCheckBox exportAll = new JCheckBox("Export all");
-			optionPanel.add(exportAll);
-			chooser.setAccessory(optionPanel);
-			
-			int result = chooser.showSaveDialog(JMainWindow.this);
-			if (result == JFileChooser.APPROVE_OPTION){
-				if (exportAll.isSelected()){
-					try {
-						AtomData current = Configuration.getCurrentAtomData();
-						while (current.getPrevious() != null)
-							current = current.getPrevious();
-						
-						int num=0;
-						String path = chooser.getSelectedFile().getParent();
-						String prefix = chooser.getSelectedFile().getName();
-						
-						
-						do {
-							String newName = current.getName();
-							if (newName.endsWith(".ada")) newName = newName.substring(0, newName.length()-4);
-							if (newName.endsWith(".ada.gz")) newName = newName.substring(0, newName.length()-7);
-								
-							if (newName.endsWith(".chkpt")) newName = newName.substring(0, newName.length()-6);
-							if (newName.endsWith(".chkpt.gz")) newName = newName.substring(0, newName.length()-9);
-							
-							newName = String.format("%s%s.ada", prefix, newName, num++);
-							if (binary) newName += ".gz";
-							current.printToFile(new File(path, newName), binary, binary);
-							current = current.getNext(); 
-						} while (current != null);
-					} catch (IOException e1) {
-						e1.printStackTrace();
-					}
-				} else {
-					try {
-						String filename = chooser.getSelectedFile().getAbsolutePath();
-						if (binary){
-							if (filename.endsWith(".ada")) filename += ".gz";
-							if (!filename.endsWith(".ada.gz")) filename += ".ada.gz";
-						} else if (!filename.endsWith(".ada")) filename += ".ada";
-						Configuration.getCurrentAtomData().printToFile(new File(filename), binary, binary);
-					} catch (IOException e1) {
-						e1.printStackTrace();
-					}
-				}
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				ViewerGLJPanel viewer = RenderingConfiguration.getViewer();
+				if (resetZoom) viewer.resetZoom();
+				else viewer.setPOV(pov.x, pov.y, pov.z);
 			}
 		}
-	}
-	
-	private class ExportActionListener implements ActionListener{
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			if (Configuration.getCurrentAtomData()!=null){
-				JFileChooser chooser = new JFileChooser();
-				if (Configuration.getLastOpenedExportFolder() !=null) 
-					chooser.setCurrentDirectory(Configuration.getLastOpenedExportFolder());
-				String fileEnding = "";
-				
-				chooser.setDialogTitle("Export screenshot");
-				chooser.setFileFilter(new FileNameExtensionFilter("Portable network graphic (*.png)","png"));
-				if (ImageIO.getImageWritersBySuffix("jpg").hasNext())
-					chooser.addChoosableFileFilter(new FileNameExtensionFilter("JPEG file (*.jpg)", "jpg"));				
-				chooser.setAcceptAllFileFilterUsed(false);
-				
-				chooser.setSelectedFile(new File(Configuration.getCurrentAtomData().getName()));
-				
-				JPanel imageSizeDialogExtension = new JPanel(new GridBagLayout());
-				GridBagConstraints gbc = new GridBagConstraints();
-				gbc.anchor = GridBagConstraints.SOUTHWEST;
-				gbc.weightx = 0.5; gbc.weighty = 0;
-				gbc.gridx = 0; gbc.gridy = 0;
-				
-				gbc.gridwidth = 2;
-				final JCheckBox exportAll = new JCheckBox("Export all");
-				imageSizeDialogExtension.add(exportAll, gbc); gbc.gridy++;
-				imageSizeDialogExtension.add(new JLabel("Image size (pixel)"), gbc); gbc.gridy++;
-				gbc.weighty = 0.1;
-				imageSizeDialogExtension.add(new JLabel(""), gbc); gbc.gridy++;
-				gbc.gridwidth = 1; gbc.weighty = 0;
-				imageSizeDialogExtension.add(new JLabel("Width"), gbc); gbc.gridx++;
-				imageSizeDialogExtension.add(new JLabel("Height"), gbc); gbc.gridy++; gbc.gridx = 0;
-				
-				gbc.fill = GridBagConstraints.HORIZONTAL;
-				JFormattedTextField widthTextField = new JFormattedTextField(new DecimalFormat("#"));
-				widthTextField.setValue(JMainWindow.this.viewer.getWidth());
-				imageSizeDialogExtension.add(widthTextField, gbc); gbc.gridx++;
-				
-				JFormattedTextField heightTextField = new JFormattedTextField(new DecimalFormat("#"));
-				heightTextField.setValue(JMainWindow.this.viewer.getHeight());
-				imageSizeDialogExtension.add(heightTextField, gbc); gbc.gridy++;
-				
-				gbc.weighty = 1;
-				imageSizeDialogExtension.add(new JLabel(""), gbc);
-				
-				chooser.setAccessory(imageSizeDialogExtension);
-				
-				int result = chooser.showSaveDialog(JMainWindow.this);
-				if (result == JFileChooser.APPROVE_OPTION){
-					fileEnding = ((FileNameExtensionFilter)chooser.getFileFilter()).getExtensions()[0];
-					Configuration.setLastOpenedExportFolder(chooser.getSelectedFile().getParentFile());
-					String filename = chooser.getSelectedFile().getAbsolutePath();
-					//Add ending only if not a sequence, otherwise the name is just a prefix for the automatically
-					//generated filename
-					boolean sequence = exportAll.isSelected();
-					if (!filename.endsWith(fileEnding) && !sequence) filename += "."+fileEnding;
-					try {
-						int width = ((Number)widthTextField.getValue()).intValue();
-						int height = ((Number)heightTextField.getValue()).intValue();
-						
-						if (width<=0) width = 1;
-						if (height<=0) height = 1;
-							
-						JMainWindow.this.viewer.makeScreenshot(filename, fileEnding, sequence, width, height);
-					} catch (Exception e1) {
-						JOptionPane.showMessageDialog(null, e1.getLocalizedMessage());
-					}
-				}
-			}
+		
+		DefaultPerspectivesButtonPanel() {
+			this.setLayout(new GridBagLayout());
+			GridBagConstraints gbc = CommonUtils.getBasicGridBagConstraint();
+			this.add(new ViewButton("+Z", 0f, 0f, 0f, false),gbc);     gbc.gridx++;
+			this.add(new ViewButton("-Z", 180f, 0f, 0f, false),gbc);   gbc.gridx = 0; gbc.gridy++;
+			this.add(new ViewButton("+Y", -90f, 0f, 180f, false),gbc); gbc.gridx++;
+			this.add(new ViewButton("-Y", -90f, 0f, 0f, false),gbc);   gbc.gridx = 0; gbc.gridy++;
+			this.add(new ViewButton("+X", -90f, 0f, -90f, false),gbc); gbc.gridx++;
+			this.add(new ViewButton("-X", -90f, 0f, 90f, false),gbc);  gbc.gridx = 0; gbc.gridy++;
+			gbc.gridwidth = 2;
+			this.add(new ViewButton("<html><center>Reset zoom<br> and focus</center><html>", 0f, 0f, 0f, true),gbc);
 		}
 	}
+		
+	@Override
+	public void atomDataChanged(AtomDataChangedEvent e) {
+		if (e.getNewAtomData() == null)
+			JMainWindow.this.setTitle("AtomViewer");
+		else 
+			JMainWindow.this.setTitle("AtomViewer ("+e.getNewAtomData().getName()+")");
+	}
 	
-	public static void main(String[] args) {
+	public static void startAtomViewer(String[] args) {
 		Locale.setDefault(Locale.US);
 		//Headless processing
-		if (args.length != 0){
-			ImdFileLoader fileLoader = new ImdFileLoader(null);
+		if (args.length != 0 && !args[0].equals("-exp")){
+			ImdFileLoader fileLoader = new ImdFileLoader();
 			try {
 				if (args.length < 5 || !args[0].equals("-h")){
 					System.out.println("*************************************************");
@@ -741,9 +763,10 @@ public class JMainWindow extends JFrame implements WindowListener {
 					System.out.println("*************************************************");
 					System.exit(1);
 				}
-				Configuration.currentFileLoader = fileLoader;
+				Configuration.setCurrentFileLoader(fileLoader);
+				final SwingWorker<AtomData, String> worker = fileLoader.getNewSwingWorker();
 				
-				fileLoader.addPropertyChangeListener(new PropertyChangeListener() {
+				worker.addPropertyChangeListener(new PropertyChangeListener() {
 					@Override
 					public void propertyChange(PropertyChangeEvent evt) {
 						if ("progress" == evt.getPropertyName()) {
@@ -757,16 +780,19 @@ public class JMainWindow extends JFrame implements WindowListener {
 					}
 				});
 				
-				Configuration.setHeadless(true);
+				RenderingConfiguration.setHeadless(true);
 				
-				ImportStates.loadProperties(new File(args[3]));
-				ImportStates.readConfigurationFile(new File(args[2]));
+				
+				ImportConfiguration ic = ImportConfiguration.getNewInstance();
+				ic.loadProperties(new File(args[3]));
+				ic.readConfigurationFile(new File(args[2]));
 				File inputFile = new File(args[1]);
 
 				Configuration.create();
 				
 				Configuration.setLastOpenedFolder(inputFile.getParentFile());
-				AtomData data = fileLoader.readInputData(inputFile);
+				Filter<Atom> filter = ImportConfiguration.getInstance().getCrystalStructure().getIgnoreAtomsDuringImportFilter();
+				AtomData data = fileLoader.readInputData(inputFile, null, filter);
 				
 				boolean binaryFormat = true;
 				boolean exportDislocations = false;
@@ -801,16 +827,20 @@ public class JMainWindow extends JFrame implements WindowListener {
 //					e.printStackTrace();
 //				}
 				
-				String outfile = args[4]+".ada";
-				if (binaryFormat)
-					outfile+=".gz";
-				data.printToFile(new File(outfile), binaryFormat, binaryFormat);
+				String outfile = args[4];
+				ImdFileWriter writer = new ImdFileWriter(binaryFormat, binaryFormat);
+				writer.writeFile(null, outfile, data, null);
 				
-				if (exportDislocations && data.getSkeletonizer() != null){
+				DataContainer dc = Configuration.getCurrentAtomData().getDataContainer(Skeletonizer.class);
+				Skeletonizer skel = null;
+				if (dc != null)
+					skel = (Skeletonizer)dc;
+				
+				if (exportDislocations && skel != null){
 					outfile = args[4]+"_dislocation.txt";
-					data.getSkeletonizer().writeDislocationSkeleton(new File(outfile));
+					skel.writeDislocationSkeleton(new File(outfile));
 				}
-			} catch (IOException e) {
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 			
@@ -830,149 +860,316 @@ public class JMainWindow extends JFrame implements WindowListener {
 		}
 	}
 	
-	protected class KeyBoardAction extends AbstractAction{
-		private static final long serialVersionUID = 1L;
-
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			
-			if (e.getActionCommand().equals("s")){
-				stereoCheckBoxMenu.doClick();
-			} else if (e.getActionCommand().equals("x")){
-				if (Configuration.getCurrentAtomData().getNext()!=null){
-					AtomData next = Configuration.getCurrentAtomData().getNext();
-					Configuration.setCurrentAtomData(next);
-					viewer.setAtomData(next, false);
-					atomicMenu.setAtomData(next, viewer, false);
-					JMainWindow.this.setTitle("AtomViewer ("+next.getName()+")");
+	public void applyProcessWindowWithDisplay(AtomData data, ProcessingModule pm) {
+		List<AtomData> d = new ArrayList<AtomData>();
+		d.add(data);
+		applyProcessWindowWithDisplay(d, pm);
+	}
+	
+	public void applyProcessWindowWithDisplay(Iterable<AtomData> data, ProcessingModule pm) {
+		final SwingWorker<Void,Void> sw = new ProcessModuleWorker(pm, data);
+		
+		final JProgressDisplayDialog progressDisplay = 
+				new JProgressDisplayDialog(sw, JMainWindow.this, false);
+		progressDisplay.setTitle("Analysis");
+		
+		sw.addPropertyChangeListener(new PropertyChangeListener() {
+			@Override
+			public void propertyChange(PropertyChangeEvent arg0) {
+				if ( sw.isDone() || sw.isCancelled()){
+					progressDisplay.dispose();
 				}
-			} else if (e.getActionCommand().equals("y") || e.getActionCommand().equals("z")){
-				if (Configuration.getCurrentAtomData().getPrevious() != null) {
-					AtomData previous = Configuration.getCurrentAtomData().getPrevious();
-					Configuration.setCurrentAtomData(previous);
-					viewer.setAtomData(previous, false);
-					atomicMenu.setAtomData(previous, viewer, false);
-					JMainWindow.this.setTitle("AtomViewer (" + previous.getName() + ")");
-				}
-			} else if (e.getActionCommand().equals("f")){
-				AtomData current = Configuration.getCurrentAtomData();
-				while (current.getPrevious() != null)
-					current = current.getPrevious();
-				atomicMenu.setAtomData(current, viewer, false);
-				viewer.setAtomData(current, false);
-				Configuration.setCurrentAtomData(current);
-				JMainWindow.this.setTitle("AtomViewer (" + current.getName() + ")");
-			} else if (e.getActionCommand().equals("l")){
-				AtomData current = Configuration.getCurrentAtomData();
-				while (current.getNext() != null)
-					current = current.getNext();
-				atomicMenu.setAtomData(current, viewer, false);
-				viewer.setAtomData(current, false);
-				Configuration.setCurrentAtomData(current);
-				JMainWindow.this.setTitle("AtomViewer (" + current.getName() + ")");
-			} else if (e.getActionCommand().equals("r")){
-				editRangeMenuItem.doClick();
-			} else if (e.getActionCommand().equals("w")){
-				whiteBackgroundCheckBoxMenu.doClick();
-			} else if (e.getActionCommand().equals("c")){
-				drawCoordinateSystemBoxMenu.doClick();
-			} else if (e.getActionCommand().equals("p")){
-				perspectiveCheckBoxMenu.doClick();
 			}
-		}
+		});
+		
+		sw.execute();
+		progressDisplay.setVisible(true);
 	}
 	
 	private class OpenMenuListener implements ActionListener{
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			JMDFileChooser chooser;
-			if (e.getActionCommand().equals(InputFormat.IMD.name()))
-				chooser = new JMDFileChooser(InputFormat.IMD);
-			else if (e.getActionCommand().equals(InputFormat.LAMMPS.name()))
-				chooser = new JMDFileChooser(InputFormat.LAMMPS);
-			else return;
-			
-			final MDFileLoader fileLoader;
-			if (e.getActionCommand().equals(InputFormat.IMD.name()))
-				fileLoader = new ImdFileLoader(chooser);
-			else if (e.getActionCommand().equals(InputFormat.LAMMPS.name()))
-				fileLoader = new LammpsFileLoader(chooser);
-			else return;
-			
-			Configuration.currentFileLoader = fileLoader;
-			
+			JMDFileChooser chooser = new JMDFileChooser();
+					
 			if (Configuration.getLastOpenedFolder() != null) {
 				chooser.setCurrentDirectory(Configuration.getLastOpenedFolder());
 			}
 			int result = chooser.showOpenDialog(JMainWindow.this);
 			if (result == JFileChooser.APPROVE_OPTION){	
-				if (Configuration.getCurrentAtomData() != null) {
+				final MDFileLoader fileLoader = Configuration.getCurrentFileLoader();
+				
+				if (Configuration.getCurrentAtomData() != null && !ImportStates.APPEND_FILES.isActive()) {
 					Configuration.getCurrentAtomData().clear();
-					viewer.getRenderRange().reset();
+					Configuration.setCurrentAtomData(null, true, true);
+					RenderingConfiguration.getViewer().getRenderRange().reset();
 				}
 				boolean successfulCreated = chooser.createConfiguration();
 				if (!successfulCreated) return;
 				Configuration.setLastOpenedFolder(chooser.getSelectedFile().getParentFile());
-				editCrystalConf.setEnabled(true);
 				typeColorMenu.setEnabled(true);
-				
-				exportSkeletonFileMenuItem.setEnabled(ImportStates.SKELETONIZE.isActive());
 
-				final JProgressDisplayDialog progressDisplay = new JProgressDisplayDialog(fileLoader, JMainWindow.this);
+				fileLoader.setFilesToRead(chooser.getSelectedFiles());
+				final SwingWorker<AtomData, String> worker = fileLoader.getNewSwingWorker();
+				
+				final JProgressDisplayDialog progressDisplay = new JProgressDisplayDialog(worker, JMainWindow.this);
 				progressDisplay.setTitle("Opening files...");
 				
-				fileLoader.addPropertyChangeListener(new PropertyChangeListener() {
+				PropertyChangeListener pcl = new PropertyChangeListener() {
 					@Override
 					public void propertyChange(PropertyChangeEvent arg0) {
-						if ( fileLoader.isDone() || fileLoader.isCancelled()){
+						if ( worker.isDone() || worker.isCancelled()){
 							try {
 								//Retrieve the results from the background worker
-								if (!fileLoader.isCancelled())
-									Configuration.setCurrentAtomData(fileLoader.get());
+								if (!worker.isCancelled())
+									Configuration.setCurrentAtomData(worker.get(), true, !ImportStates.APPEND_FILES.isActive());
 							} catch (Exception e) {
 								progressDisplay.dispose();
-								e.printStackTrace();
-								fileLoader.removePropertyChangeListener(this);
 								JOptionPane.showMessageDialog(null, e.toString());
+								e.printStackTrace();
 							} finally {
+								worker.removePropertyChangeListener(this);
 								progressDisplay.dispose();
 							}
 						}
 					}
-				});
+				};
+				worker.addPropertyChangeListener(pcl);
 				
-				Configuration.setCurrentAtomData(null);
-				viewer.setAtomData(null, true);
-				fileLoader.execute();
+				if (!ImportStates.APPEND_FILES.isActive())
+					Configuration.setCurrentAtomData(null, true, true);
+			
+				worker.execute();
 				
 				progressDisplay.setVisible(true);
-				if (Configuration.getCurrentAtomData() != null){
-					viewer.setAtomData(Configuration.getCurrentAtomData(), true);
-					atomicMenu.setAtomData(Configuration.getCurrentAtomData(), viewer, true);
-					JMainWindow.this.setTitle("AtomViewer ("+Configuration.getCurrentAtomData().getName()+")");
-				}
 			} 
 		}
 	}
 
-	public static final class CursorController {
-		public final static Cursor busyCursor = Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR);
-		public final static Cursor defaultCursor = Cursor.getDefaultCursor();
-
-		private CursorController() {}
-
-		public static ActionListener createListener(final Component component, final ActionListener mainActionListener) {
-			ActionListener actionListener = new ActionListener() {
-				public void actionPerformed(ActionEvent ae) {
-					try {
-						component.setCursor(busyCursor);
-						mainActionListener.actionPerformed(ae);
-					} finally {
-						component.setCursor(defaultCursor);
+	private class ExportFileActionListener implements ActionListener {
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			assert Configuration.getCurrentAtomData()!=null : "current AtomData is null";
+			
+			final JFileChooser chooser = new JFileChooser();
+			JPanel optionPanel = new JPanel();
+			optionPanel.setLayout(new BoxLayout(optionPanel, BoxLayout.Y_AXIS));
+			final JCheckBox exportAll = new JCheckBox("Export all files at once");
+			optionPanel.add(exportAll);
+			chooser.setAccessory(optionPanel);
+			
+			final MDFileWriter writer = new ImdFileWriter();
+			
+			int result = chooser.showSaveDialog(JMainWindow.this);
+			if (result == JFileChooser.APPROVE_OPTION){
+				
+				final AtomData current = Configuration.getCurrentAtomData();
+				
+				JPrimitiveVariablesPropertiesDialog configDialog = 
+						new JPrimitiveVariablesPropertiesDialog(JMainWindow.this, "Configure export");
+				List<PrimitiveProperty<?>> options = 
+						writer.getAdditionalProperties(current, exportAll.isSelected()); 
+				if (options != null && options.size()>0){
+					configDialog.startGroup("Options");
+					for (PrimitiveProperty<?> p : options) configDialog.addComponent(p);
+					configDialog.endGroup();
+				}
+				
+				boolean exportGrain = current.isPolyCrystalline();
+				boolean exportRBV = current.isRbvAvailable();
+				List<DataColumnInfo> dci = current.getDataColumnInfos();
+				//Identify which entries are common in all AtomData
+				if (exportAll.isSelected()){
+					for (AtomData d : Configuration.getAtomDataIterable()){
+						dci.retainAll(d.getDataColumnInfos());
+						if (exportGrain) exportGrain = d.isPolyCrystalline();
+						if (exportRBV) exportRBV = d.isRbvAvailable();
 					}
 				}
-			};
-			return actionListener;
+				
+				BooleanProperty eNum = new BooleanProperty("num", "Atom number", "Export atom number", true);
+				BooleanProperty eEle = new BooleanProperty("ele", "Element", "Export atom element", true);
+				BooleanProperty eg = new BooleanProperty("grains", "Grain number", "Export Grain number per atom", true);
+				BooleanProperty erbv = new BooleanProperty("rbv", "RBV", "Export RBV per atom", true);
+				BooleanProperty etype = new BooleanProperty("Type", "Structure type", "Export classified type", true);
+				BooleanProperty[] dciEnabled = new BooleanProperty[dci.size()];
+				
+				configDialog.startGroup("Include values in output");
+				configDialog.addComponent(eNum);
+				configDialog.addComponent(eEle);
+				configDialog.addComponent(etype);
+				if (exportGrain) configDialog.addComponent(eg);
+				if (exportRBV) configDialog.addComponent(erbv);
+				
+				for (int i=0; i<dci.size(); i++){
+					DataColumnInfo d = dci.get(i);
+					BooleanProperty bp = new BooleanProperty(d.getId(), d.getName(), "", true);
+					configDialog.addComponent(bp);
+					dciEnabled[i] = bp;
+				}
+				configDialog.endGroup();
+				
+				boolean ok = configDialog.showDialog();
+				if (!ok) return;
+				
+				List<DataColumnInfo> toExport = new ArrayList<DataColumnInfo>();
+				for (int i=0; i<dciEnabled.length; i++)
+					if (dciEnabled[i].getValue()) toExport.add(dci.get(i));
+				
+				writer.setDataToExport(eNum.getValue(), eEle.getValue(), etype.getValue(),
+						erbv.getValue(), eg.getValue(), toExport.toArray(new DataColumnInfo[toExport.size()]));
+				
+				final SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>(){
+					protected Void doInBackground(){
+						ProgressMonitor pm = null;
+						try {
+							pm = ProgressMonitor.createNewProgressMonitor(this);
+							pm.setActivityName("Exporting");
+							if (exportAll.isSelected()){
+								File path = chooser.getSelectedFile().getParentFile();
+								String prefix = chooser.getSelectedFile().getName();
+								int num = 0;
+								for (AtomData d : Configuration.getAtomDataIterable()){
+									pm.setCurrentFilename(d.getName());
+									
+									String newName = current.getName();
+									newName = String.format("%s.%05d", prefix, num++);
+									
+									writer.writeFile(path, newName, d, null);
+								}
+							} else {
+								String filename = chooser.getSelectedFile().getAbsolutePath();
+								pm.setCurrentFilename(filename);
+								writer.writeFile(null, filename, current, null);
+							}
+						} catch (final Exception e){
+							SwingUtilities.invokeLater(new Runnable() {
+								@Override
+								public void run() {
+									JOptionPane.showMessageDialog(null, e.getLocalizedMessage());
+								}
+							});
+						} finally {
+							if (pm!=null) pm.destroy();
+						}
+						return null;
+					};
+				};
+				
+				final JProgressDisplayDialog progressDisplay = new JProgressDisplayDialog(worker, JMainWindow.this, false);
+				progressDisplay.setTitle("Exporting IMD files");
+				
+				PropertyChangeListener pcl = new PropertyChangeListener() {
+					@Override
+					public void propertyChange(PropertyChangeEvent arg0) {
+						if ( worker.isDone() || worker.isCancelled()){
+							worker.removePropertyChangeListener(this);
+							progressDisplay.dispose();
+						}
+					}
+				};
+				worker.addPropertyChangeListener(pcl);
+				worker.execute();
+				progressDisplay.setVisible(true);
+			}
+		}
+	}
+	
+	private class ExportScreenshotActionListener implements ActionListener{
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			if (Configuration.getCurrentAtomData()!=null){
+				JFileChooser chooser = new JFileChooser();
+				if (Configuration.getLastOpenedExportFolder() !=null) 
+					chooser.setCurrentDirectory(Configuration.getLastOpenedExportFolder());
+				String fileEnding = "";
+				
+				chooser.setDialogTitle("Export screenshot");
+				chooser.setFileFilter(new FileNameExtensionFilter("Portable network graphic (*.png)","png"));
+				if (ImageIO.getImageWritersBySuffix("jpg").hasNext())
+					chooser.addChoosableFileFilter(new FileNameExtensionFilter("JPEG file (*.jpg)", "jpg"));				
+				chooser.setAcceptAllFileFilterUsed(false);
+				
+				chooser.setSelectedFile(new File(Configuration.getCurrentAtomData().getName()));
+				
+				JPanel imageSizeDialogExtension = new JPanel(new GridBagLayout());
+				GridBagConstraints gbc = CommonUtils.getBasicGridBagConstraint();
+				
+				gbc.gridwidth = 2;
+				final JCheckBox exportAll = new JCheckBox("Export all");
+				imageSizeDialogExtension.add(exportAll, gbc); gbc.gridy++;
+				imageSizeDialogExtension.add(new JLabel("Image size (pixel)"), gbc); gbc.gridy++;
+				gbc.weighty = 0.1;
+				imageSizeDialogExtension.add(new JLabel(""), gbc); gbc.gridy++;
+				gbc.gridwidth = 1; gbc.weighty = 0;
+				imageSizeDialogExtension.add(new JLabel("Width"), gbc); gbc.gridx++;
+				imageSizeDialogExtension.add(new JLabel("Height"), gbc); gbc.gridy++; gbc.gridx = 0;
+				
+				gbc.fill = GridBagConstraints.HORIZONTAL;
+				JFormattedTextField widthTextField = new JFormattedTextField(new DecimalFormat("#"));
+				widthTextField.setValue(RenderingConfiguration.getViewer().getWidth());
+				imageSizeDialogExtension.add(widthTextField, gbc); gbc.gridx++;
+				
+				JFormattedTextField heightTextField = new JFormattedTextField(new DecimalFormat("#"));
+				heightTextField.setValue(RenderingConfiguration.getViewer().getHeight());
+				imageSizeDialogExtension.add(heightTextField, gbc); gbc.gridy++;
+				
+				gbc.weighty = 1;
+				imageSizeDialogExtension.add(new JLabel(""), gbc);
+				
+				chooser.setAccessory(imageSizeDialogExtension);
+				
+				int result = chooser.showSaveDialog(JMainWindow.this);
+				if (result == JFileChooser.APPROVE_OPTION){
+					fileEnding = ((FileNameExtensionFilter)chooser.getFileFilter()).getExtensions()[0];
+					Configuration.setLastOpenedExportFolder(chooser.getSelectedFile().getParentFile());
+					String filename = chooser.getSelectedFile().getAbsolutePath();
+					//Add ending only if not a sequence, otherwise the name is just a prefix for the automatically
+					//generated filename
+					boolean sequence = exportAll.isSelected();
+					if (!filename.endsWith(fileEnding) && !sequence) filename += "."+fileEnding;
+					try {
+						int width = ((Number)widthTextField.getValue()).intValue();
+						int height = ((Number)heightTextField.getValue()).intValue();
+						
+						if (width<=0) width = 1;
+						if (height<=0) height = 1;
+							
+						RenderingConfiguration.getViewer().makeScreenshot(filename, fileEnding, sequence, width, height);
+					} catch (Exception e1) {
+						JOptionPane.showMessageDialog(null, e1.getLocalizedMessage());
+					}
+				}
+			}
+		}
+	}
+	
+	private class ProcessModuleWorker extends SwingWorker<Void, Void>{
+		ProcessingModule pm;
+		Iterable<AtomData> data;
+		
+		
+		ProcessModuleWorker(ProcessingModule pm, Iterable<AtomData> data) {
+			this.pm = pm;
+			this.data = data;
+			ProgressMonitor.createNewProgressMonitor(this);
+		}
+		
+		@Override
+		protected Void doInBackground() throws Exception {	
+			try {
+				for (AtomData d : data)
+					d.applyProcessingModule(pm);
+			} catch (Exception e) {
+				JLogPanel.getJLogPanel().addError("Error in processing module", e.getMessage());
+				e.printStackTrace();
+			}
+			return null;
+		}
+		
+		@Override
+		protected void done() {
+			super.done();
+			ProgressMonitor.getProgressMonitor().destroy();
 		}
 	}
 	
@@ -980,9 +1177,10 @@ public class JMainWindow extends JFrame implements WindowListener {
 		private static final long serialVersionUID = 1L;
 		final RenderOption ro;
 		
-		public JGraphicOptionCheckBoxMenuItem(String label, RenderOption option) {
+		public JGraphicOptionCheckBoxMenuItem(String label, RenderOption option, String tooltip) {
 			super(label);
 			this.ro = option;
+			this.setToolTipText(tooltip);
 			this.setSelected(ro.isEnabled());
 			this.addActionListener(new ActionListener() {
 				@Override
@@ -990,6 +1188,47 @@ public class JMainWindow extends JFrame implements WindowListener {
 					ro.setEnabled(JGraphicOptionCheckBoxMenuItem.this.isSelected());
 				}
 			});
+		}
+	}
+	
+	private class JChangeSphereSizeActionListener implements ActionListener{
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			final float min = 0.00001f;
+			final float max = 10000f;
+			JPrimitiveVariablesPropertiesDialog d = 
+					new JPrimitiveVariablesPropertiesDialog(JMainWindow.this, "Edit sphere size");
+			FloatProperty defSize = d.addFloat("scale", "Global scaling factor", "Adjust the scaling of all atoms",
+					Math.max(min, Math.min(RenderingConfiguration.getViewer().getSphereSize(), max)), min, max);
+			
+			FloatProperty[] atomScales = new FloatProperty[0];
+			
+			if (Configuration.getCurrentAtomData() != null){
+				CrystalStructure cs = Configuration.getCurrentAtomData().getCrystalStructure();
+				defSize.setDefaultValue(cs.getDistanceToNearestNeighbor()*0.55f);
+				
+				if (cs.getNumberOfElements() > 1){
+					float[] defsizes = cs.getDefaultSphereSizeScalings();
+					float[] sizes = cs.getSphereSizeScalings();
+					String[] names = cs.getNamesOfElements();
+					atomScales = new FloatProperty[sizes.length];
+					d.add(new JSeparator());
+					d.startGroup("Clustering");
+			
+					d.addLabel("Individual scaling");
+					for (int i=0; i<sizes.length; i++){
+						atomScales[i] = d.addFloat("", names[i], "", sizes[i], 0.001f, 1000f);
+						atomScales[i].setDefaultValue(defsizes[i]); 
+					}
+					d.endGroup();
+				}
+			}
+			boolean ok = d.showDialog();
+			if (ok){
+				for (int i=0; i<atomScales.length; i++)
+					Configuration.getCurrentAtomData().getCrystalStructure().setSphereSizeScalings(i, atomScales[i].value);
+				RenderingConfiguration.getViewer().setSphereSize(defSize.value);
+			}
 		}
 	}
 }

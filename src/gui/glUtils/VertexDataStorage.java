@@ -18,8 +18,8 @@
 
 package gui.glUtils;
 
-import javax.media.opengl.GL;
-import javax.media.opengl.GL3;
+import com.jogamp.opengl.GL;
+import com.jogamp.opengl.GL3;
 
 public abstract class VertexDataStorage {
 	private static VertexDataStorage lastBoundStorage = null;

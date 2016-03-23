@@ -19,9 +19,9 @@ package model;
 
 import java.util.ArrayList;
 
-public class AtomFilterSet implements AtomFilter{
+public class AtomFilterSet implements Filter<Atom>{
 
-	ArrayList<AtomFilter> filter = new ArrayList<AtomFilter>();
+	ArrayList<Filter<Atom>> filter = new ArrayList<Filter<Atom>>();
 	
 	@Override
 	public boolean accept(Atom a) {
@@ -30,12 +30,12 @@ public class AtomFilterSet implements AtomFilter{
 		return true;
 	}
 	
-	public void addFilter(AtomFilter af){
+	public void addFilter(Filter<Atom> af){
 		if (!filter.contains(af))
 			filter.add(af);
 	}
 	
-	public void removeFilter(AtomFilter af){
+	public void removeFilter(Filter<Atom> af){
 		filter.remove(af);
 	}
 	

@@ -1,4 +1,6 @@
 /bin/
 /viewerSettings.conf
 /plugins
-/AtomViewer.jar
+/*.*
+/ColorSchemes/
+/viewer.conf
