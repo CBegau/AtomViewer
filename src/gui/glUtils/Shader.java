@@ -27,6 +27,7 @@ public class Shader {
 	public final static int FRAG_COLOR = 0;
 	public final static int FRAG_NORMAL = 1;
 	public final static int FRAG_POSITION = 2;
+	public final static int FRAG_ACCU = 1;
 	
 	private final static String defaultVertexShaderUniformColor = 
 		"in vec3 v;" +
@@ -97,12 +98,11 @@ public class Shader {
 	
 	private final static String simpleTextureShader = 
 		"uniform sampler2D Texture0;"+
-		"in vec4 FrontColor;" +
 		"in vec2 TexCoord0;"+
 		"out vec4 vFragColor;"+
 		
 		"void main(void) {"+
-			"vFragColor   = texture(Texture0, TexCoord0.xy)*FrontColor;"+
+			"vFragColor   = texture(Texture0, TexCoord0.xy);"+
 		"}"
 	;	
 	
@@ -661,6 +661,54 @@ public class Shader {
 		"vFragColor.a =  1.0;"+
 		"}"
 	;
+	
+	private final static String oidTransparencyFragmentShader = 
+		"in vec3 lightvec;"+
+		"in vec3 normal;"+
+		"in vec4 FrontColor;"+
+		"out vec4 vFragPosition;"+
+		"out vec4 vFragAccu;"+
+		
+		"uniform int noShading = 0;"+
+		"uniform int ads = 1;"+
+			
+		"void main(void) {"+
+		"  vFragPosition = FrontColor;\n"+
+		"  if (noShading != 1){\n"+
+		"    vec3 norm = normalize(normal);"+
+		"    vec3 lv = normalize(lightvec);"+
+		"    float ambient = 0.5 - ads*0.2;"+
+		"    if (ads == 1){\n"+
+		"      float diff = max(0.0, dot(norm, lv));"+
+		"      vec3 vReflection = normalize(reflect(-lv, norm));"+
+		"      float spec = max(0.0, dot(norm, vReflection));"+
+		"      float fSpec = pow(spec, 96.0);"+
+		"      vFragPosition.rgb *= vec3(diff+ambient);"+
+		"      vFragPosition.rgb += vec3(fSpec);"+
+		"    } else {\n"+
+		"      vFragPosition.rgb *= (max(dot(norm, lv), 0.) + ambient);"+
+		"    }\n"+
+		"  }\n"+
+		"  float w = FrontColor.a*max(0.01, 3000.*(1.-gl_FragCoord.z)*(1.-gl_FragCoord.z)*(1.-gl_FragCoord.z));\n"+
+		"  vFragPosition = vec4(vFragPosition.rgb*FrontColor.a, (FrontColor.a))*w;\n"+
+		"  vFragAccu = vec4(FrontColor.a);\n"+	
+		"}"
+	;
+	
+	private final static String oidTransparencyComposer = 
+			"uniform sampler2D RevealageTexture;"+
+			"uniform sampler2D AccuTexture;"+
+			
+			"in vec2 TexCoord0;"+
+			"out vec4 vFragColor;"+
+			
+			"void main(void) {"+
+			"  vec4 acc = texture(AccuTexture, TexCoord0.st);"+
+			"  float revealage = texture(RevealageTexture, TexCoord0.st).r;"+
+			"  if (revealage > 0.99) discard;\n"+
+			"  vFragColor = vec4(acc.rgb / clamp(acc.a, 1e-4, 5e4), revealage);\n"+
+			"}"
+		;
 
 	private static Shader lastUsedShader = null;
 	
@@ -831,6 +879,7 @@ public class Shader {
 		gl.glBindFragDataLocation(program, FRAG_COLOR, "vFragColor");
 		gl.glBindFragDataLocation(program, FRAG_NORMAL, "vFragNormal");
 		gl.glBindFragDataLocation(program, FRAG_POSITION, "vFragPosition");
+		gl.glBindFragDataLocation(program, FRAG_ACCU, "vFragAccu");
 		
 		gl.glLinkProgram(program);
 		gl.glValidateProgram(program);
@@ -1036,6 +1085,19 @@ public class Shader {
 				new String[]{blurShader},
 				new int[]{ATTRIB_VERTEX, ATTRIB_TEX0},
 				new String[]{"v", "Tex"}),
+		
+		
+		OID_COMPOSER(
+				new String[]{defaultVertexShader},
+				new String[]{oidTransparencyComposer},
+				new int[]{ATTRIB_VERTEX, ATTRIB_TEX0},
+				new String[]{"v", "Tex"}),
+		OID_TEST(
+				new String[]{defaultPPLVertexShaderUniformColor},
+				new String[]{oidTransparencyFragmentShader},
+				new int[]{ATTRIB_VERTEX, ATTRIB_NORMAL}, 
+				new String[]{"v", "norm"}),
+		
 		;
 		private Shader s;
 		

@@ -499,19 +499,61 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		
 		if (!picking) drawFromDeferredBuffer(gl, picking, drawIntoFBO);
 		
+		fboDeferredBuffer.bind(gl, false);
+		
 		//Using forward rendering
 		//Renderpass 2 for transparent objects
 		if (!picking) gl.glEnable(GL.GL_BLEND);
+		
+		gl.glBlendFunci(2, GL.GL_ONE, GL.GL_ONE);
+		gl.glBlendFunci(1, GL.GL_ZERO, GL.GL_ONE_MINUS_SRC_ALPHA);
+		
+		gl.glDrawBuffers(1, new int[]{GL3.GL_COLOR_ATTACHMENT2}, 0);
+		gl.glClearColor(0f, 0f, 0f, 1f);
+		gl.glClear(GL.GL_COLOR_BUFFER_BIT);
+		
+		gl.glDrawBuffers(1, new int[]{GL3.GL_COLOR_ATTACHMENT1}, 0);
+		gl.glClearColor(1f, 1f, 1f, 1f);
+		gl.glClear(GL.GL_COLOR_BUFFER_BIT);
+		
+		gl.glDrawBuffers(3, new int[]{GL3.GL_COLOR_ATTACHMENT0, GL3.GL_COLOR_ATTACHMENT1, GL3.GL_COLOR_ATTACHMENT2}, 0);
+		
 		if (!picking) gl.glDepthMask(false);	
 		
 		drawGrain(gl, picking);
 		for (DataContainer dc : atomData.getAdditionalData())
 			dc.drawTransparentObjects(this, gl, renderInterval, picking, atomData.getBox());
-		
-		gl.glDepthMask(true);
-		drawGrain(gl, picking);
+
 		drawIndent(gl, picking);
 		
+		fboDeferredBuffer.unbind(gl);
+		if (drawIntoFBO != null)
+			drawIntoFBO.bind(gl, !picking);
+		
+		
+		gl.glBlendFunc(GL.GL_ONE_MINUS_SRC_ALPHA, GL.GL_SRC_ALPHA);
+		
+		Shader oidComposer = BuiltInShader.OID_COMPOSER.getShader();
+		
+		GLMatrix mvm = new GLMatrix();
+		GLMatrix pm = createFlatProjectionMatrix();
+		oidComposer.enable(gl);
+		updateModelViewInShader(gl, oidComposer, mvm, pm);
+		
+		gl.glUniform1i(gl.glGetUniformLocation(oidComposer.getProgram(), "RevealageTexture"), Shader.FRAG_COLOR);
+		gl.glUniform1i(gl.glGetUniformLocation(oidComposer.getProgram(), "AccuTexture"), Shader.FRAG_ACCU);
+		
+		gl.glActiveTexture(GL.GL_TEXTURE0+Shader.FRAG_ACCU);
+		gl.glBindTexture(GL.GL_TEXTURE_2D, fboDeferredBuffer.getPositionTextureName());
+		gl.glActiveTexture(GL.GL_TEXTURE0+Shader.FRAG_COLOR);
+		gl.glBindTexture(GL.GL_TEXTURE_2D, fboDeferredBuffer.getNormalTextureName());
+		
+		fullScreenQuad.draw(gl, GL.GL_TRIANGLE_STRIP);
+		
+		
+		gl.glDepthMask(true);
+		gl.glClearColor(0f, 0f, 0f, 0f);
+		gl.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA);
 		//Additional objects
 		//Some are placed on top of the scene as 2D objects
 		if (!picking){
@@ -950,7 +992,8 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	
 	private void drawGrain(GL3 gl, boolean picking){
 		if (!RenderOption.GRAINS.isEnabled() || !atomData.isPolyCrystalline()) return;
-		Shader s = BuiltInShader.ADS_UNIFORM_COLOR.getShader();
+//		Shader s = BuiltInShader.ADS_UNIFORM_COLOR.getShader();
+		Shader s = BuiltInShader.OID_TEST.getShader();
 		s.enable(gl);
 		int colorUniform = gl.glGetUniformLocation(s.getProgram(), "Color");
 

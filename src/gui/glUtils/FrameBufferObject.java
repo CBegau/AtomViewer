@@ -43,6 +43,8 @@ public class FrameBufferObject extends FBObject{
 		
 		if(depthBuffer)
 			this.attachRenderbuffer(gl, GL3.GL_DEPTH_COMPONENT24);
+		
+		
 		this.colorTexture = this.attachTexture2D(gl, 0, GL3.GL_RGBA ,GL3.GL_RGBA ,GL3.GL_UNSIGNED_BYTE, 
 				GL3.GL_NEAREST, GL3.GL_NEAREST, GL.GL_CLAMP_TO_EDGE,GL.GL_CLAMP_TO_EDGE);
 		
