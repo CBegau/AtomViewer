@@ -242,7 +242,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
         Font font = new Font(Font.SANS_SERIF, Font.PLAIN, 72);
         Font[] fonts = GraphicsEnvironment.getLocalGraphicsEnvironment().getAllFonts();
         for (Font f : fonts){
-        	if (f.getFamily().startsWith("Arial")){
+        	if (f.getFontName().equals(RenderingConfiguration.defaultFont)){
         		font = new Font(f.getFamily(), Font.PLAIN, 72);
         		break;
         	}
