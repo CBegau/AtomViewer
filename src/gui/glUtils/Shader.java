@@ -99,10 +99,11 @@ public class Shader {
 	private final static String simpleTextureShader = 
 		"uniform sampler2D Texture0;"+
 		"in vec2 TexCoord0;"+
+		"in vec4 FrontColor;"+
 		"out vec4 vFragColor;"+
 		
 		"void main(void) {"+
-			"vFragColor   = texture(Texture0, TexCoord0.xy);"+
+			"vFragColor   = texture(Texture0, TexCoord0.xy)*FrontColor;"+
 		"}"
 	;	
 	
@@ -689,7 +690,8 @@ public class Shader {
 		"      vFragPosition.rgb *= (max(dot(norm, lv), 0.) + ambient);"+
 		"    }\n"+
 		"  }\n"+
-		"  float w = FrontColor.a*max(0.01, 3000.*(1.-gl_FragCoord.z)*(1.-gl_FragCoord.z)*(1.-gl_FragCoord.z));\n"+
+//		"  float w = FrontColor.a*max(0.01, 3000.*(1.-gl_FragCoord.z)*(1.-gl_FragCoord.z)*(1.-gl_FragCoord.z));\n"+
+		"  float w = 1.;\n"+	//TODO Add weighting factor
 		"  vFragPosition = vec4(vFragPosition.rgb*FrontColor.a, (FrontColor.a))*w;\n"+
 		"  vFragAccu = vec4(FrontColor.a);\n"+	
 		"}"
@@ -1092,11 +1094,16 @@ public class Shader {
 				new String[]{oidTransparencyComposer},
 				new int[]{ATTRIB_VERTEX, ATTRIB_TEX0},
 				new String[]{"v", "Tex"}),
-		OID_TEST(
+		OID_ADS_UNIFORM_COLOR(
 				new String[]{defaultPPLVertexShaderUniformColor},
 				new String[]{oidTransparencyFragmentShader},
 				new int[]{ATTRIB_VERTEX, ATTRIB_NORMAL}, 
 				new String[]{"v", "norm"}),
+		OID_ADS_VERTX_COLOR(
+				new String[]{defaultVertexShader},
+				new String[]{oidTransparencyFragmentShader},
+				new int[]{ATTRIB_VERTEX, ATTRIB_NORMAL, ATTRIB_COLOR},
+				new String[]{"v", "norm", "Color"}),
 		
 		;
 		private Shader s;

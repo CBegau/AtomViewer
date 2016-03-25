@@ -220,16 +220,15 @@ public class SurfaceApproximationModule extends ClonableProcessingModule {
 		
 		@Override
 		public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
-			gl.glDepthMask(true);
 			getDataControlPanel();
 			if (dataPanel.transparency<0.98f) drawMesh(viewer, gl, renderRange, picking, box, false);
 		}
 		
-		private void drawMesh(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box, boolean deferred){
+		private void drawMesh(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box, boolean transparencyRendering){
 			if (!getDataControlPanel().isDataVisible()) return;
 			
-			Shader s = BuiltInShader.ADS_UNIFORM_COLOR.getShader();
-			if (deferred)
+			Shader s = picking?BuiltInShader.ADS_UNIFORM_COLOR.getShader():BuiltInShader.OID_ADS_UNIFORM_COLOR.getShader();
+			if (transparencyRendering)
 				s = BuiltInShader.UNIFORM_COLOR_DEFERRED.getShader();
 			
 			s.enableAndPushOld(gl);
