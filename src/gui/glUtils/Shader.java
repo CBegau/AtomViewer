@@ -690,10 +690,10 @@ public class Shader {
 		"      vFragPosition.rgb *= (max(dot(norm, lv), 0.) + ambient);"+
 		"    }\n"+
 		"  }\n"+
-//		"  float w = FrontColor.a*max(0.01, 3000.*(1.-gl_FragCoord.z)*(1.-gl_FragCoord.z)*(1.-gl_FragCoord.z));\n"+
-		"  float w = 1.;\n"+	//TODO Add weighting factor
-		"  vFragPosition = vec4(vFragPosition.rgb*FrontColor.a, (FrontColor.a))*w;\n"+
-		"  vFragAccu = vec4(FrontColor.a);\n"+	
+		"  float w = FrontColor.a*max(0.01, 3000.*(1.-gl_FragCoord.z)*(1.-gl_FragCoord.z)*(1.-gl_FragCoord.z));\n"+
+//		"  float w = 1.;\n"+	//TODO Add weighting factor
+		"  vFragAccu = vec4(vFragPosition.rgb*FrontColor.a*w, (FrontColor.a));\n"+
+		"  vFragPosition = vec4(FrontColor.a)*w;\n"+	
 		"}"
 	;
 	
@@ -705,10 +705,10 @@ public class Shader {
 			"out vec4 vFragColor;"+
 			
 			"void main(void) {"+
-			"  vec4 acc = texture(AccuTexture, TexCoord0.st);"+
-			"  float revealage = texture(RevealageTexture, TexCoord0.st).r;"+
-			"  if (revealage > 0.99) discard;\n"+
-			"  vFragColor = vec4(acc.rgb / clamp(acc.a, 1e-4, 5e4), revealage);\n"+
+			"  vec4 accum = texture(AccuTexture, TexCoord0.st);"+
+			"  float r = accum.a;\n"+
+			"  accum.a = texture(RevealageTexture, TexCoord0.st).r;"+
+			"  vFragColor = vec4(accum.rgb / clamp(accum.a, 1e-4, 5e4), r);\n"+
 			"}"
 		;
 

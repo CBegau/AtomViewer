@@ -505,18 +505,11 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		//Renderpass 2 for transparent objects
 		if (!picking) {
 			gl.glEnable(GL.GL_BLEND);
-			gl.glBlendFunci(2, GL.GL_ONE, GL.GL_ONE);
-			gl.glBlendFunci(1, GL.GL_ZERO, GL.GL_ONE_MINUS_SRC_ALPHA);
-			
-			gl.glDrawBuffers(1, new int[]{GL3.GL_COLOR_ATTACHMENT2}, 0);
-			gl.glClearColor(0f, 0f, 0f, 0f);
-			gl.glClear(GL.GL_COLOR_BUFFER_BIT);
-			
-			gl.glDrawBuffers(1, new int[]{GL3.GL_COLOR_ATTACHMENT1}, 0);
-			gl.glClearColor(1f, 1f, 1f, 1f);
-			gl.glClear(GL.GL_COLOR_BUFFER_BIT);
+			gl.glBlendFuncSeparate(GL.GL_ONE, GL.GL_ONE, GL.GL_ZERO, GL.GL_ONE_MINUS_SRC_ALPHA);
 			
 			gl.glDrawBuffers(3, new int[]{GL3.GL_COLOR_ATTACHMENT0, GL3.GL_COLOR_ATTACHMENT1, GL3.GL_COLOR_ATTACHMENT2}, 0);
+			gl.glClearColor(0f, 0f, 0f, 1f);
+			gl.glClear(GL.GL_COLOR_BUFFER_BIT);
 			gl.glDepthMask(false);
 			gl.glDisable(GL.GL_CULL_FACE);
 		}
@@ -540,16 +533,17 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		oidComposer.enable(gl);
 		updateModelViewInShader(gl, oidComposer, mvm, pm);
 		
-		gl.glUniform1i(gl.glGetUniformLocation(oidComposer.getProgram(), "RevealageTexture"), Shader.FRAG_COLOR);
+		gl.glUniform1i(gl.glGetUniformLocation(oidComposer.getProgram(), "RevealageTexture"), Shader.FRAG_POSITION);
 		gl.glUniform1i(gl.glGetUniformLocation(oidComposer.getProgram(), "AccuTexture"), Shader.FRAG_ACCU);
 		
-		gl.glActiveTexture(GL.GL_TEXTURE0+Shader.FRAG_ACCU);
+		gl.glActiveTexture(GL.GL_TEXTURE0+Shader.FRAG_POSITION);
 		gl.glBindTexture(GL.GL_TEXTURE_2D, fboDeferredBuffer.getPositionTextureName());
-		gl.glActiveTexture(GL.GL_TEXTURE0+Shader.FRAG_COLOR);
+		gl.glActiveTexture(GL.GL_TEXTURE0+Shader.FRAG_ACCU);
 		gl.glBindTexture(GL.GL_TEXTURE_2D, fboDeferredBuffer.getNormalTextureName());
 		gl.glDepthFunc(GL.GL_ALWAYS);
 		fullScreenQuad.draw(gl, GL.GL_TRIANGLE_STRIP);
 		gl.glDepthFunc(GL.GL_LESS);
+		
 		
 		gl.glDepthMask(true);
 		gl.glEnable(GL.GL_CULL_FACE);
