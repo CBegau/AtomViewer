@@ -693,8 +693,8 @@ public class Shader {
 		"      vFragPosition.rgb *= (max(dot(norm, lv), 0.) + ambient);"+
 		"    }\n"+
 		"  }\n"+
-		"  float w = FrontColor.a*max(0.01, 3000.*(1.-gl_FragCoord.z)*(1.-gl_FragCoord.z)*(1.-gl_FragCoord.z));\n"+
-//		"  float w = 1.;\n"+	//TODO Add weighting factor
+//		"  float w = FrontColor.a*max(0.01, 3000.*(1.-gl_FragCoord.z)*(1.-gl_FragCoord.z)*(1.-gl_FragCoord.z));\n"+
+		"  float w = FrontColor.a*max(0.01, (1.-gl_FragCoord.z));\n"+
 		"  vFragAccu = vec4(vFragPosition.rgb*FrontColor.a*w, (FrontColor.a));\n"+
 		"  vFragPosition = vec4(FrontColor.a)*w;\n"+	
 		"}"
