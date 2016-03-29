@@ -526,7 +526,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			gl.glEnablei(GL.GL_BLEND, 1);
 			gl.glEnablei(GL.GL_BLEND, 2);
 			gl.glDepthMask(false);
-			gl.glDisable(GL.GL_CULL_FACE);
+//			gl.glDisable(GL.GL_CULL_FACE);
 		}
 		
 		drawGrain(gl, picking);

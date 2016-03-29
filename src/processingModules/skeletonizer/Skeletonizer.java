@@ -589,6 +589,8 @@ public class Skeletonizer extends DataContainer {
 	private void drawSurfaces(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box){
 		Shader shader = (picking?BuiltInShader.VERTEX_ARRAY_COLOR_UNIFORM:BuiltInShader.OID_VERTEX_ARRAY_COLOR_UNIFORM).getShader();
 		shader.enable(gl);
+		boolean cullingEnabled = gl.glIsEnabled(GL.GL_CULL_FACE);
+		gl.glDisable(GL.GL_CULL_FACE);
 		int colorUniform = gl.glGetUniformLocation(shader.getProgram(), "Color");
 		
 		for (int i=0; i<this.getPlanarDefects().size(); i++) {
@@ -635,6 +637,7 @@ public class Skeletonizer extends DataContainer {
 			vds.draw(gl, GL.GL_TRIANGLES);
 			vds.dispose(gl);
 		}
+		if (cullingEnabled) gl.glEnable(GL.GL_CULL_FACE);
 	}
 		
 	private void drawCores(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
