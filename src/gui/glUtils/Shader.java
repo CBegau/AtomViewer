@@ -66,7 +66,6 @@ public class Shader {
 	private final static String anaglyphFragmentShader = 
 		"uniform sampler2D left;"+
 		"uniform sampler2D right;"+
-		"uniform sampler2D back;"+
 		"uniform int stereo;"+
 		"in vec2 TexCoord0;"+
 		"out vec4 vFragColor;"+
@@ -74,14 +73,13 @@ public class Shader {
 		"void main(void)"+
 		"{"+
 		"vec4 ColorL = texture(left, TexCoord0.st);"+
-		"vec4 Background = texture(back, TexCoord0.st);"+
 		"if (stereo == 1) {"+
 		   "vec4 ColorR = texture(right, TexCoord0.st);"+
 		   "float GrayR = dot(vec3(0.3, 0.59, 0.11), vec3(ColorR));"+
-		   "vFragColor  = vec4( GrayR, ColorL.g, ColorL.b, 1.) + Background*vec4(1.-ColorR.a, 1.-ColorL.a, 1.-ColorL.a, 1);"+
+		   "vFragColor  = vec4( GrayR, ColorL.g, ColorL.b, 1.) + vec4(1.-ColorR.a, 1.-ColorL.a, 1.-ColorL.a, 1);"+
 		   "vFragColor.a = 1.0;"+
 		"} else {"+
-		   "vFragColor  = ColorL + Background*vec4(1.-ColorL.a,1.-ColorL.a,1.-ColorL.a, 1.-ColorL.a);"+
+		   "vFragColor  = ColorL;"+
 		   "vFragColor.a = 1.0;"+
 		"}"+
 		"}"

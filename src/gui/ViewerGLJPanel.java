@@ -69,9 +69,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		public void setEnabled(boolean enabled){
 			this.enabled = enabled;
 			if (RenderingConfiguration.getViewer()!=null) RenderingConfiguration.getViewer().reDraw();
-			if (this == RenderOption.PRINTING_MODE){
-				RenderingConfiguration.getViewer().makeBackground();
-			}
 		}
 		
 		public boolean isEnabled(){
@@ -90,7 +87,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	
 	private FrameBufferObject fboLeft;
 	private FrameBufferObject fboRight;
-	private FrameBufferObject fboBackground;
 	private FrameBufferObject fboDeferredBuffer;
 
 	private VertexDataStorage fullScreenQuad;
@@ -233,7 +229,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		gl.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA);
         gl.glDepthFunc(GL.GL_LESS);
         gl.glEnable(GL3.GL_DEPTH_CLAMP);
-        gl.glClearColor(0f, 0f, 0f, 0f);
+        gl.glClearColor(0f, 0f, 0f, 1f); //Must be this value for order independent rendering
         
         Shader.init(gl);
         this.initShaderUniforms(gl);
@@ -408,9 +404,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			gl.glBindTexture(GL.GL_TEXTURE_2D, fboRight.getColorTextureName());		    
 		    gl.glUniform1i(uniLocation, 1);
 		}
-		//Bind background
-		gl.glActiveTexture(GL.GL_TEXTURE2);
-		gl.glBindTexture(GL.GL_TEXTURE_2D, fboBackground.getColorTextureName());
 	   
 		fullScreenQuad.draw(gl, GL.GL_TRIANGLE_STRIP);
 		
@@ -449,7 +442,12 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		
 		gl.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT);
 		
-		if (atomData == null) return;
+		
+		
+		if (atomData == null) {
+			drawBackground(gl);
+			return;
+		}
 		
 		
 		//setup modelview and projection matrices
@@ -476,9 +474,11 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	 * @param picking
 	 */
 	private void draw(GL3 gl, boolean picking, FrameBufferObject drawIntoFBO) {
+		if (!picking) drawBackground(gl);
+		
 		if (drawIntoFBO != null)
 			drawIntoFBO.unbind(gl);
-
+		
 		gl.glDisable(GL.GL_BLEND);
 		if (!picking)
 			fboDeferredBuffer.bind(gl, false);
@@ -505,11 +505,14 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		//Renderpass 2 for transparent objects
 		if (!picking) {
 			gl.glEnable(GL.GL_BLEND);
+			
 			gl.glBlendFuncSeparate(GL.GL_ONE, GL.GL_ONE, GL.GL_ZERO, GL.GL_ONE_MINUS_SRC_ALPHA);
 			
-			gl.glDrawBuffers(3, new int[]{GL3.GL_COLOR_ATTACHMENT0, GL3.GL_COLOR_ATTACHMENT1, GL3.GL_COLOR_ATTACHMENT2}, 0);
-			gl.glClearColor(0f, 0f, 0f, 1f);
+			gl.glDrawBuffers(3, new int[]{GL3.GL_NONE, GL3.GL_COLOR_ATTACHMENT1, GL3.GL_COLOR_ATTACHMENT2}, 0);
 			gl.glClear(GL.GL_COLOR_BUFFER_BIT);
+			
+			gl.glEnablei(GL.GL_BLEND, 1);
+			gl.glEnablei(GL.GL_BLEND, 2);
 			gl.glDepthMask(false);
 			gl.glDisable(GL.GL_CULL_FACE);
 		}
@@ -519,11 +522,14 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			dc.drawTransparentObjects(this, gl, renderInterval, picking, atomData.getBox());
 
 		drawIndent(gl, picking);
-		
+	
 		fboDeferredBuffer.unbind(gl);
+		
 		if (drawIntoFBO != null)
 			drawIntoFBO.bind(gl, !picking);
 		
+		gl.glDisablei(GL.GL_BLEND, 1);
+		gl.glDisablei(GL.GL_BLEND, 2);
 		gl.glBlendFunc(GL.GL_ONE_MINUS_SRC_ALPHA, GL.GL_SRC_ALPHA);
 		
 		Shader oidComposer = BuiltInShader.OID_COMPOSER.getShader();
@@ -544,11 +550,11 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		fullScreenQuad.draw(gl, GL.GL_TRIANGLE_STRIP);
 		gl.glDepthFunc(GL.GL_LESS);
 		
-		
 		gl.glDepthMask(true);
 		gl.glEnable(GL.GL_CULL_FACE);
-		gl.glClearColor(0f, 0f, 0f, 0f);
 		gl.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA);
+		gl.glDisable(GL.GL_BLEND);
+		
 		//Additional objects
 		//Some are placed on top of the scene as 2D objects
 		if (!picking){
@@ -1393,7 +1399,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		this.atomData = atomData;
 		if (atomData == null) {
 			renderData = null;
-			makeBackground();
 			this.reDraw();
 			return;
 		}
@@ -1764,8 +1769,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		else fboLeft = new FrameBufferObject(width, height, gl);
 		if (fboRight != null) fboRight.reset(gl, width, height, 0);
 		else fboRight = new FrameBufferObject(width, height, gl);
-		if (fboBackground != null) fboBackground.reset(gl, width, height, 0);
-		else fboBackground = new FrameBufferObject(width, height, gl, false, false);
 		
 		//Update resolution in shader
 		Shader.BuiltInShader.BLUR.getShader().enableAndPushOld(gl);
@@ -1774,8 +1777,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		Shader.BuiltInShader.FXAA.getShader().enableAndPushOld(gl);
 		gl.glUniform2f(gl.glGetUniformLocation(BuiltInShader.FXAA.getShader().getProgram(), "resolution"), width, height);
 		Shader.popAndEnableShader(gl);
-		
-		this.makeBackground();
 	}
 	
     //region export methods
@@ -1835,15 +1836,11 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		fullScreenQuad.endFillBuffer(gl);
 	}
 	
-	private void makeBackground(){
-		//Render Background
-		GL3 gl = getGLFromContext();
-		fboBackground.bind(gl, false);
-	
+	private void drawBackground(GL3 gl){
 		//Use a gray to gray color gradient as background, otherwise use pure white
 		GLMatrix mvm = new GLMatrix();
 		GLMatrix pm = createFlatProjectionMatrix();
-		
+		gl.glDepthMask(false);
 		updateModelViewInShader(gl, BuiltInShader.NO_LIGHTING.getShader(), mvm, pm);
 		BuiltInShader.NO_LIGHTING.getShader().enable(gl);
 		VertexDataStorageLocal vds = new VertexDataStorageLocal(gl, 4, 3, 0, 0, 4, 0, 0, 0, 0);		
@@ -1862,8 +1859,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
         vds.draw(gl, GL.GL_TRIANGLE_STRIP);
         vds.dispose(gl);
         updateModelViewInShader(gl, BuiltInShader.NO_LIGHTING.getShader(), modelViewMatrix, projectionMatrix);
-	
-		fboBackground.unbind(gl);
+        gl.glDepthMask(true);
 	}
 	
 	public float estimateUnitLengthInPixels(){
@@ -2020,7 +2016,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		if (fboDeferredBuffer != null)   fboDeferredBuffer.destroy(gl);
 		if (fboLeft != null) 	   fboLeft.destroy(gl);
 		if (fboRight != null) 	   fboRight.destroy(gl);
-		if (fboBackground != null) fboBackground.destroy(gl);
 	}
 	
 	private class TypeColoringAndFilter implements ColoringFilter<Atom> {
