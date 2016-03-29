@@ -587,17 +587,13 @@ public class Skeletonizer extends DataContainer {
 	}
 	
 	private void drawSurfaces(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box){
-		Shader shader = BuiltInShader.VERTEX_ARRAY_COLOR_UNIFORM.getShader();
+		Shader shader = (picking?BuiltInShader.VERTEX_ARRAY_COLOR_UNIFORM:BuiltInShader.OID_VERTEX_ARRAY_COLOR_UNIFORM).getShader();
 		shader.enable(gl);
 		int colorUniform = gl.glGetUniformLocation(shader.getProgram(), "Color");
 		
-		gl.glDisable(GL.GL_CULL_FACE);
 		for (int i=0; i<this.getPlanarDefects().size(); i++) {
 			PlanarDefect s = this.getPlanarDefects().get(i);
-			
-			VertexDataStorageLocal vds = new VertexDataStorageLocal(gl, s.getFaces().length, 3, 0, 0, 0, 0, 0, 0, 0);
-			int numElements = 0;
-			vds.beginFillBuffer(gl);
+			//Select the color
 			if (picking){
 				float[] color = viewer.getNextPickingColor(s);
 				gl.glUniform4f(colorUniform, color[0], color[1], color[2], color[3]);
@@ -612,11 +608,15 @@ public class Skeletonizer extends DataContainer {
 					if (viewer.getHighLightObjects().contains(s))
 						gl.glUniform4f(colorUniform, 0.8f,0.0f,0.0f,0.35f);
 					else {
-						if (RenderOption.PRINTING_MODE.isEnabled()) gl.glUniform4f(colorUniform, 0.0f,0.0f,0.0f,0.35f);
-						else gl.glUniform4f(colorUniform, 0.5f,0.5f,0.5f,0.35f);
+						if (RenderOption.PRINTING_MODE.isEnabled()) gl.glUniform4f(colorUniform, 0.5f,0.5f,0.5f,0.35f);
+						else gl.glUniform4f(colorUniform, 0.8f,0.8f,0.8f,0.35f);
 					}
 				}
 			}
+			
+			VertexDataStorageLocal vds = new VertexDataStorageLocal(gl, s.getFaces().length, 3, 0, 0, 0, 0, 0, 0, 0);
+			vds.beginFillBuffer(gl);
+			int numElements = 0;
 			
 			for (int j = 0; j < s.getFaces().length; j+=3) {
 				if (renderRange.isInInterval(s.getFaces()[j]) && 
@@ -635,7 +635,6 @@ public class Skeletonizer extends DataContainer {
 			vds.draw(gl, GL.GL_TRIANGLES);
 			vds.dispose(gl);
 		}
-		gl.glEnable(GL.GL_CULL_FACE);
 	}
 		
 	private void drawCores(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {

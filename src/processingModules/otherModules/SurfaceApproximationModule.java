@@ -221,7 +221,8 @@ public class SurfaceApproximationModule extends ClonableProcessingModule {
 		@Override
 		public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
 			getDataControlPanel();
-			if (dataPanel.transparency<0.98f) drawMesh(viewer, gl, renderRange, picking, box, true);
+			if (dataPanel.transparency<0.98f && dataPanel.transparency>0.02f)
+				drawMesh(viewer, gl, renderRange, picking, box, true);
 		}
 		
 		private void drawMesh(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box, boolean transparencyRendering){

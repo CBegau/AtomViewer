@@ -662,15 +662,20 @@ public class Shader {
 	;
 	
 	private final static String oidTransparencyFragmentShader = 
-		"in vec3 lightvec;"+
-		"in vec3 normal;"+
-		"in vec4 FrontColor;"+
-		"out vec4 vFragPosition;"+
-		"out vec4 vFragAccu;"+
-		
-		"uniform int noShading = 0;"+
-		"uniform int ads = 1;"+
-			
+		"in vec4 FrontColor;\n"+
+		"out vec4 vFragPosition;\n"+
+		"out vec4 vFragAccu;\n"+
+		"#ifdef NO_LIGHTING\n"+
+		"const int noShading = 1;\n"+
+		"const int ads = 0;\n"+
+		"const vec3 lightvec = vec3(0.);\n"+
+		"const vec3 normal = vec3(0.);\n"+
+		"#else \n"+
+		"in vec3 lightvec;\n"+
+		"in vec3 normal;\n"+
+		"uniform int noShading = 0;\n"+
+		"uniform int ads = 1;\n"+
+		"#endif\n"+
 		"void main(void) {"+
 		"  vFragPosition = FrontColor;\n"+
 		"  if (noShading != 1){\n"+
@@ -1092,6 +1097,11 @@ public class Shader {
 				new String[]{oidTransparencyComposer},
 				new int[]{ATTRIB_VERTEX, ATTRIB_TEX0},
 				new String[]{"v", "Tex"}),
+		OID_VERTEX_ARRAY_COLOR_UNIFORM(
+				new String[]{defaultVertexShaderUniformColor}, 
+				new String[]{"#define NO_LIGHTING 1\n",oidTransparencyFragmentShader},
+				new int[]{ATTRIB_VERTEX}, 
+				new String[]{"v"}),
 		OID_ADS_UNIFORM_COLOR(
 				new String[]{defaultPPLVertexShaderUniformColor},
 				new String[]{oidTransparencyFragmentShader},

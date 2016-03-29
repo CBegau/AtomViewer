@@ -442,13 +442,10 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		
 		gl.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT);
 		
-		
-		
 		if (atomData == null) {
 			drawBackground(gl);
 			return;
 		}
-		
 		
 		//setup modelview and projection matrices
 		modelViewMatrix = createModelViewMatrix();
@@ -749,7 +746,9 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	private void drawIndent(GL3 gl, boolean picking){
 		if (!RenderOption.INDENTER.isEnabled()) return;
 		
-		BuiltInShader.ADS_UNIFORM_COLOR.getShader().enable(gl);
+		Shader s = picking?BuiltInShader.ADS_UNIFORM_COLOR.getShader():BuiltInShader.OID_ADS_UNIFORM_COLOR.getShader();
+		s.enable(gl);
+			
 		GLMatrix mvm = modelViewMatrix.clone();
 		SimplePickable indenter = new SimplePickable();
 		
@@ -757,8 +756,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		if(picking)
 			color = getNextPickingColor(indenter);
 		
-		gl.glUniform4f(gl.glGetUniformLocation(
-				BuiltInShader.ADS_UNIFORM_COLOR.getShader().getProgram(),"Color"), color[0], color[1], color[2], color[3]);
+		gl.glUniform4f(gl.glGetUniformLocation(s.getProgram(),"Color"), color[0], color[1], color[2], color[3]);
 		
 		//Test indenter geometry, sphere or cylinder
 		Object o = atomData.getFileMetaData("extpot_cylinder");
@@ -789,7 +787,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			}
 			mvm.scale((float)indent[4], (float)indent[4], length);
 			
-			updateModelViewInShader(gl, BuiltInShader.ADS_UNIFORM_COLOR.getShader(), mvm, projectionMatrix);
+			updateModelViewInShader(gl, s, mvm, projectionMatrix);
 			SimpleGeometriesRenderer.drawCylinder(gl);
 		}
 		o = atomData.getFileMetaData("extpot");
@@ -807,7 +805,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			
 			mvm.translate(p.x, p.y, p.z);
 			mvm.scale((float)indent[4], (float)indent[4], (float)indent[4]);
-			updateModelViewInShader(gl, BuiltInShader.ADS_UNIFORM_COLOR.getShader(), mvm, projectionMatrix);
+			updateModelViewInShader(gl, s, mvm, projectionMatrix);
 			SimpleGeometriesRenderer.drawSphere(gl);
 		}
 		o = atomData.getFileMetaData("wall");
@@ -828,10 +826,10 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 
 			mvm.translate(0, 0, (float)(indent[1] - indent[2]));
 			mvm.scale(hx, hy, 3f*(float)indent[2]);
-			updateModelViewInShader(gl, BuiltInShader.ADS_UNIFORM_COLOR.getShader(), mvm, projectionMatrix);
+			updateModelViewInShader(gl, s, mvm, projectionMatrix);
 			SimpleGeometriesRenderer.drawCube(gl);
 		}
-		updateModelViewInShader(gl, BuiltInShader.ADS_UNIFORM_COLOR.getShader(), modelViewMatrix, projectionMatrix);
+		updateModelViewInShader(gl, s, modelViewMatrix, projectionMatrix);
 	}
 	
 

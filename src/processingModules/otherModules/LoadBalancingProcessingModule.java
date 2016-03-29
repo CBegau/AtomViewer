@@ -235,10 +235,13 @@ public class LoadBalancingProcessingModule extends ClonableProcessingModule {
 			
 			if (dataPanel.drawAsWireframe){
 				gl.glPolygonMode(GL.GL_FRONT_AND_BACK, GL3.GL_LINE);
-				gl.glDisable(GL.GL_CULL_FACE);
 			}
 			
-			BuiltInShader.NO_LIGHTING.getShader().enable(gl);
+			if (picking)
+				BuiltInShader.NO_LIGHTING.getShader().enable(gl);
+			else 
+				BuiltInShader.OID_ADS_VERTX_COLOR.getShader().enable(gl);
+			
 			int numElements = 0;
 			VertexDataStorageLocal vds = 
 					new VertexDataStorageLocal(gl, cpuDim[0]*cpuDim[1]*cpuDim[2]*36, 3, 3, 0, 4, 0, 0, 0, 0);
@@ -255,8 +258,8 @@ public class LoadBalancingProcessingModule extends ClonableProcessingModule {
 						vds.setColor(ColorTable.getIntensityGLColor(0.8f, 1.2f, in.load, 0.4f));
 						
 //						else vds.setColor(ColorTable.getIntensityGLColor(0, numCPU-1, in.cpu, 1f));
-						vds.setColor(ColorTable.getIntensityGLColor(minLoad, maxLoad, in.load, 0.4f));
-						vds.setColor(ColorTable.getIntensityGLColor(0, numCPU-1, in.cpu, 0.4f));
+						vds.setColor(ColorTable.getIntensityGLColor(minLoad, maxLoad, in.load, 0.5f));
+//						vds.setColor(ColorTable.getIntensityGLColor(0, numCPU-1, in.cpu, 0.4f));
 //						vds.setColor(ColorTable.getIntensityGLColor(0.5f, 1.5f, in.load, 0.2f));
 
 						
@@ -343,8 +346,6 @@ public class LoadBalancingProcessingModule extends ClonableProcessingModule {
 			vds.dispose(gl);
 			viewer.drawLegendThisFrame(Float.toString(minLoad), Float.toString((minLoad+maxLoad)*0.5f),  Float.toString(maxLoad));
 //			viewer.drawLegendThisFrame("0.8", "1.0",  "1.2");
-			
-			gl.glEnable(GL.GL_CULL_FACE);
 		}
 		
 		@Override

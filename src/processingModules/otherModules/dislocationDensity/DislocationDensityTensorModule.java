@@ -172,7 +172,7 @@ public class DislocationDensityTensorModule extends ClonableProcessingModule {
 						}
 						
 						VolumeElement ve = ddt[i][j][k].getVolumeElement();
-						float[] f = ColorTable.getIntensityGLColor(minPower, maxPower, c1, 0.2f);
+						float[] f = ColorTable.getIntensityGLColor(minPower, maxPower, c1, 0.20f);
 						
 						if (c1>0) {
 							if (picking)

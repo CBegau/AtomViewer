@@ -65,8 +65,10 @@ public class CuboidVolumeElement implements VolumeElement{
 		Vec3 l = lowerBound;
 		
 		ViewerGLJPanel viewer = RenderingConfiguration.getViewer();
-		
 		Shader s = Shader.BuiltInShader.ADS_UNIFORM_COLOR.getShader();
+		if (color4[3] != 1f && !picking)
+			s = Shader.BuiltInShader.OID_ADS_UNIFORM_COLOR.getShader();
+		
 		s.enable(gl);
 		int col = gl.glGetUniformLocation(s.getProgram(),"Color");
 		gl.glUniform4f(col, color4[0], color4[1], color4[2], color4[3]);
