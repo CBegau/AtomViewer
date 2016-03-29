@@ -215,21 +215,21 @@ public class SurfaceApproximationModule extends ClonableProcessingModule {
 		@Override
 		public void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
 			getDataControlPanel(); //Make sure that singleton is created to prevent null-pointer
-			if (dataPanel.transparency>=0.98f) drawMesh(viewer, gl, renderRange, picking, box, true);
+			if (dataPanel.transparency>=0.98f) drawMesh(viewer, gl, renderRange, picking, box, false);
 		}
 		
 		@Override
 		public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
 			getDataControlPanel();
-			if (dataPanel.transparency<0.98f) drawMesh(viewer, gl, renderRange, picking, box, false);
+			if (dataPanel.transparency<0.98f) drawMesh(viewer, gl, renderRange, picking, box, true);
 		}
 		
 		private void drawMesh(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box, boolean transparencyRendering){
 			if (!getDataControlPanel().isDataVisible()) return;
 			
-			Shader s = picking?BuiltInShader.ADS_UNIFORM_COLOR.getShader():BuiltInShader.OID_ADS_UNIFORM_COLOR.getShader();
-			if (transparencyRendering)
-				s = BuiltInShader.UNIFORM_COLOR_DEFERRED.getShader();
+			Shader s = BuiltInShader.UNIFORM_COLOR_DEFERRED.getShader();
+			if (transparencyRendering && !picking)
+				s = BuiltInShader.OID_ADS_UNIFORM_COLOR.getShader();
 			
 			s.enableAndPushOld(gl);
 			

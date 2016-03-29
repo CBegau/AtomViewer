@@ -499,11 +499,26 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		
 		if (!picking) drawFromDeferredBuffer(gl, picking, drawIntoFBO);
 		
-		fboDeferredBuffer.bind(gl, false);
+		drawTransparentObjects(gl, picking, drawIntoFBO);
 		
-		//Using forward rendering
-		//Renderpass 2 for transparent objects
+		//Additional objects
+		//Some are placed on top of the scene as 2D objects
+		if (!picking){
+			drawCoordinateSystem(gl);
+			drawThompsonTetraeder(gl);			
+			drawLegend(gl);
+			drawLengthScale(gl);
+		}
+		
+		this.updateRenderContent = false;
+		Shader.disableLastUsedShader(gl);
+	}
+
+	public void drawTransparentObjects(GL3 gl, boolean picking, FrameBufferObject drawIntoFBO) {
 		if (!picking) {
+			//Prepare order independent rendering using the deferred rendering FBO that has all
+			//solid objects already rendered into and thus holds the correct depth mask
+			fboDeferredBuffer.bind(gl, false);
 			gl.glEnable(GL.GL_BLEND);
 			
 			gl.glBlendFuncSeparate(GL.GL_ONE, GL.GL_ONE, GL.GL_ZERO, GL.GL_ONE_MINUS_SRC_ALPHA);
@@ -522,50 +537,41 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			dc.drawTransparentObjects(this, gl, renderInterval, picking, atomData.getBox());
 
 		drawIndent(gl, picking);
-	
-		fboDeferredBuffer.unbind(gl);
 		
-		if (drawIntoFBO != null)
-			drawIntoFBO.bind(gl, !picking);
-		
-		gl.glDisablei(GL.GL_BLEND, 1);
-		gl.glDisablei(GL.GL_BLEND, 2);
-		gl.glBlendFunc(GL.GL_ONE_MINUS_SRC_ALPHA, GL.GL_SRC_ALPHA);
-		
-		Shader oidComposer = BuiltInShader.OID_COMPOSER.getShader();
-		
-		GLMatrix mvm = new GLMatrix();
-		GLMatrix pm = createFlatProjectionMatrix();
-		oidComposer.enable(gl);
-		updateModelViewInShader(gl, oidComposer, mvm, pm);
-		
-		gl.glUniform1i(gl.glGetUniformLocation(oidComposer.getProgram(), "RevealageTexture"), Shader.FRAG_POSITION);
-		gl.glUniform1i(gl.glGetUniformLocation(oidComposer.getProgram(), "AccuTexture"), Shader.FRAG_ACCU);
-		
-		gl.glActiveTexture(GL.GL_TEXTURE0+Shader.FRAG_POSITION);
-		gl.glBindTexture(GL.GL_TEXTURE_2D, fboDeferredBuffer.getPositionTextureName());
-		gl.glActiveTexture(GL.GL_TEXTURE0+Shader.FRAG_ACCU);
-		gl.glBindTexture(GL.GL_TEXTURE_2D, fboDeferredBuffer.getNormalTextureName());
-		gl.glDepthFunc(GL.GL_ALWAYS);
-		fullScreenQuad.draw(gl, GL.GL_TRIANGLE_STRIP);
-		gl.glDepthFunc(GL.GL_LESS);
-		
-		gl.glDepthMask(true);
-		gl.glEnable(GL.GL_CULL_FACE);
-		gl.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA);
-		gl.glDisable(GL.GL_BLEND);
-		
-		//Additional objects
-		//Some are placed on top of the scene as 2D objects
-		if (!picking){
-			drawCoordinateSystem(gl);
-			drawThompsonTetraeder(gl);			
-			drawLegend(gl);
-			drawLengthScale(gl);
+		if (!picking) {
+			//Blend accumulated data into the framebuffer
+			fboDeferredBuffer.unbind(gl);
+			
+			if (drawIntoFBO != null)
+				drawIntoFBO.bind(gl, !picking);
+			
+			gl.glDisablei(GL.GL_BLEND, 1);
+			gl.glDisablei(GL.GL_BLEND, 2);
+			gl.glBlendFunc(GL.GL_ONE_MINUS_SRC_ALPHA, GL.GL_SRC_ALPHA);
+			
+			Shader oidComposer = BuiltInShader.OID_COMPOSER.getShader();
+			
+			GLMatrix mvm = new GLMatrix();
+			GLMatrix pm = createFlatProjectionMatrix();
+			oidComposer.enable(gl);
+			updateModelViewInShader(gl, oidComposer, mvm, pm);
+			
+			gl.glUniform1i(gl.glGetUniformLocation(oidComposer.getProgram(), "RevealageTexture"), Shader.FRAG_POSITION);
+			gl.glUniform1i(gl.glGetUniformLocation(oidComposer.getProgram(), "AccuTexture"), Shader.FRAG_ACCU);
+			
+			gl.glActiveTexture(GL.GL_TEXTURE0+Shader.FRAG_POSITION);
+			gl.glBindTexture(GL.GL_TEXTURE_2D, fboDeferredBuffer.getPositionTextureName());
+			gl.glActiveTexture(GL.GL_TEXTURE0+Shader.FRAG_ACCU);
+			gl.glBindTexture(GL.GL_TEXTURE_2D, fboDeferredBuffer.getNormalTextureName());
+			gl.glDepthFunc(GL.GL_ALWAYS);
+			fullScreenQuad.draw(gl, GL.GL_TRIANGLE_STRIP);
+			gl.glDepthFunc(GL.GL_LESS);
+			
+			gl.glDepthMask(true);
+			gl.glEnable(GL.GL_CULL_FACE);
+			gl.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA);
+			gl.glDisable(GL.GL_BLEND);
 		}
-		
-		this.updateRenderContent = false;
-		Shader.disableLastUsedShader(gl);
 	}
 
 	private void drawFromDeferredBuffer(GL3 gl, boolean picking, FrameBufferObject targetFbo) {
