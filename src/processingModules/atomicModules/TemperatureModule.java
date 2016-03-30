@@ -49,12 +49,15 @@ public class TemperatureModule extends ClonableProcessingModule{
 	private float centerOfMassVelocityRadius = 0f;
 	@ExportableValue
 	private float scalingFactor = 11605f;
+	@ExportableValue
+	private boolean spatialAverage = true;
 	
 	@Override
 	public String getFunctionDescription() {
 		return "Computes the temperature T per atom from a velocity vector δv and the atomic mass m as T=|δv|*m/3. "
 				+ "The velocity vector δv is the difference of the atom's velocity "
-				+ "and the center of mass velocity of all atoms within the given cutoff radius.";
+				+ "and the center of mass velocity of all atoms within the given cutoff radius."
+				+" If requested, the temperature per atom is averaged within the cutoff radius.";
 	}
 	
 	@Override
@@ -150,7 +153,6 @@ public class TemperatureModule extends ClonableProcessingModule{
 			parallelTasks.add(new Callable<Void>() {
 				@Override
 				public Void call() throws Exception {
-					float temp = 0f;
 					final int start = (int)(((long)data.getAtoms().size() * j)/ThreadPool.availProcessors());
 					final int end = (int)(((long)data.getAtoms().size() * (j+1))/ThreadPool.availProcessors());
 					for (int i=start; i<end; i++){
@@ -161,12 +163,14 @@ public class TemperatureModule extends ClonableProcessingModule{
 						float vx = a.getData(vxColumn);
 						float vy = a.getData(vyColumn);
 						float vz = a.getData(vzColumn);
-							
-						float av_x = vx;
-						float av_y = vx;
-						float av_z = vx;
 						
-						if (centerOfMassVelocityRadius > 0){	
+						float totThermalEnergy = 0f;
+						
+						if (centerOfMassVelocityRadius > 0){
+							float av_x = vx;
+							float av_y = vy;
+							float av_z = vz;
+							
 							ArrayList<Atom> neigh = nnb.getNeigh(a);
 							for (Atom n : neigh){
 								float ax = n.getData(vxColumn);
@@ -181,15 +185,31 @@ public class TemperatureModule extends ClonableProcessingModule{
 							av_y /= (neigh.size()+1);
 							av_z /= (neigh.size()+1);
 							
-							vx-=av_x;
-							vy-=av_y;
-							vz-=av_z;
+							totThermalEnergy = a.getData(massColumn) *
+									((vx-av_x)*(vx-av_x) + (vy-av_y)*(vy-av_y) + (vz-av_z)*(vz-av_z));
+							
+							if (spatialAverage){
+								for (Atom n : neigh){
+									float ax = n.getData(vxColumn);
+									float ay = n.getData(vyColumn);
+									float az = n.getData(vzColumn);
+									float am = n.getData(massColumn);
+									
+									totThermalEnergy += am *
+											((ax-av_x)*(ax-av_x) + (ay-av_y)*(ay-av_y) + (az-av_z)*(az-av_z));	
+								}
+								
+								totThermalEnergy /= (neigh.size()+1);
+							}
+						} else {
+							totThermalEnergy = a.getData(massColumn) * (vx*vx + vy*vy + vz*vz);
 						}
 						
-						temp = ((a.getData(massColumn) * ((vx*vx+vy*vy+vz*vz) ))) / 3;
-						temp *= scalingFactor;
+						//final scaling to (average) temperature
+						totThermalEnergy /= 3f;
+						totThermalEnergy *= scalingFactor;
 						
-						a.setData(temp, tempColumn);
+						a.setData(totThermalEnergy, tempColumn);
 					}
 					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
 					return null;
@@ -223,10 +243,13 @@ public class TemperatureModule extends ClonableProcessingModule{
 		FloatProperty comRadius = dialog.addFloat("comvRadius", "Center of mass velocity cutoff"
 				, "", centerOfMassVelocityRadius, 0f, 1000f);
 		FloatProperty scaling = dialog.addFloat("scalingFactor", "Scaling factor (e.g. 1eV->11605K)", "", scalingFactor, 0f, 1e20f);
+		BooleanProperty average = dialog.addBoolean("spacialAverage", "Enable spatial averaging", 
+				"The temperatures of each particle are averaged within the cutoff radius", spatialAverage);
 		boolean ok = dialog.showDialog();
 		if (ok){
 			this.centerOfMassVelocityRadius = comRadius.getValue();
 			this.scalingFactor = scaling.getValue();
+			this.spatialAverage = average.getValue();
 		}
 		return ok;
 	}
