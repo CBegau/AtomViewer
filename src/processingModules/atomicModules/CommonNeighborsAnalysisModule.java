@@ -244,7 +244,7 @@ public class CommonNeighborsAnalysisModule extends ClonableProcessingModule {
 		JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(frame, "Perform common neighbor analysis" );
 		dialog.addLabel(getFunctionDescription());
 		dialog.add(new JSeparator());
-		FloatProperty cutoff = dialog.addFloat("avRadius", "cutoff_radius", "", 5f, 0f, 1000f);
+		FloatProperty cutoff = dialog.addFloat("avRadius", "cutoff_radius", "", this.cutoff, 0f, 1000f);
 		
 		boolean ok = dialog.showDialog();
 		if (ok){

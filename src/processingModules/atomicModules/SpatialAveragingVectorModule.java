@@ -67,13 +67,13 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 	private String toAverageID;
 	
 	@ExportableValue
-	private float averageRadius = 0f;
+	private float averageRadius = 5f;
 	
 	@ExportableValue
-	private boolean useSmoothingKernel = true;
+	private boolean useSmoothingKernel = false;
 	
 	@ExportableValue
-	private boolean weigthByMass = true;
+	private boolean weigthByMass = false;
 
 	public SpatialAveragingVectorModule() {}
 	
@@ -290,7 +290,7 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 		dialog.addLabel("Select vector to average");
 		dialog.addComponent(averageComponentsComboBox);
 		FloatProperty avRadius = dialog.addFloat("avRadius", "Cutoff radius for averaging"
-				, "", 5f, 0f, 1000f);
+				, "", averageRadius, 0f, 1000f);
 		
 		ButtonGroup bg = new ButtonGroup();
 		dialog.startGroup("Averaging method");
@@ -301,12 +301,12 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 		smoothingButton.setToolTipText(CommonUtils.getWordWrappedString(smoothingTooltip, smoothingButton));
 		arithmeticButton.setToolTipText("Computes the arithmetic average over all nearby neighbors without weighting.");
 		
-		JCheckBox considerMassButton = new JCheckBox("Weigth by particle mass", false);
+		JCheckBox considerMassButton = new JCheckBox("Weigth by particle mass", this.weigthByMass);
 		considerMassButton.setToolTipText("Weigth particles by their mass (if possible)");
 		if (data.getIndexForComponent(Component.MASS)==-1) considerMassButton.setEnabled(false);
 		
-		smoothingButton.setSelected(false);
-		arithmeticButton.setSelected(true);
+		smoothingButton.setSelected(useSmoothingKernel);
+		arithmeticButton.setSelected(!useSmoothingKernel);
 		dialog.addComponent(arithmeticButton);
 		dialog.addComponent(smoothingButton);
 		dialog.addComponent(considerMassButton);

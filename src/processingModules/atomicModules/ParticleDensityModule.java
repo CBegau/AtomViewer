@@ -166,9 +166,9 @@ public class ParticleDensityModule extends ClonableProcessingModule {
 		JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(frame, "Compute particle density");
 		dialog.addLabel(getFunctionDescription());
 		dialog.add(new JSeparator());
-		FloatProperty avRadius = dialog.addFloat("avRadius", "Radius of the sphere", "", 5f, 0f, 1000f);
+		FloatProperty avRadius = dialog.addFloat("avRadius", "Radius of the sphere", "", radius, 0f, 1000f);
 		
-		FloatProperty scaling = dialog.addFloat("scalingFactor", "Scaling factor for the result (e.g. to particles/nm³)", "", 1f, 0f, 1e20f);
+		FloatProperty scaling = dialog.addFloat("scalingFactor", "Scaling factor for the result (e.g. to particles/nm³)", "", scalingFactor, 0f, 1e20f);
 		
 		ButtonGroup bg = new ButtonGroup();
 		
@@ -176,7 +176,7 @@ public class ParticleDensityModule extends ClonableProcessingModule {
 		final JRadioButton smoothingButton = new JRadioButton("Cubic spline smoothing kernel");
 		JRadioButton arithmeticButton = new JRadioButton("Arithmetic average");
 		
-		final JCheckBox considerMassButton = new JCheckBox("Compute mass density", false);
+		final JCheckBox considerMassButton = new JCheckBox("Compute mass density", weigthByMass);
 		considerMassButton.setToolTipText("Weigth particles by their mass, thus computes the local mass density, "
 				+ "instead of particle density (if possible)");
 		if (data.getIndexForComponent(Component.MASS)==-1) considerMassButton.setEnabled(false);
@@ -187,8 +187,8 @@ public class ParticleDensityModule extends ClonableProcessingModule {
 		smoothingButton.setToolTipText(wrappedToolTip);
 		arithmeticButton.setToolTipText("Computed average is the arithmetic average");
 		
-		smoothingButton.setSelected(true);
-		arithmeticButton.setSelected(false);
+		smoothingButton.setSelected(useSmoothKernel);
+		arithmeticButton.setSelected(!useSmoothKernel);
 		dialog.addComponent(smoothingButton);
 		dialog.addComponent(arithmeticButton);
 		dialog.addComponent(considerMassButton);

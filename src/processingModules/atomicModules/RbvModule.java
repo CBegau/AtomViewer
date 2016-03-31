@@ -670,12 +670,12 @@ public class RbvModule extends ClonableProcessingModule{
 						"<html>If the computed RBV is shorter than this fraction of a perfect Burgers vector, the value is just discarded.<br>"
 						+ "<br> Larger values filter more noise, but small details may be lost."
 						+ "<br> Min: 0.05, Max: 1.0</html>",
-						0.14f, 0.05f, 1f);
+						this.acceptanceThreshold, 0.05f, 1f);
 		
 		BooleanProperty rbvForAllAtoms = dialog.addBoolean("rbvForAllAtoms", 
 				"Compute RBVs for all atoms in the lattice, not only for defects",
 						"<html>Enabling this options is very time consuming, but may help to identify extended defects in unknown structures<br></html>",
-						false);
+						!this.defectsOnly);
 		
 		boolean ok = dialog.showDialog();
 		if (ok){

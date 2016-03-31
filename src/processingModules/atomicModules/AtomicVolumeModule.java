@@ -144,9 +144,9 @@ public class AtomicVolumeModule extends ClonableProcessingModule {
 		dialog.addLabel("The result of the volume has the unit of '(length unit)^3', the density '(length unit)^-3'");
 		dialog.add(new JSeparator());
 		FloatProperty avRadius = dialog.addFloat("avRadius", "Radius of a sphere to find neighbors for a voronoi cell construction."
-				, "", 5f, 0f, 1000f);
-		BooleanProperty density = dialog.addBoolean("compDensity", "Compute density instead of volume", "", false);
-		FloatProperty scaling = dialog.addFloat("scalingFactor", "Scaling factor for the result (e.g. to nm³)", "", 1f, 0f, 1e20f);
+				, "", radius, 0f, 1000f);
+		BooleanProperty density = dialog.addBoolean("compDensity", "Compute density instead of volume", "", computeDensity);
+		FloatProperty scaling = dialog.addFloat("scalingFactor", "Scaling factor for the result (e.g. to nm³)", "", scalingFactor, 0f, 1e20f);
 		boolean ok = dialog.showDialog();
 		if (ok){
 			this.computeDensity = density.getValue();

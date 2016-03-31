@@ -44,7 +44,7 @@ public class SlipVectorModule extends ClonableProcessingModule{
 	}
 	
 	@ExportableValue
-	private float cutoffRadius = 3f;
+	private float cutoffRadius = 0f;
 	@ExportableValue
 	private float slipThreshold = 0.5f;
 	
@@ -96,10 +96,12 @@ public class SlipVectorModule extends ClonableProcessingModule{
 		
 		dialog.addLabel("Select reference configuration");
 		dialog.addComponent(referenceComboBox);
+		float cutoff = this.cutoffRadius==0f?data.getCrystalStructure().getNearestNeighborSearchRadius():this.cutoffRadius;
+		
 		FloatProperty cRadius = dialog.addFloat("cutoffRadius", "Cutoff radius for finding neighbors"
-				, "", data.getCrystalStructure().getNearestNeighborSearchRadius(), 0.01f, 1e20f);
+				, "", cutoff, 0.01f, 1e20f);
 		FloatProperty slipThres = dialog.addFloat("slipThreshold", "Threshold of displacement to be considered as slip"
-				, "", 0.5f, 0.0f, 1e20f);
+				, "", this.slipThreshold, 0.0f, 1e20f);
 		
 		boolean ok = dialog.showDialog();
 		if (ok){

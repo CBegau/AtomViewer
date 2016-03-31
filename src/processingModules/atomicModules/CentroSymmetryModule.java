@@ -164,17 +164,21 @@ public class CentroSymmetryModule extends ClonableProcessingModule {
 	public boolean showConfigurationDialog(JFrame frame, AtomData data) {
 		JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(frame, "Centrosymmetry deviation");
 		dialog.addLabel(getFunctionDescription());
-		float def = data.getCrystalStructure().getNearestNeighborSearchRadius();
+		float def;
+		if (this.radius == 0f)
+			def = data.getCrystalStructure().getNearestNeighborSearchRadius();
+		else
+			def = radius;
 		
 		FloatProperty avRadius = dialog.addFloat("avRadius", "Radius of a sphere to find neighbors."
 				, "", def, 0f, 1e10f);
 		BooleanProperty adaptive = dialog.addBoolean("adaptive", "Adaptive Centrosymmetry, "
 				+ "only consider a fixed number of nearest neighbors", 
-				"If more neighbors are found, the farthest once are excluded", false);
+				"If more neighbors are found, the farthest once are excluded", adaptiveCentroSymmetry);
 		IntegerProperty maxBonds = dialog.addInteger("maxBonds", "Maximum number of bonds for adaptive centrosymmetry",
-				"", 12, 0, 100000);
+				"", this.maxBonds, 0, 100000);
 		FloatProperty scaling = dialog.addFloat("scalingFactor", "Scaling factor for the result."
-				+ "", "", 1f, 0f, 1e20f);
+				+ "", "", this.scaling, 0f, 1e20f);
 		
 		boolean ok = dialog.showDialog();
 		if (ok){

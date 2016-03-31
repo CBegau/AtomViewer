@@ -119,7 +119,7 @@ public class CoordinationNumberModule extends ClonableProcessingModule {
 		JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(frame, "Compute coordination number");
 		dialog.addLabel(getFunctionDescription());
 		dialog.add(new JSeparator());
-		FloatProperty avRadius = dialog.addFloat("avRadius", "Radius", "", 5f, 0f, 1000f);
+		FloatProperty avRadius = dialog.addFloat("avRadius", "Radius", "", this.radius, 0f, 1000f);
 		
 		boolean ok = dialog.showDialog();
 		if (ok){

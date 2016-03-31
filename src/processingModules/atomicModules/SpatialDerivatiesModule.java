@@ -60,7 +60,7 @@ public class SpatialDerivatiesModule extends ClonableProcessingModule implements
 	@ExportableValue
 	private float radius = 5f;
 	@ExportableValue
-	private boolean weigthByMass = true;
+	private boolean weigthByMass = false;
 	
 	private DataColumnInfo toDeriveColumn;
 	private DataColumnInfo gradientColumn;
@@ -211,7 +211,7 @@ public class SpatialDerivatiesModule extends ClonableProcessingModule implements
 		
 		dialog.addLabel(getFunctionDescription());
 		dialog.add(new JSeparator());
-		FloatProperty avRadius = dialog.addFloat("avRadius", "Radius of the sphere", "", 5f, 0f, 1000f);
+		FloatProperty avRadius = dialog.addFloat("avRadius", "Radius of the sphere", "", this.radius, 0f, 1000f);
 		
 		JComboBox averageComponentsComboBox = new JComboBox();
 		for (DataColumnInfo dci : data.getDataColumnInfos())
@@ -220,7 +220,7 @@ public class SpatialDerivatiesModule extends ClonableProcessingModule implements
 		dialog.addLabel("Select value to compute gradient");
 		dialog.addComponent(averageComponentsComboBox);
 		
-		JCheckBox considerMassButton = new JCheckBox("Weigth by particle mass", false);
+		JCheckBox considerMassButton = new JCheckBox("Weigth by particle mass", this.weigthByMass);
 		considerMassButton.setToolTipText("Weigth particles by their mass (if possible)");
 		if (data.getIndexForComponent(Component.MASS)==-1) considerMassButton.setEnabled(false);
 		dialog.addComponent(considerMassButton);
