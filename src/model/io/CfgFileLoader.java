@@ -139,17 +139,20 @@ public class CfgFileLoader extends MDFileLoader {
 						Atom a = new Atom(xyzPos, atomNumber, (byte)currentType);
 						if (autoAtomNumbers.getValue()) atomNumber++;
 						atomsRead++;
-						//Custom columns
-						for (int j = 0; j<dataColumns.length; j++){
-							if (dataColumns[j] != -1)
-								a.setData(Float.parseFloat(parts[dataColumns[j]]), j);
-						}
-						if (massColumn != -1){
-							a.setData(currentMass, massColumn);
-						}
+					
 						
 						if (atomFilter == null || atomFilter.accept(a)){
 							idc.atoms.add(a);
+							
+							//Custom columns
+							for (int j = 0; j<dataColumns.length; j++){
+								if (dataColumns[j] != -1)
+									idc.dataValues.get(j).add(Float.parseFloat(parts[dataColumns[j]]));
+							}
+							
+							if (massColumn != -1){
+								idc.dataValues.get(massColumn).add(currentMass);
+							}
 						}
 						
 					}
@@ -181,17 +184,18 @@ public class CfgFileLoader extends MDFileLoader {
 					Atom a = new Atom(xyzPos, atomNumber, (byte)type);
 					if (autoAtomNumbers.getValue()) atomNumber++;
 					atomsRead++;
-					//Custom columns
-					for (int j = 0; j<dataColumns.length; j++){
-						if (dataColumns[j] != -1)
-							a.setData(Float.parseFloat(parts[dataColumns[j]]), j);
-					}
-					if (massColumn != -1){
-						a.setData(Float.parseFloat(parts[0]), massColumn);
-					}
 					
 					if (atomFilter == null || atomFilter.accept(a)){
 						idc.atoms.add(a);
+						
+						//Custom columns
+						for (int j = 0; j<dataColumns.length; j++){
+							if (dataColumns[j] != -1)
+								idc.dataValues.get(j).add(Float.parseFloat(parts[dataColumns[j]]));
+						}
+						if (massColumn != -1){
+							idc.dataValues.get(massColumn).add(Float.parseFloat(parts[0]));
+						}
 					}
 					
 					s = inputReader.readLine();

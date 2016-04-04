@@ -130,13 +130,14 @@ public class XYZFileLoader extends MDFileLoader {
 					Atom a = new Atom(pos, atomNumber, (byte)ele);
 					if (autoAtomNumbers.getValue()) atomNumber++;
 					
-					//Custom columns
-					for (int j = 0; j<dataColumns.length; j++){
-						if (dataColumns[j] != -1)
-							a.setData(Float.parseFloat(parts[dataColumns[j]]), j);
+					if (atomFilter == null || atomFilter.accept(a)){
+						idc.atoms.add(a);
+						//Custom columns
+						for (int j = 0; j<dataColumns.length; j++){
+							if (dataColumns[j] != -1)
+								idc.dataValues.get(j).add(Float.parseFloat(parts[dataColumns[j]]));
+						}
 					}
-					if (atomFilter == null || atomFilter.accept(a))
-						idc.addAtom(a);
 				}
 				
 				
@@ -159,7 +160,7 @@ public class XYZFileLoader extends MDFileLoader {
 					
 					Atom a = new Atom(pos, atomNumber, (byte)ele);
 					if (autoAtomNumbers.getValue()) atomNumber++;
-					idc.addAtom(a);
+					idc.atoms.add(a);
 				}
 				
 				if (!extendedFormat){

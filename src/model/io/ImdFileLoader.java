@@ -27,9 +27,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.regex.*;
 import java.util.zip.GZIPInputStream;
 
@@ -37,7 +34,6 @@ import javax.swing.filechooser.FileFilter;
 
 import common.CommonUtils;
 import common.DataInputStreamWrapper;
-import common.ThreadPool;
 import common.Vec3;
 import crystalStructures.PolygrainMetadata;
 import model.*;
@@ -133,7 +129,7 @@ public class ImdFileLoader extends MDFileLoader{
 	 * @throws IOException
 	 */
 	protected ImportDataContainer readFile(File f, final Filter<Atom> atomFilter) throws IOException{
-		ProgressMonitor.getProgressMonitor().setActivityName("Reading file");
+		ProgressMonitor.getProgressMonitor().setActivityName("Reading file");		
 		final ImportDataContainer idc = new ImportDataContainer();
 		idc.name = f.getName();
 		idc.fullPathAndFilename = f.getCanonicalPath();
@@ -201,7 +197,7 @@ public class ImdFileLoader extends MDFileLoader{
 					
 					int fileNumber = 0;
 					File nextFile = null;
-					ArrayList<Future<Void>> tasks = new ArrayList<Future<Void>>();
+					
 					do {
 						String nextFilename = f.getAbsolutePath();
 						if (gzipped)	//remove ".head.gz"
@@ -213,31 +209,16 @@ public class ImdFileLoader extends MDFileLoader{
 						if (gzipped) nextFilename += ".gz";
 						nextFile = new File(nextFilename);
 						if (nextFile.exists()){
-							final File nf = nextFile; 
-							Callable<Void> c = new Callable<Void>() {
-								@Override
-								public Void call() throws Exception {
-									//Read one file per thread
-									readBinaryFile(nf, idc, gzipped, header, atomFilter);
-									return null;
-								}
-							};
-							tasks.add(ThreadPool.submit(c));
-							
+							readBinaryFile(nextFile, idc, gzipped, header, atomFilter);							
 							fileNumber++;
 						}
 					} while (nextFile.exists());
-					for (Future<Void> t : tasks){ //Wait until all files are processed
-						t.get();
-					}
 				} else
 					readBinaryFile(f, idc, gzipped, header, atomFilter);
 			}
 			else throw new IllegalArgumentException("File format not supported");
 		}catch (IOException ex){
 			throw ex;
-		} catch (InterruptedException e) {
-		} catch (ExecutionException e) {
 		} finally {
 			inputReader.close();
 		}
@@ -403,14 +384,12 @@ public class ImdFileLoader extends MDFileLoader{
 				
 				if (atomFilter == null || atomFilter.accept(a)){
 					//Put atom into the list of all atoms
-					if (header.multiFileInput) 
-						idc.addAtom(a);     //Thread safe access
-					else idc.atoms.add(a);	//Non thread safe access
+					idc.atoms.add(a);
+					
+					//Custom columns
+					for (int i = 0; i<header.dataColumns.length; i++)
+						idc.dataValues.get(i).add(dataColumnValues[i]);
 				}
-
-				//Custom columns
-				for (int i = 0; i<header.dataColumns.length; i++)
-					a.setData(dataColumnValues[i], i);
 				
 				if (gzipped && filesize <= dis.getBytesRead()){
 					if (filesize < dis.getBytesRead())
@@ -486,42 +465,40 @@ public class ImdFileLoader extends MDFileLoader{
 			
 			//Put atom into the list of all atoms
 			if (atomFilter == null || atomFilter.accept(a)){
-				if (header.multiFileInput) 
-					idc.addAtom(a);     //Thread safe access
-				else idc.atoms.add(a);	//Non thread safe access
-			}
-			
-			//Custom columns
-			for (int i = 0; i<header.dataColumns.length; i++){
-				if (header.dataColumns[i]!=-1)
-					a.setData(Float.parseFloat(parts[header.dataColumns[i]]), i);
-			}
-			
-			if (header.readRBV){
-				Vec3 rbv = new Vec3();
-				Vec3 lineDirection = new Vec3();
-
-				if (header.rbv_data == -1){
-					rbv.x = Float.parseFloat(parts[header.rbvX_Column]);
-					rbv.y = Float.parseFloat(parts[header.rbvX_Column+1]);
-					rbv.z = Float.parseFloat(parts[header.rbvX_Column+2]);
-						
-					lineDirection.x = Float.parseFloat(parts[header.lsX_Column]);
-					lineDirection.y = Float.parseFloat(parts[header.lsX_Column+1]);
-					lineDirection.z = Float.parseFloat(parts[header.lsX_Column+2]);
-				} else {
-					int data = Integer.parseInt(parts[header.rbv_data]);
-					if (data == 1){
-						lineDirection.x = Float.parseFloat(parts[header.rbv_data+1]);
-						lineDirection.y = Float.parseFloat(parts[header.rbv_data+2]);
-						lineDirection.z = Float.parseFloat(parts[header.rbv_data+3]);
-						
-						rbv.x = Float.parseFloat(parts[header.rbv_data+4]);
-						rbv.y = Float.parseFloat(parts[header.rbv_data+5]);
-						rbv.z = Float.parseFloat(parts[header.rbv_data+6]);
-					}
+				idc.atoms.add(a);
+				
+				//Custom columns
+				for (int i = 0; i<header.dataColumns.length; i++){
+					if (header.dataColumns[i]!=-1)
+						idc.dataValues.get(i).add(Float.parseFloat(parts[header.dataColumns[i]])); 
 				}
-				idc.rbvStorage.addRBV(a, rbv, lineDirection);
+				
+				if (header.readRBV){
+					Vec3 rbv = new Vec3();
+					Vec3 lineDirection = new Vec3();
+
+					if (header.rbv_data == -1){
+						rbv.x = Float.parseFloat(parts[header.rbvX_Column]);
+						rbv.y = Float.parseFloat(parts[header.rbvX_Column+1]);
+						rbv.z = Float.parseFloat(parts[header.rbvX_Column+2]);
+							
+						lineDirection.x = Float.parseFloat(parts[header.lsX_Column]);
+						lineDirection.y = Float.parseFloat(parts[header.lsX_Column+1]);
+						lineDirection.z = Float.parseFloat(parts[header.lsX_Column+2]);
+					} else {
+						int data = Integer.parseInt(parts[header.rbv_data]);
+						if (data == 1){
+							lineDirection.x = Float.parseFloat(parts[header.rbv_data+1]);
+							lineDirection.y = Float.parseFloat(parts[header.rbv_data+2]);
+							lineDirection.z = Float.parseFloat(parts[header.rbv_data+3]);
+							
+							rbv.x = Float.parseFloat(parts[header.rbv_data+4]);
+							rbv.y = Float.parseFloat(parts[header.rbv_data+5]);
+							rbv.z = Float.parseFloat(parts[header.rbv_data+6]);
+						}
+					}
+					idc.rbvStorage.addRBV(a, rbv, lineDirection);
+				}
 			}
 			
 			s = inputReader.readLine();

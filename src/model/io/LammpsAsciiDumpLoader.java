@@ -283,14 +283,13 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 
 					Atom a = new Atom(pos, number, element);
 
-					//Custom columns
-					for (int j = 0; j<dataColumns.length; j++){
-						if (dataColumns[j] != -1)
-							a.setData(Float.parseFloat(parts[dataColumns[j]]), j);
-					}
-					
 					if (atomFilter == null || atomFilter.accept(a)){
 						idc.atoms.add(a);
+						//Custom columns
+						for (int j = 0; j<dataColumns.length; j++){
+							if (dataColumns[j] != -1)
+								idc.dataValues.get(j).add(Float.parseFloat(parts[dataColumns[j]])); 
+						}
 					}
 					
 					s = lnr.readLine();

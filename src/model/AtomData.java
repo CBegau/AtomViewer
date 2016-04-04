@@ -33,6 +33,7 @@ import model.io.MDFileLoader;
 import model.polygrain.*;
 import common.*;
 import crystalStructures.CrystalStructure;
+import gnu.trove.list.array.TFloatArrayList;
 
 public class AtomData {
 	/**
@@ -85,6 +86,11 @@ public class AtomData {
 	 */
 	private ArrayList<DataContainer> additionalData = new ArrayList<DataContainer>();
 	
+	/**
+	 * Storage for atomic data 
+	 */
+	private List<TFloatArrayList> dataValues;
+	
 	private int[] atomsPerElement = new int[0];
 	private int[] atomsPerType;
 	private AtomData next, previous;
@@ -107,6 +113,17 @@ public class AtomData {
 		this.atomsPerType = new int[defaultCrystalStructure.getNumberOfTypes()];
 		this.box = idc.box;
 		this.atoms = idc.atoms;
+		this.dataValues = idc.dataValues;
+		
+		for (int i=0; i<this.atoms.size(); i++){
+			this.atoms.get(i).setAtomData(this, i);
+		}		
+		
+		//Create nulled arrays if values could not be imported from file
+		for (int i=0; i<this.dataValues.size(); i++){
+			if (this.dataValues.get(i).isEmpty())
+				this.dataValues.set(i, new CommonUtils.InitializedTFloatArrayList(atoms.size()));
+		} 
 		
 		this.maxNumElements = idc.maxElementNumber;
 		
@@ -157,16 +174,11 @@ public class AtomData {
 	 */
 	private void addDataColumnInfo(DataColumnInfo ... dci){
 		if (dci == null) return;
-		int added = 0;
 		for (DataColumnInfo d : dci)
 			if (!dataColumns.contains(d)) {
 				dataColumns.add(d);
-				added++;
+				dataValues.add(new CommonUtils.InitializedTFloatArrayList(this.atoms.size()));
 			}
-		
-		if (added > 0)
-			for (Atom a : atoms)
-				a.extendDataValuesFields(added);
 	}
 	
 	/**
@@ -183,18 +195,21 @@ public class AtomData {
 			for (DataColumnInfo d : dci.getVectorComponents()){
 				int index = dataColumns.indexOf(d);
 				dataColumns.remove(index);
-				for (Atom a : atoms)
-					a.deleteDataValueField(index);
+				dataValues.remove(index);
 			}
 		} else { 
 			//Delete a scalar value
 			if (dataColumns.contains(dci)){
 				int index = dataColumns.indexOf(dci);
 				dataColumns.remove(index);
-				for (Atom a : atoms)
-					a.deleteDataValueField(index);
+				dataValues.remove(index);
 			}
 		}
+	}
+	
+	public TFloatArrayList getDataValueArray(int index){
+		assert(index<dataValues.size());
+		return dataValues.get(index);
 	}
 	
 	/**
@@ -235,8 +250,9 @@ public class AtomData {
 		for (int i=0; i < dataColumns.size(); i++){
 			float scale = dataColumns.get(i).getScalingFactor();
 			if (scale != 1f){
-				for (Atom a : this.atoms)
-					a.setData(a.getData(i)*scale, i);
+				TFloatArrayList values = this.dataValues.get(i);
+				for (int j=0; j<values.size(); j++)
+					values.setQuick(j, values.getQuick(j)*scale);
 			}
 		}
 		
@@ -540,18 +556,29 @@ public class AtomData {
 		int origSize = atoms.size();
 		int size = origSize;
 		int i=0;
+		
+
 		while (i<size){
 			if (filter.accept(atoms.get(i))){
 				i++;
 			} else {
 				//Replace the not accepted entry by the last
 				//element in the list
-				atoms.set(i, atoms.get(--size));
+				size--;
+				atoms.set(i, atoms.get(size));
+				for (TFloatArrayList f: dataValues)
+					f.set(i, f.get(size));
+				//Update the ID for the moved atom
+				atoms.get(i).setAtomData(this, i);
 			}
 		}
+		//Shrink down the lists
+		atoms.subList(size, origSize).clear();
+		atoms.trimToSize();
 		
-		for (i = origSize-1; i>=size; i--){
-			atoms.remove(i);
+		for (TFloatArrayList f: this.dataValues){
+			f.remove(size, origSize-size);
+			f.trimToSize();
 		}
 	}
 	

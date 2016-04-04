@@ -31,13 +31,15 @@ import crystalStructures.CrystalStructure;
  * @author Christoph Begau
  *
  */
-public class Atom extends Vec3 implements Pickable {
+public final class Atom extends Vec3 implements Pickable {
 	public static final int IGNORED_GRAIN = Short.MAX_VALUE;
 	public static final int DEFAULT_GRAIN = Short.MAX_VALUE-1;
 	
-	private float[] dataValues;
+	private AtomData atomData;
+	private int ID;
+	
 	private int atomNumber;
-	//TODO pack the grain into dataValues
+	//TODO pack the grain data into AtomData and create only if needed
 	private short grain = DEFAULT_GRAIN;
 	private byte type, element;
 	
@@ -55,65 +57,49 @@ public class Atom extends Vec3 implements Pickable {
 
 		this.atomNumber = num;
 		this.element = element;
-		
-		if (ImportConfiguration.getInstance().getDataColumns().size() != 0)
-			dataValues = new float[ImportConfiguration.getInstance().getDataColumns().size()];
+	}
+	
+	
+	void setAtomData(AtomData data, int ID){
+		this.atomData = data;
+		this.ID = ID;
 	}
 	
 	/**
-	 * Increase the size of the array dataValues by n values
-	 * New entries are initialized with 0f.  
-	 * @param n 
+	 * The ID of this atom to access the data stored in an enclosing instance of AtomData
+	 * associated with this atom
+	 * Instead of calling this.getData(i), it is possible to call atomData.getDataValueArray(i).get(this.getID)
+	 * @return
 	 */
-	void extendDataValuesFields(int n){
-		assert (n>=0);
-		if (dataValues == null)
-			dataValues = new float[n];
-		else
-			dataValues = Arrays.copyOf(dataValues, dataValues.length+n);
-	}
-	
-	/**
-	 * Remove the entry in dataValue at the given index
-	 * All following entries are shifted by one
-	 * @param index
-	 */
-	void deleteDataValueField(int index){
-		assert (index < dataValues.length);
-		if (dataValues.length == 1){
-			dataValues = null;
-			return;
-		}
-		//Create a copy of the array not containing the value at the index
-		float[] d = new float[dataValues.length-1];
-	    System.arraycopy(dataValues, 0, d, 0, index );
-	    System.arraycopy(dataValues, index+1, d, index, dataValues.length - index-1);
-		dataValues = d;
+	public int getID(){
+		return ID;
 	}
 	
 	/**
 	 * Set or update data values (imported from file or computed)
+	 * This method must not be called before the atom is assigned to an instance of AtomData
 	 * @see model.Configuration#getDataColumnInfo(int)  
 	 * @param value The new value to be stored
 	 * @param index the index to be retrieved, must be smaller than the value returned by 
 	 * {@link model.Configuration#getSizeDataColumns()} 
 	 */
 	public void setData(float value, int index){
-		assert(index<dataValues.length);
-		dataValues[index]=value;
+		assert(atomData != null) : "Atom is not yet assigned to an instance of AtomData";
+		atomData.getDataValueArray(index).setQuick(ID, value);
 	};
 	
 	/**
 	 * Access to data values (imported from file or computed)
 	 * To retrieve information on the values 
+	 * This method must not be called before the atom is assigned to an instance of AtomData
 	 * @see model.Configuration#getDataColumnInfo(int)  
 	 * @param index the index to be retrieved, must be smaller than the value returned by 
 	 * {@link model.Configuration#getSizeDataColumns()} 
 	 * @return the value of data at the given index
 	 */
 	public float getData(int index){
-		assert(index<dataValues.length);
-		return dataValues[index];
+		assert(atomData != null) : "Atom is not yet assigned to an instance of AtomData";
+		return atomData.getDataValueArray(index).getQuick(ID);
 	}
 	
 	/**
@@ -225,20 +211,20 @@ public class Atom extends Vec3 implements Pickable {
 		
 		
 		List<DataColumnInfo> dci = data.getDataColumnInfos();
-		if (dataValues != null){
-			for (int i=0; i < dataValues.length; i++){
-				DataColumnInfo c = dci.get(i);
-				if (!c.isVectorComponent()){
-					keys.add(c.getName()); values.add(CommonUtils.outputDecimalFormatter.format(getData(i))+c.getUnit());
-				} else if (c.isFirstVectorComponent()){
-					keys.add(c.getVectorName()+(!c.getUnit().isEmpty()?"("+c.getUnit()+")":""));
-					int index2 = data.getIndexForCustomColumn(c.getVectorComponents()[1]);
-					int index3 = data.getIndexForCustomColumn(c.getVectorComponents()[2]);
-					Vec3 vec = new Vec3(getData(i), getData(index2), getData(index3));
-					values.add(vec.toString());
-					keys.add("Magnitude of "+c.getVectorName()+(!c.getUnit().isEmpty()?"("+c.getUnit()+")":""));
-					values.add(Float.toString(vec.getLength()));
-				}
+		
+		for (DataColumnInfo c : dci){
+			if (!c.isVectorComponent()){
+				int index1 = data.getIndexForCustomColumn(c);
+				keys.add(c.getName()); values.add(CommonUtils.outputDecimalFormatter.format(getData(index1))+c.getUnit());
+			} else if (c.isFirstVectorComponent()){
+				keys.add(c.getVectorName()+(!c.getUnit().isEmpty()?"("+c.getUnit()+")":""));
+				int index1 = data.getIndexForCustomColumn(c.getVectorComponents()[0]);
+				int index2 = data.getIndexForCustomColumn(c.getVectorComponents()[1]);
+				int index3 = data.getIndexForCustomColumn(c.getVectorComponents()[2]);
+				Vec3 vec = new Vec3(getData(index1), getData(index2), getData(index3));
+				values.add(vec.toString());
+				keys.add("Magnitude of "+c.getVectorName()+(!c.getUnit().isEmpty()?"("+c.getUnit()+")":""));
+				values.add(Float.toString(vec.getLength()));
 			}
 		}
 		

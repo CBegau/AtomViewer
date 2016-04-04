@@ -16,6 +16,7 @@
 		<pathelement path="${libDir}libs/Jama/Jama.jar"/>
 		<pathelement path="${libDir}jogamp/jar/jogl-all.jar"/>
 		<pathelement path="${libDir}libs/Quickhull3d/quickhull3d.jar"/>
+		<pathelement path="${libDir}libs/trove/trove-3.0.3.jar"/>
 	 </path>	
 	
 	
@@ -83,7 +84,8 @@
 			</fileset>
 			<manifest>
 				<attribute name="Main-Class" value="AtomViewer" />
-				<attribute name="Class-Path" value="jogamp/jar/gluegen-rt.jar jogamp/jar/jogl-all.jar libs/Jama/Jama.jar libs/Quickhull3d/quickhull3d.jar" />
+				<attribute name="Class-Path" 
+					value="jogamp/jar/gluegen-rt.jar jogamp/jar/jogl-all.jar libs/Jama/Jama.jar libs/Quickhull3d/quickhull3d.jar libs/trove/trove-3.0.3.jar" />
 				<attribute name="Build-Date" value="${repository.date}"/>
 				<attribute name="Revision" value="${repository.version}"/>
 			</manifest>
