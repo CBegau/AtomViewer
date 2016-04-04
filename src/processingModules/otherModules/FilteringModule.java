@@ -1,7 +1,5 @@
 package processingModules.otherModules;
 
-import java.util.List;
-
 import javax.swing.JFrame;
 
 import model.Atom;
@@ -56,24 +54,7 @@ public class FilteringModule extends ClonableProcessingModule {
 	
 	@Override
 	public ProcessingResult process(AtomData data) throws Exception {
-		if (filter == null) return null;
-		List<Atom> atoms = data.getAtoms();
-		int origSize = atoms.size();
-		int size = origSize;
-		int i=0;
-		while (i<size){
-			if (filter.accept(atoms.get(i))){
-				i++;
-			} else {
-				//Replace the not accepted entry by the last
-				//element in the list
-				atoms.set(i, atoms.get(--size));
-			}
-		}
-		
-		for (i = origSize-1; i>=size; i--){
-			atoms.remove(i);
-		}
+		data.removeAtoms(filter);
 		return null;
 	}
 }

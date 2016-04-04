@@ -26,7 +26,6 @@ import java.util.*;
 import processingModules.*;
 import processingModules.atomicModules.AtomClassificationModule;
 import processingModules.otherModules.DeleteColumnModule;
-import processingModules.otherModules.FilteringModule;
 import processingModules.otherModules.VectorNormModule;
 import processingModules.toolchain.Toolchain;
 import model.ImportConfiguration.ImportStates;
@@ -46,7 +45,7 @@ public class AtomData {
 	/**
 	 * All atoms are stored in this list 
 	 */
-	private ArrayList<Atom> atoms = new ArrayList<Atom>();
+	private final ArrayList<Atom> atoms;
 	
 	/**
 	 * Only used in polycrystalline / polyphase material:
@@ -274,12 +273,12 @@ public class AtomData {
 		
 		if (ImportStates.DISPOSE_DEFAULT.isActive()){ //Dispose perfect atoms
 			final int defaultType = defaultCrystalStructure.getDefaultType();
-			new FilteringModule(new Filter<Atom>() {
+			this.removeAtoms(new Filter<Atom>() {
 				@Override
 				public boolean accept(Atom a) {
 					return a.getType() != defaultType;
 				}
-			}).process(this);
+			});
 			countAtomTypes();
 		}
 		
@@ -536,6 +535,26 @@ public class AtomData {
 		return fileMetaData.get(s);
 	}
 
+	public void removeAtoms(Filter<Atom> filter){
+		if (filter == null) return;
+		int origSize = atoms.size();
+		int size = origSize;
+		int i=0;
+		while (i<size){
+			if (filter.accept(atoms.get(i))){
+				i++;
+			} else {
+				//Replace the not accepted entry by the last
+				//element in the list
+				atoms.set(i, atoms.get(--size));
+			}
+		}
+		
+		for (i = origSize-1; i>=size; i--){
+			atoms.remove(i);
+		}
+	}
+	
 	/**
 	 * Frees the atom list to make more memory available by removing all references to other 
 	 * instances of AtomData
