@@ -110,11 +110,11 @@ public class LoadBalancingProcessingModule extends ClonableProcessingModule {
 		private float minLoad;
 		
 		public boolean processData(AtomData atomData, File dataFile) throws IOException {
-			LineNumberReader lnr = null;
+			BufferedReader lnr = null;
 			Pattern p = Pattern.compile(" +");
 			
 			try {
-				lnr = new LineNumberReader(new FileReader(dataFile));
+				lnr = new BufferedReader(new FileReader(dataFile));
 				String s = lnr.readLine();
 				
 				String[] parts = p.split(s);

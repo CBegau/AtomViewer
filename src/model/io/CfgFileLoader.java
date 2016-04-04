@@ -1,11 +1,11 @@
 package model.io;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.LineNumberReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -42,11 +42,11 @@ public class CfgFileLoader extends MDFileLoader {
 	
 	@Override
 	public AtomData readInputData(File f, AtomData previous, Filter<Atom> atomFilter) throws Exception {
-		LineNumberReader lnr = null;
+		BufferedReader inputReader = null;
 		if (CommonUtils.isFileGzipped(f)) {
 			// Directly read gzip-compressed files
-			lnr = new LineNumberReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(f))));
-		} else lnr = new LineNumberReader(new FileReader(f));
+			inputReader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(f), 16384*64)));
+		} else inputReader = new BufferedReader(new FileReader(f), 16384*64);
 		
 		CFGHeader header = new CFGHeader();
 		header.readHeader(f);
@@ -64,7 +64,7 @@ public class CfgFileLoader extends MDFileLoader {
 			idc.makeBox();
 			
 			Pattern p = Pattern.compile("\\s+");
-			String s = lnr.readLine();
+			String s = inputReader.readLine();
 			
 			//The end of the header of cfg-files is not well defined
 			//The first line that does start with a numeric entry is already an atom
@@ -95,7 +95,7 @@ public class CfgFileLoader extends MDFileLoader {
 						break;
 					}
 				}
-				s = lnr.readLine();
+				s = inputReader.readLine();
 			}
 			if (!headerRead){
 				throw new Exception("File seems to be broken");
@@ -118,7 +118,7 @@ public class CfgFileLoader extends MDFileLoader {
 					String[] parts = p.split(s);
 					if (parts.length == 1){
 						currentMass = Float.parseFloat(parts[0]);
-						s = lnr.readLine();
+						s = inputReader.readLine();
 						String element = s.trim();
 						if (!typeMap.containsKey(element))
 							typeMap.put(element, typeMap.size());
@@ -154,7 +154,7 @@ public class CfgFileLoader extends MDFileLoader {
 						
 					}
 				
-					s = lnr.readLine();
+					s = inputReader.readLine();
 				}
 			} else {
 				//Standard CFG-format
@@ -194,7 +194,7 @@ public class CfgFileLoader extends MDFileLoader {
 						idc.atoms.add(a);
 					}
 					
-					s = lnr.readLine();
+					s = inputReader.readLine();
 				}
 			}
 			
@@ -212,7 +212,7 @@ public class CfgFileLoader extends MDFileLoader {
 			header.valuesUnits = new String[0][];
 			throw e;
 		} finally {
-			lnr.close();
+			inputReader.close();
 		}
 		
 		return new AtomData(previous, idc);
@@ -291,11 +291,11 @@ public class CfgFileLoader extends MDFileLoader {
 		}
 		
 		void readHeader(File f) throws IOException{
-			LineNumberReader lnr = null;
+			BufferedReader lnr = null;
 			if (CommonUtils.isFileGzipped(f)) {
 				// Directly read gzip-compressed files
-				lnr = new LineNumberReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(f))));
-			} else lnr = new LineNumberReader(new FileReader(f));
+				lnr = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(f))));
+			} else lnr = new BufferedReader(new FileReader(f));
 
 			try{
 				Pattern p = Pattern.compile("[=\\s]+");

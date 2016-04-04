@@ -113,15 +113,15 @@ public class StressDataModule extends ClonableProcessingModule {
 		
 		public boolean processData(AtomData data, File stressFile) throws IOException {
 			getDataControlPanel(); // Initialize data panel, might be null
-			LineNumberReader lnr;
+			BufferedReader lnr;
 			DataInputStreamWrapper dis = null;
 			FileInputStream fis = null;
 			
 			if (stressFile.getName().endsWith(".gz")){
 				//Directly read gzip-compressed files
-				lnr = new LineNumberReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(stressFile))));
+				lnr = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(stressFile))));
 			} else 
-				lnr = new LineNumberReader(new FileReader(stressFile));
+				lnr = new BufferedReader(new FileReader(stressFile));
 			
 
 			Pattern p = Pattern.compile(" +");

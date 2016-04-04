@@ -63,16 +63,16 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 	
 	@Override
 	public String[][] getColumnNamesUnitsFromHeader(File f) throws IOException {
-		LineNumberReader lnr = null;
+		BufferedReader inputReader = null;
 		if (CommonUtils.isFileGzipped(f)) {
 			// Directly read gzip-compressed files
-			lnr = new LineNumberReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(f))));
-		} else lnr = new LineNumberReader(new FileReader(f));
+			inputReader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(f))));
+		} else inputReader = new BufferedReader(new FileReader(f));
 		
 		ArrayList<String[]> values = new ArrayList<String[]>();
 		try{
 			Pattern p = Pattern.compile("\\s+");
-			String s = lnr.readLine();
+			String s = inputReader.readLine();
 			
 			boolean headerRead = false;
 			
@@ -84,13 +84,13 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 						values.add(new String[]{parts[i],""});
 					}
 				}
-				s = lnr.readLine();
+				s = inputReader.readLine();
 			}
 		} catch (IOException e){
 			values.clear();
 			throw e;
 		} finally {
-			lnr.close();
+			inputReader.close();
 		}
 		
 		ArrayList<String[]> filteredValues = new ArrayList<String[]>();
@@ -116,11 +116,11 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 	 */
 	private AtomData readFile(File f, AtomData previous, Filter<Atom> atomFilter) throws IOException {
 		ProgressMonitor.getProgressMonitor().setActivityName("Reading file");
-		LineNumberReader lnr = null;
+		BufferedReader lnr = null;
 		if (CommonUtils.isFileGzipped(f)) {
 			// Directly read gzip-compressed files
-			lnr = new LineNumberReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(f))));
-		} else lnr = new LineNumberReader(new FileReader(f));
+			lnr = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(f), 16384*64)));
+		} else lnr = new BufferedReader(new FileReader(f), 16384*64);
 
 		int elementColumn = -1;
 		int xColumn = -1;

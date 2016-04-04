@@ -59,7 +59,7 @@ public class XYZFileLoader extends MDFileLoader {
 	
 	@Override
 	public AtomData readInputData(File f, AtomData previous, Filter<Atom> atomFilter) throws Exception {
-		LineNumberReader lnr = null;
+		BufferedReader inputReader = null;
 		String line = null;
 		
 		ImportDataContainer idc = new ImportDataContainer();
@@ -74,10 +74,10 @@ public class XYZFileLoader extends MDFileLoader {
 		try {
 			boolean extendedFormat = false;
 			if (CommonUtils.isFileGzipped(f)){
-				lnr = new LineNumberReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(f))));
-			} else lnr = new LineNumberReader(new FileReader(f));
-			line = lnr.readLine(); // Number of atoms -> don't care
-			line = lnr.readLine(); // Actual header
+				inputReader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(f), 16384*64)));
+			} else inputReader = new BufferedReader(new FileReader(f), 16384*64);
+			line = inputReader.readLine(); // Number of atoms -> don't care
+			line = inputReader.readLine(); // Actual header
 			
 			Map<String, String> map = readKeyValuesFromHeader(line);
 			if (map != null) extendedFormat = true;
@@ -111,7 +111,7 @@ public class XYZFileLoader extends MDFileLoader {
 					}
 				}
 				
-				while ( (line = lnr.readLine())!=null && !line.isEmpty()){
+				while ( (line = inputReader.readLine())!=null && !line.isEmpty()){
 					String[] parts = p.split(line);
 					String element = parts[0];
 					int ele = 0;
@@ -143,7 +143,7 @@ public class XYZFileLoader extends MDFileLoader {
 			} else {
 				Vec3 box = new Vec3();
 				
-				while ( (line = lnr.readLine())!=null){
+				while ( (line = inputReader.readLine())!=null){
 					String[] parts = p.split(line);
 					String element = parts[0];
 					int ele = 0;
@@ -192,7 +192,7 @@ public class XYZFileLoader extends MDFileLoader {
 		} catch (IOException e){
 			throw e;
 		} finally {
-			if (lnr!=null) lnr.close();
+			if (inputReader!=null) inputReader.close();
 		}
 		
 		//Add the names of the elements to the input

@@ -19,10 +19,10 @@
 package common;
 
 import java.awt.Color;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.LineNumberReader;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
@@ -431,7 +431,7 @@ public class ColorTable {
 
 	public static final float[][] loadColorsFromFile(File f) throws IOException {
 		ArrayList<float[]> c = new ArrayList<float[]>();
-		LineNumberReader lnr = new LineNumberReader(new FileReader(f));
+		BufferedReader lnr = new BufferedReader(new FileReader(f));
 		
 		String s = lnr.readLine();
 		Pattern p = Pattern.compile("\\s+");

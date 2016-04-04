@@ -68,21 +68,21 @@ public class ImdFileLoader extends MDFileLoader{
 	
 	@Override
 	public String[][] getColumnNamesUnitsFromHeader(File f) throws IOException {
-		LineNumberReader lnr = null;
+		BufferedReader inputReader = null;
 		FileInputStream fis;
 		
 		final boolean gzipped = CommonUtils.isFileGzipped(f);
 		fis = new FileInputStream(f);
 		if (gzipped){
 			//Directly read gzip-compressed files
-			GZIPInputStream gzipis = new GZIPInputStream(fis);
-			lnr = new LineNumberReader(new InputStreamReader(gzipis));
+			GZIPInputStream gzipis = new GZIPInputStream(fis, 16384*64);
+			inputReader = new BufferedReader(new InputStreamReader(gzipis), 16384*32);
 		} else 
-			lnr = new LineNumberReader(new InputStreamReader(fis));
+			inputReader = new BufferedReader(new InputStreamReader(fis), 16384*32);
 		
 		ArrayList<String[]> filteredValues = new ArrayList<String[]>();
 		try{
-			ArrayList<String[]> values = new IMD_Header().readValuesFromHeader(lnr);
+			ArrayList<String[]> values = new IMD_Header().readValuesFromHeader(inputReader);
 			
 			for (String[] v : values){
 				String s = v[0];
@@ -98,7 +98,7 @@ public class ImdFileLoader extends MDFileLoader{
 			filteredValues.clear();
 			throw(e);
 		} finally{
-			lnr.close();
+			inputReader.close();
 		}
 		return filteredValues.toArray(new String[filteredValues.size()][]);
 	}
@@ -137,7 +137,7 @@ public class ImdFileLoader extends MDFileLoader{
 		final ImportDataContainer idc = new ImportDataContainer();
 		idc.name = f.getName();
 		idc.fullPathAndFilename = f.getCanonicalPath();
-		LineNumberReader lnr = null;
+		BufferedReader inputReader = null;
 		GZIPInputStream gzipis = null;
 		FileInputStream fis;
 		
@@ -145,14 +145,14 @@ public class ImdFileLoader extends MDFileLoader{
 		fis = new FileInputStream(f);
 		if (gzipped){
 			//Directly read gzip-compressed files
-			gzipis = new GZIPInputStream(fis);
-			lnr = new LineNumberReader(new InputStreamReader(gzipis));
+			gzipis = new GZIPInputStream(fis, 16384*64);
+			inputReader = new BufferedReader(new InputStreamReader(gzipis), 16384*32);
 		} else 
-			lnr = new LineNumberReader(new InputStreamReader(fis));
+			inputReader = new BufferedReader(new InputStreamReader(fis), 16384*32);
 		
 		//Reading the header
 		final IMD_Header header = new IMD_Header();
-		header.readHeader(lnr, idc);
+		header.readHeader(inputReader, idc);
 		
 		if (f.getPath().endsWith(".head") || f.getPath().endsWith(".head.gz"))
 			header.multiFileInput = true;
@@ -160,7 +160,7 @@ public class ImdFileLoader extends MDFileLoader{
 		try{
 			if (header.format.equals("A")){	//Ascii-Format
 				if (header.multiFileInput){
-					lnr.close();
+					inputReader.close();
 					
 					int fileNumber = 0;
 					File nextFile = null;
@@ -179,25 +179,25 @@ public class ImdFileLoader extends MDFileLoader{
 								fis = new FileInputStream(nextFile);
 								if (gzipped){
 									//Directly read gzip-compressed files
-									gzipis = new GZIPInputStream(fis);
-									lnr = new LineNumberReader(new InputStreamReader(gzipis));
+									gzipis = new GZIPInputStream(fis, 16384*64);
+									inputReader = new BufferedReader(new InputStreamReader(gzipis), 16384*32);
 								} else 
-									lnr = new LineNumberReader(new FileReader(nextFile));
-								readASCIIFile(idc, lnr, header, fis, atomFilter);
+									inputReader = new BufferedReader(new FileReader(nextFile));
+								readASCIIFile(idc, inputReader, header, fis, atomFilter);
 								fileNumber++;
 							} finally {
-								if (lnr!=null) lnr.close();	
+								if (inputReader!=null) inputReader.close();	
 							}
 						}
 					} while (nextFile.exists());
 				} else
-					readASCIIFile(idc, lnr, header, fis, atomFilter);
+					readASCIIFile(idc, inputReader, header, fis, atomFilter);
 			}
 			//binary formats
 			else if (header.format.equals("l") || header.format.equals("b") || 
 					header.format.equals("L") || header.format.equals("B")){
 				if (header.multiFileInput){
-					lnr.close();
+					inputReader.close();
 					
 					int fileNumber = 0;
 					File nextFile = null;
@@ -239,14 +239,14 @@ public class ImdFileLoader extends MDFileLoader{
 		} catch (InterruptedException e) {
 		} catch (ExecutionException e) {
 		} finally {
-			lnr.close();
+			inputReader.close();
 		}
 		return idc;
 	}
 
 	private void readBinaryFile(File f, ImportDataContainer idc, boolean gzipped, IMD_Header header, Filter<Atom> atomFilter)
 			throws FileNotFoundException, IOException {
-		GZIPInputStream gzipis;
+		 
 		if (header.numberColumn == -1) 
 			throw new IllegalArgumentException("binary files must contain number");
 		
@@ -267,8 +267,8 @@ public class ImdFileLoader extends MDFileLoader{
 			raf.readFully(w, 0, 4);
 			filesize =  (long)(w[3]&0xff) << 24 | (long)(w[2]&0xff) << 16 | (long)(w[1]&0xff) << 8 | (long)(w[0]&0xff);
 			raf.close();
-			gzipis = new GZIPInputStream(fis, 16384*64);
-			bis = new BufferedInputStream(gzipis);
+			GZIPInputStream gzipis = new GZIPInputStream(fis, 16384*64);
+			bis = new BufferedInputStream(gzipis, 16384*32);
 		} else {
 			bis = new BufferedInputStream(fis, 16384*64);
 			filesize = fis.getChannel().size();
@@ -429,9 +429,9 @@ public class ImdFileLoader extends MDFileLoader{
 		}
 	}
 
-	private void readASCIIFile(ImportDataContainer idc, LineNumberReader lnr, IMD_Header header,
+	private void readASCIIFile(ImportDataContainer idc, BufferedReader inputReader, IMD_Header header,
 			FileInputStream fis, Filter<Atom> atomFilter) throws IOException {
-		String s = lnr.readLine();
+		String s = inputReader.readLine();
 		Vec3 pos = new Vec3();
 		byte type = 0;
 		int num = 0;
@@ -449,7 +449,7 @@ public class ImdFileLoader extends MDFileLoader{
 			
 			s = s.trim();
 			if (s.isEmpty()){ /*Skipping empty lines if someone inserted them in the file */
-				s = lnr.readLine();
+				s = inputReader.readLine();
 				continue;
 			}
 			String[] parts = p.split(s);
@@ -524,7 +524,7 @@ public class ImdFileLoader extends MDFileLoader{
 				idc.rbvStorage.addRBV(a, rbv, lineDirection);
 			}
 			
-			s = lnr.readLine();
+			s = inputReader.readLine();
 		}
 		ProgressMonitor.getProgressMonitor().stop();
 	}
@@ -549,11 +549,11 @@ public class ImdFileLoader extends MDFileLoader{
 		boolean[] columnToBeRead;
 		int[] columnToCustomIndex;
 		
-		private ArrayList<String[]> readValuesFromHeader(LineNumberReader lnr) throws IOException{
+		private ArrayList<String[]> readValuesFromHeader(BufferedReader inputReader) throws IOException{
 			ArrayList<String[]> values = new ArrayList<String[]>();
 			Pattern p = Pattern.compile("\\s+");
 
-			String s = lnr.readLine();
+			String s = inputReader.readLine();
 			while (s != null && !s.startsWith("#E")) {
 				if (s.startsWith("#C")) {
 					String[] parts = p.split(s);
@@ -562,13 +562,13 @@ public class ImdFileLoader extends MDFileLoader{
 					}
 					return values;
 				}
-				s = lnr.readLine();
+				s = inputReader.readLine();
 			}
 			return values;
 		}
 		
 		
-		private void readHeader(LineNumberReader lnr,
+		private void readHeader(BufferedReader inputReader,
 				ImportDataContainer idc) throws IOException{
 			
 			
@@ -580,7 +580,7 @@ public class ImdFileLoader extends MDFileLoader{
 				this.dataColumns[i] = -1;
 			}
 			
-			String s = lnr.readLine();
+			String s = inputReader.readLine();
 			while (s != null && !s.startsWith("#E")) {
 				if (s.startsWith("#F")){
 					String[] parts = p.split(s);
@@ -684,12 +684,12 @@ public class ImdFileLoader extends MDFileLoader{
 					idc.pbc[1] = Integer.parseInt(parts[2])==1;
 					idc.pbc[2] = Integer.parseInt(parts[3])==1;
 				} else if (s.startsWith("##META")){
-					s = lnr.readLine();
+					s = inputReader.readLine();
 					if (idc.fileMetaData == null)
 						idc.fileMetaData = new HashMap<String, Object>();
 					while (!s.startsWith("##METAEND")) {
 						//First check if there are custom options
-						if (s.startsWith("##") && !processGrainMetaData(s, idc.fileMetaData, lnr, idc)){
+						if (s.startsWith("##") && !processGrainMetaData(s, idc.fileMetaData, inputReader, idc)){
 							//Try to store the line as a array of floats, e.g. timesteps, indenter...
 							try{
 								s = s.substring(2);
@@ -701,10 +701,10 @@ public class ImdFileLoader extends MDFileLoader{
 								idc.fileMetaData.put(parts[0].toLowerCase(), info);
 							} catch (Exception e) {}
 						}
-						s = lnr.readLine();
+						s = inputReader.readLine();
 					}
 				}
-				s = lnr.readLine();
+				s = inputReader.readLine();
 			}
 			
 			if (this.xColumn ==-1) 
@@ -777,7 +777,7 @@ public class ImdFileLoader extends MDFileLoader{
 	}
 	
 	private final static boolean processGrainMetaData(String s, Map<String, Object> metaContainer,
-			LineNumberReader lnr, ImportDataContainer idc) throws IOException{
+			BufferedReader lnr, ImportDataContainer idc) throws IOException{
 		boolean imported = PolygrainMetadata.processMetadataLine(s, metaContainer, lnr, idc); 
 		return imported;
 	}

@@ -18,8 +18,8 @@
 
 package crystalStructures;
 
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.LineNumberReader;
 import java.util.Hashtable;
 import java.util.Map;
 
@@ -39,7 +39,7 @@ public class PolygrainMetadata{
 	
 	
 	public static boolean processMetadataLine(String s, Map<String, Object> metaContainer,
-			LineNumberReader lnr, ImportDataContainer idc) throws IOException{
+			BufferedReader inputReader, ImportDataContainer idc) throws IOException{
 		if (s.startsWith("##grain")){
 			PolygrainMetadata meta;
 			Object o = metaContainer.get("grain");
@@ -91,7 +91,7 @@ public class PolygrainMetadata{
 			String[] p = s.split(" +");
 			Integer num = Integer.parseInt(p[1]);
 			
-			s = lnr.readLine();
+			s = inputReader.readLine();
 			MeshData md = new MeshData();
 			
 			if (s.startsWith("###triangles")){
@@ -103,7 +103,7 @@ public class PolygrainMetadata{
 					md.triangles[i] = Integer.parseInt(p[i+2]);
 				}
 			}
-			s = lnr.readLine();
+			s = inputReader.readLine();
 			if (s.startsWith("###vertices")){
 				p = s.split(" +");
 				int size = Integer.parseInt(p[1]);
