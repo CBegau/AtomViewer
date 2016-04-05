@@ -201,7 +201,7 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 		}
 		
 		final int colValue = data.getIndexForCustomColumn(toDeltaColumn);
-		final int colValueRef = data.getIndexForCustomColumn(toDeltaColumn);
+		final int colValueRef = referenceAtomData.getIndexForCustomColumn(toDeltaColumn);
 		final int deltaCol = data.getIndexForCustomColumn(existingDeltaColumns.get(toDeltaColumn));
 		
 		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
