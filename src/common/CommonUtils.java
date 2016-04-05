@@ -30,8 +30,6 @@ import java.util.regex.Pattern;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 
-import gnu.trove.list.array.TFloatArrayList;
-
 public class CommonUtils {
 	
 	/**
@@ -190,12 +188,5 @@ public class CommonUtils {
 		l.setText(getWordWrappedString(s, l));
 		l.setAlignmentX(Component.LEFT_ALIGNMENT);
 		return l;
-	}
-	
-	public static class InitializedTFloatArrayList extends TFloatArrayList {
-		public InitializedTFloatArrayList(int capacity) {
-			super(capacity, 0f);
-			this._pos = capacity;
-		}
 	}
 }

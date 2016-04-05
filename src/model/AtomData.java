@@ -46,7 +46,7 @@ public class AtomData {
 	/**
 	 * All atoms are stored in this list 
 	 */
-	private final ArrayList<Atom> atoms;
+	private final FastDeletableArrayList<Atom> atoms;
 	
 	/**
 	 * Only used in polycrystalline / polyphase material:
@@ -89,7 +89,7 @@ public class AtomData {
 	/**
 	 * Storage for atomic data 
 	 */
-	private List<TFloatArrayList> dataValues;
+	private List<FastTFloatArrayList> dataValues;
 	
 	private int[] atomsPerElement = new int[0];
 	private int[] atomsPerType;
@@ -122,7 +122,7 @@ public class AtomData {
 		//Create nulled arrays if values could not be imported from file
 		for (int i=0; i<this.dataValues.size(); i++){
 			if (this.dataValues.get(i).isEmpty())
-				this.dataValues.set(i, new CommonUtils.InitializedTFloatArrayList(atoms.size()));
+				this.dataValues.set(i, new FastTFloatArrayList(atoms.size(), true));
 		} 
 		
 		this.maxNumElements = idc.maxElementNumber;
@@ -177,7 +177,7 @@ public class AtomData {
 		for (DataColumnInfo d : dci)
 			if (!dataColumns.contains(d)) {
 				dataColumns.add(d);
-				dataValues.add(new CommonUtils.InitializedTFloatArrayList(this.atoms.size()));
+				dataValues.add(new FastTFloatArrayList(this.atoms.size(),true));
 			}
 	}
 	
@@ -207,7 +207,7 @@ public class AtomData {
 		}
 	}
 	
-	public TFloatArrayList getDataValueArray(int index){
+	public FastTFloatArrayList getDataValueArray(int index){
 		assert(index<dataValues.size());
 		return dataValues.get(index);
 	}
@@ -553,31 +553,28 @@ public class AtomData {
 
 	public void removeAtoms(Filter<Atom> filter){
 		if (filter == null) return;
-		int origSize = atoms.size();
-		int size = origSize;
+		int size = atoms.size();
 		int i=0;
-		
-
+	
 		while (i<size){
 			if (filter.accept(atoms.get(i))){
 				i++;
 			} else {
-				//Replace the not accepted entry by the last
-				//element in the list
+				//This are fast removes, the last element is copied to
+				//the position i and the number of elements in the
+				//lists are reduced by one. Order is not preserved, but
+				//deleting any number of element from linear lists is in total an O(n) operation
 				size--;
-				atoms.set(i, atoms.get(size));
-				for (TFloatArrayList f: dataValues)
-					f.set(i, f.get(size));
+				atoms.remove(i);	
+				for (FastTFloatArrayList f: dataValues)
+					f.removeFast(i);
 				//Update the ID for the moved atom
 				atoms.get(i).setAtomData(this, i);
 			}
 		}
 		//Shrink down the lists
-		atoms.subList(size, origSize).clear();
 		atoms.trimToSize();
-		
 		for (TFloatArrayList f: this.dataValues){
-			f.remove(size, origSize-size);
 			f.trimToSize();
 		}
 	}

@@ -33,8 +33,9 @@ import gui.ProgressMonitor;
 
 import javax.swing.SwingWorker;
 
+import common.FastDeletableArrayList;
+import common.FastTFloatArrayList;
 import common.Vec3;
-import gnu.trove.list.array.TFloatArrayList;
 import model.*;
 import model.ImportConfiguration.ImportStates;
 
@@ -136,9 +137,9 @@ public abstract class MDFileLoader{
 		/**
 		 * All atoms are stored in this list 
 		 */
-		public ArrayList<Atom> atoms = new ArrayList<Atom>();
+		public FastDeletableArrayList<Atom> atoms = new FastDeletableArrayList<Atom>();
 		
-		public List<TFloatArrayList> dataValues = new ArrayList<TFloatArrayList>();
+		public List<FastTFloatArrayList> dataValues = new ArrayList<FastTFloatArrayList>();
 		
 		/**
 		 * The largest (virtual) elements number found in all imported files
@@ -174,7 +175,7 @@ public abstract class MDFileLoader{
 		
 		public ImportDataContainer() {
 			for (int i=0; i<ImportConfiguration.getInstance().getDataColumns().size(); i++)
-				dataValues.add(new TFloatArrayList());
+				dataValues.add(new FastTFloatArrayList());
 		}
 		
 		public void makeBox(){
