@@ -28,7 +28,6 @@ import common.CommonUtils;
 import common.Tupel;
 import common.Vec3;
 import model.AtomData;
-import model.BoxParameter;
 import model.Configuration;
 import model.DataColumnInfo;
 import model.Pickable;
@@ -211,12 +210,12 @@ public class LoadBalancingProcessingModule extends ClonableProcessingModule {
 		}
 		
 		@Override
-		public void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
+		public void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, AtomData data) {
 			return;
 		}
 		
 		@Override
-		public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
+		public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, AtomData data) {
 			
 			if (!getDataControlPanel().isDataVisible()) return;
 			

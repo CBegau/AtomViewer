@@ -200,9 +200,13 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 			throw new RuntimeException(errorMessage);
 		}
 		
-		final int colValue = data.getIndexForCustomColumn(toDeltaColumn);
-		final int colValueRef = referenceAtomData.getIndexForCustomColumn(toDeltaColumn);
-		final int deltaCol = data.getIndexForCustomColumn(existingDeltaColumns.get(toDeltaColumn));
+		final int valueIndex = data.getIndexForCustomColumn(toDeltaColumn);
+		final int refValueIndex = referenceAtomData.getIndexForCustomColumn(toDeltaColumn);
+		final int deltaIndex = data.getIndexForCustomColumn(existingDeltaColumns.get(toDeltaColumn));
+		
+		final float[] deltaArray = data.getDataValueArray(deltaIndex).getData();
+		final float[] valueArray = data.getDataValueArray(valueIndex).getData();
+		final float[] refValueArray = referenceAtomData.getDataValueArray(refValueIndex).getData();
 		
 		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
 		final Object mutex = new Object();
@@ -226,8 +230,8 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 						Atom a_ref = atomsMap.get(a.getNumber());
 
 						if (a_ref!=null){
-							float value = a.getData(colValue)-a_ref.getData(colValueRef);						
-							a.setData(value, deltaCol);
+							float value = valueArray[i]-refValueArray[a_ref.getID()];
+							deltaArray[i] = value;
 							sum.add(value);
 						} else {
 							if (!mismatchWarningShown.getAndSet(true)){
@@ -236,7 +240,7 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 												+ "Computed differences between these file may be inaccurate", 
 										data.getName(), referenceAtomData.getName()));
 							}
-							a.setData(0f, deltaCol);
+							deltaArray[i] = 0f;
 						}
 					}
 					

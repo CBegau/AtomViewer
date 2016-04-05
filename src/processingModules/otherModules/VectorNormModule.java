@@ -25,7 +25,6 @@ import java.util.concurrent.Callable;
 import javax.swing.JFrame;
 
 import common.ThreadPool;
-import model.Atom;
 import model.AtomData;
 import model.DataColumnInfo;
 import processingModules.ClonableProcessingModule;
@@ -66,13 +65,13 @@ public class VectorNormModule extends ClonableProcessingModule {
 
 	@Override
 	public boolean isApplicable(AtomData data) {
-		//Will always be false, since it is not intended to be  by the user
+		//Will always be false, since it is not intended to be visible to the user
 		return false;
 	}
 
 	@Override
 	public boolean showConfigurationDialog(JFrame frame, final AtomData data) {
-		//Will always be false, since it is not intended to be  by the user
+		//Will always be false, since it is not intended to be visible to the user
 		return false;
 	}
 
@@ -83,10 +82,15 @@ public class VectorNormModule extends ClonableProcessingModule {
 
 	@Override
 	public ProcessingResult process(final AtomData data) throws Exception {
-		final int colV1 = data.getIndexForCustomColumn(firstVectorComponent.getVectorComponents()[0]);
-		final int colV2 = data.getIndexForCustomColumn(firstVectorComponent.getVectorComponents()[1]);
-		final int colV3 = data.getIndexForCustomColumn(firstVectorComponent.getVectorComponents()[2]);
-		final int colN = data.getIndexForCustomColumn(firstVectorComponent.getVectorComponents()[3]);
+		final int indexX = data.getIndexForCustomColumn(firstVectorComponent.getVectorComponents()[0]);
+		final int indexY = data.getIndexForCustomColumn(firstVectorComponent.getVectorComponents()[1]);
+		final int indexZ = data.getIndexForCustomColumn(firstVectorComponent.getVectorComponents()[2]);
+		final int indexNorm = data.getIndexForCustomColumn(firstVectorComponent.getVectorComponents()[3]);
+		
+		final float[] arrayX = data.getDataValueArray(indexX).getData();
+		final float[] arrayY = data.getDataValueArray(indexY).getData();
+		final float[] arrayZ = data.getDataValueArray(indexZ).getData();
+		final float[] arrayNorm = data.getDataValueArray(indexNorm).getData();
 		
 		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
 		
@@ -101,15 +105,8 @@ public class VectorNormModule extends ClonableProcessingModule {
 					final int end = (int)(((long)data.getAtoms().size() * (j+1))/ThreadPool.availProcessors());
 					
 					for (int i=start; i<end; i++){
-						if ((i-start)%10000 == 0)
-							ProgressMonitor.getProgressMonitor().addToCounter(10000);
-						
-						Atom a = data.getAtoms().get(i);
-						float n = (float)Math.sqrt(a.getData(colV1)*a.getData(colV1)
-								                  +a.getData(colV2)*a.getData(colV2)
-								                  +a.getData(colV3)*a.getData(colV3)); 
-						
-						a.setData(n, colN);
+						if ((i-start)%10000 == 0) ProgressMonitor.getProgressMonitor().addToCounter(10000);
+						arrayNorm[i] = (float)Math.sqrt(arrayX[i]*arrayX[i] + arrayY[i]*arrayY[i] + arrayZ[i]*arrayZ[i]);
 					}
 					
 					ProgressMonitor.getProgressMonitor().addToCounter(end-start%10000);

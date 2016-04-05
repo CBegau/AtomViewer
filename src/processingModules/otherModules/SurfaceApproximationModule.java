@@ -213,19 +213,19 @@ public class SurfaceApproximationModule extends ClonableProcessingModule {
 		private ArrayList<Mesh> meshes = new ArrayList<Mesh>();
 		
 		@Override
-		public void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
+		public void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, AtomData data) {
 			getDataControlPanel(); //Make sure that singleton is created to prevent null-pointer
-			if (dataPanel.transparency>=0.98f) drawMesh(viewer, gl, renderRange, picking, box, false);
+			if (dataPanel.transparency>=0.98f) drawMesh(viewer, gl, renderRange, picking, data, false);
 		}
 		
 		@Override
-		public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
+		public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, AtomData data) {
 			getDataControlPanel();
 			if (dataPanel.transparency<0.98f && dataPanel.transparency>0.02f)
-				drawMesh(viewer, gl, renderRange, picking, box, true);
+				drawMesh(viewer, gl, renderRange, picking, data, true);
 		}
 		
-		private void drawMesh(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box, boolean transparencyRendering){
+		private void drawMesh(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, AtomData data, boolean transparencyRendering){
 			if (!getDataControlPanel().isDataVisible()) return;
 			
 			Shader s = BuiltInShader.UNIFORM_COLOR_DEFERRED.getShader();

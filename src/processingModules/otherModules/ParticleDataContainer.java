@@ -42,7 +42,7 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import common.Vec3;
-import model.BoxParameter;
+import model.AtomData;
 import model.DataColumnInfo;
 import model.Pickable;
 import model.RenderingConfiguration;
@@ -59,9 +59,9 @@ public abstract class ParticleDataContainer<T extends Vec3 & Pickable> extends D
 		return false;
 	}
 	
-	protected void updateRenderData(BoxParameter box){
+	protected void updateRenderData(AtomData data){
 		if (RenderingConfiguration.isHeadless());
-		ord = new ObjectRenderData<T>(particles, true, box);
+		ord = new ObjectRenderData<T>(particles, true, data);
 		float size = getParticleDataControlPanel().getParticleSize();
 		float[] col = getParticleDataControlPanel().getColor();
 		
@@ -77,7 +77,7 @@ public abstract class ParticleDataContainer<T extends Vec3 & Pickable> extends D
 	}
 	
 	@Override
-	public void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
+	public void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, AtomData data) {
 		if (!getDataControlPanel().isDataVisible()) return;
 		
 		if (viewer.isUpdateRenderContent()){
@@ -122,7 +122,7 @@ public abstract class ParticleDataContainer<T extends Vec3 & Pickable> extends D
 	}
 	
 	@Override
-	public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
+	public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, AtomData data) {
 		return;
 	}
 

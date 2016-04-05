@@ -247,7 +247,7 @@ public class FeC_virtStructure extends FeCStructure {
 			
 			atomData.getAtoms().clear();
 			atomData.getAtoms().addAll(realAtoms);
-			updateRenderData(atomData.getBox());
+			updateRenderData(atomData);
 			return true;
 		}
 

@@ -568,15 +568,15 @@ public class Skeletonizer extends DataContainer {
 	}
 
 	@Override
-	public void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
+	public void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, AtomData data) {
 		if (Option.DISLOCATIONS.isEnabled())
-			drawCores(viewer, gl, renderRange, picking, box);
+			drawCores(viewer, gl, renderRange, picking, data);
 	}
 
 	@Override
-	public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
+	public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, AtomData data) {
 		if (Option.STACKING_FAULT.isEnabled())
-			drawSurfaces(viewer, gl, renderRange, picking, box);
+			drawSurfaces(viewer, gl, renderRange, picking, data);
 	}
 
 	@Override
@@ -586,7 +586,7 @@ public class Skeletonizer extends DataContainer {
 		return dataPanel;
 	}
 	
-	private void drawSurfaces(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box){
+	private void drawSurfaces(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, AtomData data){
 		Shader shader = (picking?BuiltInShader.VERTEX_ARRAY_COLOR_UNIFORM:BuiltInShader.OID_VERTEX_ARRAY_COLOR_UNIFORM).getShader();
 		shader.enable(gl);
 		boolean cullingEnabled = gl.glIsEnabled(GL.GL_CULL_FACE);
@@ -619,6 +619,7 @@ public class Skeletonizer extends DataContainer {
 			VertexDataStorageLocal vds = new VertexDataStorageLocal(gl, s.getFaces().length, 3, 0, 0, 0, 0, 0, 0, 0);
 			vds.beginFillBuffer(gl);
 			int numElements = 0;
+			BoxParameter box = data.getBox();
 			
 			for (int j = 0; j < s.getFaces().length; j+=3) {
 				if (renderRange.isInInterval(s.getFaces()[j]) && 
@@ -640,7 +641,7 @@ public class Skeletonizer extends DataContainer {
 		if (cullingEnabled) gl.glEnable(GL.GL_CULL_FACE);
 	}
 		
-	private void drawCores(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
+	private void drawCores(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, AtomData data) {
 		//Check for object to highlight
 		if (!picking){
 			int numEle = data.getCrystalStructure().getNumberOfElements();
@@ -677,7 +678,7 @@ public class Skeletonizer extends DataContainer {
 				}
 			}
 					
-			ObjectRenderData<?> ord = new ObjectRenderData<Atom>(atomsToRender, false, box);
+			ObjectRenderData<?> ord = new ObjectRenderData<Atom>(atomsToRender, false, data);
 			ObjectRenderData<?>.Cell c = ord.getRenderableCells().get(0);
 			for(int i=0; i<objectsToRender.size(); i++){
 				c.getColorArray()[3*i+0] = objectsToRender.get(i).color[0];
@@ -695,7 +696,7 @@ public class Skeletonizer extends DataContainer {
 		Shader s = BuiltInShader.UNIFORM_COLOR_DEFERRED.getShader();
 		int colorUniform = gl.glGetUniformLocation(s.getProgram(), "Color");
 		s.enable(gl);
-		
+		BoxParameter box = data.getBox();
 		for (int i=0; i<this.getDislocations().size(); i++) {
 			Dislocation dis = this.getDislocations().get(i);
 			//Disable some dislocations if needed

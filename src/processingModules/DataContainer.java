@@ -23,7 +23,7 @@ import gui.ViewerGLJPanel;
 
 import com.jogamp.opengl.GL3;
 
-import model.BoxParameter;
+import model.AtomData;
 
 public abstract class DataContainer {
 	
@@ -38,9 +38,9 @@ public abstract class DataContainer {
 	 * @param picking
 	 */
 	public abstract void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, 
-			RenderRange renderRange, boolean picking, BoxParameter box);
+			RenderRange renderRange, boolean picking, AtomData data);
 	public abstract void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, 
-			RenderRange renderRange, boolean picking, BoxParameter box);
+			RenderRange renderRange, boolean picking, AtomData data);
 	
 	public abstract JDataPanel getDataControlPanel();
 	

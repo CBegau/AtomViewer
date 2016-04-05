@@ -104,7 +104,7 @@ public final class VacancyDetectionModule extends ClonableProcessingModule {
 	public ProcessingResult process(AtomData data) throws Exception {
 		VacancyDataContainer dc = new VacancyDataContainer();
 		dc.findVacancies(data, this.nnd_tolerance);
-		dc.updateRenderData(data.getBox());
+		dc.updateRenderData(data);
 		return new DataContainer.DefaultDataContainerProcessingResult(dc, "");
 	}
 

@@ -28,7 +28,7 @@ import java.util.concurrent.Callable;
 
 import common.ThreadPool;
 import common.Vec3;
-import model.BoxParameter;
+import model.AtomData;
 import model.Pickable;
 
 /**
@@ -44,15 +44,16 @@ public class ObjectRenderData<T extends Vec3 & Pickable> {
 	private final CellComparator cellComparator = new CellComparator();
 	Vector<Cell> allCells = new Vector<ObjectRenderData<T>.Cell>();
 	private boolean subdivided = false;
+	private AtomData data;
 	
 	
-	public ObjectRenderData(Collection<T> objects, boolean subdivide, BoxParameter box) {
+	public ObjectRenderData(Collection<T> objects, boolean subdivide, AtomData data) {
 //		long time = System.nanoTime();
 		
 		final Cell rootCell;
-		
+		this.data = data;
 		if (objects.size() == 0){
-			Vec3 size = box.getHeight();
+			Vec3 size = data.getBox().getHeight();
 			rootCell = new Cell(size.multiplyClone(0.5f), size);
 		} else {
 			Vec3 min = new Vec3(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY);
@@ -124,6 +125,10 @@ public class ObjectRenderData<T extends Vec3 & Pickable> {
 	
 	private synchronized void finishRunningTasks(){
 		runningTasks--;
+	}
+	
+	public AtomData getData() {
+		return data;
 	}
 	
 	/**

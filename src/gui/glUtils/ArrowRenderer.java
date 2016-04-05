@@ -137,19 +137,23 @@ public class ArrowRenderer {
 	 * @param gl
 	 * @param ord
 	 * @param picking
-	 * @param v1
-	 * @param v2
-	 * @param v3
+	 * @param xIndex
+	 * @param yIndex
+	 * @param zIndex
 	 * @param scalingFactor
 	 * @param normalize
 	 */
-	public void drawVectors(GL3 gl, ObjectRenderData<Atom> ord, boolean picking, int v1,
-			int v2, int v3, float scalingFactor, float thickness, boolean normalize){
+	public void drawVectors(GL3 gl, ObjectRenderData<Atom> ord, boolean picking, int xIndex,
+			int yIndex, int zIndex, float scalingFactor, float thickness, boolean normalize){
 		
 		if (ViewerGLJPanel.openGLVersion>=3.3 && ord.isSubdivided()){
-			drawVectorsInstanced(gl, ord, picking, v1, v2, v3, scalingFactor, normalize, thickness, 2f);
+			drawVectorsInstanced(gl, ord, picking, xIndex, yIndex, zIndex, scalingFactor, normalize, thickness, 2f);
 			return;
 		}
+		
+		float[] xArray = ord.getData().getDataValueArray(xIndex).getData();
+		float[] yArray = ord.getData().getDataValueArray(yIndex).getData();
+		float[] zArray = ord.getData().getDataValueArray(zIndex).getData();
 		
 		gl.glDisable(GL.GL_BLEND);
 		
@@ -164,7 +168,8 @@ public class ArrowRenderer {
 			for (int j=0; j<c.getNumObjects(); j++){
 				if (visible[j]){
 					Atom a = objects.get(j);
-					Vec3 dir = new Vec3(a.getData(v1), a.getData(v2), a.getData(v3));
+					int id = a.getID();
+					Vec3 dir = new Vec3(xArray[id], yArray[id], zArray[id]);
 					if (normalize && dir.getLengthSqr()>1e-10) dir.normalize();
 					dir.multiply(scalingFactor);
 					
@@ -180,8 +185,8 @@ public class ArrowRenderer {
 		if (!picking) gl.glEnable(GL.GL_BLEND);
 	}
 	
-	private void drawVectorsInstanced(GL3 gl, ObjectRenderData<Atom> ard, boolean picking, int v1,
-			int v2, int v3, float scalingFactor, boolean normalize, float thickness, float headThickScale){
+	private void drawVectorsInstanced(GL3 gl, ObjectRenderData<Atom> ord, boolean picking, int xIndex,
+			int yIndex, int zIndex, float scalingFactor, boolean normalize, float thickness, float headThickScale){
 		VertexDataStorage.unbindAll(gl);
 		gl.glDisable(GL.GL_BLEND); //Transparency can cause troubles and should be avoided, disabling blending might be faster then
 		
@@ -222,10 +227,14 @@ public class ArrowRenderer {
 		
 		viewer.updateModelViewInShader(gl, shader, viewer.getModelViewMatrix(), viewer.getProjectionMatrix());
 		
-		ard.sortCells(viewer.getModelViewMatrix());
+		ord.sortCells(viewer.getModelViewMatrix());
 
-		for (int j=0; j<ard.getRenderableCells().size(); j++){
-			ObjectRenderData<Atom>.Cell c = ard.getRenderableCells().get(j);
+		float[] xArray = ord.getData().getDataValueArray(xIndex).getData();
+		float[] yArray = ord.getData().getDataValueArray(yIndex).getData();
+		float[] zArray = ord.getData().getDataValueArray(zIndex).getData();
+		
+		for (int j=0; j<ord.getRenderableCells().size(); j++){
+			ObjectRenderData<Atom>.Cell c = ord.getRenderableCells().get(j);
 
 			//Cells are order by visibility, with empty cells at the end of the list
 			//Stop at the first empty block
@@ -246,8 +255,9 @@ public class ArrowRenderer {
 			
 			for (int i=0; i<c.getNumObjects(); i++){
 				if (visible[i]){
-					Atom ra = objects.get(i);
-					Vec3 dir = new Vec3(ra.getData(v1), ra.getData(v2), ra.getData(v3));
+					Atom a = objects.get(i);
+					int id = a.getID();
+					Vec3 dir = new Vec3(xArray[id], yArray[id], zArray[id]);
 					
 					if (normalize && dir.getLengthSqr()>1e-10) dir.normalize();
 					dir.multiply(scalingFactor);
@@ -259,13 +269,13 @@ public class ArrowRenderer {
 					
 					//Color
 					if (picking){
-						float[] col = viewer.getNextPickingColor(ra);
+						float[] col = viewer.getNextPickingColor(a);
 						buf.put(col[0]); buf.put(col[1]); buf.put(col[2]); buf.put(col[3]);
 					} else {
 						buf.put(colors[3*i]); buf.put(colors[3*i+1]); buf.put(colors[3*i+2]); buf.put(1f);
 					}
 					//Origin
-					buf.put(ra.x); buf.put(ra.y); buf.put(ra.z);
+					buf.put(a.x); buf.put(a.y); buf.put(a.z);
 					//Direction
 					buf.put(dir.x); buf.put(dir.y); buf.put(dir.z);
 					//Scalings

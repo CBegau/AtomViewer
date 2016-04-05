@@ -560,7 +560,7 @@ public class AtomData {
 			if (filter.accept(atoms.get(i))){
 				i++;
 			} else {
-				//This are fast removes, the last element is copied to
+				//These are fast removes. The last element is copied to
 				//the position i and the number of elements in the
 				//lists are reduced by one. Order is not preserved, but
 				//deleting any number of element from linear lists is in total an O(n) operation
@@ -568,12 +568,14 @@ public class AtomData {
 				atoms.remove(i);	
 				for (FastTFloatArrayList f: dataValues)
 					f.removeFast(i);
-				//Update the ID for the moved atom
-				atoms.get(i).setAtomData(this, i);
 			}
 		}
 		//Shrink down the lists
 		atoms.trimToSize();
+		//Reassign ID for all remaining atoms
+		for (int j=0; j<atoms.size(); j++)
+			atoms.get(j).setAtomData(this, j);
+		
 		for (TFloatArrayList f: this.dataValues){
 			f.trimToSize();
 		}

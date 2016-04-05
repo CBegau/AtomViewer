@@ -485,7 +485,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		//Render solid objects using deferred rendering
 		drawSimulationBox(gl, picking);
 		for (DataContainer dc : atomData.getAdditionalData())
-			dc.drawSolidObjects(this, gl, renderInterval, picking, atomData.getBox());
+			dc.drawSolidObjects(this, gl, renderInterval, picking, atomData);
 		
 		drawAtoms(gl, picking);
 		
@@ -531,7 +531,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		
 		drawGrain(gl, picking);
 		for (DataContainer dc : atomData.getAdditionalData())
-			dc.drawTransparentObjects(this, gl, renderInterval, picking, atomData.getBox());
+			dc.drawTransparentObjects(this, gl, renderInterval, picking, atomData);
 
 		drawIndent(gl, picking);
 		
@@ -1416,7 +1416,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			renderInterval.setGlobalLimit(5, this.atomData.getBox().getHeight().z);
 			if (reinit || renderInterval.isNoLimiting()) renderInterval.reset();		
 		}
-		renderData = new ObjectRenderData<Atom>(atomData.getAtoms(), true, atomData.getBox());
+		renderData = new ObjectRenderData<Atom>(atomData.getAtoms(), true, atomData);
 		this.updateAtoms();
 		
 		if (atomData.getNumberOfElements() > ignoreElement.length){

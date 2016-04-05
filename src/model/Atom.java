@@ -35,6 +35,7 @@ public final class Atom extends Vec3 implements Pickable {
 	public static final int IGNORED_GRAIN = Short.MAX_VALUE;
 	public static final int DEFAULT_GRAIN = Short.MAX_VALUE-1;
 	
+	@Deprecated
 	private AtomData atomData;
 	private int ID;
 	
@@ -69,6 +70,8 @@ public final class Atom extends Vec3 implements Pickable {
 	 * The ID of this atom to access the data stored in an enclosing instance of AtomData
 	 * associated with this atom
 	 * Instead of calling this.getData(i), it is possible to call atomData.getDataValueArray(i).get(this.getID)
+	 * This is an internal ID to get data stored in arrays and is not related to an atomic identification number
+	 * as provided by {@link #getNumber()}. The ID has no meaning for the user. 
 	 * @return
 	 */
 	public int getID(){
@@ -97,9 +100,35 @@ public final class Atom extends Vec3 implements Pickable {
 	 * {@link model.Configuration#getSizeDataColumns()} 
 	 * @return the value of data at the given index
 	 */
+	@Deprecated
 	public float getData(int index){
 		assert(atomData != null) : "Atom is not yet assigned to an instance of AtomData";
 		return atomData.getDataValueArray(index).getQuick(ID);
+	}
+	
+	/**
+	 * Set or update data values (imported from file or computed)
+	 * @see model.Configuration#getDataColumnInfo(int)  
+	 * @param value The new value to be stored
+	 * @param index the index to be retrieved, must be smaller than the value returned by
+	 * @param data the AtomData the Atom belongs to access data  
+	 * {@link model.Configuration#getSizeDataColumns()} 
+	 */
+	public void setData(float value, int index, AtomData data){
+		data.getDataValueArray(index).setQuick(ID, value);
+	};
+	
+	/**
+	 * Access to data values (imported from file or computed)
+	 * To retrieve information on the values 
+	 * @see model.Configuration#getDataColumnInfo(int)  
+	 * @param index the index to be retrieved, must be smaller than the value returned by 
+	 * {@link model.Configuration#getSizeDataColumns()}
+	 * @param data the AtomData the Atom belongs to access data   
+	 * @return the value of data at the given index
+	 */
+	public float getData(int index, AtomData data){
+		return data.getDataValueArray(index).getQuick(ID);
 	}
 	
 	/**

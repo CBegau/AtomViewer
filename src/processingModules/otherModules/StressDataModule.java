@@ -37,7 +37,6 @@ import javax.swing.event.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 import model.AtomData;
-import model.BoxParameter;
 import model.Configuration;
 import model.DataColumnInfo;
 import model.Pickable;
@@ -299,7 +298,7 @@ public class StressDataModule extends ClonableProcessingModule {
 		}
 		
 		@Override
-		public void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
+		public void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, AtomData data) {
 			if (!dataPanel.isDataVisible()) return;
 			
 			float min = dataPanel.globalMinStress[dataPanel.showStressValue];
@@ -321,7 +320,8 @@ public class StressDataModule extends ClonableProcessingModule {
 				}
 			}
 			
-			ObjectRenderData<StressValue> ord = new ObjectRenderData<StressValue>(objects, false, box);
+			ObjectRenderData<StressValue> ord = 
+					new ObjectRenderData<StressValue>(objects, false, data);
 			ObjectRenderData<?>.Cell c = ord.getRenderableCells().get(0);
 			for(int i=0; i<objects.size(); i++){
 				float[] col = ColorTable.getIntensityGLColor(min, max, objects.get(i).getStress(dataPanel.showStressValue));
@@ -337,7 +337,7 @@ public class StressDataModule extends ClonableProcessingModule {
 		}
 		
 		@Override
-		public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, BoxParameter box) {
+		public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, AtomData data) {
 			return;
 		}
 			

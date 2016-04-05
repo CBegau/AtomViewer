@@ -205,19 +205,19 @@ public class ImdFileWriter extends MDFileWriter {
 					
 					if (exportNumber) dos.writeInt(a.getNumber());
 					if (exportElement) dos.writeInt(a.getElement());
-					if (hasMass) dos.writeFloat(a.getData(massColumn));
+					if (hasMass) dos.writeFloat(a.getData(massColumn, data));
 					
 					dos.writeFloat(a.x); dos.writeFloat(a.y); dos.writeFloat(a.z);
 					
 					if (hasVelocity){
-						dos.writeFloat(a.getData(vxColumn));
-						dos.writeFloat(a.getData(vyColumn));
-						dos.writeFloat(a.getData(vzColumn));
+						dos.writeFloat(a.getData(vxColumn, data));
+						dos.writeFloat(a.getData(vyColumn, data));
+						dos.writeFloat(a.getData(vzColumn, data));
 					}
 					
 					for (int i = 0; i < mapData.length; i++)
 						if (mapData[i] != -1)
-							dos.writeFloat(a.getData(mapData[i]));
+							dos.writeFloat(a.getData(mapData[i], data));
 					
 					if (exportType) dos.writeFloat(a.getType());
 					
@@ -257,15 +257,16 @@ public class ImdFileWriter extends MDFileWriter {
 					if (exportElement) dos.writeBytes(String.format(" %d", a.getElement()));
 					
 					if (hasMass)
-						dos.writeBytes(String.format(" %.8f", a.getData(massColumn)));
+						dos.writeBytes(String.format(" %.8f", a.getData(massColumn, data)));
 					dos.writeBytes(String.format(" %.8f %.8f %.8f", a.x, a.y, a.z));
 					if (hasVelocity)
-						dos.writeBytes(String.format(" %.8f %.8f %.8f", a.getData(vxColumn), a.getData(vyColumn), a.getData(vzColumn)));
+						dos.writeBytes(String.format(" %.8f %.8f %.8f", 
+								a.getData(vxColumn, data), a.getData(vyColumn, data), a.getData(vzColumn, data)));
 					
 					
 					for (int i = 0; i < mapData.length; i++)
 						if (mapData[i] != -1)
-								dos.writeBytes(String.format(" %.8f",a.getData(mapData[i])));
+								dos.writeBytes(String.format(" %.8f",a.getData(mapData[i], data)));
 					
 					if (exportType) dos.writeBytes(String.format(" %d", a.getType()));
 					
