@@ -133,7 +133,7 @@ public class SpatialDerivatiesModule extends ClonableProcessingModule implements
 		final int gx = data.getDataColumnIndex(gradientColumn.getVectorComponents()[0]);
 		final int gy = data.getDataColumnIndex(gradientColumn.getVectorComponents()[1]);
 		final int gz = data.getDataColumnIndex(gradientColumn.getVectorComponents()[2]);
-		final int ga = data.getDataColumnIndex(gradientColumn.getVectorComponents()[3]);
+		final int gn = data.getDataColumnIndex(gradientColumn.getVectorComponents()[3]);
 		
 		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), radius, true);
 		nnb.addAll(data.getAtoms());
@@ -145,6 +145,13 @@ public class SpatialDerivatiesModule extends ClonableProcessingModule implements
 			JLogPanel.getJLogPanel().addWarning("Mass not found",
 					String.format("Weightened spatial derivatives for %s selected, but mass column is missing in %s", 
 							toDeriveColumn.getName(), data.getName()));
+		
+		final float[] gxArray = data.getDataArray(gx).getData();
+		final float[] gyArray = data.getDataArray(gy).getData();
+		final float[] gzArray = data.getDataArray(gz).getData();
+		final float[] gnArray = data.getDataArray(gn).getData();
+		final float[] massArray = data.getDataArray(massColumn).getData();
+		final float[] vArray = data.getDataArray(v).getData();
 		
 		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
 		for (int i=0; i<ThreadPool.availProcessors(); i++){
@@ -164,31 +171,30 @@ public class SpatialDerivatiesModule extends ClonableProcessingModule implements
 						ArrayList<Tupel<Atom,Vec3>> neigh = nnb.getNeighAndNeighVec(a);
 
 						//Estimate local density
-						float mass = scaleMass ? a.getData(massColumn) : 1f;
+						float mass = scaleMass ? massArray[i] : 1f;
 						float density = mass * CommonUtils.getM4SmoothingKernelWeight(0f, halfR);
 						
 						for (int k=0, len = neigh.size(); k<len; k++){
-							mass = scaleMass ? neigh.get(k).o1.getData(massColumn) : 1f;
+							mass = scaleMass ? massArray[neigh.get(k).o1.getID()] : 1f;
 							density += mass * CommonUtils.getM4SmoothingKernelWeight(neigh.get(k).o2.getLength(), halfR);
 						}
 						 
 						Vec3 grad = new Vec3();
 						
-						float valueA = a.getData(v);
+						float valueA = vArray[i];
 						
 						for (Tupel<Atom,Vec3> n : neigh){
-							float valueB = n.o1.getData(v);
-							mass = scaleMass ? n.o1.getData(massColumn) : 1f;
+							float valueB = vArray[n.o1.getID()];
+							mass = scaleMass ? massArray[n.o1.getID()] : 1f;
 							grad.add(CommonUtils.getM4SmoothingKernelDerivative(n.o2, halfR).multiply(mass*(valueB-valueA)));
 						}
 						
 						grad.divide(density);
 						
-						a.setData(grad.x, gx);
-						a.setData(grad.y, gy);
-						a.setData(grad.z, gz);						
-						a.setData(grad.getLength(), ga);
-						
+						gxArray[i] = grad.x;
+						gyArray[i] = grad.y;
+						gzArray[i] = grad.z;
+						gnArray[i] = grad.getLength();
 					}
 					ProgressMonitor.getProgressMonitor().addToCounter( (end-start)%1000);
 					return null;

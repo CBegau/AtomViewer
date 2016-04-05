@@ -58,7 +58,15 @@ public class LatticeRotationModule extends ClonableProcessingModule {
 	
 	@Override
 	public ProcessingResult process(final AtomData data) throws Exception {
-		final int latticeRotationColumn = data.getDataColumnIndex(cci[0]);
+		final int latticeRotationColumnX = data.getDataColumnIndex(cci[0]);
+		final int latticeRotationColumnY = data.getDataColumnIndex(cci[1]);
+		final int latticeRotationColumnZ = data.getDataColumnIndex(cci[2]);
+		final int latticeRotationColumnN = data.getDataColumnIndex(cci[3]);
+		
+		final float[] xArray = data.getDataArray(latticeRotationColumnX).getData();
+		final float[] yArray = data.getDataArray(latticeRotationColumnY).getData();
+		final float[] zArray = data.getDataArray(latticeRotationColumnZ).getData();
+		final float[] nArray = data.getDataArray(latticeRotationColumnN).getData();
 		
 //		final double PHI_MAX = Math.cos(30*Math.PI/180.);
 		
@@ -130,6 +138,8 @@ public class LatticeRotationModule extends ClonableProcessingModule {
 						if ((k-start)%1000 == 0)
 							ProgressMonitor.getProgressMonitor().addToCounter(1000);
 						
+						xArray[k] = 0f; yArray[k] = 0f; zArray[k] = 0f; nArray[k] = 0f;
+						
 						if (Thread.interrupted()) return null;
 						
 						for (int i=0;i<9;i++){
@@ -194,11 +204,10 @@ public class LatticeRotationModule extends ClonableProcessingModule {
 							
 							float[] angles = getAxisRotationAndTilt(getEulerAngles(foo));
 							
-							int index = latticeRotationColumn;
-							atom.setData(angles[0], index);
-							atom.setData(angles[1], index+1);
-							atom.setData(angles[2], index+2);
-							atom.setData(angles[3], index+3);
+							xArray[k] = angles[0];
+							yArray[k] = angles[1];
+							zArray[k] = angles[2];
+							nArray[k] = angles[3];
 						}
 					}
 					

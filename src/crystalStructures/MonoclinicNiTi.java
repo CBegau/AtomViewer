@@ -131,10 +131,12 @@ public final class MonoclinicNiTi extends B2NiTi implements ProcessingModule{
 		
 		final float[][] rot = data.getCrystalRotation().getDefaultRotationMatrix();
 		final int martColumn = data.getDataColumnIndex(variantColumn);
+		final float[] martArray = data.getDataArray(martColumn).getData();
 		
-		for (Atom a : data.getAtoms()){
+		for (int i=0; i<data.getAtoms().size(); i++){
+			Atom a = data.getAtoms().get(i);
 			if (a.getElement() % 2 == 1) nnb.add(a);
-			else a.setData(IGNORED_VARIANT, martColumn);
+			else martArray[i] = IGNORED_VARIANT;
 		}
 		
 		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
@@ -147,9 +149,9 @@ public final class MonoclinicNiTi extends B2NiTi implements ProcessingModule{
 					final int end = (int)(((long)data.getAtoms().size() * (j+1))/ThreadPool.availProcessors());
 					for (int i=start; i<end; i++){
 						Atom a = data.getAtoms().get(i);
-						if (a.getElement() % 2 == 1 && (a.getType() == 3 || a.getType() == 4)) 
-							a.setData(getVariant(a, nnb, rot),martColumn);
-						else a.setData(IGNORED_VARIANT, martColumn);
+						if (a.getElement() % 2 == 1 && (a.getType() == 3 || a.getType() == 4))
+							martArray[i] = getVariant(a, nnb, rot);
+						else martArray[i] = IGNORED_VARIANT;
 					}
 					return null;
 				}

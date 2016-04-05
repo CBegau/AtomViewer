@@ -903,7 +903,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 									cell.getVisibiltyArray()[j] = true;
 									//Assign default or individual particle radius
 									cell.getSizeArray()[j] = radiusColumn == -1 ? sphereSize[c.getElement() % numEle] :
-										c.getData(radiusColumn) * sphereSize[c.getElement() % numEle];
+										c.getData(radiusColumn, atomData) * sphereSize[c.getElement() % numEle];
 									float[] color = colFunc.getColor(c);
 									cell.getColorArray()[j*3+0] = color[0];
 									cell.getColorArray()[j*3+1] = color[1];
@@ -2141,14 +2141,14 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		
 		@Override
 		public boolean accept(Atom a) {
-			if ((filterMin && a.getData(selected)<min) || (filterMax && a.getData(selected)>max))
+			if ((filterMin && a.getData(selected, atomData)<min) || (filterMax && a.getData(selected, atomData)>max))
 					return inversed;
 				return !inversed;
 		}
 		
 		@Override
 		public float[] getColor(Atom c) {
-			return ColorTable.getIntensityGLColor(min, max, c.getData(selected));
+			return ColorTable.getIntensityGLColor(min, max, c.getData(selected, atomData));
 		}
 		
 		@Override

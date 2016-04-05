@@ -95,6 +95,7 @@ public class AtomicVolumeModule extends ClonableProcessingModule {
 		final int v = computeDensity ? 
 				data.getDataColumnIndex(densityColumn) : data.getDataColumnIndex(volumeColumn);
 		final float sphereVolume = (radius*radius*radius)*((float)Math.PI)*(4f/3f);
+		final float[] vArray = data.getDataArray(v).getData();
 		
 		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
 		
@@ -121,8 +122,7 @@ public class AtomicVolumeModule extends ClonableProcessingModule {
 							value = 0f;
 						else if (computeDensity && value > 1e-8f) value = 1f/value;
 						if (computeDensity && value < 0f) value = 0f;
-						
-						a.setData(value*scalingFactor, v);
+						vArray[i] = value*scalingFactor;
 					}
 					
 					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);

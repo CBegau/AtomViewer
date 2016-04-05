@@ -119,7 +119,7 @@ public class AtomData {
 		this.dataArrays = idc.dataArrays;
 		
 		for (int i=0; i<this.atoms.size(); i++){
-			this.atoms.get(i).setAtomData(this, i);
+			this.atoms.get(i).setID(i);
 		}		
 		
 		//Create nulled arrays if values could not be imported from file
@@ -577,7 +577,7 @@ public class AtomData {
 		atoms.trimToSize();
 		//Reassign ID for all remaining atoms
 		for (int j=0; j<atoms.size(); j++)
-			atoms.get(j).setAtomData(this, j);
+			atoms.get(j).setID(j);
 		
 		for (TFloatArrayList f: this.dataArrays){
 			f.trimToSize();

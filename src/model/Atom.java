@@ -35,8 +35,6 @@ public final class Atom extends Vec3 implements Pickable {
 	public static final int IGNORED_GRAIN = Short.MAX_VALUE;
 	public static final int DEFAULT_GRAIN = Short.MAX_VALUE-1;
 	
-	@Deprecated
-	private AtomData atomData;
 	private int ID;
 	
 	private int atomNumber;
@@ -61,8 +59,7 @@ public final class Atom extends Vec3 implements Pickable {
 	}
 	
 	
-	void setAtomData(AtomData data, int ID){
-		this.atomData = data;
+	void setID(int ID){
 		this.ID = ID;
 	}
 	
@@ -76,35 +73,6 @@ public final class Atom extends Vec3 implements Pickable {
 	 */
 	public int getID(){
 		return ID;
-	}
-	
-	/**
-	 * Set or update data values (imported from file or computed)
-	 * This method must not be called before the atom is assigned to an instance of AtomData
-	 * @see model.Configuration#getDataColumnInfo(int)  
-	 * @param value The new value to be stored
-	 * @param index the index to be retrieved, must be smaller than the value returned by 
-	 * {@link model.Configuration#getSizeDataColumns()} 
-	 */
-	@Deprecated
-	public void setData(float value, int index){
-		assert(atomData != null) : "Atom is not yet assigned to an instance of AtomData";
-		atomData.getDataArray(index).setQuick(ID, value);
-	};
-	
-	/**
-	 * Access to data values (imported from file or computed)
-	 * To retrieve information on the values 
-	 * This method must not be called before the atom is assigned to an instance of AtomData
-	 * @see model.Configuration#getDataColumnInfo(int)  
-	 * @param index the index to be retrieved, must be smaller than the value returned by 
-	 * {@link model.Configuration#getSizeDataColumns()} 
-	 * @return the value of data at the given index
-	 */
-	@Deprecated
-	public float getData(int index){
-		assert(atomData != null) : "Atom is not yet assigned to an instance of AtomData";
-		return atomData.getDataArray(index).getQuick(ID);
 	}
 	
 	/**
@@ -245,13 +213,13 @@ public final class Atom extends Vec3 implements Pickable {
 		for (DataColumnInfo c : dci){
 			if (!c.isVectorComponent()){
 				int index1 = data.getDataColumnIndex(c);
-				keys.add(c.getName()); values.add(CommonUtils.outputDecimalFormatter.format(getData(index1))+c.getUnit());
+				keys.add(c.getName()); values.add(CommonUtils.outputDecimalFormatter.format(getData(index1, data))+c.getUnit());
 			} else if (c.isFirstVectorComponent()){
 				keys.add(c.getVectorName()+(!c.getUnit().isEmpty()?"("+c.getUnit()+")":""));
 				int index1 = data.getDataColumnIndex(c.getVectorComponents()[0]);
 				int index2 = data.getDataColumnIndex(c.getVectorComponents()[1]);
 				int index3 = data.getDataColumnIndex(c.getVectorComponents()[2]);
-				Vec3 vec = new Vec3(getData(index1), getData(index2), getData(index3));
+				Vec3 vec = new Vec3(getData(index1, data), getData(index2, data), getData(index3, data));
 				values.add(vec.toString());
 				keys.add("Magnitude of "+c.getVectorName()+(!c.getUnit().isEmpty()?"("+c.getUnit()+")":""));
 				values.add(Float.toString(vec.getLength()));

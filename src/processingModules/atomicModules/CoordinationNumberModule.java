@@ -82,6 +82,7 @@ public class CoordinationNumberModule extends ClonableProcessingModule {
 		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
 		
 		final int v = data.getDataColumnIndex(coordNumColumn);
+		final float[] vArray = data.getDataArray(v).getData();
 		
 		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), radius, true);
 		nnb.addAll(data.getAtoms());
@@ -100,7 +101,7 @@ public class CoordinationNumberModule extends ClonableProcessingModule {
 							ProgressMonitor.getProgressMonitor().addToCounter(1000);
 						
 						Atom a = data.getAtoms().get(i);
-						a.setData(nnb.getNeigh(a).size(), v);
+						vArray[i] = nnb.getNeigh(a).size();
 					}
 					
 					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
