@@ -97,7 +97,7 @@ public class CommonNeighborsAnalysisModule extends ClonableProcessingModule {
 				new Pattern(6, 6, 3)	
 		};
 		
-		final int cnaCol = data.getIndexForCustomColumn(cnaColumn);
+		final float[] cnaArray = data.getDataValueArray(data.getIndexForCustomColumn(cnaColumn)).getData();
 		
 		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), cutoff, true);
 		nnb.addAll(data.getAtoms());
@@ -167,12 +167,11 @@ public class CommonNeighborsAnalysisModule extends ClonableProcessingModule {
 								if (pattern[l].equals(p)) counter[l]++;
 						}
 						
-						
-						if (counter[0] == 12) a.setData(1, cnaCol); 
-						else if (counter[0] == 6 && counter[1] == 6) a.setData(2, cnaCol);
-						else if (counter[2] == 8 && counter[3] == 6) a.setData(3, cnaCol);
-						else if (counter[4] == 12 && counter[5] == 4) a.setData(4, cnaCol);
-						else a.setData(0, cnaCol);
+						if (counter[0] == 12) cnaArray[i] = 1f; 
+						else if (counter[0] == 6 && counter[1] == 6) cnaArray[i] = 2f;
+						else if (counter[2] == 8 && counter[3] == 6) cnaArray[i] = 3f;
+						else if (counter[4] == 12 && counter[5] == 4) cnaArray[i] = 4f;
+						else cnaArray[i] = 5f;
 					}
 					
 					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);

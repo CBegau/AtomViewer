@@ -94,7 +94,7 @@ public class CentroSymmetryModule extends ClonableProcessingModule {
 	public ProcessingResult process(final AtomData data) throws Exception {
 		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), radius, true);
 		
-		final int v = data.getIndexForCustomColumn(centroSymmetryColumn);
+		final float[] csdArray = data.getDataValueArray(data.getIndexForCustomColumn(centroSymmetryColumn)).getData();
 		
 		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
 
@@ -145,7 +145,7 @@ public class CentroSymmetryModule extends ClonableProcessingModule {
 						
 						csd /= radius;
 						csd *= scaling;
-						a.setData(csd, v);
+						csdArray[i] = csd;
 					}
 					
 					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);

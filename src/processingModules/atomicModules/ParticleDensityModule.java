@@ -108,6 +108,9 @@ public class ParticleDensityModule extends ClonableProcessingModule {
 			JLogPanel.getJLogPanel().addWarning("Mass not found",
 					String.format("Weightened particle density selected, but mass column is missing in %s", data.getName()));
 		
+		final float[] massArray = data.getDataValueArray(massColumn).getData();
+		final float[] densityArray = data.getDataValueArray(v).getData();
+		
 		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
 		for (int i=0; i<ThreadPool.availProcessors(); i++){
 			final int j = i;
@@ -127,26 +130,26 @@ public class ParticleDensityModule extends ClonableProcessingModule {
 							if (scaleMass){
 								float density = 0f;
 								for (Atom n : nnb.getNeigh(a))
-									density += n.getData(massColumn);
-								a.setData(density/sphereVolume*scalingFactor, v);
+									density += massArray[n.getID()];
+								densityArray[i] = density/sphereVolume*scalingFactor;
 							} else {
 								float density = ((nnb.getNeigh(a).size()+1)/sphereVolume);
-								a.setData(density*scalingFactor, v);
+								densityArray[i] = density*scalingFactor; 
 							}
 						} else {
 							ArrayList<Tupel<Atom,Vec3>> neigh = nnb.getNeighAndNeighVec(a);
-							float mass = scaleMass ? a.getData(massColumn) : 1f;
+							float mass = scaleMass ? massArray[i] : 1f;
 							
 							//Include central particle a with d = 0
 							float density = mass*CommonUtils.getM4SmoothingKernelWeight(0f, radius*0.5f);
 							//Estimate local density based on distance to other particles
 							for (int k=0, len = neigh.size(); k<len; k++){
 								Tupel<Atom,Vec3> n = neigh.get(k);
-								mass = scaleMass ? n.o1.getData(massColumn) : 1f;
+								mass = scaleMass ? massArray[n.o1.getID()] : 1f;
 								density += mass * CommonUtils.getM4SmoothingKernelWeight(n.o2.getLength(), radius*0.5f);
 							}
 							//Temporarily store the density of the particle 
-							a.setData(density*scalingFactor, v);
+							densityArray[i] = density*scalingFactor; 
 						}
 					}
 					

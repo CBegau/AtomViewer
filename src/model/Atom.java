@@ -86,6 +86,7 @@ public final class Atom extends Vec3 implements Pickable {
 	 * @param index the index to be retrieved, must be smaller than the value returned by 
 	 * {@link model.Configuration#getSizeDataColumns()} 
 	 */
+	@Deprecated
 	public void setData(float value, int index){
 		assert(atomData != null) : "Atom is not yet assigned to an instance of AtomData";
 		atomData.getDataValueArray(index).setQuick(ID, value);

@@ -148,10 +148,10 @@ public class DisplacementModule extends ClonableProcessingModule {
 			throw new RuntimeException(errorMessage);
 		}
 		
-		final int dx = data.getIndexForCustomColumn(cci[0]);
-		final int dy = data.getIndexForCustomColumn(cci[1]);
-		final int dz = data.getIndexForCustomColumn(cci[2]);
-		final int da = data.getIndexForCustomColumn(cci[3]);
+		final float[] xArray = data.getDataValueArray(data.getIndexForCustomColumn(cci[0])).getData();
+		final float[] yArray = data.getDataValueArray(data.getIndexForCustomColumn(cci[1])).getData();
+		final float[] zArray = data.getDataValueArray(data.getIndexForCustomColumn(cci[2])).getData();
+		final float[] nArray = data.getDataValueArray(data.getIndexForCustomColumn(cci[3])).getData();
 		
 		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
 		
@@ -173,10 +173,10 @@ public class DisplacementModule extends ClonableProcessingModule {
 						Atom a_ref = atomsMap.get(a.getNumber());
 						if (a_ref!=null){
 							Vec3 displ = data.getBox().getPbcCorrectedDirection(a_ref, a);
-							a.setData(displ.x, dx);
-							a.setData(displ.y, dy);
-							a.setData(displ.z, dz);
-							a.setData(displ.getLength(), da);
+							xArray[i] = displ.x;
+							yArray[i] = displ.y;
+							zArray[i] = displ.z;
+							nArray[i] = displ.getLength();
 						} else {
 							if (!mismatchWarningShown.getAndSet(true)){
 								JLogPanel.getJLogPanel().addWarning("Inaccurate displacement vectors", 
@@ -184,7 +184,7 @@ public class DisplacementModule extends ClonableProcessingModule {
 												+ "Computed  displacement vectors between these file may be inaccurate", 
 										data.getName(), referenceAtomData.getName()));
 							}
-							a.setData(0f, dx); a.setData(0f, dy); a.setData(0f, dz); a.setData(0f, da);
+							xArray[i] = 0f; yArray[i] = 0f; zArray[i] = 0f; nArray[i] = 0f;
 						}
 					}
 					

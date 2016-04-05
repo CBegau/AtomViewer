@@ -152,6 +152,10 @@ public class SpatialAveragingModule extends ClonableProcessingModule implements 
 					String.format("Weightened averages for %s selected, but mass column is missing in %s", toAverageColumn.getName(),
 							data.getName()));
 		
+		final float[] massArray = data.getDataValueArray(massColumn).getData();
+		final float[] dataArray = data.getDataValueArray(v).getData();
+		final float[] avArray = data.getDataValueArray(av).getData();
+		
 		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
 		for (int i=0; i<ThreadPool.availProcessors(); i++){
 			final int j = i;
@@ -168,19 +172,19 @@ public class SpatialAveragingModule extends ClonableProcessingModule implements 
 							if ((i-start)%1000 == 0) ProgressMonitor.getProgressMonitor().addToCounter(2000);
 					
 							Atom a = data.getAtoms().get(i);
-							float mass = scaleMass ? a.getData(massColumn) : 1f;
-							sum = mass * a.getData(v);
+							float mass = scaleMass ? massArray[i] : 1f;
+							sum = mass * dataArray[i];
 							float sumMass = mass;
 							
 							ArrayList<Atom> neigh = nnb.getNeigh(a);
 							for (Atom n : neigh){
-								mass = scaleMass ? a.getData(massColumn) : 1f;
-								sum += mass * n.getData(v);
+								mass = scaleMass ? massArray[n.getID()] : 1f;
+								sum += mass * dataArray[n.getID()];
 								sumMass += mass;
 							}
 							sum /= sumMass;
 							
-							a.setData(sum, av);
+							avArray[i] = sum;
 						}
 						ProgressMonitor.getProgressMonitor().addToCounter( 2*((end-start)%1000));
 					} else {
@@ -190,18 +194,18 @@ public class SpatialAveragingModule extends ClonableProcessingModule implements 
 								ProgressMonitor.getProgressMonitor().addToCounter(1000);
 							Atom a = data.getAtoms().get(i);
 							ArrayList<Tupel<Atom,Vec3>> neigh = nnb.getNeighAndNeighVec(a);
-							float mass = scaleMass ? a.getData(massColumn) : 1f;
+							float mass = scaleMass ? massArray[i] : 1f;
 							
 							//Include central particle a with d = 0
 							float density = mass*CommonUtils.getM4SmoothingKernelWeight(0f, halfR);
 							//Estimate local density based on distance to other particles
 							for (int k=0, len = neigh.size(); k<len; k++){
 								Tupel<Atom,Vec3> n = neigh.get(k);
-								mass = scaleMass ? n.o1.getData(massColumn) : 1f;
+								mass = scaleMass ? massArray[n.o1.getID()] : 1f;
 								density += mass * CommonUtils.getM4SmoothingKernelWeight(n.o2.getLength(), halfR);
 							}
-							//Temporarily store the density of the particle 
-							a.setData(density, av);
+							//Temporarily store the density of the particle
+							avArray[i] = density;
 						}
 						ProgressMonitor.getProgressMonitor().addToCounter( (end-start)%1000);
 						barrier.await();
@@ -215,14 +219,13 @@ public class SpatialAveragingModule extends ClonableProcessingModule implements 
 							
 							ArrayList<Tupel<Atom,Vec3>> neigh = nnb.getNeighAndNeighVec(a);
 							//Start with central particle with d = 0
-							//a.getData(av) is the density of particle a
-							float mass = scaleMass ? a.getData(massColumn) : 1f;
-							sum = mass * a.getData(v) / a.getData(av) * CommonUtils.getM4SmoothingKernelWeight(0f, halfR);
+							float mass = scaleMass ? massArray[i] : 1f;
+							sum = mass * dataArray[i] / avArray[i] * CommonUtils.getM4SmoothingKernelWeight(0f, halfR);
 							for (int k=0, len = neigh.size(); k<len; k++){
 								//Weighting based on distance and density
 								Tupel<Atom,Vec3> n = neigh.get(k);
-								mass = scaleMass ? n.o1.getData(massColumn) : 1f;
-								sum += mass * n.o1.getData(v) / n.o1.getData(av) * 
+								mass = scaleMass ? massArray[n.o1.getID()] : 1f;
+								sum += mass * dataArray[n.o1.getID()] / avArray[n.o1.getID()] * 
 										CommonUtils.getM4SmoothingKernelWeight(n.getO2().getLength(), halfR);
 							}							
 							buffer[i] = sum;
@@ -232,7 +235,7 @@ public class SpatialAveragingModule extends ClonableProcessingModule implements 
 						
 						//Copy final results from buffer into the final position
 						for (int i=start; i<end; i++){
-							data.getAtoms().get(i).setData(buffer[i], av);
+							avArray[i] = buffer[i];
 						}
 						
 						ProgressMonitor.getProgressMonitor().addToCounter( (end-start%1000) / 2);
