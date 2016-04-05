@@ -110,7 +110,7 @@ public class EnergyAnalysisProcessingModule extends ClonableProcessingModule {
 			if (y<0) y += by;
 			if (z<0) z += bz;
 			
-			float e = a.getData(ec); 
+			float e = a.getData(ec, atomData); 
 			
 			eng[x][y][z].atoms++;
 			eng[x][y][z].eSum += e;

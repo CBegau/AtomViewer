@@ -213,19 +213,29 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 			throw new RuntimeException(errorMessage);
 		}
 		
-		final int colValueX = data.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[0]);
-		final int colValueY = data.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[1]);
-		final int colValueZ = data.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[2]);
+		final int xIndex = data.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[0]);
+		final int yIndex = data.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[1]);
+		final int zIndex = data.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[2]);
+		final float[] xArray = data.getDataValueArray(xIndex).getData();
+		final float[] yArray = data.getDataValueArray(yIndex).getData();
+		final float[] zArray = data.getDataValueArray(zIndex).getData();
 		
-		final int colValueRefX = referenceAtomData.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[0]);
-		final int colValueRefY = referenceAtomData.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[1]);
-		final int colValueRefZ = referenceAtomData.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[2]);
+		final int xRefIndex = referenceAtomData.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[0]);
+		final int yRefIndex = referenceAtomData.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[1]);
+		final int zRefIndex = referenceAtomData.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[2]);
+		final float[] xRefArray = data.getDataValueArray(xRefIndex).getData();
+		final float[] yRefArray = data.getDataValueArray(yRefIndex).getData();
+		final float[] zRefArray = data.getDataValueArray(zRefIndex).getData();
 		
 		DataColumnInfo d = existingDeltaColumns.get(toDeltaColumn);
-		final int deltaColX = data.getIndexForCustomColumn(d.getVectorComponents()[0]);
-		final int deltaColY = data.getIndexForCustomColumn(d.getVectorComponents()[1]);
-		final int deltaColZ = data.getIndexForCustomColumn(d.getVectorComponents()[2]);
-		final int deltaColA = data.getIndexForCustomColumn(d.getVectorComponents()[3]);
+		final int deltaXIndex = data.getIndexForCustomColumn(d.getVectorComponents()[0]);
+		final int deltaYIndex = data.getIndexForCustomColumn(d.getVectorComponents()[1]);
+		final int deltaZIndex = data.getIndexForCustomColumn(d.getVectorComponents()[2]);
+		final int deltaNIndex = data.getIndexForCustomColumn(d.getVectorComponents()[3]);
+		final float[] deltaXArray = data.getDataValueArray(deltaXIndex).getData();
+		final float[] deltaYArray = data.getDataValueArray(deltaYIndex).getData();
+		final float[] deltaZArray = data.getDataValueArray(deltaZIndex).getData();
+		final float[] deltaNArray = data.getDataValueArray(deltaNIndex).getData();
 		
 		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
 		
@@ -247,14 +257,13 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 						Atom a_ref = atomsMap.get(a.getNumber());
 
 						if (a_ref!=null){
-							float x = a.getData(colValueX)-a_ref.getData(colValueRefX);						
-							float y = a.getData(colValueY)-a_ref.getData(colValueRefY);
-							float z = a.getData(colValueZ)-a_ref.getData(colValueRefZ);
+							int refID = a_ref.getID();
+							float x = xArray[i] - xRefArray[refID];						
+							float y = yArray[i] - yRefArray[refID];
+							float z = zArray[i] - zRefArray[refID];
 							
-							a.setData(x, deltaColX);
-							a.setData(y, deltaColY);
-							a.setData(z, deltaColZ);
-							a.setData((float)Math.sqrt(x*x + y*y +z*z), deltaColA);
+							deltaXArray[i] = x; deltaYArray[i] = y; deltaZArray[i] = z;
+							deltaNArray[i] = (float)Math.sqrt(x*x + y*y +z*z); 
 						} else {
 							if (!mismatchWarningShown.getAndSet(true)){
 								JLogPanel.getJLogPanel().addWarning(String.format("Inaccurate differences for %s", toDeltaColumn.getName()), 
@@ -262,10 +271,8 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 												+ "Computed differences between these file may be inaccurate", 
 										data.getName(), referenceAtomData.getName()));
 							}
-							a.setData(0f, deltaColX);
-							a.setData(0f, deltaColY);
-							a.setData(0f, deltaColZ);
-							a.setData(0f, deltaColA);
+							deltaXArray[i] = 0f; deltaYArray[i] = 0f; deltaZArray[i] = 0f;
+							deltaNArray[i] = 0f;
 						}
 					}
 					

@@ -239,9 +239,9 @@ public class DataColumnInfo {
 			
 			while (atomData!=null){
 				int column = atomData.getIndexForCustomColumn(this);
+				float[] f = atomData.getDataValueArray(column).getData();
 				if (column != -1){
-					for (int i=0; i < atomData.getAtoms().size(); i++){
-						float v = atomData.getAtoms().get(i).getData(column);
+					for (float v : f){
 						if (v < min) min = v;
 						if (v > max) max = v;
 					}
@@ -250,9 +250,9 @@ public class DataColumnInfo {
 			}
 		} else {
 			int column = atomData.getIndexForCustomColumn(this);
+			float[] f = atomData.getDataValueArray(column).getData();
 			if (column != -1){
-				for (int i=0; i < atomData.getAtoms().size(); i++){
-					float v = atomData.getAtoms().get(i).getData(column);
+				for (float v : f){
 					if (v < min) min = v;
 					if (v > max) max = v;
 				}

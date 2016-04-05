@@ -670,7 +670,7 @@ public class Skeletonizer extends DataContainer {
 							else color = new float[]{1f, 0f, 0f, 1f};
 							//Particle size, either per type or per particle
 							float s = radiusColumn == -1 ? sphereSize[a.getElement() % numEle] :
-								a.getData(radiusColumn) * sphereSize[a.getElement() % numEle];
+								a.getData(radiusColumn, data) * sphereSize[a.getElement() % numEle];
 							objectsToRender.add(new RenderableObject<Atom>(a, color, s));
 							atomsToRender.add(a);
 						}

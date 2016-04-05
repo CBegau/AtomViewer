@@ -133,14 +133,15 @@ public class TemperatureModule extends ClonableProcessingModule{
 				v_z = i;
 		}
 		
-		final int tempColumn = data.getIndexForCustomColumn(temperatureColumn);
-		final int massColumn = m;
-		final int vxColumn = v_x;
-		final int vyColumn = v_y;
-		final int vzColumn = v_z;
-		
-		if (massColumn == -1  || tempColumn == -1 || vxColumn == -1 || vyColumn == -1 || vzColumn == -1)
+		int temperatureIndex = data.getIndexForCustomColumn(temperatureColumn);
+		if (m == -1  || temperatureIndex == -1 || v_x == -1 || v_y == -1 || v_z == -1)
 			throw new RuntimeException("Could not find all all input data");
+		
+		final float[] massArray = data.getDataValueArray(m).getData();
+		final float[] vxArray = data.getDataValueArray(v_x).getData();
+		final float[] vyArray = data.getDataValueArray(v_y).getData();
+		final float[] vzArray = data.getDataValueArray(v_z).getData();
+		final float[] temperatureArray = data.getDataValueArray(temperatureIndex).getData();
 		
 		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
 		
@@ -160,9 +161,9 @@ public class TemperatureModule extends ClonableProcessingModule{
 							ProgressMonitor.getProgressMonitor().addToCounter(1000);
 						
 						Atom a = data.getAtoms().get(i);
-						float vx = a.getData(vxColumn);
-						float vy = a.getData(vyColumn);
-						float vz = a.getData(vzColumn);
+						float vx = vxArray[i];
+						float vy = vyArray[i];
+						float vz = vzArray[i];
 						
 						float totThermalEnergy = 0f;
 						
@@ -173,27 +174,26 @@ public class TemperatureModule extends ClonableProcessingModule{
 							
 							ArrayList<Atom> neigh = nnb.getNeigh(a);
 							for (Atom n : neigh){
-								float ax = n.getData(vxColumn);
-								float ay = n.getData(vyColumn);
-								float az = n.getData(vzColumn);
-								av_x += ax;
-								av_y += ay;
-								av_z += az;
+								int id = n.getID();
+								av_x += vxArray[id];
+								av_y += vyArray[id];
+								av_z += vzArray[id];
 							}
 							
 							av_x /= (neigh.size()+1);
 							av_y /= (neigh.size()+1);
 							av_z /= (neigh.size()+1);
 							
-							totThermalEnergy = a.getData(massColumn) *
+							totThermalEnergy = massArray[i] *
 									((vx-av_x)*(vx-av_x) + (vy-av_y)*(vy-av_y) + (vz-av_z)*(vz-av_z));
 							
 							if (spatialAverage){
 								for (Atom n : neigh){
-									float ax = n.getData(vxColumn);
-									float ay = n.getData(vyColumn);
-									float az = n.getData(vzColumn);
-									float am = n.getData(massColumn);
+									int id = n.getID();
+									float ax = vxArray[id];
+									float ay = vyArray[id];
+									float az = vzArray[id];
+									float am = massArray[id];
 									
 									totThermalEnergy += am *
 											((ax-av_x)*(ax-av_x) + (ay-av_y)*(ay-av_y) + (az-av_z)*(az-av_z));	
@@ -202,14 +202,14 @@ public class TemperatureModule extends ClonableProcessingModule{
 								totThermalEnergy /= (neigh.size()+1);
 							}
 						} else {
-							totThermalEnergy = a.getData(massColumn) * (vx*vx + vy*vy + vz*vz);
+							totThermalEnergy = massArray[i] * (vx*vx + vy*vy + vz*vz);
 						}
 						
 						//final scaling to (average) temperature
 						totThermalEnergy /= 3f;
 						totThermalEnergy *= scalingFactor;
 						
-						a.setData(totThermalEnergy, tempColumn);
+						temperatureArray[i] = totThermalEnergy;
 					}
 					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
 					return null;
@@ -221,7 +221,7 @@ public class TemperatureModule extends ClonableProcessingModule{
 		double[] tempPerElement = new double[data.getNumberOfElements()];
 		int[] numPerElement = new int[data.getNumberOfElements()];
 		for (Atom a : data.getAtoms()){
-			tempPerElement[a.getElement()] += a.getData(tempColumn);
+			tempPerElement[a.getElement()] += a.getData(temperatureIndex, data);
 			numPerElement[a.getElement()]++;
 		}
 		
