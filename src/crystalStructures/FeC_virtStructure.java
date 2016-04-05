@@ -22,19 +22,25 @@ import gui.ColoringFilter;
 import gui.PrimitiveProperty.BooleanProperty;
 import gui.ViewerGLJPanel.AtomRenderType;
 
+import java.awt.event.InputEvent;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 
 import javax.swing.JFrame;
 
 import common.ColorTable;
+import common.CommonUtils;
+import common.FastTFloatArrayList;
+import common.Tupel;
+import common.Vec3;
 import model.Atom;
 import model.AtomData;
 import model.RenderingConfiguration;
-import model.ImportConfiguration;
 import model.DataColumnInfo;
 import model.Filter;
 import model.NearestNeighborBuilder;
+import model.Pickable;
 import processingModules.ClonableProcessingModule;
 import processingModules.DataContainer;
 import processingModules.JDataPanel;
@@ -182,8 +188,8 @@ public class FeC_virtStructure extends FeCStructure {
 		}
 	}
 	
-	private static final class PlaceholderDataContainer extends ParticleDataContainer<Atom>{
-		private static JParticleDataControlPanel<Atom> dataPanel = null;
+	private static final class PlaceholderDataContainer extends ParticleDataContainer<PlaceholderDataContainer.Placeholder>{
+		private static JParticleDataControlPanel<Placeholder> dataPanel = null;
 		private static PlaceholderColoringFilter colFunc;
 		
 		@Override
@@ -191,24 +197,25 @@ public class FeC_virtStructure extends FeCStructure {
 			return "Placeholder";
 		}
 		
-		protected ColoringFilter<Atom> getColoringFilter(){
+		protected ColoringFilter<Placeholder> getColoringFilter(){
 			if(colFunc == null)
 				colFunc = new PlaceholderColoringFilter();
 			
 			return colFunc;
 		}
 		
-		private class PlaceholderColoringFilter implements ColoringFilter<Atom>{
+		private class PlaceholderColoringFilter implements ColoringFilter<Placeholder>{
 			DataColumnInfo dataInfo;
 			int selected;
 			float min, max;
 			boolean filterMin,filterMax,inversed, colorByValue;
 			
 			@Override
-			public boolean accept(Atom a) {
+			public boolean accept(Placeholder p) {
 				if (!colorByValue) return true;
 				if (selected == -1) return false;
-				return !(((filterMin && a.getData(selected)<min) || (filterMax && a.getData(selected)>max))^inversed);
+				float value = particleData.get(selected).get(p.getID());
+				return !(( (filterMin && value<min) || (filterMax && value>max) )^inversed);
 			}
 			
 			@Override
@@ -227,34 +234,46 @@ public class FeC_virtStructure extends FeCStructure {
 			}
 			
 			@Override
-			public float[] getColor(Atom c) {
-				if (colorByValue) return ColorTable.getIntensityGLColor(min, max, c.getData(selected));
+			public float[] getColor(Placeholder c) {
+				if (colorByValue) 
+					return ColorTable.getIntensityGLColor(min, max, particleData.get(selected).get(c.getID()));
 				else return getParticleDataControlPanel().getColor();
 			}
 		};
 		
 		public boolean processData(AtomData atomData) throws IOException {
-			ArrayList<Atom> realAtoms = new ArrayList<Atom>();
+			particleDataColumns.addAll(atomData.getDataColumnInfos());
+			for (int i=0; i<atomData.getDataColumnInfos().size(); i++)
+				particleData.add(new FastTFloatArrayList());
 			
-			for (Atom a : atomData.getAtoms()){
+			int index = 0;
+			for (int i=0; i<atomData.getAtoms().size(); i++){
+				Atom a = atomData.getAtoms().get(i);
 				if (a.getElement()%3 == 2){
-					particles.add(a);
-					a.setType(8);
+					particles.add(new Placeholder(a, index++));
+					
+					for (int j=0; j<particleData.size(); j++)
+						particleData.get(j).add(atomData.getDataValueArray(j).get(i));
 				}
-				else realAtoms.add(a);
 			}
-			particleDataColumns.addAll(ImportConfiguration.getInstance().getDataColumns());
+			particleDataColumns.addAll(atomData.getDataColumnInfos());
 			
-			atomData.getAtoms().clear();
-			atomData.getAtoms().addAll(realAtoms);
+			//Delete all placeholders from the 
+			atomData.removeAtoms(new Filter<Atom>(){
+				@Override
+				public boolean accept(Atom a) {
+					return (a.getElement()%3 != 2);
+				}
+			});
+			
 			updateRenderData(atomData);
 			return true;
 		}
 
 		@Override
-		protected JParticleDataControlPanel<Atom> getParticleDataControlPanel() {
+		protected JParticleDataControlPanel<Placeholder> getParticleDataControlPanel() {
 			if (dataPanel == null){
-				dataPanel = new JParticleDataControlPanel<Atom>(this, new float[]{0.1f,0.95f,0.3f}, 0.5f);
+				dataPanel = new JParticleDataControlPanel<Placeholder>(this, new float[]{0.1f,0.95f,0.3f}, 0.5f);
 			}
 			return dataPanel;
 		}
@@ -262,6 +281,82 @@ public class FeC_virtStructure extends FeCStructure {
 		@Override
 		public JDataPanel getDataControlPanel() {
 			return getParticleDataControlPanel();
+		}
+		
+		class Placeholder extends Vec3 implements Pickable{
+			private int ID;
+			private int number;
+			private byte element;
+			
+			public Placeholder(Atom a, int ID) {
+				super(a.x,a.y, a.z);
+				this.ID = ID;
+				this.number = a.getNumber();
+				this.element = (byte)a.getElement();
+			}
+			
+			public int getID() {
+				return ID;
+			}
+			
+			@Override
+			public Collection<?> getHighlightedObjects() {
+				return null;
+			}
+
+			@Override
+			public boolean isHighlightable() {
+				return false;
+			}
+
+			@Override
+			public Tupel<String,String> printMessage(InputEvent ev, AtomData data) {			
+				ArrayList<String> keys = new ArrayList<String>();
+				ArrayList<String> values = new ArrayList<String>();
+				
+				Vec3 offset = data.getBox().getOffset();
+				keys.add("Nr"); values.add(Integer.toString(number));
+				keys.add("Position"); values.add(this.addClone(offset).toString());
+				
+				keys.add("element");
+				if (data.getNameOfElement(element).isEmpty())
+					values.add(Integer.toString(element));
+				else values.add(Integer.toString(element)+" "+data.getNameOfElement(element));
+				
+				for (DataColumnInfo c : particleDataColumns){
+					if (!c.isVectorComponent()){
+						int index1 = getIndexForCustomColumn(c);
+						keys.add(c.getName());
+						values.add(CommonUtils.outputDecimalFormatter.format(particleData.get(index1).get(ID))+c.getUnit());
+					} else if (c.isFirstVectorComponent()){
+						keys.add(c.getVectorName()+(!c.getUnit().isEmpty()?"("+c.getUnit()+")":""));
+						int index1 = getIndexForCustomColumn(c.getVectorComponents()[0]);
+						int index2 = getIndexForCustomColumn(c.getVectorComponents()[1]);
+						int index3 = getIndexForCustomColumn(c.getVectorComponents()[2]);
+						Vec3 vec = new Vec3(
+								particleData.get(index1).get(ID),
+								particleData.get(index2).get(ID),
+								particleData.get(index3).get(ID));
+						values.add(vec.toString());
+						keys.add("Magnitude of "+c.getVectorName()+(!c.getUnit().isEmpty()?"("+c.getUnit()+")":""));
+						values.add(Float.toString(vec.getLength()));
+					}
+				}
+				
+				return new Tupel<String, String>("Placeholder "+number, 
+						CommonUtils.buildHTMLTableForKeyValue(
+								keys.toArray(new String[keys.size()]), values.toArray(new String[values.size()])));
+			}
+			
+			@Override
+			public boolean equals(Object obj) {
+				return this == obj;
+			}
+			
+			@Override
+			public Vec3 getCenterOfObject() {
+				return this.clone();
+			}
 		}
 	}
 }

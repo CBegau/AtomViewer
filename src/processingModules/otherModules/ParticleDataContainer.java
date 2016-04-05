@@ -41,6 +41,7 @@ import javax.swing.border.TitledBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import common.FastTFloatArrayList;
 import common.Vec3;
 import model.AtomData;
 import model.DataColumnInfo;
@@ -52,6 +53,7 @@ import processingModules.JDataPanel;
 public abstract class ParticleDataContainer<T extends Vec3 & Pickable> extends DataContainer{
 	protected ArrayList<T> particles = new ArrayList<T>();
 	protected List<DataColumnInfo> particleDataColumns = new ArrayList<DataColumnInfo>();
+	protected List<FastTFloatArrayList> particleData = new ArrayList<FastTFloatArrayList>();
 	protected ObjectRenderData<T> ord;
 	
 	@Override
@@ -74,6 +76,13 @@ public abstract class ParticleDataContainer<T extends Vec3 & Pickable> extends D
 				c.getVisibiltyArray()[i] = true;
 			}
 		}
+	}
+	
+	public int getIndexForCustomColumn(DataColumnInfo dci){
+		for (int i=0; i < particleDataColumns.size(); i++)
+			if (dci.equals(particleDataColumns.get(i)))
+				return i;
+		return -1;
 	}
 	
 	@Override

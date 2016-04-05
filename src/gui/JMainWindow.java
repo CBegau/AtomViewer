@@ -1216,7 +1216,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 					d.startGroup("Clustering");
 			
 					d.addLabel("Individual scaling");
-					for (int i=0; i<sizes.length; i++){
+					for (int i=0; i<cs.getNumberOfElements(); i++){
 						atomScales[i] = d.addFloat("", names[i], "", sizes[i], 0.001f, 1000f);
 						atomScales[i].setDefaultValue(defsizes[i]); 
 					}

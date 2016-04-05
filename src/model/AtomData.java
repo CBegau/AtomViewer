@@ -60,6 +60,13 @@ public class AtomData {
 	
 	private String[] elementNames;
 	
+	/**
+	 * Storage for atomic data
+	 */
+	private List<FastTFloatArrayList> dataValues;
+	/**
+	 * Metadata for the atomic data
+	 */
 	private List<DataColumnInfo> dataColumns = new ArrayList<DataColumnInfo>();
 	
 	//Some flags for imported or calculated values
@@ -85,11 +92,7 @@ public class AtomData {
 	 * control panels are stored in this list.
 	 */
 	private ArrayList<DataContainer> additionalData = new ArrayList<DataContainer>();
-	
-	/**
-	 * Storage for atomic data 
-	 */
-	private List<FastTFloatArrayList> dataValues;
+
 	
 	private int[] atomsPerElement = new int[0];
 	private int[] atomsPerType;
@@ -256,6 +259,13 @@ public class AtomData {
 			}
 		}
 		
+		for (DataColumnInfo dci : dataColumns){
+			if (dci.isFirstVectorComponent()){
+				ProgressMonitor.getProgressMonitor().setActivityName("Compute norm of imported vectors");
+				new VectorNormModule(dci).process(this);
+			}
+		}
+		
 		Toolchain t = defaultCrystalStructure.getToolchainToApplyAtBeginningOfAnalysis();
 		if (t != null){
 			for (ProcessingModule pm : t.getProcessingModules())
@@ -275,13 +285,6 @@ public class AtomData {
 			for (Grain g : gr){
 				this.addGrain(g);
 				g.getMesh(); //ensure the mesh is created in the worker thread
-			}
-		}
-			
-		for (DataColumnInfo dci : dataColumns){
-			if (dci.isFirstVectorComponent()){
-				ProgressMonitor.getProgressMonitor().setActivityName("Compute norm of vectors");
-				new VectorNormModule(dci).process(this);
 			}
 		}
 		
