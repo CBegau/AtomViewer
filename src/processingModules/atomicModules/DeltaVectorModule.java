@@ -217,9 +217,9 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 		final int colValueY = data.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[1]);
 		final int colValueZ = data.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[2]);
 		
-		final int colValueRefX = data.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[0]);
-		final int colValueRefY = data.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[1]);
-		final int colValueRefZ = data.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[2]);
+		final int colValueRefX = referenceAtomData.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[0]);
+		final int colValueRefY = referenceAtomData.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[1]);
+		final int colValueRefZ = referenceAtomData.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[2]);
 		
 		DataColumnInfo d = existingDeltaColumns.get(toDeltaColumn);
 		final int deltaColX = data.getIndexForCustomColumn(d.getVectorComponents()[0]);
