@@ -35,6 +35,8 @@ import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JRadioButton;
 import javax.swing.JSeparator;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
@@ -172,17 +174,14 @@ public class SpatialAveragingModule extends ClonableProcessingModule implements 
 							if ((i-start)%1000 == 0) ProgressMonitor.getProgressMonitor().addToCounter(2000);
 					
 							Atom a = data.getAtoms().get(i);
-							float mass = scaleMass ? massArray[i] : 1f;
-							sum = mass * dataArray[i];
-							float sumMass = mass;
+							sum = dataArray[i];
+							
 							
 							ArrayList<Atom> neigh = nnb.getNeigh(a);
 							for (Atom n : neigh){
-								mass = scaleMass ? massArray[n.getID()] : 1f;
-								sum += mass * dataArray[n.getID()];
-								sumMass += mass;
+								sum += dataArray[n.getID()];
 							}
-							sum /= sumMass;
+							sum /= neigh.size()+1;
 							
 							avArray[i] = sum;
 						}
@@ -273,13 +272,20 @@ public class SpatialAveragingModule extends ClonableProcessingModule implements 
 		
 		ButtonGroup bg = new ButtonGroup();
 		dialog.startGroup("Averaging method");
-		JRadioButton smoothingButton = new JRadioButton("Cubic spline smoothing kernel");
+		final JRadioButton smoothingButton = new JRadioButton("Cubic spline smoothing kernel");
 		JRadioButton arithmeticButton = new JRadioButton("Arithmetic average");
 		
-		JCheckBox considerMassButton = new JCheckBox("Weigth by particle mass", this.weigthByMass);
+		final JCheckBox considerMassButton = new JCheckBox("Weigth by particle mass", this.weigthByMass);
 		considerMassButton.setToolTipText("Weigth particles by their mass (if possible)");
 		if (data.getComponentIndex(Component.MASS)==-1) considerMassButton.setEnabled(false);
 		
+		smoothingButton.addChangeListener(new ChangeListener() {
+			@Override
+			public void stateChanged(ChangeEvent e) {
+				considerMassButton.setEnabled(smoothingButton.isSelected());
+				
+			}
+		});
 		String smoothingTooltip = "Computes a weightend average over neighbors based on distance and density<br>"
 				+ "This implementation is using the cubic spline M4 kernel<br>";
 		smoothingButton.setToolTipText(CommonUtils.getWordWrappedString(smoothingTooltip, smoothingButton));
