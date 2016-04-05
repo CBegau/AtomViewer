@@ -93,7 +93,7 @@ public class AtomicVolumeModule extends ClonableProcessingModule {
 	public ProcessingResult process(final AtomData data) throws Exception {
 		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), radius, true);
 		final int v = computeDensity ? 
-				data.getIndexForCustomColumn(densityColumn) : data.getIndexForCustomColumn(volumeColumn);
+				data.getDataColumnIndex(densityColumn) : data.getDataColumnIndex(volumeColumn);
 		final float sphereVolume = (radius*radius*radius)*((float)Math.PI)*(4f/3f);
 		
 		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());

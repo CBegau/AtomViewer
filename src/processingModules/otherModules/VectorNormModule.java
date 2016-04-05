@@ -82,15 +82,15 @@ public class VectorNormModule extends ClonableProcessingModule {
 
 	@Override
 	public ProcessingResult process(final AtomData data) throws Exception {
-		final int indexX = data.getIndexForCustomColumn(firstVectorComponent.getVectorComponents()[0]);
-		final int indexY = data.getIndexForCustomColumn(firstVectorComponent.getVectorComponents()[1]);
-		final int indexZ = data.getIndexForCustomColumn(firstVectorComponent.getVectorComponents()[2]);
-		final int indexNorm = data.getIndexForCustomColumn(firstVectorComponent.getVectorComponents()[3]);
+		final int indexX = data.getDataColumnIndex(firstVectorComponent.getVectorComponents()[0]);
+		final int indexY = data.getDataColumnIndex(firstVectorComponent.getVectorComponents()[1]);
+		final int indexZ = data.getDataColumnIndex(firstVectorComponent.getVectorComponents()[2]);
+		final int indexNorm = data.getDataColumnIndex(firstVectorComponent.getVectorComponents()[3]);
 		
-		final float[] arrayX = data.getDataValueArray(indexX).getData();
-		final float[] arrayY = data.getDataValueArray(indexY).getData();
-		final float[] arrayZ = data.getDataValueArray(indexZ).getData();
-		final float[] arrayNorm = data.getDataValueArray(indexNorm).getData();
+		final float[] arrayX = data.getDataArray(indexX).getData();
+		final float[] arrayY = data.getDataArray(indexY).getData();
+		final float[] arrayZ = data.getDataArray(indexZ).getData();
+		final float[] arrayNorm = data.getDataArray(indexNorm).getData();
 		
 		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
 		

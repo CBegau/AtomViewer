@@ -219,7 +219,7 @@ public class DislocationDensityTensorModule extends ClonableProcessingModule {
 			DataColumnInfo[] dci = new LatticeRotationModule().getDataColumnsInfo();
 			boolean hasLatticeRotation = true;
 			for (DataColumnInfo d : dci)
-				if (atomData.getIndexForCustomColumn(d) == -1)
+				if (atomData.getDataColumnIndex(d) == -1)
 					hasLatticeRotation = false;
 			
 			boolean hasSkeleton = (atomData.getDataContainer(Skeletonizer.class)!=null);

@@ -63,7 +63,7 @@ public class AtomData {
 	/**
 	 * Storage for atomic data
 	 */
-	private List<FastTFloatArrayList> dataValues;
+	private List<FastTFloatArrayList> dataArrays;
 	/**
 	 * Metadata for the atomic data
 	 */
@@ -116,16 +116,16 @@ public class AtomData {
 		this.atomsPerType = new int[defaultCrystalStructure.getNumberOfTypes()];
 		this.box = idc.box;
 		this.atoms = idc.atoms;
-		this.dataValues = idc.dataValues;
+		this.dataArrays = idc.dataArrays;
 		
 		for (int i=0; i<this.atoms.size(); i++){
 			this.atoms.get(i).setAtomData(this, i);
 		}		
 		
 		//Create nulled arrays if values could not be imported from file
-		for (int i=0; i<this.dataValues.size(); i++){
-			if (this.dataValues.get(i).isEmpty())
-				this.dataValues.set(i, new FastTFloatArrayList(atoms.size(), true));
+		for (int i=0; i<this.dataArrays.size(); i++){
+			if (this.dataArrays.get(i).isEmpty())
+				this.dataArrays.set(i, new FastTFloatArrayList(atoms.size(), true));
 		} 
 		
 		this.maxNumElements = idc.maxElementNumber;
@@ -180,7 +180,7 @@ public class AtomData {
 		for (DataColumnInfo d : dci)
 			if (!dataColumns.contains(d)) {
 				dataColumns.add(d);
-				dataValues.add(new FastTFloatArrayList(this.atoms.size(),true));
+				dataArrays.add(new FastTFloatArrayList(this.atoms.size(),true));
 			}
 	}
 	
@@ -198,21 +198,21 @@ public class AtomData {
 			for (DataColumnInfo d : dci.getVectorComponents()){
 				int index = dataColumns.indexOf(d);
 				dataColumns.remove(index);
-				dataValues.remove(index);
+				dataArrays.remove(index);
 			}
 		} else { 
 			//Delete a scalar value
 			if (dataColumns.contains(dci)){
 				int index = dataColumns.indexOf(dci);
 				dataColumns.remove(index);
-				dataValues.remove(index);
+				dataArrays.remove(index);
 			}
 		}
 	}
 	
-	public FastTFloatArrayList getDataValueArray(int index){
-		assert(index<dataValues.size());
-		return dataValues.get(index);
+	public FastTFloatArrayList getDataArray(int index){
+		assert(index<dataArrays.size());
+		return dataArrays.get(index);
 	}
 	
 	/**
@@ -253,7 +253,7 @@ public class AtomData {
 		for (int i=0; i < dataColumns.size(); i++){
 			float scale = dataColumns.get(i).getScalingFactor();
 			if (scale != 1f){
-				TFloatArrayList values = this.dataValues.get(i);
+				TFloatArrayList values = this.dataArrays.get(i);
 				for (int j=0; j<values.size(); j++)
 					values.setQuick(j, values.getQuick(j)*scale);
 			}
@@ -479,7 +479,7 @@ public class AtomData {
 	 * @param dci
 	 * @return
 	 */
-	public int getIndexForCustomColumn(DataColumnInfo dci){
+	public int getDataColumnIndex(DataColumnInfo dci){
 		for (int i=0; i < dataColumns.size(); i++)
 			if (dci.equals(dataColumns.get(i)))
 				return i;
@@ -492,7 +492,7 @@ public class AtomData {
 	 * @param dci
 	 * @return
 	 */
-	public int getIndexForComponent(DataColumnInfo.Component component){
+	public int getComponentIndex(DataColumnInfo.Component component){
 		for (int i=0; i < dataColumns.size(); i++)
 			if (dataColumns.get(i).getComponent().equals(component))
 				return i;
@@ -569,7 +569,7 @@ public class AtomData {
 				//deleting any number of element from linear lists is in total an O(n) operation
 				size--;
 				atoms.remove(i);	
-				for (FastTFloatArrayList f: dataValues)
+				for (FastTFloatArrayList f: dataArrays)
 					f.removeFast(i);
 			}
 		}
@@ -579,7 +579,7 @@ public class AtomData {
 		for (int j=0; j<atoms.size(); j++)
 			atoms.get(j).setAtomData(this, j);
 		
-		for (TFloatArrayList f: this.dataValues){
+		for (TFloatArrayList f: this.dataArrays){
 			f.trimToSize();
 		}
 	}

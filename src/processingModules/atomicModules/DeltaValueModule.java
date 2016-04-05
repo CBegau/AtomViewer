@@ -200,13 +200,13 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 			throw new RuntimeException(errorMessage);
 		}
 		
-		final int valueIndex = data.getIndexForCustomColumn(toDeltaColumn);
-		final int refValueIndex = referenceAtomData.getIndexForCustomColumn(toDeltaColumn);
-		final int deltaIndex = data.getIndexForCustomColumn(existingDeltaColumns.get(toDeltaColumn));
+		final int valueIndex = data.getDataColumnIndex(toDeltaColumn);
+		final int refValueIndex = referenceAtomData.getDataColumnIndex(toDeltaColumn);
+		final int deltaIndex = data.getDataColumnIndex(existingDeltaColumns.get(toDeltaColumn));
 		
-		final float[] deltaArray = data.getDataValueArray(deltaIndex).getData();
-		final float[] valueArray = data.getDataValueArray(valueIndex).getData();
-		final float[] refValueArray = referenceAtomData.getDataValueArray(refValueIndex).getData();
+		final float[] deltaArray = data.getDataArray(deltaIndex).getData();
+		final float[] valueArray = data.getDataArray(valueIndex).getData();
+		final float[] refValueArray = referenceAtomData.getDataArray(refValueIndex).getData();
 		
 		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
 		final Object mutex = new Object();

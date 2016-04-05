@@ -140,15 +140,15 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 	public ProcessingResult process(final AtomData data) throws Exception {
 		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), averageRadius, true);
 		
-		final int vx = data.getIndexForCustomColumn(toAverageColumn.getVectorComponents()[0]);
-		final int avx = data.getIndexForCustomColumn(averageColumn.getVectorComponents()[0]);
-		final int vy = data.getIndexForCustomColumn(toAverageColumn.getVectorComponents()[1]);
-		final int avy = data.getIndexForCustomColumn(averageColumn.getVectorComponents()[1]);
-		final int vz = data.getIndexForCustomColumn(toAverageColumn.getVectorComponents()[2]);
-		final int avz = data.getIndexForCustomColumn(averageColumn.getVectorComponents()[2]);
-		final int ava = data.getIndexForCustomColumn(averageColumn.getVectorComponents()[3]);
+		final int vx = data.getDataColumnIndex(toAverageColumn.getVectorComponents()[0]);
+		final int avx = data.getDataColumnIndex(averageColumn.getVectorComponents()[0]);
+		final int vy = data.getDataColumnIndex(toAverageColumn.getVectorComponents()[1]);
+		final int avy = data.getDataColumnIndex(averageColumn.getVectorComponents()[1]);
+		final int vz = data.getDataColumnIndex(toAverageColumn.getVectorComponents()[2]);
+		final int avz = data.getDataColumnIndex(averageColumn.getVectorComponents()[2]);
+		final int ava = data.getDataColumnIndex(averageColumn.getVectorComponents()[3]);
 		
-		final int massColumn = data.getIndexForComponent(Component.MASS);
+		final int massColumn = data.getComponentIndex(Component.MASS);
 		final boolean scaleMass = weigthByMass && massColumn != -1;
 		if (weigthByMass && !scaleMass)
 			JLogPanel.getJLogPanel().addWarning("Mass not found",
@@ -303,7 +303,7 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 		
 		JCheckBox considerMassButton = new JCheckBox("Weigth by particle mass", this.weigthByMass);
 		considerMassButton.setToolTipText("Weigth particles by their mass (if possible)");
-		if (data.getIndexForComponent(Component.MASS)==-1) considerMassButton.setEnabled(false);
+		if (data.getComponentIndex(Component.MASS)==-1) considerMassButton.setEnabled(false);
 		
 		smoothingButton.setSelected(useSmoothingKernel);
 		arithmeticButton.setSelected(!useSmoothingKernel);

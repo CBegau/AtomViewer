@@ -147,11 +147,11 @@ public class CfgFileLoader extends MDFileLoader {
 							//Custom columns
 							for (int j = 0; j<dataColumns.length; j++){
 								if (dataColumns[j] != -1)
-									idc.dataValues.get(j).add(Float.parseFloat(parts[dataColumns[j]]));
+									idc.dataArrays.get(j).add(Float.parseFloat(parts[dataColumns[j]]));
 							}
 							
 							if (massColumn != -1){
-								idc.dataValues.get(massColumn).add(currentMass);
+								idc.dataArrays.get(massColumn).add(currentMass);
 							}
 						}
 						
@@ -191,10 +191,10 @@ public class CfgFileLoader extends MDFileLoader {
 						//Custom columns
 						for (int j = 0; j<dataColumns.length; j++){
 							if (dataColumns[j] != -1)
-								idc.dataValues.get(j).add(Float.parseFloat(parts[dataColumns[j]]));
+								idc.dataArrays.get(j).add(Float.parseFloat(parts[dataColumns[j]]));
 						}
 						if (massColumn != -1){
-							idc.dataValues.get(massColumn).add(Float.parseFloat(parts[0]));
+							idc.dataArrays.get(massColumn).add(Float.parseFloat(parts[0]));
 						}
 					}
 					

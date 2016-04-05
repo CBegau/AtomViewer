@@ -131,8 +131,8 @@ public class SpatialAveragingModule extends ClonableProcessingModule implements 
 	public ProcessingResult process(final AtomData data) throws Exception {
 		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), averageRadius, true);
 		
-		final int v = data.getIndexForCustomColumn(toAverageColumn);
-		final int av = data.getIndexForCustomColumn(averageColumn);
+		final int v = data.getDataColumnIndex(toAverageColumn);
+		final int av = data.getDataColumnIndex(averageColumn);
 		
 		ProgressMonitor.getProgressMonitor().start(2*data.getAtoms().size());
 		
@@ -145,16 +145,16 @@ public class SpatialAveragingModule extends ClonableProcessingModule implements 
 		//to the DataColumn
 		final float[] buffer = useSmoothingKernel ? new float[data.getAtoms().size()] : null;
 		
-		final int massColumn = data.getIndexForComponent(Component.MASS);
+		final int massColumn = data.getComponentIndex(Component.MASS);
 		final boolean scaleMass = weigthByMass && massColumn != -1;
 		if (weigthByMass && !scaleMass)
 			JLogPanel.getJLogPanel().addWarning("Mass not found",
 					String.format("Weightened averages for %s selected, but mass column is missing in %s", toAverageColumn.getName(),
 							data.getName()));
 		
-		final float[] massArray = data.getDataValueArray(massColumn).getData();
-		final float[] dataArray = data.getDataValueArray(v).getData();
-		final float[] avArray = data.getDataValueArray(av).getData();
+		final float[] massArray = data.getDataArray(massColumn).getData();
+		final float[] dataArray = data.getDataArray(v).getData();
+		final float[] avArray = data.getDataArray(av).getData();
 		
 		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
 		for (int i=0; i<ThreadPool.availProcessors(); i++){
@@ -278,7 +278,7 @@ public class SpatialAveragingModule extends ClonableProcessingModule implements 
 		
 		JCheckBox considerMassButton = new JCheckBox("Weigth by particle mass", this.weigthByMass);
 		considerMassButton.setToolTipText("Weigth particles by their mass (if possible)");
-		if (data.getIndexForComponent(Component.MASS)==-1) considerMassButton.setEnabled(false);
+		if (data.getComponentIndex(Component.MASS)==-1) considerMassButton.setEnabled(false);
 		
 		String smoothingTooltip = "Computes a weightend average over neighbors based on distance and density<br>"
 				+ "This implementation is using the cubic spline M4 kernel<br>";

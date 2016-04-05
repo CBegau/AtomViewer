@@ -151,9 +151,9 @@ public class ArrowRenderer {
 			return;
 		}
 		
-		float[] xArray = ord.getData().getDataValueArray(xIndex).getData();
-		float[] yArray = ord.getData().getDataValueArray(yIndex).getData();
-		float[] zArray = ord.getData().getDataValueArray(zIndex).getData();
+		float[] xArray = ord.getData().getDataArray(xIndex).getData();
+		float[] yArray = ord.getData().getDataArray(yIndex).getData();
+		float[] zArray = ord.getData().getDataArray(zIndex).getData();
 		
 		gl.glDisable(GL.GL_BLEND);
 		
@@ -229,9 +229,9 @@ public class ArrowRenderer {
 		
 		ord.sortCells(viewer.getModelViewMatrix());
 
-		float[] xArray = ord.getData().getDataValueArray(xIndex).getData();
-		float[] yArray = ord.getData().getDataValueArray(yIndex).getData();
-		float[] zArray = ord.getData().getDataValueArray(zIndex).getData();
+		float[] xArray = ord.getData().getDataArray(xIndex).getData();
+		float[] yArray = ord.getData().getDataArray(yIndex).getData();
+		float[] zArray = ord.getData().getDataArray(zIndex).getData();
 		
 		for (int j=0; j<ord.getRenderableCells().size(); j++){
 			ObjectRenderData<Atom>.Cell c = ord.getRenderableCells().get(j);

@@ -81,7 +81,7 @@ public class CoordinationNumberModule extends ClonableProcessingModule {
 	public ProcessingResult process(final AtomData data) throws Exception {
 		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
 		
-		final int v = data.getIndexForCustomColumn(coordNumColumn);
+		final int v = data.getDataColumnIndex(coordNumColumn);
 		
 		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), radius, true);
 		nnb.addAll(data.getAtoms());

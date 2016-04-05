@@ -253,7 +253,7 @@ public class FeC_virtStructure extends FeCStructure {
 					particles.add(new Placeholder(a, index++));
 					
 					for (int j=0; j<particleData.size(); j++)
-						particleData.get(j).add(atomData.getDataValueArray(j).get(i));
+						particleData.get(j).add(atomData.getDataArray(j).get(i));
 				}
 			}
 			particleDataColumns.addAll(atomData.getDataColumnInfos());

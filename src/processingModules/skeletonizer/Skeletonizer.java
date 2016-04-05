@@ -656,7 +656,7 @@ public class Skeletonizer extends DataContainer {
 			}
 			
 			//Identify if individual particle radii are given
-			final int radiusColumn = data.getIndexForComponent(DataColumnInfo.Component.PARTICLE_RADIUS);
+			final int radiusColumn = data.getComponentIndex(DataColumnInfo.Component.PARTICLE_RADIUS);
 			
 			for (int i=0; i<this.getDislocations().size(); i++) {
 				Dislocation dis = this.getDislocations().get(i);

@@ -89,7 +89,7 @@ public final class Atom extends Vec3 implements Pickable {
 	@Deprecated
 	public void setData(float value, int index){
 		assert(atomData != null) : "Atom is not yet assigned to an instance of AtomData";
-		atomData.getDataValueArray(index).setQuick(ID, value);
+		atomData.getDataArray(index).setQuick(ID, value);
 	};
 	
 	/**
@@ -104,7 +104,7 @@ public final class Atom extends Vec3 implements Pickable {
 	@Deprecated
 	public float getData(int index){
 		assert(atomData != null) : "Atom is not yet assigned to an instance of AtomData";
-		return atomData.getDataValueArray(index).getQuick(ID);
+		return atomData.getDataArray(index).getQuick(ID);
 	}
 	
 	/**
@@ -116,7 +116,7 @@ public final class Atom extends Vec3 implements Pickable {
 	 * {@link model.Configuration#getSizeDataColumns()} 
 	 */
 	public void setData(float value, int index, AtomData data){
-		data.getDataValueArray(index).setQuick(ID, value);
+		data.getDataArray(index).setQuick(ID, value);
 	};
 	
 	/**
@@ -129,7 +129,7 @@ public final class Atom extends Vec3 implements Pickable {
 	 * @return the value of data at the given index
 	 */
 	public float getData(int index, AtomData data){
-		return data.getDataValueArray(index).getQuick(ID);
+		return data.getDataArray(index).getQuick(ID);
 	}
 	
 	/**
@@ -244,13 +244,13 @@ public final class Atom extends Vec3 implements Pickable {
 		
 		for (DataColumnInfo c : dci){
 			if (!c.isVectorComponent()){
-				int index1 = data.getIndexForCustomColumn(c);
+				int index1 = data.getDataColumnIndex(c);
 				keys.add(c.getName()); values.add(CommonUtils.outputDecimalFormatter.format(getData(index1))+c.getUnit());
 			} else if (c.isFirstVectorComponent()){
 				keys.add(c.getVectorName()+(!c.getUnit().isEmpty()?"("+c.getUnit()+")":""));
-				int index1 = data.getIndexForCustomColumn(c.getVectorComponents()[0]);
-				int index2 = data.getIndexForCustomColumn(c.getVectorComponents()[1]);
-				int index3 = data.getIndexForCustomColumn(c.getVectorComponents()[2]);
+				int index1 = data.getDataColumnIndex(c.getVectorComponents()[0]);
+				int index2 = data.getDataColumnIndex(c.getVectorComponents()[1]);
+				int index3 = data.getDataColumnIndex(c.getVectorComponents()[2]);
 				Vec3 vec = new Vec3(getData(index1), getData(index2), getData(index3));
 				values.add(vec.toString());
 				keys.add("Magnitude of "+c.getVectorName()+(!c.getUnit().isEmpty()?"("+c.getUnit()+")":""));

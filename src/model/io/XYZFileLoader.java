@@ -135,7 +135,7 @@ public class XYZFileLoader extends MDFileLoader {
 						//Custom columns
 						for (int j = 0; j<dataColumns.length; j++){
 							if (dataColumns[j] != -1)
-								idc.dataValues.get(j).add(Float.parseFloat(parts[dataColumns[j]]));
+								idc.dataArrays.get(j).add(Float.parseFloat(parts[dataColumns[j]]));
 						}
 					}
 				}

@@ -884,7 +884,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			colFunc.update();
 			
 			//Identify if individual particle radii are given
-			final int radiusColumn = atomData.getIndexForComponent(DataColumnInfo.Component.PARTICLE_RADIUS);
+			final int radiusColumn = atomData.getComponentIndex(DataColumnInfo.Component.PARTICLE_RADIUS);
 					
 			Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
 			for (int i=0; i<ThreadPool.availProcessors(); i++){
@@ -965,9 +965,9 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			
 			//Draw the spheres using the pre-computed render cells
 			if (atomRenderType == AtomRenderType.VECTOR_DATA){
-				int v1 = atomData.getIndexForCustomColumn(dataInfo.getVectorComponents()[0]);
-				int v2 = atomData.getIndexForCustomColumn(dataInfo.getVectorComponents()[1]);
-				int v3 = atomData.getIndexForCustomColumn(dataInfo.getVectorComponents()[2]);
+				int v1 = atomData.getDataColumnIndex(dataInfo.getVectorComponents()[0]);
+				int v2 = atomData.getDataColumnIndex(dataInfo.getVectorComponents()[1]);
+				int v3 = atomData.getDataColumnIndex(dataInfo.getVectorComponents()[2]);
 				arrowRenderer.drawVectors(gl, renderData, picking, v1, v2, v3, 
 						RenderingConfiguration.getVectorDataScaling(),
 						RenderingConfiguration.getVectorDataThickness(), 
@@ -2159,11 +2159,11 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			if (dataInfo == null) return;
 			
 			if (isVector){
-				selected = atomData.getIndexForCustomColumn(dataInfo.getVectorComponents()[3]);
+				selected = atomData.getDataColumnIndex(dataInfo.getVectorComponents()[3]);
 				min = dataInfo.getVectorComponents()[3].getLowerLimit();
 				max = dataInfo.getVectorComponents()[3].getUpperLimit();
 			} else { 
-				selected = atomData.getIndexForCustomColumn(dataInfo);
+				selected = atomData.getDataColumnIndex(dataInfo);
 				min = dataInfo.getLowerLimit();
 				max = dataInfo.getUpperLimit();
 			}

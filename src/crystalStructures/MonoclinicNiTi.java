@@ -130,7 +130,7 @@ public final class MonoclinicNiTi extends B2NiTi implements ProcessingModule{
 				data.getBox(), this.getNearestNeighborSearchRadius());
 		
 		final float[][] rot = data.getCrystalRotation().getDefaultRotationMatrix();
-		final int martColumn = data.getIndexForCustomColumn(variantColumn);
+		final int martColumn = data.getDataColumnIndex(variantColumn);
 		
 		for (Atom a : data.getAtoms()){
 			if (a.getElement() % 2 == 1) nnb.add(a);

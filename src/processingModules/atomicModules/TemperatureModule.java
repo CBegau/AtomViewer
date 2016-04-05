@@ -133,15 +133,15 @@ public class TemperatureModule extends ClonableProcessingModule{
 				v_z = i;
 		}
 		
-		int temperatureIndex = data.getIndexForCustomColumn(temperatureColumn);
+		int temperatureIndex = data.getDataColumnIndex(temperatureColumn);
 		if (m == -1  || temperatureIndex == -1 || v_x == -1 || v_y == -1 || v_z == -1)
 			throw new RuntimeException("Could not find all all input data");
 		
-		final float[] massArray = data.getDataValueArray(m).getData();
-		final float[] vxArray = data.getDataValueArray(v_x).getData();
-		final float[] vyArray = data.getDataValueArray(v_y).getData();
-		final float[] vzArray = data.getDataValueArray(v_z).getData();
-		final float[] temperatureArray = data.getDataValueArray(temperatureIndex).getData();
+		final float[] massArray = data.getDataArray(m).getData();
+		final float[] vxArray = data.getDataArray(v_x).getData();
+		final float[] vyArray = data.getDataArray(v_y).getData();
+		final float[] vzArray = data.getDataArray(v_z).getData();
+		final float[] temperatureArray = data.getDataArray(temperatureIndex).getData();
 		
 		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
 		

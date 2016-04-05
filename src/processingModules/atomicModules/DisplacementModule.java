@@ -148,10 +148,10 @@ public class DisplacementModule extends ClonableProcessingModule {
 			throw new RuntimeException(errorMessage);
 		}
 		
-		final float[] xArray = data.getDataValueArray(data.getIndexForCustomColumn(cci[0])).getData();
-		final float[] yArray = data.getDataValueArray(data.getIndexForCustomColumn(cci[1])).getData();
-		final float[] zArray = data.getDataValueArray(data.getIndexForCustomColumn(cci[2])).getData();
-		final float[] nArray = data.getDataValueArray(data.getIndexForCustomColumn(cci[3])).getData();
+		final float[] xArray = data.getDataArray(data.getDataColumnIndex(cci[0])).getData();
+		final float[] yArray = data.getDataArray(data.getDataColumnIndex(cci[1])).getData();
+		final float[] zArray = data.getDataArray(data.getDataColumnIndex(cci[2])).getData();
+		final float[] nArray = data.getDataArray(data.getDataColumnIndex(cci[3])).getData();
 		
 		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
 		

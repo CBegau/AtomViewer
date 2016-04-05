@@ -97,7 +97,7 @@ public class CommonNeighborsAnalysisModule extends ClonableProcessingModule {
 				new Pattern(6, 6, 3)	
 		};
 		
-		final float[] cnaArray = data.getDataValueArray(data.getIndexForCustomColumn(cnaColumn)).getData();
+		final float[] cnaArray = data.getDataArray(data.getDataColumnIndex(cnaColumn)).getData();
 		
 		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), cutoff, true);
 		nnb.addAll(data.getAtoms());

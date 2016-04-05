@@ -97,19 +97,19 @@ public class ParticleDensityModule extends ClonableProcessingModule {
 		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
 		final float sphereVolume = radius*radius*radius*((float)Math.PI)*(4f/3f);
 		
-		final int v = data.getIndexForCustomColumn(densityColumn);
+		final int v = data.getDataColumnIndex(densityColumn);
 		
 		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), radius, true);
 		nnb.addAll(data.getAtoms());
 		
-		final int massColumn = data.getIndexForComponent(Component.MASS);
+		final int massColumn = data.getComponentIndex(Component.MASS);
 		final boolean scaleMass = weigthByMass && massColumn != -1;
 		if (weigthByMass && !scaleMass)
 			JLogPanel.getJLogPanel().addWarning("Mass not found",
 					String.format("Weightened particle density selected, but mass column is missing in %s", data.getName()));
 		
-		final float[] massArray = data.getDataValueArray(massColumn).getData();
-		final float[] densityArray = data.getDataValueArray(v).getData();
+		final float[] massArray = data.getDataArray(massColumn).getData();
+		final float[] densityArray = data.getDataArray(v).getData();
 		
 		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
 		for (int i=0; i<ThreadPool.availProcessors(); i++){
@@ -182,7 +182,7 @@ public class ParticleDensityModule extends ClonableProcessingModule {
 		final JCheckBox considerMassButton = new JCheckBox("Compute mass density", weigthByMass);
 		considerMassButton.setToolTipText("Weigth particles by their mass, thus computes the local mass density, "
 				+ "instead of particle density (if possible)");
-		if (data.getIndexForComponent(Component.MASS)==-1) considerMassButton.setEnabled(false);
+		if (data.getComponentIndex(Component.MASS)==-1) considerMassButton.setEnabled(false);
 		
 		String wrappedToolTip = CommonUtils.getWordWrappedString("Computed average is the weightend average of all particles based on their distance d "
 				+ "<br> (2-d)³-4(1-d)³ for d&lt;1/2r <br> (2-d)³ for 1/2r&lt;d&lt;r", smoothingButton);

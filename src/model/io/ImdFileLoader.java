@@ -388,7 +388,7 @@ public class ImdFileLoader extends MDFileLoader{
 					
 					//Custom columns
 					for (int i = 0; i<header.dataColumns.length; i++)
-						idc.dataValues.get(i).add(dataColumnValues[i]);
+						idc.dataArrays.get(i).add(dataColumnValues[i]);
 				}
 				
 				if (gzipped && filesize <= dis.getBytesRead()){
@@ -470,7 +470,7 @@ public class ImdFileLoader extends MDFileLoader{
 				//Custom columns
 				for (int i = 0; i<header.dataColumns.length; i++){
 					if (header.dataColumns[i]!=-1)
-						idc.dataValues.get(i).add(Float.parseFloat(parts[header.dataColumns[i]])); 
+						idc.dataArrays.get(i).add(Float.parseFloat(parts[header.dataColumns[i]])); 
 				}
 				
 				if (header.readRBV){

@@ -98,19 +98,19 @@ public class ImdFileWriter extends MDFileWriter {
 		int vxColumn = -1, vyColumn = -1, vzColumn = -1;
 		for (int i=0; i<toExportColumns.length; i++){
 			if (toExportColumns[i].getComponent() == Component.MASS)
-				massColumn = data.getIndexForCustomColumn(toExportColumns[i]);
+				massColumn = data.getDataColumnIndex(toExportColumns[i]);
 			if (toExportColumns[i].getComponent() == Component.VELOCITY_X)
-				vxColumn = data.getIndexForCustomColumn(toExportColumns[i]);
+				vxColumn = data.getDataColumnIndex(toExportColumns[i]);
 			if (toExportColumns[i].getComponent() == Component.VELOCITY_Y)
-				vyColumn = data.getIndexForCustomColumn(toExportColumns[i]);
+				vyColumn = data.getDataColumnIndex(toExportColumns[i]);
 			if (toExportColumns[i].getComponent() == Component.VELOCITY_Z)
-				vzColumn = data.getIndexForCustomColumn(toExportColumns[i]);
+				vzColumn = data.getDataColumnIndex(toExportColumns[i]);
 		}
 		
 		//Tag which data need not to be exported in the end of each line
 		int[] mapData = new int[toExportColumns.length];
 		for (int i=0; i<mapData.length;i++){
-			mapData[i] = data.getIndexForCustomColumn(toExportColumns[i]);
+			mapData[i] = data.getDataColumnIndex(toExportColumns[i]);
 		}
 		
 		boolean hasMass = massColumn!=-1;

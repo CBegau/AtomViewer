@@ -58,7 +58,7 @@ public class LatticeRotationModule extends ClonableProcessingModule {
 	
 	@Override
 	public ProcessingResult process(final AtomData data) throws Exception {
-		final int latticeRotationColumn = data.getIndexForCustomColumn(cci[0]);
+		final int latticeRotationColumn = data.getDataColumnIndex(cci[0]);
 		
 //		final double PHI_MAX = Math.cos(30*Math.PI/180.);
 		

@@ -146,10 +146,10 @@ public class SlipVectorModule extends ClonableProcessingModule{
 			throw new RuntimeException(
 					String.format("Cannot compute slip vectors: IDs of atoms in %s are non-unique.", data.getName()));
 		
-		final float[] sx = data.getDataValueArray(data.getIndexForCustomColumn(cci[0])).getData();
-		final float[] sy = data.getDataValueArray(data.getIndexForCustomColumn(cci[1])).getData();
-		final float[] sz = data.getDataValueArray(data.getIndexForCustomColumn(cci[2])).getData();
-		final float[] sa = data.getDataValueArray(data.getIndexForCustomColumn(cci[3])).getData();
+		final float[] sx = data.getDataArray(data.getDataColumnIndex(cci[0])).getData();
+		final float[] sy = data.getDataArray(data.getDataColumnIndex(cci[1])).getData();
+		final float[] sz = data.getDataArray(data.getDataColumnIndex(cci[2])).getData();
+		final float[] sa = data.getDataArray(data.getDataColumnIndex(cci[3])).getData();
 		
 		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
 		

@@ -213,29 +213,29 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 			throw new RuntimeException(errorMessage);
 		}
 		
-		final int xIndex = data.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[0]);
-		final int yIndex = data.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[1]);
-		final int zIndex = data.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[2]);
-		final float[] xArray = data.getDataValueArray(xIndex).getData();
-		final float[] yArray = data.getDataValueArray(yIndex).getData();
-		final float[] zArray = data.getDataValueArray(zIndex).getData();
+		final int xIndex = data.getDataColumnIndex(toDeltaColumn.getVectorComponents()[0]);
+		final int yIndex = data.getDataColumnIndex(toDeltaColumn.getVectorComponents()[1]);
+		final int zIndex = data.getDataColumnIndex(toDeltaColumn.getVectorComponents()[2]);
+		final float[] xArray = data.getDataArray(xIndex).getData();
+		final float[] yArray = data.getDataArray(yIndex).getData();
+		final float[] zArray = data.getDataArray(zIndex).getData();
 		
-		final int xRefIndex = referenceAtomData.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[0]);
-		final int yRefIndex = referenceAtomData.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[1]);
-		final int zRefIndex = referenceAtomData.getIndexForCustomColumn(toDeltaColumn.getVectorComponents()[2]);
-		final float[] xRefArray = data.getDataValueArray(xRefIndex).getData();
-		final float[] yRefArray = data.getDataValueArray(yRefIndex).getData();
-		final float[] zRefArray = data.getDataValueArray(zRefIndex).getData();
+		final int xRefIndex = referenceAtomData.getDataColumnIndex(toDeltaColumn.getVectorComponents()[0]);
+		final int yRefIndex = referenceAtomData.getDataColumnIndex(toDeltaColumn.getVectorComponents()[1]);
+		final int zRefIndex = referenceAtomData.getDataColumnIndex(toDeltaColumn.getVectorComponents()[2]);
+		final float[] xRefArray = data.getDataArray(xRefIndex).getData();
+		final float[] yRefArray = data.getDataArray(yRefIndex).getData();
+		final float[] zRefArray = data.getDataArray(zRefIndex).getData();
 		
 		DataColumnInfo d = existingDeltaColumns.get(toDeltaColumn);
-		final int deltaXIndex = data.getIndexForCustomColumn(d.getVectorComponents()[0]);
-		final int deltaYIndex = data.getIndexForCustomColumn(d.getVectorComponents()[1]);
-		final int deltaZIndex = data.getIndexForCustomColumn(d.getVectorComponents()[2]);
-		final int deltaNIndex = data.getIndexForCustomColumn(d.getVectorComponents()[3]);
-		final float[] deltaXArray = data.getDataValueArray(deltaXIndex).getData();
-		final float[] deltaYArray = data.getDataValueArray(deltaYIndex).getData();
-		final float[] deltaZArray = data.getDataValueArray(deltaZIndex).getData();
-		final float[] deltaNArray = data.getDataValueArray(deltaNIndex).getData();
+		final int deltaXIndex = data.getDataColumnIndex(d.getVectorComponents()[0]);
+		final int deltaYIndex = data.getDataColumnIndex(d.getVectorComponents()[1]);
+		final int deltaZIndex = data.getDataColumnIndex(d.getVectorComponents()[2]);
+		final int deltaNIndex = data.getDataColumnIndex(d.getVectorComponents()[3]);
+		final float[] deltaXArray = data.getDataArray(deltaXIndex).getData();
+		final float[] deltaYArray = data.getDataArray(deltaYIndex).getData();
+		final float[] deltaZArray = data.getDataArray(deltaZIndex).getData();
+		final float[] deltaNArray = data.getDataArray(deltaNIndex).getData();
 		
 		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
 		

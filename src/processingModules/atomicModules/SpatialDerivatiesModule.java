@@ -128,18 +128,18 @@ public class SpatialDerivatiesModule extends ClonableProcessingModule implements
 	public ProcessingResult process(final AtomData data) throws Exception {
 		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
 		
-		final int v = data.getIndexForCustomColumn(toDeriveColumn);
+		final int v = data.getDataColumnIndex(toDeriveColumn);
 		
-		final int gx = data.getIndexForCustomColumn(gradientColumn.getVectorComponents()[0]);
-		final int gy = data.getIndexForCustomColumn(gradientColumn.getVectorComponents()[1]);
-		final int gz = data.getIndexForCustomColumn(gradientColumn.getVectorComponents()[2]);
-		final int ga = data.getIndexForCustomColumn(gradientColumn.getVectorComponents()[3]);
+		final int gx = data.getDataColumnIndex(gradientColumn.getVectorComponents()[0]);
+		final int gy = data.getDataColumnIndex(gradientColumn.getVectorComponents()[1]);
+		final int gz = data.getDataColumnIndex(gradientColumn.getVectorComponents()[2]);
+		final int ga = data.getDataColumnIndex(gradientColumn.getVectorComponents()[3]);
 		
 		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), radius, true);
 		nnb.addAll(data.getAtoms());
 		
 		final float halfR = radius*0.5f;
-		final int massColumn = data.getIndexForComponent(Component.MASS);
+		final int massColumn = data.getComponentIndex(Component.MASS);
 		final boolean scaleMass = weigthByMass && massColumn != -1;
 		if (weigthByMass && !scaleMass)
 			JLogPanel.getJLogPanel().addWarning("Mass not found",
@@ -222,7 +222,7 @@ public class SpatialDerivatiesModule extends ClonableProcessingModule implements
 		
 		JCheckBox considerMassButton = new JCheckBox("Weigth by particle mass", this.weigthByMass);
 		considerMassButton.setToolTipText("Weigth particles by their mass (if possible)");
-		if (data.getIndexForComponent(Component.MASS)==-1) considerMassButton.setEnabled(false);
+		if (data.getComponentIndex(Component.MASS)==-1) considerMassButton.setEnabled(false);
 		dialog.addComponent(considerMassButton);
 		
 		boolean ok = dialog.showDialog();

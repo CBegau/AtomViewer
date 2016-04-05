@@ -139,7 +139,7 @@ public abstract class MDFileLoader{
 		 */
 		public FastDeletableArrayList<Atom> atoms = new FastDeletableArrayList<Atom>();
 		
-		public List<FastTFloatArrayList> dataValues = new ArrayList<FastTFloatArrayList>();
+		public List<FastTFloatArrayList> dataArrays = new ArrayList<FastTFloatArrayList>();
 		
 		/**
 		 * The largest (virtual) elements number found in all imported files
@@ -175,7 +175,7 @@ public abstract class MDFileLoader{
 		
 		public ImportDataContainer() {
 			for (int i=0; i<ImportConfiguration.getInstance().getDataColumns().size(); i++)
-				dataValues.add(new FastTFloatArrayList());
+				dataArrays.add(new FastTFloatArrayList());
 		}
 		
 		public void makeBox(){
