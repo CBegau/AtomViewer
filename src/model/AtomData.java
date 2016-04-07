@@ -44,34 +44,24 @@ public class AtomData {
 	private BoxParameter box;
 	
 	/**
-	 * All atoms are stored in this list 
+	 * All information on the level of individual atoms (position/velocities...)
+	 * is stored in this container class
 	 */
-	private final FastDeletableArrayList<Atom> atoms;
+	private final AtomicData atomicData;
 	
 	/**
 	 * Only used in polycrystalline / polyphase material:
 	 * Each subgrain is assigned a number, each atom is assigned a number of the grain its belongs to
 	 */
 	private HashMap<Integer, Grain> grains = new HashMap<Integer, Grain>();
+	private boolean grainsImported = false;
+	
 	/**
 	 * The largest (virtual) elements number
 	 */
 	private int maxNumElements = 1;
 	
 	private String[] elementNames;
-	
-	/**
-	 * Storage for atomic data
-	 */
-	private List<FastTFloatArrayList> dataArrays;
-	/**
-	 * Metadata for the atomic data
-	 */
-	private List<DataColumnInfo> dataColumns = new ArrayList<DataColumnInfo>();
-	
-	//Some flags for imported or calculated values
-	private RBVStorage rbvStorage = new RBVStorage();
-	private boolean grainsImported = false;
 	
 	/**
 	 * Meta data found in the file header
@@ -92,7 +82,13 @@ public class AtomData {
 	 * control panels are stored in this list.
 	 */
 	private ArrayList<DataContainer> additionalData = new ArrayList<DataContainer>();
-
+	
+	/**
+	 * Container storing resultant Burgers vectors
+	 * TODO: This should be replaced using by a derived class of the generic DataContainer
+	 * For historic reasons, this module is still somewhat privileged
+	 */
+	private RBVStorage rbvStorage = new RBVStorage();
 	
 	private int[] atomsPerElement = new int[0];
 	private int[] atomsPerType;
@@ -107,32 +103,23 @@ public class AtomData {
 	//There is always only maximum one reference 
 	private boolean isReferenceForProcessingModule = false;
 	
-	public AtomData(AtomData previous, MDFileLoader.ImportDataContainer idc){
-		this.defaultCrystalStructure = ImportConfiguration.getInstance().getCrystalStructure();
+	public AtomData(AtomData previous, MDFileLoader.ImportDataContainer idc) throws Exception{
+		this.atomicData = new AtomicData(idc.atoms, idc.dataArrays, ImportConfiguration.getInstance().getDataColumns());
 		
+		this.box = idc.box;
+		this.maxNumElements = idc.maxElementNumber;
+		this.rbvStorage = idc.rbvStorage;
+		this.grainsImported = idc.grainsImported;
+		this.fileMetaData = idc.fileMetaData;
+		this.name = idc.name;
+		this.fullPathAndFilename = idc.fullPathAndFilename;
+		
+		this.defaultCrystalStructure = ImportConfiguration.getInstance().getCrystalStructure();
 		this.crystalRotation = new CrystalRotationTools(defaultCrystalStructure, 
 				ImportConfiguration.getInstance().getCrystalOrientation());
 		
-		this.atomsPerType = new int[defaultCrystalStructure.getNumberOfTypes()];
-		this.box = idc.box;
-		this.atoms = idc.atoms;
-		this.dataArrays = idc.dataArrays;
-		
-		for (int i=0; i<this.atoms.size(); i++){
-			this.atoms.get(i).setID(i);
-		}		
-		
-		//Create nulled arrays if values could not be imported from file
-		for (int i=0; i<this.dataArrays.size(); i++){
-			if (this.dataArrays.get(i).isEmpty())
-				this.dataArrays.set(i, new FastTFloatArrayList(atoms.size(), true));
-		} 
-		
-		this.maxNumElements = idc.maxElementNumber;
-		
 		//Assign the names of elements if provided in the input file
 		this.elementNames = new String[maxNumElements];
-		this.atomsPerElement = new int[maxNumElements];
 		for (int i=0; i<maxNumElements;i++){
 			if (idc.elementNames.containsKey(i))
 				this.elementNames[i] = idc.elementNames.get(i);
@@ -146,120 +133,28 @@ public class AtomData {
 			}
 		}
 		
-		this.rbvStorage = idc.rbvStorage;
-		this.grainsImported = idc.grainsImported;
-		this.fileMetaData = idc.fileMetaData;
-		this.name = idc.name;
-		this.fullPathAndFilename = idc.fullPathAndFilename;
-		
-		this.dataColumns.addAll(ImportConfiguration.getInstance().getDataColumns());
-		
-		if (previous!=null){
-			previous.next = this;
-			this.previous = previous;
-		}
-		
-		try {
-			processInputData(idc);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-	}
-
-	public ArrayList<DataContainer> getAdditionalData() {
-		return additionalData;
+		this.setPrevious(previous);
+		this.processInputData(idc);
 	}
 	
 	/**
-	 * Adds a set of DataColumnInfos to the data. Adds only non-existing columns.
-	 * @param dci
-	 */
-	private void addDataColumnInfo(DataColumnInfo ... dci){
-		if (dci == null) return;
-		for (DataColumnInfo d : dci)
-			if (!dataColumns.contains(d)) {
-				dataColumns.add(d);
-				dataArrays.add(new FastTFloatArrayList(this.atoms.size(),true));
-			}
-	}
-	
-	/**
-	 * Removes a DataColumnInfo
-	 * This method should only be called internally
-	 * For public access an instance of {@link DeleteColumnModule} should be created
-	 * and passed to {@link #applyProcessingModule(ProcessingModule) applyProcessingModule} method.
-	 * This way it will be correctly recorded in a toolchain is needed 
-	 * @param dci
-	 */
-	public void removeDataColumnInfo(DataColumnInfo dci){
-		if (dci.isVectorComponent()){
-			//Delete a complete vector component
-			for (DataColumnInfo d : dci.getVectorComponents()){
-				int index = dataColumns.indexOf(d);
-				dataColumns.remove(index);
-				dataArrays.remove(index);
-			}
-		} else { 
-			//Delete a scalar value
-			if (dataColumns.contains(dci)){
-				int index = dataColumns.indexOf(dci);
-				dataColumns.remove(index);
-				dataArrays.remove(index);
-			}
-		}
-	}
-	
-	public FastTFloatArrayList getDataArray(int index){
-		assert(index<dataArrays.size());
-		return dataArrays.get(index);
-	}
-	
-	/**
-	 * Apply a processing module
-	 * If a toolchain is currently recording, this step will automatically being added
-	 * @param pm
+	 * After the raw data is read from a file and copied into this instance of AtomData
+	 * additional processing steps are executed in this  
+	 * @param idc
 	 * @throws Exception
 	 */
-	public void applyProcessingModule(ProcessingModule pm) throws Exception{
-		if (pm.isApplicable(this)){
-			ProgressMonitor.getProgressMonitor().setCurrentFilename(this.getName());
-			ProgressMonitor.getProgressMonitor().setActivityName(pm.getShortName());
-			
-			this.addDataColumnInfo(pm.getDataColumnsInfo());
-			
-			ProcessingResult pr = pm.process(this);
-			
-			if (pr != null){
-				if (pr.getDataContainer() != null)
-					this.addAdditionalData(pr.getDataContainer());
-				
-				if (pr.getResultInfoString()!=null && !pr.getResultInfoString().isEmpty())
-					JLogPanel.getJLogPanel().addInfo(String.format("Results: %s", pm.getShortName()), 
-							pr.getResultInfoString());
-			}
-			if (pm.getDataColumnsInfo() != null){
-				for (DataColumnInfo dci : pm.getDataColumnsInfo())
-					if (!dci.isInitialized())
-						dci.findRange(this, false);
-			}
-			//Store sucessful step in Toolchain
-			this.toolchain.addModule(pm);
-		}
-	}
-	
 	private void processInputData(MDFileLoader.ImportDataContainer idc) throws Exception{
 		//Scale the data columns values of the remaining atoms
-		for (int i=0; i < dataColumns.size(); i++){
-			float scale = dataColumns.get(i).getScalingFactor();
+		for (int i=0; i < atomicData.dataColumns.size(); i++){
+			float scale = atomicData.dataColumns.get(i).getScalingFactor();
 			if (scale != 1f){
-				TFloatArrayList values = this.dataArrays.get(i);
+				TFloatArrayList values = atomicData.dataArrays.get(i);
 				for (int j=0; j<values.size(); j++)
 					values.setQuick(j, values.getQuick(j)*scale);
 			}
 		}
 		
-		for (DataColumnInfo dci : dataColumns){
+		for (DataColumnInfo dci : atomicData.dataColumns){
 			if (dci.isFirstVectorComponent()){
 				ProgressMonitor.getProgressMonitor().setActivityName("Compute norm of imported vectors");
 				new VectorNormModule(dci).process(this);
@@ -300,36 +195,90 @@ public class AtomData {
 			});
 			countAtomTypes();
 		}
-		
-		this.atoms.trimToSize();
 	}
 
+	public ArrayList<DataContainer> getAdditionalData() {
+		return additionalData;
+	}
+	
+	/**
+	 * Adds a set of DataColumnInfos to the data. Adds only non-existing columns.
+	 * @param dci
+	 */
+	private void addDataColumnInfo(DataColumnInfo ... dci){
+		atomicData.addDataColumnInfo(dci);
+	}
+	
+	/**
+	 * Removes a DataColumnInfo
+	 * This method should only be called internally
+	 * For public access an instance of {@link DeleteColumnModule} should be created
+	 * and passed to {@link #applyProcessingModule(ProcessingModule) applyProcessingModule} method.
+	 * This way it will be correctly recorded in a toolchain is needed 
+	 * @param dci
+	 */
+	public void removeDataColumnInfo(DataColumnInfo dci){
+		atomicData.removeDataColumnInfo(dci);
+	}
+	
+	public FastTFloatArrayList getDataArray(int index){
+		assert(index < atomicData.dataArrays.size());
+		return atomicData.dataArrays.get(index);
+	}
+	
+	/**
+	 * Apply a processing module
+	 * If a toolchain is currently recording, this step will automatically being added
+	 * @param pm
+	 * @throws Exception
+	 */
+	public void applyProcessingModule(ProcessingModule pm) throws Exception{
+		if (pm.isApplicable(this)){
+			ProgressMonitor.getProgressMonitor().setCurrentFilename(this.getName());
+			ProgressMonitor.getProgressMonitor().setActivityName(pm.getShortName());
+			
+			this.addDataColumnInfo(pm.getDataColumnsInfo());
+			
+			ProcessingResult pr = pm.process(this);
+			
+			if (pr != null){
+				if (pr.getDataContainer() != null)
+					this.addAdditionalData(pr.getDataContainer());
+				
+				if (pr.getResultInfoString()!=null && !pr.getResultInfoString().isEmpty())
+					JLogPanel.getJLogPanel().addInfo(String.format("Results: %s", pm.getShortName()), 
+							pr.getResultInfoString());
+			}
+			if (pm.getDataColumnsInfo() != null){
+				for (DataColumnInfo dci : pm.getDataColumnsInfo())
+					if (!dci.isInitialized())
+						dci.findRange(this, false);
+			}
+			//Store sucessful step in Toolchain
+			this.toolchain.addModule(pm);
+		}
+	}
+	
+	
+
 	public void countAtomTypes() {
-		int maxType = defaultCrystalStructure.getNumberOfTypes();
+		this.atomsPerType = new int[defaultCrystalStructure.getNumberOfTypes()];
+		this.atomsPerElement = new int[maxNumElements];
 		int warnings = 0;
 		
-		for (int i=0; i<atomsPerType.length;i++)
-			atomsPerType[i] = 0; 
-		
-		for (int i=0; i<atomsPerElement.length;i++)
-			atomsPerElement[i] = 0; 
-		
-		for (int i=0; i<atoms.size();i++){
-			if (atoms.get(i).getType()>=maxType || atoms.get(i).getType()<0){
-				atoms.get(i).setType(0);
+		for (Atom a : atomicData.atoms){
+			if (a.getType() >= atomsPerType.length || a.getType()<0){
+				a.setType(0);
 				warnings++;
 			}
+			atomsPerType[a.getType()]++;		
+			atomsPerElement[a.getElement()]++;
 		}
+		
 		if (warnings > 0){
 			JLogPanel.getJLogPanel().addWarning("Type ID exceeds number of defined types.", 
 					String.format("%d atoms had a type ID that was larger than the number of types defined for the structure. "
 							+ "These atoms were reassigned to type 0.", warnings));
-		}
-		
-		for (int i=0; i<atoms.size();i++){
-			if (atoms.get(i).getType() >= 0 && atoms.get(i).getType() < atomsPerType.length)
-				atomsPerType[atoms.get(i).getType()]++;		
-			atomsPerElement[atoms.get(i).getElement()]++;
 		}
 	}
 	
@@ -352,7 +301,7 @@ public class AtomData {
 				return false;
 			}
 		};
-		nnb.addAll(atoms, filter);
+		nnb.addAll(atomicData.atoms, filter);
 		
 		sb.append("<html><body>");
 		for (Atom a : atomsToPlot){
@@ -420,7 +369,7 @@ public class AtomData {
 	}
 	
 	public List<Atom> getAtoms(){
-		return atoms;
+		return atomicData.atoms;
 	}
 	
 	public String getName() {
@@ -435,16 +384,19 @@ public class AtomData {
 		return next;
 	}
 	
-	public void setNext(AtomData next) {
-		this.next = next;
-	}
-	
 	public AtomData getPrevious() {
 		return previous;
 	}
 	
+	/**
+	 * Change the previous AtomData in the double linked list
+	 * Automatically updates the next reference in previous 
+	 * @param previous
+	 */
 	public void setPrevious(AtomData previous) {
 		this.previous = previous;
+		if (previous != null)
+			previous.next = this;
 	}
 	
 	public CrystalStructure getCrystalStructure() {
@@ -456,12 +408,8 @@ public class AtomData {
 	}
 	
 	public void setAsReferenceForProcessingModule() {
-		AtomData a = this;
-		while(a.getPrevious()!=null) a = a.getPrevious();
-		while(a!=null){
-			a.isReferenceForProcessingModule = false;
-			a = a.next;
-		}
+		for (AtomData data : Configuration.getAtomDataIterable(this))
+			data.isReferenceForProcessingModule = false;
 		this.isReferenceForProcessingModule = true;
 	}
 	
@@ -480,8 +428,8 @@ public class AtomData {
 	 * @return
 	 */
 	public int getDataColumnIndex(DataColumnInfo dci){
-		for (int i=0; i < dataColumns.size(); i++)
-			if (dci.equals(dataColumns.get(i)))
+		for (int i=0; i < atomicData.dataColumns.size(); i++)
+			if (dci.equals(atomicData.dataColumns.get(i)))
 				return i;
 		return -1;
 	}
@@ -493,14 +441,14 @@ public class AtomData {
 	 * @return
 	 */
 	public int getComponentIndex(DataColumnInfo.Component component){
-		for (int i=0; i < dataColumns.size(); i++)
-			if (dataColumns.get(i).getComponent().equals(component))
+		for (int i=0; i < atomicData.dataColumns.size(); i++)
+			if (atomicData.dataColumns.get(i).getComponent().equals(component))
 				return i;
 		return -1;
 	}
 	
 	public List<DataColumnInfo> getDataColumnInfos(){
-		return dataColumns;
+		return atomicData.dataColumns;
 	}
 	
 	public int getNumberOfAtomsWithType(int i){
@@ -555,44 +503,16 @@ public class AtomData {
 	}
 
 	public void removeAtoms(Filter<Atom> filter){
-		if (filter == null) return;
-		int size = atoms.size();
-		int i=0;
-	
-		while (i<size){
-			if (filter.accept(atoms.get(i))){
-				i++;
-			} else {
-				//These are fast removes. The last element is copied to
-				//the position i and the number of elements in the
-				//lists are reduced by one. Order is not preserved, but
-				//deleting any number of element from linear lists is in total an O(n) operation
-				size--;
-				atoms.remove(i);	
-				for (FastTFloatArrayList f: dataArrays)
-					f.removeFast(i);
-			}
-		}
-		//Shrink down the lists
-		atoms.trimToSize();
-		//Reassign ID for all remaining atoms
-		for (int j=0; j<atoms.size(); j++)
-			atoms.get(j).setID(j);
-		
-		for (TFloatArrayList f: this.dataArrays){
-			f.trimToSize();
-		}
+		atomicData.removeAtoms(filter);
 	}
 	
 	/**
-	 * Frees the atom list to make more memory available by removing all references to other 
-	 * instances of AtomData
-	 * Helps if you want to load another large file, without memory shortcomings 
+	 * Removes the references to other instances of AtomData and the internal container
+	 * storing possibly very large amount of data, permitting the GC to do its work 
+	 * Calling this method is useful before other files are loaded to prevent memory shortcomings
 	 */
 	public void clear(){
-		maxNumElements = 1;
-		this.atoms.clear();
-		this.atoms.trimToSize();
+		this.atomicData.clear();
 		this.additionalData.clear();
 		this.next = null;
 		this.previous = null;
@@ -625,5 +545,123 @@ public class AtomData {
 	@Override
 	public String toString() {
 		return getName();
+	}
+	
+	/**
+	 * A simple container class that stores all data related to individual atoms
+	 */
+	private class AtomicData{
+		/**
+		 * All atoms are stored in this list 
+		 */
+		final FastDeletableArrayList<Atom> atoms;
+		/**
+		 * Additional data per atom that is either imported from file or dynamically created
+		 * using processing modules is store within these lists
+		 * The data associated to a specific atom is stored at the same index as the atom itself in 
+		 * the list of atoms 
+		 */
+		final List<FastTFloatArrayList> dataArrays;
+		/**
+		 * The metadata containing information what kind of data is stored in dataArrays
+		 * dataArrays and dataColumns are of same size
+		 */
+		final List<DataColumnInfo> dataColumns = new ArrayList<DataColumnInfo>();
+		
+		public AtomicData(FastDeletableArrayList<Atom> atoms, List<FastTFloatArrayList> dataArrays,
+				List<DataColumnInfo> dataColumns) {
+			this.atoms = atoms;
+			this.dataArrays = dataArrays;
+			this.dataColumns.addAll(dataColumns);
+		
+			for (int i=0; i<this.atoms.size(); i++){
+				this.atoms.get(i).setID(i);
+			}	
+			
+			//Create arrays for atomic data filled with zeros if this specific information was not contained
+			//in the input file. This can be the case if different files are read at the same time and some files
+			//are missing information
+			for (int i=0; i<this.dataArrays.size(); i++){
+				if (this.dataArrays.get(i).isEmpty())
+					this.dataArrays.set(i, new FastTFloatArrayList(this.atoms.size(), true));
+			}
+			
+			cleanup();
+		}
+		
+		private void cleanup(){
+			//(Re-)Initialize the IDs for each atom to match the position in the arrays
+			for (int j=0; j<atoms.size(); j++)
+				atoms.get(j).setID(j);
+			//Shrink down the arrays
+			atoms.trimToSize();
+			for (TFloatArrayList f: this.dataArrays){
+				f.trimToSize();
+				//Atoms and data arrays should be of same size
+				assert (f.size() == atoms.size());
+			}
+			
+			assert(dataColumns.size() == dataArrays.size());
+		}
+		
+		void clear(){
+			atoms.clear();
+			atoms.trimToSize();
+			dataArrays.clear();
+			dataColumns.clear();
+		}
+		
+		void addDataColumnInfo(DataColumnInfo ... dci){
+			if (dci == null) return;
+			for (DataColumnInfo d : dci)
+				if (!dataColumns.contains(d)) {
+					dataColumns.add(d);
+					dataArrays.add(new FastTFloatArrayList(this.atoms.size(),true));
+				}
+		}
+		
+		void removeDataColumnInfo(DataColumnInfo dci){
+			if (dci.isVectorComponent()){
+				//Delete a complete vector component
+				for (DataColumnInfo d : dci.getVectorComponents()){
+					int index = dataColumns.indexOf(d);
+					dataColumns.remove(index);
+					dataArrays.remove(index);
+				}
+			} else { 
+				//Delete a scalar value
+				if (dataColumns.contains(dci)){
+					int index = dataColumns.indexOf(dci);
+					dataColumns.remove(index);
+					dataArrays.remove(index);
+				}
+			}
+		}
+		
+		void removeAtoms(Filter<Atom> filter){
+			if (filter == null) return;
+			int size = atoms.size();
+			int i=0;
+		
+			while (i<size){
+				if (filter.accept(atoms.get(i))){
+					i++;
+				} else {
+					//These are fast removes. The last element is copied to
+					//the position i and the number of elements in the
+					//lists are reduced by one. Order is not preserved, but
+					//deleting any number of element from linear lists is in total an O(n) operation
+					size--;
+					Atom rmAtom = atoms.remove(i);
+					for (FastTFloatArrayList f: dataArrays)
+						f.removeFast(i);
+					if (rbvStorage != null)
+						rbvStorage.removeAtom(rmAtom);
+				}
+			}
+			
+			cleanup();
+			countAtomTypes();
+		}
 	}
 }

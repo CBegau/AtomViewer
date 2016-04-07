@@ -100,7 +100,7 @@ public class ImdFileLoader extends MDFileLoader{
 	}
 	
 	@Override
-	public AtomData readInputData(File f, AtomData previous, Filter<Atom> atomFilter) throws IOException{
+	public AtomData readInputData(File f, AtomData previous, Filter<Atom> atomFilter) throws Exception{
 		
 		//Dispose perfect lattice atoms during import
 		if (ImportStates.DISPOSE_DEFAULT.isActive()){ 

@@ -48,6 +48,10 @@ public class RBVStorage {
 		return rbvData.isEmpty();
 	}
 	
+	boolean removeAtom(Atom a){
+		return (rbvData.remove(a)!=null);
+	}
+	
 	public void clear(){
 		rbvData.clear();
 	}

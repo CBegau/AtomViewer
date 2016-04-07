@@ -41,7 +41,7 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 	}
 	
 	@Override
-	public AtomData readInputData(File f, AtomData previous, Filter<Atom> atomFilter) throws IOException{
+	public AtomData readInputData(File f, AtomData previous, Filter<Atom> atomFilter) throws Exception{
 		return readFile(f, previous, atomFilter);
 	}
 	
@@ -114,7 +114,7 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 	 * @throws IOException
 	 * @throws IllegalAccessException
 	 */
-	private AtomData readFile(File f, AtomData previous, Filter<Atom> atomFilter) throws IOException {
+	private AtomData readFile(File f, AtomData previous, Filter<Atom> atomFilter) throws Exception {
 		ProgressMonitor.getProgressMonitor().setActivityName("Reading file");
 		BufferedReader lnr = null;
 		if (CommonUtils.isFileGzipped(f)) {
@@ -301,7 +301,7 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 				previous = new AtomData(previous, idc);
 				idc = new ImportDataContainer();
 			}
-		} catch (IOException ex) {
+		} catch (Exception ex) {
 			throw ex;
 		} finally {
 			lnr.close();

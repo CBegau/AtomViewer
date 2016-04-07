@@ -23,7 +23,6 @@ public class RemoveInvisibleAtomsModule extends FilteringModule {
 	@Override
 	public ProcessingResult process(AtomData data) throws Exception {
 		ProcessingResult pr = super.process(data); 
-		data.countAtomTypes();
 		return pr;
 	}
 }

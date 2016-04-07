@@ -149,9 +149,6 @@ public class JOrderAtomDataSet extends JDialog {
 				AtomData previous = null;
 				for (AtomData d : model.atomDataList){
 					d.setPrevious(previous);
-					d.setNext(null);
-					if (previous != null)
-						previous.setNext(d);
 					previous = d;
 					if (d == current)
 						currentFound = true;
