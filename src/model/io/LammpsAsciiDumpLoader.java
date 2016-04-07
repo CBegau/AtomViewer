@@ -116,12 +116,10 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 	 */
 	private AtomData readFile(File f, AtomData previous, Filter<Atom> atomFilter) throws Exception {
 		ProgressMonitor.getProgressMonitor().setActivityName("Reading file");
-		BufferedReader lnr = null;
-		if (CommonUtils.isFileGzipped(f)) {
-			// Directly read gzip-compressed files
-			lnr = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(f), 16384*64)));
-		} else lnr = new BufferedReader(new FileReader(f), 16384*64);
-
+		FileInputStream fis = new FileInputStream(f);
+		boolean gzipped = CommonUtils.isFileGzipped(f);
+		BufferedReader inputReader = CommonUtils.createBufferedReader(fis, gzipped);
+		
 		int elementColumn = -1;
 		int xColumn = -1;
 		int numberColumn = -1;
@@ -136,7 +134,7 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 		ImportDataContainer idc = new ImportDataContainer();
 		int num=0;
 		try {
-			String s = lnr.readLine();
+			String s = inputReader.readLine();
 			while (s != null) {
 				idc.fullPathAndFilename = f.getCanonicalPath();
 				idc.name = String.format("%s (%05d)", f.getName(), num++);
@@ -147,9 +145,9 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 				idc.fileMetaData = new HashMap<String, Object>();
 				while (!headerRead) {
 					if (s.contains("ITEM: NUMBER OF ATOMS")) {
-						s = lnr.readLine();
+						s = inputReader.readLine();
 						atomsCount = Integer.parseInt(s);
-						s = lnr.readLine();
+						s = inputReader.readLine();
 					} else if (s.contains("ITEM: BOX BOUNDS")) {
 						String[] parts = p.split(s);
 						boolean triclinic = false;
@@ -169,7 +167,7 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 							}
 						}
 						
-						s = lnr.readLine();
+						s = inputReader.readLine();
 						parts = p.split(s);
 						float min = Float.parseFloat(parts[0]);
 						float max = Float.parseFloat(parts[1]);
@@ -177,7 +175,7 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 						idc.offset.x = min;
 						idc.boxSizeX.x = max - min;
 
-						s = lnr.readLine();
+						s = inputReader.readLine();
 						parts = p.split(s);
 						min = Float.parseFloat(parts[0]);
 						max = Float.parseFloat(parts[1]);
@@ -186,7 +184,7 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 						idc.boxSizeY.x = xy;
 						idc.boxSizeY.y = max - min;
 						
-						s = lnr.readLine();
+						s = inputReader.readLine();
 						parts = p.split(s);
 						min = Float.parseFloat(parts[0]);
 						max = Float.parseFloat(parts[1]);
@@ -195,7 +193,7 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 						idc.boxSizeZ.x = xz;
 						idc.boxSizeZ.y = yz;
 						idc.boxSizeZ.z = max - min;
-						s = lnr.readLine();
+						s = inputReader.readLine();
 						
 						idc.makeBox();
 					} else if (s.contains("ITEM: ATOMS")) {
@@ -215,20 +213,20 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 									dataColumns[j] = i - 2;
 							}
 						}
-						s = lnr.readLine();
+						s = inputReader.readLine();
 					} else if (s.startsWith("ITEM:")){
 						try{ // Try reading additional lines, read each line until the next item
 							//and put everything into an array of floats
 							String label = s.substring(6);
 							ArrayList<Double> values = new ArrayList<Double>();
-							s = lnr.readLine();
+							s = inputReader.readLine();
 							while (!s.startsWith("ITEM:")){
 								String[] parts = p.split(s);
 								
 								for (int i=0; i<parts.length; i++){
 									values.add(Double.parseDouble(parts[i]));
 								}
-								s = lnr.readLine();
+								s = inputReader.readLine();
 							}
 							double[] tmp = new double[values.size()];
 							for (int i=0; i<values.size(); i++)
@@ -238,12 +236,12 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 						} catch (Exception e) {
 						} finally{
 							while(!s.startsWith("ITEM:")){
-								s = lnr.readLine();
+								s = inputReader.readLine();
 							}
 						}
 					}
 					//Nothing done, process next line
-					else s = lnr.readLine();
+					else s = inputReader.readLine();
 				}
 				
 				if (xColumn == -1) throw new IllegalArgumentException("Broken header, no coordinates x y z");
@@ -292,7 +290,7 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 						}
 					}
 					
-					s = lnr.readLine();
+					s = inputReader.readLine();
 				}
 				//If there is only a single data set in the lammps dump, do not append numbers
 				if (num <= 1)
@@ -301,10 +299,8 @@ public class LammpsAsciiDumpLoader extends MDFileLoader {
 				previous = new AtomData(previous, idc);
 				idc = new ImportDataContainer();
 			}
-		} catch (Exception ex) {
-			throw ex;
 		} finally {
-			lnr.close();
+			inputReader.close();
 		}
 		return previous;
 	}

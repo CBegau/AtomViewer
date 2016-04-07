@@ -22,10 +22,16 @@ import java.awt.Component;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.GridBagConstraints;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
 import java.text.DecimalFormat;
 import java.util.regex.Pattern;
+import java.util.zip.GZIPInputStream;
 
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -127,23 +133,41 @@ public class CommonUtils {
 		return gbc;
 	}
 	
-	public final static boolean isFileGzipped(File f){
+	public final static boolean isFileGzipped(File f) throws IOException{
 		final int GZIP_MAGIC = 0x8b1f;
+		
+		RandomAccessFile raf = new RandomAccessFile(f, "r");
 		try {
-			RandomAccessFile raf = null;
-			try {
-				raf = new RandomAccessFile(f, "r");
-				int byte1 = raf.read();
-				if (byte1==-1) return false;
-				int byte2 = raf.read();
-				if (byte2==-1) return false;
-				if (((byte2 << 8) | byte1) == GZIP_MAGIC) return true;
-			} finally {
-				if (raf != null) raf.close();
-			}
-		} catch (Exception e) {}
-
+			int byte1 = raf.read();
+			if (byte1==-1) return false;
+			int byte2 = raf.read();
+			if (byte2==-1) return false;
+			if (((byte2 << 8) | byte1) == GZIP_MAGIC) return true;
+		} finally {
+			raf.close();
+		}
+		
 		return false;
+	}
+	
+	/**
+	 * Creates a BufferedReader from a FileInputStream with optional Gzip decompression
+	 * and larger buffers
+	 * @param fis
+	 * @param gzipped
+	 * @return
+	 * @throws IOException If an exception occurs, the FileInputStream is automatically closed 
+	 */
+	public static final BufferedReader createBufferedReader(FileInputStream fis, boolean gzipped) throws IOException{
+		InputStream is = fis;
+		try {
+		if (gzipped) //Directly read gzip-compressed files
+			is = new GZIPInputStream(is, 16384*64);
+		} catch (IOException ex){
+			fis.close();
+			throw ex;
+		}
+		return new BufferedReader(new InputStreamReader(is), 16384*32);
 	}
 	
 	/**

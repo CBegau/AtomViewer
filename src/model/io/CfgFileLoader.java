@@ -3,16 +3,13 @@ package model.io;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
-import java.util.zip.GZIPInputStream;
 
 import javax.swing.filechooser.FileFilter;
 
@@ -42,19 +39,15 @@ public class CfgFileLoader extends MDFileLoader {
 	
 	@Override
 	public AtomData readInputData(File f, AtomData previous, Filter<Atom> atomFilter) throws Exception {
-		BufferedReader inputReader = null;
-		if (CommonUtils.isFileGzipped(f)) {
-			// Directly read gzip-compressed files
-			inputReader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(f), 16384*64)));
-		} else inputReader = new BufferedReader(new FileReader(f), 16384*64);
-		
 		CFGHeader header = new CFGHeader();
 		header.readHeader(f);
-		
 		ImportDataContainer idc = new ImportDataContainer();
 		
+		boolean gzipped = CommonUtils.isFileGzipped(f);
+		FileInputStream fis = new FileInputStream(f);
+		BufferedReader inputReader = CommonUtils.createBufferedReader(fis, gzipped);
+		
 		try{
-			
 			idc.fullPathAndFilename = f.getCanonicalPath();
 			idc.name = f.getName();
 			Vec3[] boxVec = header.getBoxVectors();
@@ -295,15 +288,13 @@ public class CfgFileLoader extends MDFileLoader {
 		}
 		
 		void readHeader(File f) throws IOException{
-			BufferedReader lnr = null;
-			if (CommonUtils.isFileGzipped(f)) {
-				// Directly read gzip-compressed files
-				lnr = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(f))));
-			} else lnr = new BufferedReader(new FileReader(f));
+			boolean gzipped = CommonUtils.isFileGzipped(f);
+			FileInputStream fis = new FileInputStream(f);
+			BufferedReader inputReader = CommonUtils.createBufferedReader(fis, gzipped);
 
 			try{
 				Pattern p = Pattern.compile("[=\\s]+");
-				String s = lnr.readLine();
+				String s = inputReader.readLine();
 				
 				//The end of the header of cfg-files is not well defined
 				//The first line that does start with a numeric entry is already an atom
@@ -366,7 +357,7 @@ public class CfgFileLoader extends MDFileLoader {
 						
 					}
 					
-					s = lnr.readLine();
+					s = inputReader.readLine();
 				}
 				
 				if (headerRead && !this.isExtended){
@@ -377,11 +368,8 @@ public class CfgFileLoader extends MDFileLoader {
 					this.valuesUnits[3] = new String[]{"mass", ""};
 				}
 				
-			} catch (IOException e){
-				this.valuesUnits = new String[0][];
-				throw e;
 			} finally {
-				lnr.close();
+				inputReader.close();
 			}
 		}
 	}
