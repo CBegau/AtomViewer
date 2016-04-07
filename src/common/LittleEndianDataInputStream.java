@@ -29,7 +29,7 @@ public class LittleEndianDataInputStream extends DataInputStream{
 
 	private final byte[] buf = new byte[8];
 	
-	public LittleEndianDataInputStream(InputStream in) throws FileNotFoundException {
+	public LittleEndianDataInputStream(InputStream in){
 		super(in);
 	}
 	

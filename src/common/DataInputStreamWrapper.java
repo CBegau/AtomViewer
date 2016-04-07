@@ -42,8 +42,7 @@ public abstract class DataInputStreamWrapper {
 	 * @return An instance of DataInputStreamWrapper with the ability to read the required format
 	 * @throws FileNotFoundException
 	 */
-	public static DataInputStreamWrapper getDataInputStreamWrapper (InputStream is, boolean doublePrecision, boolean litteEndian) 
-		throws FileNotFoundException{
+	public static DataInputStreamWrapper getDataInputStreamWrapper (InputStream is, boolean doublePrecision, boolean litteEndian) {
 		if (litteEndian && !doublePrecision) return new LittleEndianSinglePrecisionDIS(is);
 		if (litteEndian && doublePrecision) return new LittleEndianDoublePrecisionDIS(is);
 		if (!litteEndian && !doublePrecision) return new BigEndianSinglePrecisionDIS(is);
@@ -71,7 +70,7 @@ public abstract class DataInputStreamWrapper {
 	
 	private static final class LittleEndianSinglePrecisionDIS extends DataInputStreamWrapper{
 		private byte skip[] = new byte[4];
-		public LittleEndianSinglePrecisionDIS(InputStream is) throws FileNotFoundException {
+		public LittleEndianSinglePrecisionDIS(InputStream is) {
 			super.ledis = new LittleEndianDataInputStream(is);
 		}
 		
@@ -98,7 +97,7 @@ public abstract class DataInputStreamWrapper {
 	
 	private static final class BigEndianSinglePrecisionDIS extends DataInputStreamWrapper{
 		private byte skip[] = new byte[4];
-		public BigEndianSinglePrecisionDIS(InputStream is) throws FileNotFoundException {
+		public BigEndianSinglePrecisionDIS(InputStream is) {
 			super.ledis = new LittleEndianDataInputStream(is);
 		}
 		
@@ -127,7 +126,7 @@ public abstract class DataInputStreamWrapper {
 	
 	private static final class LittleEndianDoublePrecisionDIS extends DataInputStreamWrapper{
 		private byte skip[] = new byte[8];
-		public LittleEndianDoublePrecisionDIS(InputStream is) throws FileNotFoundException {
+		public LittleEndianDoublePrecisionDIS(InputStream is) {
 			super.ledis = new LittleEndianDataInputStream(is);
 		}
 		
@@ -155,7 +154,7 @@ public abstract class DataInputStreamWrapper {
 	
 	private static final class BigEndianDoublePresicionDIS extends DataInputStreamWrapper{
 		private byte skip[] = new byte[8];
-		public BigEndianDoublePresicionDIS(InputStream is) throws FileNotFoundException {
+		public BigEndianDoublePresicionDIS(InputStream is) {
 			super.ledis = new LittleEndianDataInputStream(is);
 		}
 		
