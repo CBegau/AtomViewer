@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.GZIPInputStream;
 
 import javax.swing.filechooser.FileFilter;
 
@@ -59,7 +58,6 @@ public class XYZFileLoader extends MDFileLoader {
 	
 	@Override
 	public AtomData readInputData(File f, AtomData previous, Filter<Atom> atomFilter) throws Exception {
-		BufferedReader inputReader = null;
 		String line = null;
 		
 		ImportDataContainer idc = new ImportDataContainer();
@@ -71,11 +69,12 @@ public class XYZFileLoader extends MDFileLoader {
 		
 		int atomNumber = 0;
 		
+		boolean gzipped = CommonUtils.isFileGzipped(f);
+		FileInputStream fis = new FileInputStream(f);
+		BufferedReader inputReader = CommonUtils.createBufferedReader(fis, gzipped);
+		
 		try {
 			boolean extendedFormat = false;
-			if (CommonUtils.isFileGzipped(f)){
-				inputReader = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(f), 16384*64)));
-			} else inputReader = new BufferedReader(new FileReader(f), 16384*64);
 			line = inputReader.readLine(); // Number of atoms -> don't care
 			line = inputReader.readLine(); // Actual header
 			
@@ -189,11 +188,8 @@ public class XYZFileLoader extends MDFileLoader {
 				idc.makeBox();
 			}
 			
-			
-		} catch (IOException e){
-			throw e;
 		} finally {
-			if (inputReader!=null) inputReader.close();
+			inputReader.close();
 		}
 		
 		//Add the names of the elements to the input
@@ -207,19 +203,17 @@ public class XYZFileLoader extends MDFileLoader {
 
 	@Override
 	public String[][] getColumnNamesUnitsFromHeader(File f) throws IOException {
-		LineNumberReader lnr = null;
+		boolean gzipped = CommonUtils.isFileGzipped(f);
+		FileInputStream fis = new FileInputStream(f);
+		BufferedReader inputReader = CommonUtils.createBufferedReader(fis, gzipped);
+		
 		String header = null;
 		
 		try {
-			if (CommonUtils.isFileGzipped(f)){
-				lnr = new LineNumberReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(f))));
-			} else lnr = new LineNumberReader(new FileReader(f));
-			header = lnr.readLine(); // Number of atoms -> don't care
-			header = lnr.readLine(); // Actual header
-		} catch (IOException e){
-			throw e;
+			header = inputReader.readLine(); // Number of atoms -> don't care
+			header = inputReader.readLine(); // Actual header
 		} finally {
-			if (lnr!=null) lnr.close();
+			inputReader.close();
 		}
 		
 		Map<String, String> map = readKeyValuesFromHeader(header);

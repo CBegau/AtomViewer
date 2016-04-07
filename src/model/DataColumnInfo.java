@@ -250,8 +250,8 @@ public class DataColumnInfo {
 			}
 		} else {
 			int column = atomData.getDataColumnIndex(this);
-			float[] f = atomData.getDataArray(column).getData();
 			if (column != -1){
+				float[] f = atomData.getDataArray(column).getData();
 				for (float v : f){
 					if (v < min) min = v;
 					if (v > max) max = v;
