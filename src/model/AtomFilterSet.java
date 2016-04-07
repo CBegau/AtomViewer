@@ -30,9 +30,10 @@ public class AtomFilterSet implements Filter<Atom>{
 		return true;
 	}
 	
-	public void addFilter(Filter<Atom> af){
-		if (!filter.contains(af))
+	public AtomFilterSet addFilter(Filter<Atom> af){
+		if (af != null && !filter.contains(af))
 			filter.add(af);
+		return this;
 	}
 	
 	public void removeFilter(Filter<Atom> af){
