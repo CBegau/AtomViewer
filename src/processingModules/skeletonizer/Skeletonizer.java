@@ -31,6 +31,7 @@ import java.util.concurrent.*;
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL3;
 
+import common.CommonUtils;
 import common.FastDeletableArrayList;
 import common.ThreadPool;
 import common.UniqueIDCounter;
@@ -62,6 +63,10 @@ public class Skeletonizer extends DataContainer {
 	private float meshingThreshold = -1;
 	private boolean skeletonizeOverGrains;
 	
+	//Text messages for the result of the dislocation network are stored in here  
+	private List<String> resultInfoKeys = new ArrayList<String>();
+	private List<String> resultInfoValues = new ArrayList<String>();
+	
 	public Skeletonizer(float meshingThreshold, boolean skeletonizeOverGrains){
 		this.meshingThreshold = meshingThreshold;
 		this.skeletonizeOverGrains = skeletonizeOverGrains;
@@ -71,6 +76,8 @@ public class Skeletonizer extends DataContainer {
 	 * Creates a dislocation skeleton from dislocation core atoms and planes of stacking faults
 	 */
 	public boolean processData(final AtomData data) {
+		this.resultInfoKeys.clear();
+		this.resultInfoValues.clear();
 		this.data = data;
 		this.meshingThreshold *= data.getCrystalStructure().getNearestNeighborSearchRadius(); 
 
@@ -444,6 +451,27 @@ public class Skeletonizer extends DataContainer {
 		boolean error = pw.checkError();
 		pw.close();
 		return error;
+	}
+	
+	/**
+	 * Add a pair of Strings that contain information about the results of the dislocation network
+	 * @param key
+	 * @param value
+	 */
+	public void addResultInfo(String key, String value){
+		this.resultInfoKeys.add(key);
+		this.resultInfoValues.add(value);
+	}
+	
+	/**
+	 * Returns a HTML-formatted string containing a table holding the information generated during
+	 * creation of the dislocation network
+	 * @return
+	 */
+	public String getFormattedResultInfo(){
+		if (resultInfoKeys.isEmpty()) return "";
+		return CommonUtils.buildHTMLTableForKeyValue(resultInfoKeys.toArray(new String[resultInfoKeys.size()]), 
+				resultInfoValues.toArray(new String[resultInfoValues.size()]));
 	}
 	
 	/**

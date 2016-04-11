@@ -189,10 +189,10 @@ public class BurgersVectorAnalyzer {
 			}
 			totalLength += d.getLength();
 		}
-		System.out.println(String.format("Verified burgers vectors (number): %d/%d (%.2f",verfiedDislocations, totalDislocations
-				,(verfiedDislocations/(float)totalDislocations)*100) + " %)");
-		System.out.println(String.format("Verified burgers vectors (length): %.2f/%.2f (%.2f", 
-				verifiedLength, totalLength, (verifiedLength/totalLength)*100f) + " %)");
+		skel.addResultInfo("Total number of dislocation segment", Integer.toString(totalDislocations));
+		skel.addResultInfo("Number of segments with identified Burgers vectors", Integer.toString(verfiedDislocations));
+		skel.addResultInfo("Total length of dislocation segment", String.format("%.2f", totalLength));
+		skel.addResultInfo("Length of segments with identified Burgers vectors", String.format("%.2f", verifiedLength));
 	}
 
 	protected boolean identifyBurgersVectorFromNetwork(Dislocation d) {

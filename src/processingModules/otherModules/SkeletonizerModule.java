@@ -37,7 +37,7 @@ public class SkeletonizerModule extends ClonableProcessingModule {
 	public ProcessingResult process(AtomData data) throws Exception {
 		Skeletonizer dc = new Skeletonizer(meshingThreshold, skeletonizeBetweenGrains);
 		dc.processData(data);
-		return new DataContainer.DefaultDataContainerProcessingResult(dc, "");
+		return new DataContainer.DefaultDataContainerProcessingResult(dc, dc.getFormattedResultInfo());
 	}
 	
 	@Override
