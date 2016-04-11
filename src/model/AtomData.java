@@ -248,7 +248,7 @@ public class AtomData {
 					this.addAdditionalData(pr.getDataContainer());
 				
 				if (pr.getResultInfoString()!=null && !pr.getResultInfoString().isEmpty())
-					JLogPanel.getJLogPanel().addInfo(String.format("Results: %s", pm.getShortName()), 
+					JLogPanel.getJLogPanel().addInfo(String.format("Results: %s (%s)", pm.getShortName(), this.getName()), 
 							pr.getResultInfoString());
 			}
 			if (pm.getDataColumnsInfo() != null){

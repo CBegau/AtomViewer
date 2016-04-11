@@ -20,6 +20,7 @@ package gui;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -85,6 +86,23 @@ public class JLogPanel extends JPanel{
 					c.setForeground(errorColor);
 				return c;
 			}
+			
+			//Implement table cell tool tips. Show the text of the cell    
+			@Override
+            public String getToolTipText(MouseEvent e) {
+                String tip = null;
+                java.awt.Point p = e.getPoint();
+                int rowIndex = rowAtPoint(p);
+                int colIndex = columnAtPoint(p);
+
+                try {
+                    tip = getValueAt(rowIndex, colIndex).toString();
+                } catch (RuntimeException e1) {
+                    //catch null pointer exception if mouse is over an empty line
+                }
+
+                return tip;
+            }
 		};
 		//Modify size of each row. Does not scale automatically with the font size
 		logTable.setRowHeight( (int)(RenderingConfiguration.defaultFontSize*1.3));
