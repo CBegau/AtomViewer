@@ -31,6 +31,7 @@ import javax.swing.JSeparator;
 import processingModules.DataContainer;
 import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
+import processingModules.otherModules.SkeletonizerModule;
 import processingModules.otherModules.VacancyDetectionModule.VacancyDataContainer;
 import processingModules.toolchain.Toolchainable.ExportableValue;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
@@ -91,6 +92,15 @@ public class RbvModule extends ClonableProcessingModule{
 	
 	@ExportableValue
 	private boolean defectsOnly = true;
+	
+	//The user interface provides the possibility to create the
+	//dislocation network directly following the RBV
+	//However, this configuration is not exported to a toolchain.
+	//In the toolchain, the two modules are stored as if the were
+	//executed as if they had been computed one after the other
+	//For this reason, this attribute must be null if the module is constructed
+	//and can only be changed using the GUI
+	private SkeletonizerModule skeletonizer = null;
 	
 	private float[] pnl;
 	private float perfectBurgersVectorLength, rbvCorrectionFactor;
@@ -677,11 +687,21 @@ public class RbvModule extends ClonableProcessingModule{
 						"<html>Enabling this options is very time consuming, but may help to identify extended defects in unknown structures<br></html>",
 						!this.defectsOnly);
 		
+		BooleanProperty skeletonize = dialog.addBoolean("skeletonize", 
+				"Create dislocation network", "Immediately derive the dislocation network from the results", false);
+		
 		boolean ok = dialog.showDialog();
 		if (ok){
 			this.acceptanceThreshold = acceptanceThreshold.getValue();
 			this.defectsOnly = !rbvForAllAtoms.getValue();
 		}
+		
+		//If required, the dislocation network will be 
+		if (skeletonize.getValue()){
+			if (skeletonizer == null) skeletonizer = new SkeletonizerModule(); 
+				skeletonizer.showConfigurationDialog(frame, data);
+		} else skeletonizer = null;
+		
 		return ok;
 	}
 
@@ -700,6 +720,11 @@ public class RbvModule extends ClonableProcessingModule{
 			for (Grain g : data.getGrains())
 				new RbvModule(data, g.getAtomsInGrain(), g.getCrystalStructure(), g, this);
 		}
+		
+		if (skeletonizer != null){	//Create dislocation network if requested
+			data.applyProcessingModule(skeletonizer);
+		}
+		
 		return null;
 	}
 

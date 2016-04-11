@@ -236,7 +236,9 @@ public class AtomData {
 		if (pm.isApplicable(this)){
 			ProgressMonitor.getProgressMonitor().setCurrentFilename(this.getName());
 			ProgressMonitor.getProgressMonitor().setActivityName(pm.getShortName());
-			
+
+			//Store step in Toolchain
+			this.toolchain.addModule(pm);
 			this.addDataColumnInfo(pm.getDataColumnsInfo());
 			
 			ProcessingResult pr = pm.process(this);
@@ -254,8 +256,6 @@ public class AtomData {
 					if (!dci.isInitialized())
 						dci.findRange(this, false);
 			}
-			//Store sucessful step in Toolchain
-			this.toolchain.addModule(pm);
 		}
 	}
 	
