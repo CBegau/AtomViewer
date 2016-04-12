@@ -53,9 +53,9 @@ import gnu.trove.set.hash.TIntHashSet;
 public class ConcentrationModule implements Toolchainable, Cloneable, ProcessingModule{
 	
 	private static DataColumnInfo atomicConcentrationColumn = 
-			new DataColumnInfo("concentration (at%)" , "AtomicConcentration" ,"%");
+			new DataColumnInfo("Concentration (at%)" , "AtomicConcentration" ,"%");
 	private static DataColumnInfo weigthConcentrationColumn = 
-			new DataColumnInfo("concentration (wt%)" , "WeigthConcentration" ,"%");
+			new DataColumnInfo("Concentration (wt%)" , "WeigthConcentration" ,"%");
 	
 	@ExportableValue
 	private float radius = 5f;
@@ -75,7 +75,7 @@ public class ConcentrationModule implements Toolchainable, Cloneable, Processing
 	
 	@Override
 	public String getShortName() {
-		return "Atom/Weigth percent concentration";
+		return "Atomic/Weight percent concentration";
 	}
 	
 	@Override
@@ -85,7 +85,7 @@ public class ConcentrationModule implements Toolchainable, Cloneable, Processing
 	
 	@Override
 	public String getFunctionDescription() {
-		return "Computes the local atomic or weigth concentration of selected elements.";
+		return "Computes the local atomic or weight concentration of selected elements.";
 	}
 	
 	@Override
@@ -139,7 +139,7 @@ public class ConcentrationModule implements Toolchainable, Cloneable, Processing
 						
 						if (m == -1){
 							JLogPanel.getJLogPanel().addWarning("Mass not found",
-								String.format("Concentration in weight percent selected, but mass column is missing in %s", 
+								String.format("Concentration in weigth percent selected, but mass column is missing in %s", 
 										data.getName()));
 						} else {
 							final float[] massArray = data.getDataArray(m).getData();
@@ -179,15 +179,18 @@ public class ConcentrationModule implements Toolchainable, Cloneable, Processing
 
 	@Override
 	public boolean showConfigurationDialog(JFrame frame, AtomData data) {
-		JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(frame, "Compute particle concentrations");
-		dialog.addLabel(getFunctionDescription());
-		dialog.addLabel("The concentration is computed per particle within a selected radius.");
+		JPrimitiveVariablesPropertiesDialog dialog = 
+				new JPrimitiveVariablesPropertiesDialog(frame, "Compute particle concentrations");
+		dialog.addLabel(getFunctionDescription()+"</br>The concentration is computed per particle within a selected radius.");
 		dialog.add(new JSeparator());
 		FloatProperty avRadius = dialog.addFloat("avRadius", "Radius of the sphere", "", 5f, 0f, 1000f);
-		BooleanProperty weighConc = dialog.addBoolean("concWeigth",
+		BooleanProperty weighConc = dialog.addBoolean("concWeight",
 				"Concentration in weight percentage instead of atomic percentage", 
 				"Requires masses per particle", concAsWeightPercent);
-		if (data.getComponentIndex(Component.MASS)==-1) weighConc.setEnabled(false);
+		if (data.getComponentIndex(Component.MASS)==-1){
+			weighConc.setEnabled(false);
+			weighConc.setValue(false);
+		}
 		
 		dialog.endGroup();
 		
@@ -200,11 +203,12 @@ public class ConcentrationModule implements Toolchainable, Cloneable, Processing
 		
 		if (data.getCrystalStructure().getNamesOfElements() != null){
 			for (int i=0; i<numElements; i++)
-				selectElements[i] = new JCheckBox(data.getCrystalStructure().getNamesOfElements()[i], true);
+				selectElements[i] = new JCheckBox(data.getCrystalStructure().getNamesOfElements()[i], elements.contains(i));
 		} else {
 			for (int i=0; i<numElements; i++)
-				selectElements[i] = new JCheckBox(Integer.toString(i), true);
+				selectElements[i] = new JCheckBox(Integer.toString(i), elements.contains(i));
 		}
+		
 		for (int i=0; i<numElements; i++)
 			buttonPanel.add(selectElements[i]);
 		
@@ -214,9 +218,7 @@ public class ConcentrationModule implements Toolchainable, Cloneable, Processing
 		boolean ok = dialog.showDialog();
 		if (ok){
 			this.radius = avRadius.getValue();
-			if (weighConc.isEnabled())
-				this.concAsWeightPercent = weighConc.getValue();
-			else this.concAsWeightPercent = false;
+			this.concAsWeightPercent = weighConc.getValue();
 			elements.clear();
 			for (int i=0; i<numElements; i++)
 				if (selectElements[i].isSelected()) elements.add(i); 
@@ -249,7 +251,7 @@ public class ConcentrationModule implements Toolchainable, Cloneable, Processing
 		this.elements.clear();
 		
 		for (String se : elementList){
-			this.elements.add(Integer.parseInt(se));
+			this.elements.add(Integer.parseInt(se.trim()));
 		}
 	}
 	
@@ -260,6 +262,6 @@ public class ConcentrationModule implements Toolchainable, Cloneable, Processing
 		clone.concAsWeightPercent = this.concAsWeightPercent;		
 		clone.radius = this.radius;
 		clone.elements.addAll(this.elements);
-		return clone();
+		return clone;
 	}
 }
