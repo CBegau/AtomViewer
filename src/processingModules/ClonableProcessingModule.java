@@ -11,7 +11,9 @@ public abstract class ClonableProcessingModule implements ProcessingModule{
 	public ProcessingModule clone() {
 		try {
 			return (ProcessingModule)(super.clone());
-		} catch (CloneNotSupportedException e) {}
+		} catch (CloneNotSupportedException e) {
+			e.printStackTrace();
+		}
 		return null;
 	}
 }

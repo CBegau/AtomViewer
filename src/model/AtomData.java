@@ -456,6 +456,10 @@ public class AtomData {
 		return atomsPerType[i];
 	}
 	
+	/**
+	 * Return the number of different virtual elements types used in this set 
+	 * @return
+	 */
 	public int getNumberOfElements() {
 		return maxNumElements;
 	}

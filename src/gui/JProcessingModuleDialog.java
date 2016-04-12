@@ -55,6 +55,7 @@ public class JProcessingModuleDialog extends JDialog {
 		atomicDens.insert(new ModuleTreeWrapper(new CoordinationNumberModule()), 0);
 		atomicDens.insert(new ModuleTreeWrapper(new ParticleDensityModule()), 1);
 		atomicDens.insert(new ModuleTreeWrapper(new AtomicVolumeModule()), 2);
+		atomicDens.insert(new ModuleTreeWrapper(new ConcentrationModule()), 3);
 		          
 		DefaultMutableTreeNode atomicAvg = new DefaultMutableTreeNode("Averages & Differences");
 		atomic.add(atomicAvg);
