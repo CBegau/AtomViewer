@@ -10,16 +10,14 @@
 	<property name="jarDir" value="./../" />
 	
 	<property name="git.Date" value="noGitAvailable" />
-	
-	<path id="libs.classpath">
+		
+	<path id="build.classpath">
 		<pathelement path="${libDir}jogamp/jar/gluegen-rt.jar"/>
 		<pathelement path="${libDir}libs/Jama/Jama.jar"/>
 		<pathelement path="${libDir}jogamp/jar/jogl-all.jar"/>
 		<pathelement path="${libDir}libs/Quickhull3d/quickhull3d.jar"/>
 		<pathelement path="${libDir}libs/trove/trove-3.0.3.jar"/>
 	 </path>	
-	
-	
 	
 	<target name="compile">
 		 <mkdir dir="${binDir}" />
@@ -28,10 +26,12 @@
 		</delete>
 		<javac includeantruntime="false" srcdir="." debug="on" destdir="${binDir}" source="1.6" target="1.6">
 			<include name="**/*.*" />
-			<classpath refid="libs.classpath" />
+			<classpath refid="build.classpath" />
 			<compilerarg line="-encoding utf-8"/>
 		</javac>
 	</target>
+	
+	
 
 	<target name="makeViewer" depends="compile">
 		<delete file="${jarDir}/AtomViewer.jar" />
@@ -39,7 +39,7 @@
 		    <format property="TODAY" pattern="dd.MM.yyyy" />
 		</tstamp>
 		
-		<property name="git.date" value="-" />
+		
 		<available file=".git" type="dir" property="git.present"/>	
 	    <exec executable="git" outputproperty="git.revision" failifexecutionfails="false" errorproperty="">
 		        <arg value="describe"/>
@@ -53,14 +53,22 @@
 		        <length string="${git.revision}" trim="yes" length="0" when="greater"/>
 		    </and>
 		</condition>
-		<exec executable="git" outputproperty="git.date" failifexecutionfails="false" errorproperty="">
+		<exec executable="git" outputproperty="git.date" failifexecutionfails="false" errorproperty="-">
 		        <arg value="show"/>
 		        <arg value="-s"/>
 		        <arg value="--format=%cD"/>
 		        <arg value="HEAD"/>
 		</exec>
+		<!--Default values if git is not available --> 
+		<condition property="git.date" value="-">
+		   <not>  
+		      <isset property="git.date"/>
+		   </not>
+		</condition>
 		
-		<!--Remove linebreak from the git date -->
+		<echo message="${git.date}"/>
+		
+		<!--Remove linebreak from the git date --> 
 		 <script language="javascript">
 		  project.setProperty('git.date', project.getProperty('git.date').
 		   replace("\n", ""));
@@ -73,6 +81,10 @@
 		    </and>
 		</condition>
 		
+		<manifestclasspath property="manifest.classpath" jarfile="${jarDir}/AtomViewer.jar">
+		    <classpath refid="build.classpath"/>
+		</manifestclasspath>
+		
 		<jar destfile="${jarDir}/AtomViewer.jar">
 			<fileset dir="${binDir}">
 				<include name="**/*.class" />
@@ -84,8 +96,7 @@
 			</fileset>
 			<manifest>
 				<attribute name="Main-Class" value="AtomViewer" />
-				<attribute name="Class-Path" 
-					value="jogamp/jar/gluegen-rt.jar jogamp/jar/jogl-all.jar libs/Jama/Jama.jar libs/Quickhull3d/quickhull3d.jar libs/trove/trove-3.0.3.jar" />
+				<attribute name="Class-Path" value="${manifest.classpath}" />
 				<attribute name="Build-Date" value="${repository.date}"/>
 				<attribute name="Revision" value="${repository.version}"/>
 			</manifest>
