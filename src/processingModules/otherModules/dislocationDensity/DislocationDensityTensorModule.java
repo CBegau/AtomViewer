@@ -36,8 +36,6 @@ import java.util.Arrays;
 
 import com.jogamp.opengl.GL3;
 import javax.swing.*;
-import javax.swing.border.EtchedBorder;
-import javax.swing.border.TitledBorder;
 
 import processingModules.ClonableProcessingModule;
 import processingModules.DataContainer;
@@ -329,8 +327,8 @@ public class DislocationDensityTensorModule extends ClonableProcessingModule {
 		private DDTDataContainer dc;
 		
 		private JDislocationDensityTensorControls(DDTDataContainer dc) {
+			super("Dislocation density tensor");
 			this.dc = dc;
-			this.setBorder(new TitledBorder(new EtchedBorder(1), "DDT"));
 			this.setLayout(new GridBagLayout());
 			GridBagConstraints gbc = new GridBagConstraints();
 			

@@ -17,8 +17,6 @@ import java.util.regex.Pattern;
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL3;
 import javax.swing.*;
-import javax.swing.border.EtchedBorder;
-import javax.swing.border.TitledBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -413,6 +411,7 @@ public class LoadBalancingProcessingModule extends ClonableProcessingModule {
 		private ViewerGLJPanel viewer;
 		
 		public JLoadBalancingControlPanel() {
+			super("Load balance");
 			((JSpinner.NumberEditor)lowerLimitSpinnerX.getEditor()).getFormat().setMaximumFractionDigits(4);
 			((JSpinner.NumberEditor)upperLimitSpinnerX.getEditor()).getFormat().setMaximumFractionDigits(4);
 			((JSpinner.NumberEditor)lowerLimitSpinnerY.getEditor()).getFormat().setMaximumFractionDigits(4);
@@ -434,8 +433,6 @@ public class LoadBalancingProcessingModule extends ClonableProcessingModule {
 			((SpinnerNumberModel)(upperLimitSpinnerZ.getModel())).setMinimum(0);
 			((SpinnerNumberModel)(upperLimitSpinnerZ.getModel())).setMaximum(512);
 			((SpinnerNumberModel)(lowerLimitSpinnerZ.getModel())).setMaximum(512);
-			
-			this.setBorder(new TitledBorder(new EtchedBorder(1), "Values"));
 			
 			this.setLayout(new GridBagLayout());
 			

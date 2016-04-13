@@ -21,11 +21,21 @@ package processingModules;
 import gui.ViewerGLJPanel;
 
 import javax.swing.JPanel;
+import javax.swing.border.EtchedBorder;
+import javax.swing.border.TitledBorder;
 
 
 public abstract class JDataPanel extends JPanel {
 	private static final long serialVersionUID = 1L;
 
+	/**
+	 * Adds a titled border around the panel with the given label
+	 * @param label
+	 */
+	protected JDataPanel(String label){
+		this.setBorder(new TitledBorder(new EtchedBorder(1), label));
+	}
+	
 	public abstract void setViewer(ViewerGLJPanel viewer);
 
 	/**

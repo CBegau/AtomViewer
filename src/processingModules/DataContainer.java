@@ -44,7 +44,7 @@ public abstract class DataContainer {
 	
 	public abstract JDataPanel getDataControlPanel();
 	
-	public static class DefaultDataContainerProcessingResult extends ProcessingResult{
+	public static class DefaultDataContainerProcessingResult implements ProcessingResult{
 		private DataContainer dc;
 		private String s;
 		

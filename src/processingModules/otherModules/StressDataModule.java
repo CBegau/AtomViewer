@@ -32,7 +32,6 @@ import java.util.zip.GZIPInputStream;
 
 import com.jogamp.opengl.GL3;
 import javax.swing.*;
-import javax.swing.border.*;
 import javax.swing.event.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
@@ -488,7 +487,7 @@ public class StressDataModule extends ClonableProcessingModule {
 		private ViewerGLJPanel viewer;
 		
 		public JStressControlPanel() {
-			this.setBorder(new TitledBorder(new EtchedBorder(1), "Stress"));
+			super("Stress");
 			this.setLayout(new GridLayout(6,1));
 			
 			this.add(showStressCheckbox);

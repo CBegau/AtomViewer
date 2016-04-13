@@ -22,14 +22,11 @@ import java.awt.GridLayout;
 import java.awt.event.*;
 
 import javax.swing.*;
-import javax.swing.border.EtchedBorder;
-import javax.swing.border.TitledBorder;
 
 import gui.ViewerGLJPanel;
 import model.RenderingConfiguration;
 import processingModules.DataContainer;
 import processingModules.JDataPanel;
-
 
 public class JDislocationMenuPanel extends JDataPanel{
 	private static final long serialVersionUID = 1L;
@@ -58,8 +55,8 @@ public class JDislocationMenuPanel extends JDataPanel{
 	
 	
 	public JDislocationMenuPanel(){
+		super("Dislocations");
 		this.setLayout(new GridLayout(3,1));
-		this.setBorder(new TitledBorder(new EtchedBorder(1), "Dislocations"));
 
 		RenderTypeButtonActionListener renderTypeButtonListener = new RenderTypeButtonActionListener();
 		

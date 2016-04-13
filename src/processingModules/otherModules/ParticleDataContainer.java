@@ -36,8 +36,6 @@ import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
-import javax.swing.border.EtchedBorder;
-import javax.swing.border.TitledBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
@@ -155,9 +153,10 @@ public abstract class ParticleDataContainer<T extends Vec3 & Pickable> extends D
 		private float[] color;
 		
 		public JParticleDataControlPanel(ParticleDataContainer<?> container, float[] color, float partSize) {
+			super(container.getLabelForControlPanel());
+			
 			this.color = color;
 			this.particleSize = partSize;
-			this.setBorder(new TitledBorder(new EtchedBorder(1), container.getLabelForControlPanel()));
 			
 			this.setLayout(new GridBagLayout());
 			

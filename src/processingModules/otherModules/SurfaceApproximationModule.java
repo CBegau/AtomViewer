@@ -19,8 +19,6 @@ import java.util.concurrent.Callable;
 
 import com.jogamp.opengl.GL3;
 import javax.swing.*;
-import javax.swing.border.EtchedBorder;
-import javax.swing.border.TitledBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
@@ -135,8 +133,8 @@ public class SurfaceApproximationModule extends ClonableProcessingModule {
 	
 	public static class JSurfaceMeshControlPanel  extends JDataPanel {
 		private static final long serialVersionUID = 1L;
-		private JCheckBox showSurfaceCheckbox = new JCheckBox("Approximated surface", false);
-		private JCheckBox showMeshCheckbox = new JCheckBox("Draw mesh", false);
+		private JCheckBox showSurfaceCheckbox = new JCheckBox("Show surface", false);
+		private JCheckBox showMeshCheckbox = new JCheckBox("Show mesh", false);
 		private JSlider transparencySlider = new JSlider(0, 100, 0);
 		
 		float[] color = new float[]{0.5f, 0.5f, 0.5f};
@@ -147,7 +145,7 @@ public class SurfaceApproximationModule extends ClonableProcessingModule {
 		float transparency = 1f;
 		
 		public JSurfaceMeshControlPanel() {
-			this.setBorder(new TitledBorder(new EtchedBorder(1), "Values"));
+			super("Approx. surface");
 			
 			this.setLayout(new GridBagLayout());
 			
@@ -184,6 +182,7 @@ public class SurfaceApproximationModule extends ClonableProcessingModule {
 			showSurfaceCheckbox.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent arg0) {
+					showMeshCheckbox.setEnabled(showMeshCheckbox.isSelected());
 					RenderingConfiguration.getViewer().reDraw();
 				}
 			});
