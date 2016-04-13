@@ -18,7 +18,8 @@
 
 package crystalStructures;
 
-import java.awt.GridLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
@@ -31,23 +32,27 @@ import javax.swing.JPanel;
 import javax.swing.border.EtchedBorder;
 import javax.swing.border.TitledBorder;
 
+import common.CommonUtils;
 import gui.PrimitiveProperty;
 
 
 public class CrystalStructureProperties {
 	
 	public static JPanel createPropertyContainer(Collection<PrimitiveProperty<?>> properties){
-		JPanel configPanel = new JPanel();
-		configPanel.setLayout(new BoxLayout(configPanel, BoxLayout.Y_AXIS));
-		
-		JPanel innerPanel = new JPanel(new GridLayout(properties.size(), 1));
-		
+		JPanel configPanel = new JPanel(new GridBagLayout());
 		configPanel.setBorder(new TitledBorder(new EtchedBorder(1), "Crystal structure options"));
+		
+		GridBagConstraints gbc = CommonUtils.getBasicGridBagConstraint();
+		
+		JPanel innerPanel = new JPanel();
+		innerPanel.setLayout(new BoxLayout(innerPanel, BoxLayout.Y_AXIS));
 		for (final PrimitiveProperty<?> p : properties)
 			innerPanel.add(p);
 		
-		configPanel.add(innerPanel);
-		configPanel.add(Box.createVerticalGlue());
+		gbc.weighty = 0;
+		configPanel.add(innerPanel, gbc); gbc.gridy++;
+		gbc.weighty = 1;
+		configPanel.add(Box.createVerticalGlue(), gbc);
 		return configPanel;
 	}
 	
