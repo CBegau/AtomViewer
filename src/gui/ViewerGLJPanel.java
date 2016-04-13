@@ -1229,7 +1229,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		else if (b>0.33f) size = 0.5f;
 		else size = 0.2f;
 		size *= (int)Math.pow(10, power);
-		String sizeString = String.format("%.1f nm",size*0.1f);
+		String sizeString = String.format("%.1f",size);
 		
 		//The length scale box is placed 10% of the screen resolution away from the upper, left corner
 		final int xshift = width/10;
