@@ -21,4 +21,17 @@ import common.Vec3;
 
 public interface Filter<T extends Vec3> {
 	public boolean accept(T a);
+	
+	/**
+	 * A dummy filter that accepts everything
+	 * @param <T>
+	 */
+	public class AcceptAllFilter<T extends Vec3> implements Filter<T>{
+		@Override
+		public boolean accept(T a) {
+			return true;
+		}
+	}
 }
+
+

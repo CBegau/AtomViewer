@@ -276,7 +276,7 @@ public abstract class CrystalStructure{
 	 * "identifyBurgersVectorType(BurgersVector bv)"
 	 * @return
 	 */
-	public abstract ArrayList<RBVToBVPattern> getBurgersVectorClassificationPattern();
+	public abstract List<RBVToBVPattern> getBurgersVectorClassificationPattern();
 	
 	/* ******************************
 	 * Final methods
@@ -327,7 +327,7 @@ public abstract class CrystalStructure{
 		//Compute the value if is not cached yet
 		if (cachedPerfectBurgersVectorLength == -1){
 			//Find the Burgers vector tagged as perfect and compute the length
-			ArrayList<RBVToBVPattern> pattern = getBurgersVectorClassificationPattern();
+			List<RBVToBVPattern> pattern = getBurgersVectorClassificationPattern();
 			float max = 0;
 			for (RBVToBVPattern p : pattern){
 				if (p.getType() == BurgersVectorType.PERFECT)
@@ -552,7 +552,13 @@ public abstract class CrystalStructure{
 	 * @return scaling factors, array has the same size as the value returned by getNumberOfElements()
 	 */
 	public final float[] getSphereSizeScalings(){
-		return sphereScalingsPerClass.get(this.getClass()).clone();
+		float[] sizes = sphereScalingsPerClass.get(this.getClass()).clone();
+		//Check if the number of elements has changed, if so recreate the array
+		if (sizes.length != this.getNumberOfElements()){
+			sizes = getDefaultSphereSizeScalings();
+			CrystalStructure.sphereScalingsPerClass.put(this.getClass(), sizes);
+		}
+		return sizes; 
 	}
 	
 	public final void setSphereSizeScalings(int index, float size){
