@@ -102,7 +102,7 @@ public class Grain implements Pickable{
 			if (a.getGrain() != Atom.DEFAULT_GRAIN && a.getGrain() != Atom.IGNORED_GRAIN){
 				data.getGrains(a.getGrain()).decreaseAtomCount();
 				a.setGrain(Atom.IGNORED_GRAIN);
-				data.getRbvStorage().addRBV(a, null, null);
+				data.getRbvStorage().removeAtom(a);
 			}
 		}
 	}

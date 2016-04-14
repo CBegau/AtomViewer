@@ -136,7 +136,7 @@ public class FilterSurfaceModule extends ClonableProcessingModule {
 					cb.await();
 					for (Atom a: filteredAtoms){
 						a.setType(surfaceType);
-						data.getRbvStorage().addRBV(a, null, null);
+						data.getRbvStorage().removeAtom(a);
 					}
 					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
 					return null;
@@ -194,7 +194,7 @@ public class FilterSurfaceModule extends ClonableProcessingModule {
 							}
 							if (surface){
 								a.setType(surfaceType);
-								data.getRbvStorage().addRBV(a, null, null);
+								data.getRbvStorage().removeAtom(a);
 							}
 						}
 					}

@@ -23,21 +23,23 @@ import java.util.HashMap;
 import java.util.Map;
 import common.Vec3;
 
+/**
+ * A thread safe implementation that maps Atoms to resultant Burgers vectors (RBVs)
+ * @author Christoph Begau
+ *
+ */
 public class RBVStorage {
 	private Map<Atom, RBV> rbvData = Collections.synchronizedMap(new HashMap<Atom, RBV>());
 	
 	/**
 	 * Sets the values for the resultant Burgers vector and the line direction to this atom
-	 * If one of these values is null the existing reference is nulled
 	 * @param a the atom associated with this RBV
-	 * @param rbv The resultant Burgers vector
-	 * @param lineDirection the lineDirection, should be a unit vector.
-	 * If it is the null-vector, no reference to a RBV is created 
+	 * @param rbv The resultant Burgers vector, must not be null
+	 * @param lineDirection the lineDirection, should be a unit vector, must not be null
 	 */
 	public void addRBV(Atom a, Vec3 rbv, Vec3 lineDirection ){
-		if (rbv != null && lineDirection != null && lineDirection.dot(lineDirection)>0.)
-			rbvData.put(a, new model.RBV(rbv, lineDirection));
-		else rbvData.remove(a);
+		assert (rbv != null && lineDirection != null); 		
+		rbvData.put(a, new model.RBV(rbv, lineDirection));
 	}
 	
 	public RBV getRBV(Atom a){
@@ -48,7 +50,7 @@ public class RBVStorage {
 		return rbvData.isEmpty();
 	}
 	
-	boolean removeAtom(Atom a){
+	public boolean removeAtom(Atom a){
 		return (rbvData.remove(a)!=null);
 	}
 	
