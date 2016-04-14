@@ -152,6 +152,7 @@ public class JOrderAtomDataSet extends JDialog {
 					previous = d;
 					if (d == current)
 						currentFound = true;
+					d.setNextToNull();
 				}
 				
 				if(!currentFound){

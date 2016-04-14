@@ -399,6 +399,10 @@ public class AtomData {
 			previous.next = this;
 	}
 	
+	public void setNextToNull() {
+		this.next = null;
+	}
+	
 	public CrystalStructure getCrystalStructure() {
 		return defaultCrystalStructure;
 	}
