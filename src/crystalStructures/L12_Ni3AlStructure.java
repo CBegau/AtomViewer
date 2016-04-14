@@ -23,6 +23,7 @@ import java.util.concurrent.CyclicBarrier;
 
 import common.Tupel;
 import common.Vec3;
+import gui.PrimitiveProperty.BooleanProperty;
 import model.Atom;
 import model.AtomData;
 import model.NearestNeighborBuilder;
@@ -31,6 +32,10 @@ public class L12_Ni3AlStructure extends FCCStructure{
 	
 	private static final float[][] bondsAngleClasses;
 	
+	protected BooleanProperty flipNiAlelementIDConventionProperty = 
+			new BooleanProperty("NiAlconvention", "Even element IDs denote Al, odd ones Ni.",
+					"<html>If not selected even element IDs denote Ni, odd ones Al.</html>",
+					false);
 	static{
 		float[] tol_l = new float[]{0f, 7f, 6f, 5f, 4f, 3f};
 		float[] tol_u = new float[]{13f, 10f, 6f, 5f, 4f, 3f};
@@ -61,6 +66,7 @@ public class L12_Ni3AlStructure extends FCCStructure{
 	
 	public L12_Ni3AlStructure() {
 		super();
+		crystalProperties.add(flipNiAlelementIDConventionProperty);
 	}
 	
 	@Override
@@ -129,6 +135,8 @@ public class L12_Ni3AlStructure extends FCCStructure{
 	public int identifyAtomType(Atom atom, NearestNeighborBuilder<Atom> nnb) {
 		ArrayList<Tupel<Atom, Vec3>> d_cont  = nnb.getNeighAndNeighVec(atom);
 		
+		boolean flipNiAlConvention = flipNiAlelementIDConventionProperty.getValue();
+		
 		/*
 		 * type=0: L12
 		 * type=1: APB
@@ -152,18 +160,22 @@ public class L12_Ni3AlStructure extends FCCStructure{
 			
 			//Element of the central atom in the bond pair
 			int type_atom = atom.getElement()%2;
-			
+			if (flipNiAlConvention)
+				type_atom = 1-type_atom;
 			
 			for (int i = 0; i < d_cont.size(); i++) {
 				//Element of the first bond atom
 				int type_i = d_cont.get(i).o1.getElement()%2;
+				if (flipNiAlConvention)
+					type_i = 1-type_i;
 				Vec3 v = d_cont.get(i).o2;
 				float v_length = v.getLength();
 				
 				for (int j = 0; j < i; j++) {
 					//Element of the second bond atom
 					int type_j = d_cont.get(j).o1.getElement()%2;
-					
+					if (flipNiAlConvention)
+						type_j = 1-type_j;
 					int bondType = 0;
 					//Identify the type of bond 
 					if (type_j!=type_i) bondType = 1;
@@ -269,7 +281,16 @@ public class L12_Ni3AlStructure extends FCCStructure{
 	
 	@Override
 	public float[] getDefaultSphereSizeScalings(){
-		return new float[]{1f, 0.79f};
+		if (flipNiAlelementIDConventionProperty != null && !flipNiAlelementIDConventionProperty.getValue())
+			return new float[]{1f, 0.79f};
+		else return new float[]{0.79f, 1f};
+	}
+	
+	@Override
+	public String[] getNamesOfElements(){
+		if (flipNiAlelementIDConventionProperty != null && !flipNiAlelementIDConventionProperty.getValue())
+			return new String[]{"Ni", "Al"};
+		else return new String[]{"Al", "Ni"};
 	}
 	
 	@Override
