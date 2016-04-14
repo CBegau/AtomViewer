@@ -32,10 +32,11 @@ public class L12_Ni3AlStructure extends FCCStructure{
 	
 	private static final float[][] bondsAngleClasses;
 	
-	protected BooleanProperty flipNiAlelementIDConventionProperty = 
+	static protected BooleanProperty flipNiAlelementIDConventionProperty = 
 			new BooleanProperty("NiAlconvention", "Even element IDs denote Al, odd ones Ni.",
 					"<html>If not selected even element IDs denote Ni, odd ones Al.</html>",
 					false);
+	
 	static{
 		float[] tol_l = new float[]{0f, 7f, 6f, 5f, 4f, 3f};
 		float[] tol_u = new float[]{13f, 10f, 6f, 5f, 4f, 3f};
@@ -281,14 +282,14 @@ public class L12_Ni3AlStructure extends FCCStructure{
 	
 	@Override
 	public float[] getDefaultSphereSizeScalings(){
-		if (flipNiAlelementIDConventionProperty != null && !flipNiAlelementIDConventionProperty.getValue())
+		if (!flipNiAlelementIDConventionProperty.getValue())
 			return new float[]{1f, 0.79f};
 		else return new float[]{0.79f, 1f};
 	}
 	
 	@Override
 	public String[] getNamesOfElements(){
-		if (flipNiAlelementIDConventionProperty != null && !flipNiAlelementIDConventionProperty.getValue())
+		if (!flipNiAlelementIDConventionProperty.getValue())
 			return new String[]{"Ni", "Al"};
 		else return new String[]{"Al", "Ni"};
 	}
