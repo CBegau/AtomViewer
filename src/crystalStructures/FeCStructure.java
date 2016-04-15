@@ -20,9 +20,9 @@ package crystalStructures;
 
 import java.util.ArrayList;
 
-import common.Tupel;
 import common.Vec3;
 import model.Atom;
+import model.Filter;
 import model.NearestNeighborBuilder;
 
 public class FeCStructure extends BCCStructure {
@@ -67,6 +67,15 @@ public class FeCStructure extends BCCStructure {
 		return new float[]{1f, 0.43f};
 	}
 	
+	public Filter<Atom> getFilterForAtomsNotNeedingClassificationByNeighbors(){
+		return new Filter<Atom>(){
+			@Override
+			public boolean accept(Atom a) {
+				return a.getElement() % getNumberOfElements() == 0;	//Accept only Fe
+			}
+		};
+	}
+	
 	@Override
 	public int identifyAtomType(Atom atom, NearestNeighborBuilder<Atom> nnb) {
 		/*
@@ -86,12 +95,10 @@ public class FeCStructure extends BCCStructure {
 		int threshold = highTempProperty.getValue() ? 3 : 2;
 		float t1 = highTempProperty.getValue() ? -.77f : -.75f;
 		float t2 = highTempProperty.getValue() ? -.69f : -0.67f;
-		ArrayList<Tupel<Atom, Vec3>> neigh = nnb.getNeighAndNeighVec(atom);
+		ArrayList<Vec3> neigh = nnb.getNeighVec(atom);
 		
 		//count Fe neighbors for Fe atoms
-		int count = 0;
-		for (int i=0; i < neigh.size(); i++)
-			if (neigh.get(i).o1.getElement() % numTypes == 0) count++;		
+		int count = neigh.size();
 		
 		if (count < 11) return 6;
 		else if (count == 11) return 4;
@@ -101,14 +108,12 @@ public class FeCStructure extends BCCStructure {
 			int co_x1 = 0;
 			int co_x2 = 0;
 			for (int i = 0; i < neigh.size(); i++) {
-				if (neigh.get(i).o1.getElement() % numTypes != 0) continue; //ignore carbon atoms
-				Vec3 v = neigh.get(i).o2;
+				Vec3 v = neigh.get(i);
 				
 				float v_length = v.getLength();
 				
 				for (int j = 0; j < i; j++) {
-					if (neigh.get(j).o1.getElement() % numTypes != 0) continue; //ignore carbon atoms
-					Vec3 u = neigh.get(j).o2;
+					Vec3 u = neigh.get(j);
 					float u_length = u.getLength();
 					float a = v.dot(u) / (v_length*u_length);
 					

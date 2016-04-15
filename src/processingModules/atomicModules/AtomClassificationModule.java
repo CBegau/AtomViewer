@@ -78,7 +78,7 @@ public class AtomClassificationModule extends ClonableProcessingModule {
 				data.getCrystalStructure().getStructuralAnalysisSearchRadius(), true);
 		List<Atom> atoms = data.getAtoms();
 		
-		nnb.addAll(atoms);
+		nnb.addAll(atoms, data.getCrystalStructure().getFilterForAtomsNotNeedingClassificationByNeighbors());
 		
 		Vector<AnalyseCallable> tasks = new Vector<AnalyseCallable>();
 		CyclicBarrier barrier = new CyclicBarrier(ThreadPool.availProcessors());

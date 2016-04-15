@@ -21,7 +21,6 @@ package crystalStructures;
 import java.util.*;
 
 import common.ColorTable;
-import common.Tupel;
 import common.Vec3;
 import gui.PrimitiveProperty.BooleanProperty;
 import model.Atom;
@@ -80,17 +79,21 @@ public class YSZStructure extends FCCStructure {
 		return ColorTable.createColorTable(getNumberOfTypes());
 	}
 
+	public Filter<Atom> getFilterForAtomsNotNeedingClassificationByNeighbors(){
+		return new Filter<Atom>(){
+			@Override
+			public boolean accept(Atom a) {
+				return a.getElement() % getNumberOfElements() != 1;	//Ignore oxygen atoms
+			}
+		};
+	}
+	
 	@Override
 	public int identifyAtomType(Atom atom, NearestNeighborBuilder<Atom> nnb) {
 		if (atom.getElement() % getNumberOfElements() == 1) return 0;
 		
-		ArrayList<Tupel<Atom,Vec3>> neighAtoms = nnb.getNeighAndNeighVec(atom);
-		ArrayList<Vec3> neigh = new ArrayList<Vec3>();
-		for (int i=0; i<neighAtoms.size(); i++){
-			int e = neighAtoms.get(i).o1.getElement()%getNumberOfElements();
-			if (e == 0 || e == 2)
-				neigh.add(neighAtoms.get(i).o2);
-		}
+		ArrayList<Vec3> neigh = nnb.getNeighVec(atom);
+		
 		if (neigh.size()<10){
 			if (neigh.size()<6) return 8;
 			//Test if all atoms are located almost in a half-space of the center atom

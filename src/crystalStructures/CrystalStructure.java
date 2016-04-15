@@ -598,6 +598,15 @@ public abstract class CrystalStructure{
 		ProgressMonitor.getProgressMonitor().addToCounter((end-start)%10000);
 	}
 	
+	/**
+	 * If it is not needed for some atoms to check the neighbor configuration,
+	 * they can be ignored using this filter
+	 * @return a filter that accepts all atoms not needing classification by neighbors. If null, all atoms are accepted
+	 */
+	public Filter<Atom> getFilterForAtomsNotNeedingClassificationByNeighbors(){
+		return null;
+	}
+	
 	/* **********************************
 	 * skeletonization related methods
 	 ************************************/
