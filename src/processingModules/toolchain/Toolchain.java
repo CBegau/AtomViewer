@@ -39,17 +39,12 @@ import processingModules.toolchain.Toolchainable.ToolchainSupport;
 
 public class Toolchain {
 	
-	public enum ReferenceData {FIRST("First", 0), LAST("Last", 1), PREVIOUS("Previous", 2), NEXT("Next", 3), REF("Reference", 4);
+	public enum ReferenceMode {FIRST("First file in sequence"), LAST("Last file in sequence"), 
+		NEXT("Next file in sequence"), PREVIOUS("Previous file in sequence"), REF("Select a file");
 		private String displayedName;
-		private final int id;
-		
-		private ReferenceData(String displayedName, int id){
+				
+		private ReferenceMode(String displayedName){
 			this.displayedName = displayedName;
-			this.id = id;
-		}
-		
-		public final int getID() {
-			return id;
 		}
 		
 		@Override
@@ -58,29 +53,38 @@ public class Toolchain {
 		}
 	};
 	
-	public static AtomData getReferenceData(AtomData currentData, int type){
+	public static AtomData getReferenceData(AtomData currentData, ReferenceMode mode){
 		AtomData referenceData = null;
-		
-		if (type == ReferenceData.FIRST.id){
-			referenceData = currentData;
-			while (referenceData.getPrevious() != null) referenceData = referenceData.getPrevious();
-		} else if (type == ReferenceData.LAST.id){
-			referenceData = currentData;
-			while (referenceData.getNext() != null) referenceData = referenceData.getNext();
-		} else if (type == ReferenceData.NEXT.id){
-			referenceData = currentData.getNext();
-		} else if (type == ReferenceData.PREVIOUS.id){
-			referenceData = currentData.getPrevious();
-		} else if (type == ReferenceData.REF.id){
-			referenceData = currentData;
-			while(referenceData.getPrevious()!=null) referenceData = referenceData.getPrevious();
-			while(referenceData!=null){
-				if (referenceData.isReferenceForProcessingModule())
-					return referenceData;
-				referenceData = referenceData.getNext();
+		switch(mode){
+			case FIRST: {
+				referenceData = currentData;
+				while (referenceData.getPrevious() != null) referenceData = referenceData.getPrevious();
+				break;
 			}
-		} else throw new RuntimeException("Unknown reference state");
-		
+			case LAST: {
+				referenceData = currentData;
+				while (referenceData.getNext() != null) referenceData = referenceData.getNext();
+				break;
+			}
+			case NEXT:{
+				referenceData = currentData.getNext()==null ? currentData : currentData.getNext();
+				break;
+			}
+			case PREVIOUS:{
+				referenceData = currentData.getPrevious()==null ? currentData : currentData.getPrevious();
+				break;
+			}
+			case REF:{
+				referenceData = currentData;
+				while(referenceData.getPrevious()!=null) referenceData = referenceData.getPrevious();
+				while(referenceData!=null){
+					if (referenceData.isReferenceForProcessingModule())
+						return referenceData;
+					referenceData = referenceData.getNext();
+				}
+				break;
+			}
+		}
 		return referenceData;
 	}
 	
@@ -177,7 +181,7 @@ public class Toolchain {
 		// Exporting primitive fields
 		Field[] fields = clz.getDeclaredFields();
 		for (Field f : fields) {
-			if (f.isAnnotationPresent(ExportableValue.class) && f.getType().isPrimitive()) {
+			if (f.isAnnotationPresent(ExportableValue.class)) {
 				exportPrimitiveField(f, xmlout, pm);
 			}
 		}
@@ -224,6 +228,15 @@ public class Toolchain {
 		throw new Exception("End element of module not found");
 	}
 	
+	/**
+	 * Exports a primitive field or an a field of type {@link Toolchain.ReferenceMode}
+	 * @param f
+	 * @param out
+	 * @param module
+	 * @throws XMLStreamException
+	 * @throws IllegalArgumentException
+	 * @throws IllegalAccessException
+	 */
 	static void exportPrimitiveField(Field f, XMLStreamWriter out, Object module)
 			throws XMLStreamException, IllegalArgumentException, IllegalAccessException{
 		out.writeStartElement("Parameter");
@@ -246,6 +259,8 @@ public class Toolchain {
 			out.writeAttribute("value", Character.toString(f.getChar(module)));
 		} else if (f.getType().equals(Boolean.TYPE)){
 			out.writeAttribute("value", Boolean.toString(f.getBoolean(module)));
+		} else if (f.getType().equals(Toolchain.ReferenceMode.class)){
+			out.writeAttribute("value", ((Toolchain.ReferenceMode)(f.get(module))).name());
 		} else throw new IllegalArgumentException("Field is not a primitive type");
 		out.writeEndElement();
 	}
@@ -279,6 +294,8 @@ public class Toolchain {
 			f.setChar(module, (value.isEmpty())?' ':value.charAt(0));
 		} else if (f.getType().equals(Boolean.TYPE)){
 			f.setBoolean(module, Boolean.parseBoolean(value));
+		} else if (f.getType().equals(Toolchain.ReferenceMode.class)){
+			f.set(module, ReferenceMode.valueOf(value));
 		} else throw new IllegalArgumentException("Field is not a primitive type");
 	}
 }

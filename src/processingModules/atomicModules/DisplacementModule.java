@@ -20,13 +20,13 @@ package processingModules.atomicModules;
 import gui.JLogPanel;
 import gui.JPrimitiveVariablesPropertiesDialog;
 import gui.ProgressMonitor;
+import gui.PrimitiveProperty.ReferenceModeProperty;
 
 import java.util.HashMap;
 import java.util.Vector;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JSeparator;
 
@@ -38,11 +38,10 @@ import model.DataColumnInfo;
 import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
 import processingModules.toolchain.Toolchain;
-import processingModules.toolchain.Toolchain.ReferenceData;
+import processingModules.toolchain.Toolchain.ReferenceMode;
 import processingModules.toolchain.Toolchainable.ExportableValue;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 
-//TODO handle reference in Toolchain
 @ToolchainSupport()
 public class DisplacementModule extends ClonableProcessingModule {
 	
@@ -52,7 +51,7 @@ public class DisplacementModule extends ClonableProcessingModule {
 			new DataColumnInfo("Displacement (length)" , "displ_abs" ,"")};
 	
 	@ExportableValue
-	private int referenceMode = 0;
+	private ReferenceMode referenceMode = ReferenceMode.FIRST;
 	
 	static {
 		//Define the vector components
@@ -92,22 +91,14 @@ public class DisplacementModule extends ClonableProcessingModule {
 		dialog.addLabel(getFunctionDescription());
 		dialog.add(new JSeparator());
 		
-		JComboBox referenceComboBox = new JComboBox();
-		AtomData d = data;
-		while (d.getPrevious()!=null) d = d.getPrevious();
-		
-		do {
-			referenceComboBox.addItem(d);
-			d = d.getNext();
-		} while (d!=null);
-		
-		dialog.addLabel("Select reference configuration");
-		dialog.addComponent(referenceComboBox);
+		ReferenceModeProperty rp = dialog.addReferenceMode("referenceMode", 
+				"Select reference configuration", referenceMode);
 		
 		boolean ok = dialog.showDialog();
 		if (ok){
-			this.referenceMode = ReferenceData.REF.getID();
-			((AtomData)referenceComboBox.getSelectedItem()).setAsReferenceForProcessingModule(); 
+			this.referenceMode = rp.getValue();
+			if (this.referenceMode == ReferenceMode.REF)
+				rp.getReferenceAtomData().setAsReferenceForProcessingModule(); 
 		}
 		return ok;
 	}

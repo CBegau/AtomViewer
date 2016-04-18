@@ -11,6 +11,7 @@ import javax.swing.border.TitledBorder;
 
 import common.CommonUtils;
 import gui.PrimitiveProperty.*;
+import processingModules.toolchain.Toolchain.ReferenceMode;
 
 public class JPrimitiveVariablesPropertiesDialog extends JDialog {
 
@@ -107,6 +108,12 @@ public class JPrimitiveVariablesPropertiesDialog extends JDialog {
 		StringProperty sp = new StringProperty(id, label, tooltip, defaultValue, true);
 		this.addComponent(sp);
 		return sp;
+	}
+	
+	public ReferenceModeProperty addReferenceMode(String id, String label, ReferenceMode defaultMode){
+		ReferenceModeProperty rp = new ReferenceModeProperty(id, label, "", defaultMode);
+		this.addComponent(rp);
+		return rp;
 	}
 	
 	public void addLabel(String s){

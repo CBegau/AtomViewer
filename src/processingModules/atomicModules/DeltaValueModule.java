@@ -20,6 +20,7 @@ package processingModules.atomicModules;
 import gui.JLogPanel;
 import gui.JPrimitiveVariablesPropertiesDialog;
 import gui.ProgressMonitor;
+import gui.PrimitiveProperty.ReferenceModeProperty;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -47,10 +48,9 @@ import processingModules.DataContainer;
 import processingModules.ProcessingResult;
 import processingModules.toolchain.Toolchain;
 import processingModules.toolchain.Toolchainable;
-import processingModules.toolchain.Toolchain.ReferenceData;
+import processingModules.toolchain.Toolchain.ReferenceMode;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 
-//TODO handle reference in Toolchain
 @ToolchainSupport()
 public class DeltaValueModule extends ClonableProcessingModule implements Toolchainable{
 	
@@ -58,7 +58,7 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 		= new HashMap<DataColumnInfo, DataColumnInfo>();
 	
 	@ExportableValue
-	private int referenceMode = 0;
+	private ReferenceMode referenceMode = ReferenceMode.FIRST;
 	
 	private DataColumnInfo toDeltaColumn;
 	//This is the indicator used for import from a toolchain, since the column
@@ -97,7 +97,7 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 			}
 		}
 		
-		return (data.getNext() != null || data.getPrevious() != null);
+		return ((data.getNext() != null || data.getPrevious() != null) && data.getDataColumnInfos().size() != 0);
 	}
 
 	@Override
@@ -107,31 +107,31 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 		dialog.addLabel(getFunctionDescription());
 		dialog.add(new JSeparator());
 		
-		final JComboBox referenceComboBox = new JComboBox();
-		AtomData d = data;
-		while (d.getPrevious()!=null) d = d.getPrevious();
-		
-		do {
-			referenceComboBox.addItem(d);
-			d = d.getNext();
-		} while (d!=null);
-		
-		dialog.addLabel("Select reference configuration");
-		dialog.addComponent(referenceComboBox);
+		final ReferenceModeProperty rp = dialog.addReferenceMode("referenceMode", 
+				"Select reference configuration", referenceMode);
 		
 		final JComboBox dataComboBox = new JComboBox();
 		
 		List<DataColumnInfo> common = new ArrayList<DataColumnInfo>(data.getDataColumnInfos());
-		common.retainAll(((AtomData)referenceComboBox.getSelectedItem()).getDataColumnInfos());
+		
+		if (rp.getValue() == ReferenceMode.REF)
+			common.retainAll(rp.getReferenceAtomData().getDataColumnInfos());
+		else 
+			common.retainAll(Toolchain.getReferenceData(data, rp.getValue()).getDataColumnInfos());
+		
 		for (DataColumnInfo cci : common)
 			dataComboBox.addItem(cci);
 		
-		referenceComboBox.addActionListener(new ActionListener() {
+		rp.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				dataComboBox.removeAllItems();
 				List<DataColumnInfo> common = new ArrayList<DataColumnInfo>(data.getDataColumnInfos());
-				common.retainAll(((AtomData)referenceComboBox.getSelectedItem()).getDataColumnInfos());
+				
+				if (rp.getValue() == ReferenceMode.REF)
+					common.retainAll(rp.getReferenceAtomData().getDataColumnInfos());
+				else
+					common.retainAll(Toolchain.getReferenceData(data, rp.getValue()).getDataColumnInfos());
 				
 				for (DataColumnInfo cci : common)
 					dataComboBox.addItem(cci);
@@ -142,10 +142,11 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 		dialog.addLabel("Select data value common in both files");
 		dialog.addComponent(dataComboBox);
 		
-		boolean ok = dialog.showDialog();
+		boolean ok = dialog.showDialog() && !common.isEmpty();
 		if (ok){
-			this.referenceMode = ReferenceData.REF.getID();
-			((AtomData)referenceComboBox.getSelectedItem()).setAsReferenceForProcessingModule();
+			this.referenceMode = rp.getValue();
+			if (this.referenceMode == ReferenceMode.REF)
+				rp.getReferenceAtomData().setAsReferenceForProcessingModule();
 			this.toDeltaColumn = (DataColumnInfo)dataComboBox.getSelectedItem();
 		}
 		if (this.toDeltaColumn == null) return false;

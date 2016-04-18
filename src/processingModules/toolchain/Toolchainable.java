@@ -19,7 +19,6 @@
 package processingModules.toolchain;
 
 import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import javax.xml.stream.XMLStreamException;
@@ -28,13 +27,18 @@ import javax.xml.stream.XMLStreamWriter;
 
 public interface Toolchainable {
 
-	@Retention(RetentionPolicy.RUNTIME)
+	@Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
 	@Target( {java.lang.annotation.ElementType.TYPE}) 
 	@interface ToolchainSupport {
 		int version() default 1;
 	}
 	
-	@Retention(RetentionPolicy.RUNTIME)
+	/**
+	 * Indicates that this field is part of the state that needs to be
+	 * stored/restored in the Toolchain mechanism
+	 * Only allowed on primitive fields and the type {@link Toolchain.ReferenceMode}
+	 */
+	@Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
 	@Target( {java.lang.annotation.ElementType.FIELD})
 	@interface ExportableValue{}
 	

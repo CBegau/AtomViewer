@@ -20,6 +20,7 @@ package processingModules.atomicModules;
 import gui.JLogPanel;
 import gui.JPrimitiveVariablesPropertiesDialog;
 import gui.ProgressMonitor;
+import gui.PrimitiveProperty.ReferenceModeProperty;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -44,10 +45,9 @@ import model.DataColumnInfo;
 import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
 import processingModules.toolchain.*;
-import processingModules.toolchain.Toolchain.ReferenceData;
+import processingModules.toolchain.Toolchain.ReferenceMode;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 
-//TODO handle reference in Toolchain
 @ToolchainSupport()
 public class DeltaVectorModule extends ClonableProcessingModule implements Toolchainable{
 	
@@ -60,7 +60,7 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 	private String toDeltaID;
 	
 	@ExportableValue
-	private int referenceMode = 0;
+	private ReferenceMode referenceMode = ReferenceMode.FIRST;
 	
 	@Override
 	public String getShortName() {
@@ -109,17 +109,8 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 		dialog.addLabel(getFunctionDescription());
 		dialog.add(new JSeparator());
 		
-		final JComboBox referenceComboBox = new JComboBox();
-		AtomData d = data;
-		while (d.getPrevious()!=null) d = d.getPrevious();
-		
-		do {
-			referenceComboBox.addItem(d);
-			d = d.getNext();
-		} while (d!=null);
-		
-		dialog.addLabel("Select reference configuration");
-		dialog.addComponent(referenceComboBox);
+		final ReferenceModeProperty rp = dialog.addReferenceMode("referenceMode", 
+				"Select reference configuration", referenceMode);
 		
 		final JComboBox dataComboBox = new JComboBox();
 		
@@ -127,18 +118,26 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 		for (DataColumnInfo dci: data.getDataColumnInfos())
 			if (dci.isFirstVectorComponent()) common.add(dci);
 		
-		common.retainAll(((AtomData)referenceComboBox.getSelectedItem()).getDataColumnInfos());
+		if (rp.getValue() == ReferenceMode.REF)
+			common.retainAll(rp.getReferenceAtomData().getDataColumnInfos());
+		else
+			common.retainAll(Toolchain.getReferenceData(data, rp.getValue()).getDataColumnInfos());
+		
 		for (DataColumnInfo dci : common)
 			dataComboBox.addItem(new DataColumnInfo.VectorDataColumnInfo(dci));
 		
-		referenceComboBox.addActionListener(new ActionListener() {
+		rp.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				dataComboBox.removeAllItems();
 				List<DataColumnInfo> common = new ArrayList<DataColumnInfo>();
 				for (DataColumnInfo dci: data.getDataColumnInfos())
 					if (dci.isFirstVectorComponent()) common.add(dci);
-				common.retainAll(((AtomData)referenceComboBox.getSelectedItem()).getDataColumnInfos());
+				
+				if (rp.getValue() == ReferenceMode.REF)
+					common.retainAll(rp.getReferenceAtomData().getDataColumnInfos());
+				else
+					common.retainAll(Toolchain.getReferenceData(data, rp.getValue()).getDataColumnInfos());
 				
 				for (DataColumnInfo dci : common)
 					dataComboBox.addItem(new DataColumnInfo.VectorDataColumnInfo(dci));
@@ -149,10 +148,11 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 		dialog.addLabel("Select vector common in both files");
 		dialog.addComponent(dataComboBox);
 		
-		boolean ok = dialog.showDialog();
+		boolean ok = dialog.showDialog() && !common.isEmpty();
 		if (ok){
-			this.referenceMode = ReferenceData.REF.getID();
-			((AtomData)referenceComboBox.getSelectedItem()).setAsReferenceForProcessingModule();
+			this.referenceMode = rp.getValue();
+			if (this.referenceMode == ReferenceMode.REF)
+				rp.getReferenceAtomData().setAsReferenceForProcessingModule();
 			this.toDeltaColumn = ((DataColumnInfo.VectorDataColumnInfo)dataComboBox.getSelectedItem()).getDci();
 		}
 		if (this.toDeltaColumn == null) return false;

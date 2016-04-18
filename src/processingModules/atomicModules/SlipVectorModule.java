@@ -10,7 +10,6 @@ import java.util.HashMap;
 import java.util.Vector;
 import java.util.concurrent.Callable;
 
-import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JSeparator;
 
@@ -24,12 +23,10 @@ import model.NearestNeighborBuilder;
 import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
 import processingModules.toolchain.Toolchain;
-import processingModules.toolchain.Toolchain.ReferenceData;
+import processingModules.toolchain.Toolchain.ReferenceMode;
 import processingModules.toolchain.Toolchainable.ExportableValue;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
-
-//TODO handle reference in Toolchain
-//Currently a workaround is implemented that always picks the first file in the sequence 
+ 
 @ToolchainSupport()
 public class SlipVectorModule extends ClonableProcessingModule{
 	
@@ -49,7 +46,7 @@ public class SlipVectorModule extends ClonableProcessingModule{
 	private float slipThreshold = 0.5f;
 	
 	@ExportableValue
-	private int referenceMode = 0;
+	private ReferenceMode referenceMode = ReferenceMode.FIRST;
 	
 	@Override
 	public String getShortName() {
@@ -85,17 +82,8 @@ public class SlipVectorModule extends ClonableProcessingModule{
 		dialog.addLabel(getFunctionDescription());
 		dialog.add(new JSeparator());
 		
-		JComboBox referenceComboBox = new JComboBox();
-		AtomData d = data;
-		while (d.getPrevious()!=null) d = d.getPrevious();
-		
-		do {
-			referenceComboBox.addItem(d);
-			d = d.getNext();
-		} while (d!=null);
-		
-		dialog.addLabel("Select reference configuration");
-		dialog.addComponent(referenceComboBox);
+		ReferenceModeProperty rp = dialog.addReferenceMode("referenceMode", 
+				"Select reference configuration", referenceMode);
 		float cutoff = this.cutoffRadius==0f?data.getCrystalStructure().getNearestNeighborSearchRadius():this.cutoffRadius;
 		
 		FloatProperty cRadius = dialog.addFloat("cutoffRadius", "Cutoff radius for finding neighbors"
@@ -106,8 +94,9 @@ public class SlipVectorModule extends ClonableProcessingModule{
 		boolean ok = dialog.showDialog();
 		if (ok){
 			this.cutoffRadius = cRadius.getValue();
-			this.referenceMode = ReferenceData.REF.getID();
-			((AtomData)referenceComboBox.getSelectedItem()).setAsReferenceForProcessingModule();
+			this.referenceMode = rp.getValue();
+			if (this.referenceMode == ReferenceMode.REF)
+				rp.getReferenceAtomData().setAsReferenceForProcessingModule();
 			this.slipThreshold = slipThres.getValue();
 		}
 		return ok;

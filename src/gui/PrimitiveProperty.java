@@ -4,6 +4,8 @@ import java.awt.Component;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
@@ -13,6 +15,7 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -24,6 +27,10 @@ import javax.swing.event.ChangeListener;
 
 import common.CommonUtils;
 import common.Tupel;
+import model.AtomData;
+import model.Configuration;
+import processingModules.toolchain.Toolchain;
+import processingModules.toolchain.Toolchain.ReferenceMode;
 
 public abstract class PrimitiveProperty<T> extends JPanel{
 	private static final long serialVersionUID = 1L;
@@ -389,6 +396,94 @@ public abstract class PrimitiveProperty<T> extends JPanel{
 			this.setDefaultValue(Boolean.parseBoolean(s));
 			this.setToDefault();
 		}
+	}
+	
+	public static class ReferenceModeProperty extends PrimitiveProperty<Toolchain.ReferenceMode>{
+		private static final long serialVersionUID = -6929224822842986638L;
+		protected ReferenceMode mode, defaultMode;
+		protected JComboBox referenceModeComboBox, referenceDataComboBox;
+		protected JPanel editorPanel;
+		
+		public ReferenceModeProperty(String id, String label, String tooltip, ReferenceMode defaultMode) {
+			super(id, label, tooltip);
+			this.defaultMode = defaultMode;
+			this.mode = defaultMode;
+			
+			referenceModeComboBox = new JComboBox();
+			for (ReferenceMode r : Toolchain.ReferenceMode.values())
+				referenceModeComboBox.addItem(r);
+			referenceModeComboBox.setSelectedItem(defaultMode);
+			
+			referenceDataComboBox = new JComboBox();
+			for (AtomData d : Configuration.getAtomDataIterable()){
+				referenceDataComboBox.addItem(d);
+			}
+			
+			final JLabel l = new JLabel("Select reference file");
+			referenceDataComboBox.setEnabled(defaultMode == ReferenceMode.REF);
+			l.setEnabled(defaultMode == ReferenceMode.REF);
+			
+			editorPanel = new JPanel(new GridLayout(4, 1));
+			editorPanel.add(referenceModeComboBox);
+			editorPanel.add(l);
+			editorPanel.add(referenceDataComboBox);
+			editorPanel.add(new JLabel(""));
+			
+			referenceModeComboBox.addItemListener(new ItemListener() {
+				@Override
+				public void itemStateChanged(ItemEvent e) {
+					if (e.getStateChange() == ItemEvent.SELECTED){
+						referenceDataComboBox.setEnabled(e.getItem().equals(ReferenceMode.REF));
+						l.setEnabled(e.getItem().equals(ReferenceMode.REF));
+					}
+				}
+			});
+			
+			super.initControlPanel(false);
+		}
+		
+		@Override
+		public JComponent getEditor() {
+			return editorPanel;
+		}
+
+		@Override
+		public void save(Properties prop) {
+			prop.setProperty(id, this.getValue().name());
+		}
+
+		@Override
+		public void load(Properties prop) {
+			String name = prop.getProperty(id, (this.getValue()).name());
+			ReferenceMode rm = ReferenceMode.valueOf(name);
+			this.defaultMode = rm;
+			this.setToDefault();
+		}
+
+		@Override
+		public void setToDefault() {
+			referenceModeComboBox.setSelectedItem(defaultMode);
+		}
+
+		@Override
+		public ReferenceMode getValue() {
+			return (ReferenceMode)referenceModeComboBox.getSelectedItem();
+		}
+
+		@Override
+		public void setValue(ReferenceMode t) {
+			referenceModeComboBox.setSelectedItem(t);
+		}
+		
+		public AtomData getReferenceAtomData(){
+			return (AtomData)referenceDataComboBox.getSelectedItem();
+		}
+		
+		public void addActionListener(ActionListener al){
+			this.referenceModeComboBox.addActionListener(al);
+			this.referenceDataComboBox.addActionListener(al);
+		}
+		
 	}
 }
 
