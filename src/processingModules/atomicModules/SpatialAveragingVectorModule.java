@@ -170,7 +170,7 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 		final float[] avyArray = data.getDataArray(avy).getData();
 		final float[] avzArray = data.getDataArray(avz).getData();
 		final float[] avnArray = data.getDataArray(avn).getData();
-		final float[] massArray = data.getDataArray(massColumn).getData();
+		final float[] massArray = scaleMass ? data.getDataArray(massColumn).getData() : null;
 		
 		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
 		for (int i=0; i<ThreadPool.availProcessors(); i++){

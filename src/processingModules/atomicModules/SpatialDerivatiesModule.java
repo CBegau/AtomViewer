@@ -150,8 +150,8 @@ public class SpatialDerivatiesModule extends ClonableProcessingModule implements
 		final float[] gyArray = data.getDataArray(gy).getData();
 		final float[] gzArray = data.getDataArray(gz).getData();
 		final float[] gnArray = data.getDataArray(gn).getData();
-		final float[] massArray = data.getDataArray(massColumn).getData();
 		final float[] vArray = data.getDataArray(v).getData();
+		final float[] massArray = scaleMass ? data.getDataArray(massColumn).getData() : null;
 		
 		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
 		for (int i=0; i<ThreadPool.availProcessors(); i++){
@@ -196,7 +196,7 @@ public class SpatialDerivatiesModule extends ClonableProcessingModule implements
 						gzArray[i] = grad.z;
 						gnArray[i] = grad.getLength();
 					}
-					ProgressMonitor.getProgressMonitor().addToCounter( (end-start)%1000);
+					ProgressMonitor.getProgressMonitor().addToCounter((end-start)%1000);
 					return null;
 				}
 			});

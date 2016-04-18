@@ -154,7 +154,7 @@ public class SpatialAveragingModule extends ClonableProcessingModule implements 
 					String.format("Weightened averages for %s selected, but mass column is missing in %s", toAverageColumn.getName(),
 							data.getName()));
 		
-		final float[] massArray = data.getDataArray(massColumn).getData();
+		final float[] massArray = scaleMass ? data.getDataArray(massColumn).getData() : null;
 		final float[] dataArray = data.getDataArray(v).getData();
 		final float[] avArray = data.getDataArray(av).getData();
 		

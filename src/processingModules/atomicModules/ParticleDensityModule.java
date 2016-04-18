@@ -108,7 +108,7 @@ public class ParticleDensityModule extends ClonableProcessingModule {
 			JLogPanel.getJLogPanel().addWarning("Mass not found",
 					String.format("Weightened particle density selected, but mass column is missing in %s", data.getName()));
 		
-		final float[] massArray = data.getDataArray(massColumn).getData();
+		final float[] massArray = scaleMass ? data.getDataArray(massColumn).getData() : null;
 		final float[] densityArray = data.getDataArray(v).getData();
 		
 		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
