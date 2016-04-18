@@ -39,6 +39,7 @@ import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
 
 import common.ThreadPool;
+import gnu.trove.map.hash.TIntObjectHashMap;
 import model.Atom;
 import model.AtomData;
 import model.DataColumnInfo;
@@ -194,7 +195,7 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 		}
 		
 		
-		final HashMap<Integer, Atom> atomsMap = new HashMap<Integer, Atom>();
+		final TIntObjectHashMap<Atom> atomsMap = new TIntObjectHashMap<Atom>();
 		for (Atom a : referenceAtomData.getAtoms()){
 			Atom oldValue = atomsMap.put(a.getNumber(), a);
 			if (oldValue != null){

@@ -32,6 +32,7 @@ import javax.swing.JSeparator;
 
 import common.ThreadPool;
 import common.Vec3;
+import gnu.trove.map.hash.TIntObjectHashMap;
 import model.Atom;
 import model.AtomData;
 import model.DataColumnInfo;
@@ -128,7 +129,7 @@ public class DisplacementModule extends ClonableProcessingModule {
 		}
 		
 		
-		final HashMap<Integer, Atom> atomsMap = new HashMap<Integer, Atom>();
+		final TIntObjectHashMap<Atom> atomsMap = new TIntObjectHashMap<Atom>();
 		for (Atom a : referenceAtomData.getAtoms())
 			atomsMap.put(a.getNumber(), a);
 		

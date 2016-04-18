@@ -6,7 +6,6 @@ import gui.ProgressMonitor;
 import gui.PrimitiveProperty.*;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Vector;
 import java.util.concurrent.Callable;
 
@@ -16,6 +15,7 @@ import javax.swing.JSeparator;
 import common.ThreadPool;
 import common.Tupel;
 import common.Vec3;
+import gnu.trove.map.hash.TIntObjectHashMap;
 import model.Atom;
 import model.AtomData;
 import model.DataColumnInfo;
@@ -118,22 +118,31 @@ public class SlipVectorModule extends ClonableProcessingModule{
 					String.format("Box sizes of reference %s is different from %s."
 							+ " Slip vectors may be inaccurate.", referenceAtomData.getName(), data.getName()));
 		}
-		
+		//Test if both sets have the same size
 		if (data.getAtoms().size() != referenceAtomData.getAtoms().size())
 			throw new RuntimeException(String.format("Cannot compute slip vectors: Number of atoms in %s and reference %s mismatch.", 
 					data.getName(), referenceAtomData.getName()));
 		
-		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(referenceAtomData.getBox(),
-				cutoffRadius, true);
-		nnb.addAll(referenceAtomData.getAtoms());
-		
-		final HashMap<Integer, Atom> atomsMap = new HashMap<Integer, Atom>();
+		//Create a look up map based on atom numbers (which must be unique for each atom )
+		final TIntObjectHashMap<Atom> atomsMap = new TIntObjectHashMap<Atom>();
 		for (Atom a : data.getAtoms())
 			atomsMap.put(a.getNumber(), a);
 		
+		//Test if each atom in the set can be mapped to the reference data
 		if (atomsMap.size() != data.getAtoms().size())
 			throw new RuntimeException(
 					String.format("Cannot compute slip vectors: IDs of atoms in %s are non-unique.", data.getName()));
+		for (Atom a : referenceAtomData.getAtoms()){
+			if (!atomsMap.containsKey(a.getNumber())){
+				throw new RuntimeException(
+						String.format("Cannot compute slip vectors: Atom %i in %s cannot be mapped to file %s.", 
+								a.getNumber(), referenceAtomData.getName(), data.getName()));
+			}
+		}
+		
+		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(referenceAtomData.getBox(),
+				cutoffRadius, true);
+		nnb.addAll(referenceAtomData.getAtoms());
 		
 		final float[] sx = data.getDataArray(data.getDataColumnIndex(cci[0])).getData();
 		final float[] sy = data.getDataArray(data.getDataColumnIndex(cci[1])).getData();
@@ -160,18 +169,11 @@ public class SlipVectorModule extends ClonableProcessingModule{
 						
 						Atom a = referenceAtomData.getAtoms().get(i);
 						Atom a_current = atomsMap.get(a.getNumber());
-						if (a_current == null) throw new RuntimeException(
-								String.format("Cannot compute slip vectors: Atom %i in %s cannot be mapped to file %s.", 
-										a.getNumber(), referenceAtomData.getName(), data.getName()));
-							
+
 						ArrayList<Tupel<Atom, Vec3>> neigh = nnb.getNeighAndNeighVec(a);
 						if (neigh.size()!=0){
 							for (Tupel<Atom,Vec3> t : neigh){
 								Atom n_current = atomsMap.get(t.o1.getNumber());
-								if (n_current == null) throw new RuntimeException(
-										String.format("Cannot compute slip vectors: Atom %i in %s cannot be mapped to file %s.", 
-												a.getNumber(), referenceAtomData.getName(), data.getName()));
-								
 								//Subtract current distance of the atoms (t.o2) from reference distance and add to sum
 								Vec3 slip = t.o2.sub(data.getBox().getPbcCorrectedDirection(n_current, a_current));
 								if (slip.getLengthSqr() > slipThreshold*slipThreshold){
