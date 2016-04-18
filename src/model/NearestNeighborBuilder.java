@@ -162,13 +162,10 @@ public class NearestNeighborBuilder<T extends Vec3> {
 		int x = (int) (dimX * c.dot(box.getTBoxSize()[0]));
 		int y = (int) (dimY * c.dot(box.getTBoxSize()[1]));
 		int z = (int) (dimZ * c.dot(box.getTBoxSize()[2]));
-		
-		if (x<0) x=0;
-		else if (x>=dimX) x=dimX-1;
-		if (y<0) y=0;
-		else if (y>=dimY) y=dimY-1;
-		if (z<0) z=0;
-		else if (z>=dimZ) z=dimZ-1;
+		//Clamp range
+		x = Math.max(0, Math.min(dimX-1, x));
+		y = Math.max(0, Math.min(dimY-1, y));
+		z = Math.max(0, Math.min(dimZ-1, z));
 		
 		int p = x*dimYZ+y*dimZ+z;
 		if (threadSafeAdd){
@@ -214,13 +211,10 @@ public class NearestNeighborBuilder<T extends Vec3> {
 		int x = (int) (dimX * c.dot(box.getTBoxSize()[0]));
 		int y = (int) (dimY * c.dot(box.getTBoxSize()[1]));
 		int z = (int) (dimZ * c.dot(box.getTBoxSize()[2]));
-		
-		if (x<0) x=0;
-		else if (x>=dimX) x=dimX-1;
-		if (y<0) y=0;
-		else if (y>=dimY) y=dimY-1;
-		if (z<0) z=0;
-		else if (z>=dimZ) z=dimZ-1;
+		//Clamp range
+		x = Math.max(0, Math.min(dimX-1, x));
+		y = Math.max(0, Math.min(dimY-1, y));
+		z = Math.max(0, Math.min(dimZ-1, z));
 		
 		int p = x*dimYZ+y*dimZ+z;
 		
@@ -249,15 +243,12 @@ public class NearestNeighborBuilder<T extends Vec3> {
 		int x = (int) (dimX * c.dot(box.getTBoxSize()[0]));
 		int y = (int) (dimY * c.dot(box.getTBoxSize()[1]));
 		int z = (int) (dimZ * c.dot(box.getTBoxSize()[2]));
+		//Clamp range
+		x = Math.max(0, Math.min(dimX-1, x));
+		y = Math.max(0, Math.min(dimY-1, y));
+		z = Math.max(0, Math.min(dimZ-1, z));
 		
-		if (x < 0) x = 0;
-		else if (x >= dimX) x = dimX - 1;
-		if (y < 0) y = 0;
-		else if (y >= dimY) y = dimY - 1;
-		if (z < 0) z = 0;
-		else if (z >= dimZ) z = dimZ - 1;
-		
-		boolean safeAccess = (x>0 && y>0 && z>0 && x<dimX-1 && y<dimY-1 && z<dimZ-1 && !accessNeverSafe);
+		boolean safeAccess = (!accessNeverSafe && x>0 && y>0 && z>0 && x<dimX-1 && y<dimY-1 && z<dimZ-1);
 		
 		ArrayList<T> neigh = new ArrayList<T>(15);
 		
@@ -325,15 +316,12 @@ public class NearestNeighborBuilder<T extends Vec3> {
 		int x = (int) (dimX * c.dot(box.getTBoxSize()[0]));
 		int y = (int) (dimY * c.dot(box.getTBoxSize()[1]));
 		int z = (int) (dimZ * c.dot(box.getTBoxSize()[2]));
+		//Clamp range
+		x = Math.max(0, Math.min(dimX-1, x));
+		y = Math.max(0, Math.min(dimY-1, y));
+		z = Math.max(0, Math.min(dimZ-1, z));
 		
-		if (x < 0) x = 0;
-		else if (x >= dimX) x = dimX - 1;
-		if (y < 0) y = 0;
-		else if (y >= dimY) y = dimY - 1;
-		if (z < 0) z = 0;
-		else if (z >= dimZ) z = dimZ - 1;
-		
-		boolean safeAccess = (x>0 && y>0 && z>0 && x<dimX-1 && y<dimY-1 && z<dimZ-1 && !accessNeverSafe);
+		boolean safeAccess = (!accessNeverSafe && x>0 && y>0 && z>0 && x<dimX-1 && y<dimY-1 && z<dimZ-1);
 		
 		ArrayList<Vec3> neigh = new ArrayList<Vec3>(15);
 		
@@ -400,16 +388,12 @@ public class NearestNeighborBuilder<T extends Vec3> {
 		int x = (int) (dimX * c.dot(box.getTBoxSize()[0]));
 		int y = (int) (dimY * c.dot(box.getTBoxSize()[1]));
 		int z = (int) (dimZ * c.dot(box.getTBoxSize()[2]));
+		//Clamp range
+		x = Math.max(0, Math.min(dimX-1, x));
+		y = Math.max(0, Math.min(dimY-1, y));
+		z = Math.max(0, Math.min(dimZ-1, z));
 		
-		if (x < 0) x = 0;
-		else if (x >= dimX) x = dimX - 1;
-		if (y < 0) y = 0;
-		else if (y >= dimY) y = dimY - 1;
-		if (z < 0) z = 0;
-		else if (z >= dimZ) z = dimZ - 1;
-		
-		//No need to handle boundary conditions
-		boolean safeAccess = (x>0 && y>0 && z>0 && x<dimX-1 && y<dimY-1 && z<dimZ-1 && !accessNeverSafe);
+		boolean safeAccess = (!accessNeverSafe && x>0 && y>0 && z>0 && x<dimX-1 && y<dimY-1 && z<dimZ-1);
 		
 		ArrayList<Tupel<T, Vec3>> neigh = new ArrayList<Tupel<T, Vec3>>(15);
 		
