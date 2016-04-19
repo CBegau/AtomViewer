@@ -155,7 +155,7 @@ public class ImportConfiguration {
 				if (vzPos==dataColumns.size()-1) dataColumns.add(v_abs);
 				else dataColumns.add(vzPos+1, v_abs);
 				map.get(Component.VELOCITY_X).setAsFirstVectorComponent(
-						map.get(Component.VELOCITY_Y), map.get(Component.VELOCITY_Z), v_abs, "Veclocity");
+						map.get(Component.VELOCITY_Y), map.get(Component.VELOCITY_Z), v_abs, "Velocity");
 			}
 		}
 	}

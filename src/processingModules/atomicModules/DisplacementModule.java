@@ -22,7 +22,6 @@ import gui.JPrimitiveVariablesPropertiesDialog;
 import gui.ProgressMonitor;
 import gui.PrimitiveProperty.ReferenceModeProperty;
 
-import java.util.HashMap;
 import java.util.Vector;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;

@@ -522,6 +522,7 @@ public class AtomData {
 	public void clear(){
 		this.atomicData.clear();
 		this.additionalData.clear();
+		if (this.previous != null) previous.next = this.next;
 		this.next = null;
 		this.previous = null;
 	}
