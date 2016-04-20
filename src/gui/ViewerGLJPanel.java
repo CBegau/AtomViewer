@@ -650,62 +650,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		if (targetFbo != null)	//rebind if necessary after destruction of ssaoFBO
 			targetFbo.bind(gl, !picking);
 	}
-
-//	private void drawRotationSphere(GL3 gl){
-//		float thickness = atomData.getBox().getHeight().maxComponent()/300f;
-//		
-//		Shader s = BuiltInShader.ADS_UNIFORM_COLOR.getShader();
-//		int colorUniform = gl.glGetUniformLocation(s.getProgram(), "Color");
-//		s.enable(gl);
-//		gl.glUniform4f(colorUniform, 0.0f, 0.0f, 0.0f, 1f);
-//		gl.glUniform1i(gl.glGetUniformLocation(s.getProgram(), "ads"), 0);
-//		
-//		Vec3 bounds = atomData.getBox().getHeight();
-//		float maxSize = bounds.maxComponent()*0.866f;
-//		Vec3 h = coordinateCenterOffset.multiplyClone(-globalMaxBounds.maxComponent()).add(bounds.multiplyClone(0.5f));
-//				
-//		//three rings, aligned at the x,y,z axes, centered around the coordinate system
-//		ArrayList<Vec3> path = new ArrayList<Vec3>();
-//		ArrayList<Vec3> path2 = new ArrayList<Vec3>();
-//		ArrayList<Vec3> path3 = new ArrayList<Vec3>();
-//		for (int i=0; i<=64; i++){
-//			double a = 2*Math.PI*(i/64.);
-//			float sin = (float)Math.sin(a)*maxSize;
-//			float cos = (float)Math.cos(a)*maxSize;
-//			path.add(new Vec3(sin+h.x, cos+h.y, h.z));
-//			path2.add(new Vec3(sin+h.x, h.y, cos+h.z));
-//			path3.add(new Vec3(h.x, sin+h.y, cos+h.z));
-//		}
-//		
-//		TubeRenderer.drawTube(gl, path, thickness);
-//		TubeRenderer.drawTube(gl, path2, thickness);
-//		TubeRenderer.drawTube(gl, path3, thickness);
-//		
-//		//Straight lines along x,y,z direction in the center of the coordinate system
-//		path.clear();
-//		path.add(new Vec3(maxSize+h.x, h.y, h.z)); path.add(new Vec3(-maxSize+h.x, h.y, h.z));
-//		TubeRenderer.drawTube(gl, path, thickness);
-//		
-//		path.clear();
-//		path.add(new Vec3(h.x, maxSize+h.y, h.z)); path.add(new Vec3(h.x, -maxSize+h.y, h.z));
-//		TubeRenderer.drawTube(gl, path, thickness);
-//		
-//		path.clear();
-//		path.add(new Vec3(h.x, h.y, maxSize+h.z)); path.add(new Vec3(h.x, h.y, -maxSize+h.z));
-//		TubeRenderer.drawTube(gl, path, thickness);
-//		
-//		//Draw a sphere centered on the coordinate system
-//		gl.glUniform4f(colorUniform, 0.5f, 0.5f, 1.0f, 0.8f);
-//		GLMatrix mvm = modelViewMatrix.clone();
-//		mvm.translate(h.x, h.y, h.z);
-//		mvm.scale(maxSize, maxSize, maxSize);
-//		updateModelViewInShader(gl, s, mvm, projectionMatrix);
-//		SimpleGeometriesRenderer.drawSphere(gl);
-//		updateModelViewInShader(gl, s, modelViewMatrix, projectionMatrix);
-//		
-//		gl.glUniform1i(gl.glGetUniformLocation(s.getProgram(), "ads"), 
-//				RenderingConfiguration.Options.ADS_SHADING.isEnabled() ? 1 : 0);
-//	}
 	
 	private void drawSimulationBox(GL3 gl, boolean picking) {
 		if (!RenderOption.BOUNDING_BOX.isEnabled() || picking) return;
@@ -994,7 +938,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		}
 	}
 	
-	
+	//TODO Put this method into a data-container
 	private void drawGrain(GL3 gl, boolean picking){
 		if (!RenderOption.GRAINS.isEnabled() || !atomData.isPolyCrystalline()) return;
 		Shader s = picking?BuiltInShader.ADS_UNIFORM_COLOR.getShader():BuiltInShader.OID_ADS_UNIFORM_COLOR.getShader();
@@ -1216,28 +1160,27 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		if (atomData == null) return;
 		
 		final int blocks = 4;
-		float size = 50;
 		float unitLengthInPixel = estimateUnitLengthInPixels();
 		float unitsOnScreen = width/unitLengthInPixel;
-		float a = unitsOnScreen/10;
+		float a = unitsOnScreen*0.1f;
 		
 		//Determine best fitting size for the label
 		//Possible values are 1*10^x, 2*10^x and 5*10^x, which x the nearest power
 		float power = (float)Math.ceil(Math.log10(a));
 		float b = a/(float)Math.pow(10, power);
+		
+		float size;
 		if (b>0.5) size = 1;
 		else if (b>0.33f) size = 0.5f;
 		else size = 0.2f;
 		size *= (int)Math.pow(10, power);
 		String sizeString = String.format("%.1f",size);
 		
-		//The length scale box is placed 10% of the screen resolution away from the upper, left corner
-		final int xshift = width/10;
-		final int yshift = height-(height/10);
-		
 		gl.glDisable(GL.GL_DEPTH_TEST);
 		GLMatrix mvm = new GLMatrix();
 		GLMatrix pm = createFlatProjectionMatrix();
+		//The length scale box is placed 10% of the screen resolution away from the upper, left corner
+		pm.translate(width/10 , height-(height/10), 0f); //
 		BuiltInShader.NO_LIGHTING.getShader().enable(gl);
 		updateModelViewInShader(gl, BuiltInShader.NO_LIGHTING.getShader(), mvm, pm);
 		
@@ -1250,57 +1193,52 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		float textWidth = textRenderer.getStringWidth(sizeString)*textscale;
 		float minSize = Math.max(textWidth+5, w*blocks);
 		
-		//Draw black background
-		VertexDataStorageLocal vds = new VertexDataStorageLocal(gl, 4, 2, 0, 0, 4, 0, 0, 0, 0);
+		VertexDataStorageLocal vds = new VertexDataStorageLocal(gl, 12 + 6*blocks, 2, 0, 0, 4, 0, 0, 0, 0);
 		vds.beginFillBuffer(gl);
-		
-		vds.setColor(0f, 0f, 0f, 1f);
-		vds.setVertex(xshift-10-border, yshift-textHeigh-border);
-		vds.setVertex(xshift+minSize+10+border, yshift-textHeigh-border);
-		vds.setVertex(xshift-10-border, yshift+10*h_scale+border);
-		vds.setVertex(xshift+minSize+10+border, yshift+10*h_scale+border);
+		{			
+			//Draw white rectangle into black rectangle -> white area + black border
+			vds.setColor(0f, 0f, 0f, 1f); // Black background
+			vds.setVertex(-10-border, -textHeigh-border); //Triangle 1
+			vds.setVertex(minSize+10+border, -textHeigh-border);
+			vds.setVertex(minSize+10+border, 10*h_scale+border);
 			
+			vds.setVertex(minSize+10+border, 10*h_scale+border); //Triangle 2
+			vds.setVertex(-10-border, 10*h_scale+border);
+			vds.setVertex(-10-border, -textHeigh-border);
+			
+			vds.setColor(1f, 1f, 1f, 1f); //White area inside
+			vds.setVertex(-10, -textHeigh);
+			vds.setVertex(minSize+10, -textHeigh);
+			vds.setVertex(minSize+10, 10*h_scale);
+			
+			vds.setVertex(minSize+10, 10*h_scale);
+			vds.setVertex(-10, 10*h_scale);
+			vds.setVertex(-10, -textHeigh);
+			
+			//Add length scale bar
+			float offset = Math.min(w*blocks-(textWidth+5), 0f)*-0.5f;
+	    	for (int i=0; i<blocks; i++){
+	    		float c = i%2==0? 0.7f: 0f;
+	    		vds.setColor(c, c, c, 1f);
+	    		
+	    		vds.setVertex(offset + w*i,     8*h_scale);
+	    		vds.setVertex(offset + w*i,     2*h_scale);
+	    		vds.setVertex(offset + w*(i+1), 8*h_scale);
+	    		
+	    		vds.setVertex(offset + w*i,     2*h_scale);
+	    		vds.setVertex(offset + w*(i+1), 2*h_scale);
+	    		vds.setVertex(offset + w*(i+1), 8*h_scale);
+	    	}
+		}
 		vds.endFillBuffer(gl);
-		vds.draw(gl, GL.GL_TRIANGLE_STRIP);
-		vds.dispose(gl);
 		
-		//Draw white rectangle into black background -> white area + black border
-		vds = new VertexDataStorageLocal(gl, 4, 2, 0, 0, 4, 0, 0, 0, 0);
-		vds.beginFillBuffer(gl);
-		
-		vds.setColor(1f, 1f, 1f, 1f);
-		vds.setVertex(xshift-10, yshift-textHeigh);
-		vds.setVertex(xshift+minSize+10, yshift-textHeigh);
-		vds.setVertex(xshift-10, yshift+10*h_scale);
-		vds.setVertex(xshift+minSize+10, yshift+10*h_scale);
-		
-		vds.endFillBuffer(gl);
-		vds.draw(gl, GL.GL_TRIANGLE_STRIP);
-		vds.dispose(gl);
-		
-		//Add lenght bar
-		vds = new VertexDataStorageLocal(gl, blocks*6, 2, 0, 0, 4, 0, 0, 0, 0);
-		float offset = Math.min(w*blocks-(textWidth+5), 0f)*-0.5f;
-    	for (int i=0; i<blocks; i++){
-    		float c = i%2==0? 0.7f: 0f;
-    		vds.setColor(c, c, c, 1f);
-    		
-    		vds.setVertex(offset + w*i+xshift, yshift+8*h_scale);
-    		vds.setVertex(offset + w*i+xshift, yshift+2*h_scale);
-    		vds.setVertex(offset + w*(i+1)+xshift, yshift+8*h_scale);
-    		
-    		vds.setVertex(offset + w*i+xshift, yshift+2*h_scale);
-    		vds.setVertex(offset + w*(i+1)+xshift, yshift+2*h_scale);
-    		vds.setVertex(offset + w*(i+1)+xshift, yshift+8*h_scale);
-    	}
-    	vds.endFillBuffer(gl);
 		vds.draw(gl, GL.GL_TRIANGLES);
 		vds.dispose(gl);
 		
 		//Add label
 		textRenderer.beginRendering(gl, 0f, 0f, 0f, 1f, mvm, pm);
-    	textRenderer.draw(gl, sizeString, minSize*0.5f-textWidth*0.5f+xshift,
-    			yshift+2*h_scale-textRenderer.getStringHeigh()*textscale, 1f, textscale);
+    	textRenderer.draw(gl, sizeString, minSize*0.5f-textWidth*0.5f,
+    			2*h_scale-textRenderer.getStringHeigh()*textscale, 1f, textscale);
 	    textRenderer.endRendering(gl);
 	    updateModelViewInShader(gl, Shader.BuiltInShader.PLAIN_TEXTURED.getShader(), modelViewMatrix, projectionMatrix);
 		
@@ -1355,8 +1293,8 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			if (zoom<0.05f) zoom = 0.05f;
 		} else if (e.isControlDown()){
 			float v = (globalMaxBounds.maxComponent()/globalMaxBounds.minComponent())/zoom;
-			//TODO Modify this formula and the setup of the modelview matrix, breaking backwards compatibility
-			//The current implementation is just plain bad
+			//TODO Modify this formula and the setup of the modelview matrix
+			//This will break backwards compatibility, but the current implementation is just plain bad
 			moveX -= ((newDragPosition.x - startDragPosition.x)/(float)width) * v;
 			moveY += ((newDragPosition.y - startDragPosition.y)/(float)height) * v;
 		} else {
@@ -1432,28 +1370,21 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		}
 		
 		if (reinit){
-			setSphereSize(atomData.getCrystalStructure().getDistanceToNearestNeighbor()*0.55f);
-			//If individual sizes are given, use default multiplier of 1
-			for (DataColumnInfo cci : atomData.getDataColumnInfos()){
-				if (cci.getComponent() == Component.PARTICLE_RADIUS)
-					setSphereSize(1f);
-			}
+			//If individual sizes are given, use default multiplier of 1 for sphere size
+			if (atomData.getComponentIndex(Component.PARTICLE_RADIUS) != -1) setSphereSize(1f);
+			else setSphereSize(atomData.getCrystalStructure().getDistanceToNearestNeighbor()*0.55f);
 			
-			if (!atomData.isPolyCrystalline()) RenderOption.GRAINS.enabled = false;
+			if (!atomData.isPolyCrystalline()) RenderOption.GRAINS.setEnabled(false);
 			
-			//Find global maximum boundaries
-			globalMaxBounds = new Vec3();
 			coordinateCenterOffset.setTo(0f, 0f, 0f);
-			AtomData tmp = atomData;
-			//Iterate over the whole set
-			while (tmp.getPrevious()!=null) tmp = tmp.getPrevious();
-			do {
-				Vec3 bounds = tmp.getBox().getHeight();
-				if (bounds.x>globalMaxBounds.x) globalMaxBounds.x = bounds.x;
-				if (bounds.y>globalMaxBounds.y) globalMaxBounds.y = bounds.y;
-				if (bounds.z>globalMaxBounds.z) globalMaxBounds.z = bounds.z;
-				tmp = tmp.getNext();
-			} while (tmp != null);
+			//Find global maximum boundaries
+			globalMaxBounds.setTo(0f, 0f, 0f);
+			for (AtomData d : Configuration.getAtomDataIterable(atomData)){
+				Vec3 bounds = d.getBox().getHeight();
+				globalMaxBounds.x = Math.max(bounds.x, globalMaxBounds.x);
+				globalMaxBounds.y = Math.max(bounds.y, globalMaxBounds.y);
+				globalMaxBounds.z = Math.max(bounds.z, globalMaxBounds.z);
+			}
 		}
 		
 		if (atomData.isPolyCrystalline()){
