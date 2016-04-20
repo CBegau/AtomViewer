@@ -81,7 +81,7 @@ public class DisplacementModule extends ClonableProcessingModule {
 
 	@Override
 	public boolean isApplicable(AtomData data) {
-		return (data.getNext() != null || data.getPrevious() != null);
+		return true;
 	}
 
 	@Override

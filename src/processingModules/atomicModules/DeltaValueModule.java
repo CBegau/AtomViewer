@@ -98,7 +98,7 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 			}
 		}
 		
-		return ((data.getNext() != null || data.getPrevious() != null) && data.getDataColumnInfos().size() != 0);
+		return (data.getDataColumnInfos().size() != 0);
 	}
 
 	@Override

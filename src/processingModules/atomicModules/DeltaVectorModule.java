@@ -95,8 +95,6 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 			}
 		}
 		
-		if ((data.getNext() == null && data.getPrevious() == null))
-			return false;
 		for (DataColumnInfo dci: data.getDataColumnInfos())
 			if (dci.isFirstVectorComponent()) return true; 
 		
