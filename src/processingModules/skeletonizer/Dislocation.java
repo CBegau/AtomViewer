@@ -203,7 +203,7 @@ public class Dislocation implements Pickable{
 			keys.add("Avg. RBV magnitude"); values.add(Float.toString(bvInfo.averageResultantBurgersVector.getLength()));
 			
 			if (bvInfo.burgersVector.isFullyDefined()) {
-				keys.add("Burgers Vector"); values.add(bvInfo.burgersVector.toString() + (bvInfo.isComputed()?" (computed":""));
+				keys.add("Burgers Vector"); values.add(bvInfo.burgersVector.toString() + (bvInfo.isComputed()?" (computed)":""));
 			} else {
 				BurgersVector tbv;
 				if (grain != null){
