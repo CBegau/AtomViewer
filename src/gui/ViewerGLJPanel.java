@@ -511,6 +511,15 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		Shader.disableLastUsedShader(gl);
 	}
 
+	/**
+	 * Draw all transparent object. This uses the weigthened order independent rendering method
+	 * described in 
+	 * McGuire & Bavoil: Weighted Blended Order-Independent Transparency, 
+	 * Journal of Computer Graphics Techniques Vol. 2, No. 2, 2013
+	 * @param gl
+	 * @param picking
+	 * @param drawIntoFBO
+	 */
 	public void drawTransparentObjects(GL3 gl, boolean picking, FrameBufferObject drawIntoFBO) {
 		if (!picking) {
 			//Prepare order independent rendering using the deferred rendering FBO that has all
