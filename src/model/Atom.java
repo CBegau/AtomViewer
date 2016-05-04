@@ -213,16 +213,16 @@ public final class Atom extends Vec3 implements Pickable {
 		for (DataColumnInfo c : dci){
 			if (!c.isVectorComponent()){
 				int index1 = data.getDataColumnIndex(c);
-				keys.add(c.getName()); values.add(CommonUtils.outputDecimalFormatter.format(getData(index1, data))+c.getUnit());
+				keys.add(c.getName()); values.add(CommonUtils.outputDecimalFormatter.format(getData(index1, data))+" "+c.getUnit());
 			} else if (c.isFirstVectorComponent()){
-				keys.add(c.getVectorName()+(!c.getUnit().isEmpty()?"("+c.getUnit()+")":""));
+				keys.add(c.getVectorName());
 				int index1 = data.getDataColumnIndex(c.getVectorComponents()[0]);
 				int index2 = data.getDataColumnIndex(c.getVectorComponents()[1]);
 				int index3 = data.getDataColumnIndex(c.getVectorComponents()[2]);
 				Vec3 vec = new Vec3(getData(index1, data), getData(index2, data), getData(index3, data));
-				values.add(vec.toString());
-				keys.add("Magnitude of "+c.getVectorName()+(!c.getUnit().isEmpty()?"("+c.getUnit()+")":""));
-				values.add(Float.toString(vec.getLength()));
+				values.add(vec.toString()+(!c.getUnit().isEmpty()?" "+c.getUnit():""));
+				keys.add("Magnitude of "+c.getVectorName());
+				values.add(Float.toString(vec.getLength())+" "+c.getUnit());
 			}
 		}
 		
