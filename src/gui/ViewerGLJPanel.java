@@ -1096,9 +1096,9 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		for (int i=0; i<3; i++){
 			String s = "";
 			if (evenNumbers)
-				s = "=[" +(int)Math.round(atomData.getCrystalRotation().getCrystalOrientation()[i].x)+" "
+				s = "=["+(int)Math.round(atomData.getCrystalRotation().getCrystalOrientation()[i].x)+" "
 						+(int)Math.round(atomData.getCrystalRotation().getCrystalOrientation()[i].y)+" "
-						+(int)Math.round(atomData.getCrystalRotation().getCrystalOrientation()[i].z) +"]";
+						+(int)Math.round(atomData.getCrystalRotation().getCrystalOrientation()[i].z)+"]";
 			if (i==0) s = "x"+s;
 			if (i==1) s = "y"+s;
 			if (i==2) s = "z"+s;

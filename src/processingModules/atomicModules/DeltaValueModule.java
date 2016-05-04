@@ -206,6 +206,19 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 		final int refValueIndex = referenceAtomData.getDataColumnIndex(toDeltaColumn);
 		final int deltaIndex = data.getDataColumnIndex(existingDeltaColumns.get(toDeltaColumn));
 		
+		if (valueIndex == -1){
+		    JLogPanel.getJLogPanel().addError("Column not found",
+                    String.format("Cannot compute difference of value %s, "
+                            + "column not available in %s", this.toDeltaColumn.getName(), data.getName()));
+		    throw new RuntimeException();
+		}
+		if (refValueIndex == -1){
+            JLogPanel.getJLogPanel().addError("Column not found",
+                    String.format("Cannot compute difference of value %s, "
+                            + "column not available in %s", this.toDeltaColumn.getName(), referenceAtomData.getName()));
+            throw new RuntimeException();
+        }
+		
 		final float[] deltaArray = data.getDataArray(deltaIndex).getData();
 		final float[] valueArray = data.getDataArray(valueIndex).getData();
 		final float[] refValueArray = referenceAtomData.getDataArray(refValueIndex).getData();

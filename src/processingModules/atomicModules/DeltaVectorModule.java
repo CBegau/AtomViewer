@@ -215,6 +215,15 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 		final int xIndex = data.getDataColumnIndex(toDeltaColumn.getVectorComponents()[0]);
 		final int yIndex = data.getDataColumnIndex(toDeltaColumn.getVectorComponents()[1]);
 		final int zIndex = data.getDataColumnIndex(toDeltaColumn.getVectorComponents()[2]);
+		
+		if (xIndex == -1 || yIndex == -1 || zIndex == -1){
+            JLogPanel.getJLogPanel().addError("Column not found",
+                    String.format("Cannot compute difference of value %s, "
+                            + "column not available in %s", this.toDeltaColumn.getName(), data.getName()));
+            throw new RuntimeException();
+        }
+      
+		
 		final float[] xArray = data.getDataArray(xIndex).getData();
 		final float[] yArray = data.getDataArray(yIndex).getData();
 		final float[] zArray = data.getDataArray(zIndex).getData();
@@ -222,6 +231,14 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 		final int xRefIndex = referenceAtomData.getDataColumnIndex(toDeltaColumn.getVectorComponents()[0]);
 		final int yRefIndex = referenceAtomData.getDataColumnIndex(toDeltaColumn.getVectorComponents()[1]);
 		final int zRefIndex = referenceAtomData.getDataColumnIndex(toDeltaColumn.getVectorComponents()[2]);
+		
+		if (xRefIndex == -1 || yRefIndex == -1 || zRefIndex == -1){
+            JLogPanel.getJLogPanel().addError("Column not found",
+                    String.format("Cannot compute difference of value %s, "
+                            + "column not available in %s", this.toDeltaColumn.getName(), referenceAtomData.getName()));
+            throw new RuntimeException();
+        }
+		
 		final float[] xRefArray = data.getDataArray(xRefIndex).getData();
 		final float[] yRefArray = data.getDataArray(yRefIndex).getData();
 		final float[] zRefArray = data.getDataArray(zRefIndex).getData();
