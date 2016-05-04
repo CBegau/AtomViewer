@@ -321,7 +321,7 @@ public class StressDataModule extends ClonableProcessingModule {
 			
 			ObjectRenderData<StressValue> ord = 
 					new ObjectRenderData<StressValue>(objects, false, data);
-			ObjectRenderData<?>.Cell c = ord.getRenderableCells().get(0);
+			ObjectRenderData<StressValue>.Cell c = ord.getRenderableCells().get(0);
 			for(int i=0; i<objects.size(); i++){
 				float[] col = ColorTable.getIntensityGLColor(min, max, objects.get(i).getStress(dataPanel.showStressValue));
 				c.getColorArray()[3*i+0] = col[0];

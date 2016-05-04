@@ -706,8 +706,8 @@ public class Skeletonizer extends DataContainer {
 				}
 			}
 					
-			ObjectRenderData<?> ord = new ObjectRenderData<Atom>(atomsToRender, false, data);
-			ObjectRenderData<?>.Cell c = ord.getRenderableCells().get(0);
+			ObjectRenderData<Atom> ord = new ObjectRenderData<Atom>(atomsToRender, false, data);
+			ObjectRenderData<Atom>.Cell c = ord.getRenderableCells().get(0);
 			for(int i=0; i<objectsToRender.size(); i++){
 				c.getColorArray()[3*i+0] = objectsToRender.get(i).color[0];
 				c.getColorArray()[3*i+1] = objectsToRender.get(i).color[1];

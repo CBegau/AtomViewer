@@ -786,7 +786,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	}
 	
 
-	public void drawSpheres(GL3 gl, ObjectRenderData<?> ard, boolean picking){
+	public <T extends Vec3 & Pickable> void drawSpheres(GL3 gl, ObjectRenderData<T> ard, boolean picking){
 		//Forward the call to a highly specialized routine
 		sphereRenderer.drawSpheres(gl, ard, picking);
 	}

@@ -30,6 +30,7 @@ import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL3;
 
 import model.AtomData;
+import model.Pickable;
 import model.RenderingConfiguration;
 import common.*;
 
@@ -55,7 +56,7 @@ public class SphereRenderer {
 		sphereVboIndices = null;
 	}
 		
-	public void drawSpheres(GL3 gl, ObjectRenderData<?> ard, boolean picking){
+	public <T extends Vec3 & Pickable> void drawSpheres(GL3 gl, ObjectRenderData<T> ard, boolean picking){
 		VertexDataStorage.unbindAll(gl);
 		
 		if (ViewerGLJPanel.openGLVersion>=3.3 && ard.isSubdivided()){
@@ -96,11 +97,11 @@ public class SphereRenderer {
 		int sphereTranslateUniform = gl.glGetUniformLocation(shader.getProgram(), "Move");
 
 		for (int i=0; i<ard.getRenderableCells().size(); ++i){
-			ObjectRenderData<?>.Cell c = ard.getRenderableCells().get(i);
+			ObjectRenderData<T>.Cell c = ard.getRenderableCells().get(i);
 			if (c.getNumVisibleObjects() == 0) continue;
 			float[] colors = c.getColorArray();
 			float[] sizes = c.getSizeArray();
-			List<? extends Vec3> objects = c.getObjects();
+			List<T> objects = c.getObjects();
 			boolean[] visible = c.getVisibiltyArray();
 			
 			for (int j=0; j<c.getNumObjects(); j++){
@@ -108,7 +109,7 @@ public class SphereRenderer {
 					Vec3 a = objects.get(j);
 					 
 					if (picking){
-						float[] col = viewer.getNextPickingColor(c.getObjects().get(j));
+						float[] col = viewer.getNextPickingColor(objects.get(j));
 						gl.glUniform4f(sphereColorUniform, col[0], col[1], col[2], 1f);
 					} else {
 						gl.glUniform4f(sphereColorUniform, colors[3*j], colors[3*j+1], colors[3*j+2], 1f);
@@ -130,7 +131,7 @@ public class SphereRenderer {
 		gl.glEnable(GL.GL_CULL_FACE);
 	}
 
-	private void drawSpheresInstanced(GL3 gl, ObjectRenderData<?> ard, boolean picking){
+	private <T extends Vec3 & Pickable> void drawSpheresInstanced(GL3 gl, ObjectRenderData<T> ard, boolean picking){
 		gl.glDisable(GL.GL_BLEND); //Transparency can cause troubles and should be avoided, disabling blending might be faster then
 		gl.glDisable(GL.GL_CULL_FACE); // The billboard is always correctly oriented, do not bother testing
 		
@@ -194,7 +195,7 @@ public class SphereRenderer {
 //		int cellsDrawn = 0;
 
 		for (int j=0; j<ard.getRenderableCells().size(); j++){
-			ObjectRenderData<?>.Cell c = ard.getRenderableCells().get(j);
+			ObjectRenderData<T>.Cell c = ard.getRenderableCells().get(j);
 
 			//Cells are order by visibility, with empty cells at the end of the list
 			//Stop at the first empty block
@@ -241,14 +242,14 @@ public class SphereRenderer {
 				
 				float[] colors = c.getColorArray();
 				float[] sizes = c.getSizeArray();
-				List<? extends Vec3> objects = c.getObjects();
+				List<T> objects = c.getObjects();
 				boolean[] visible = c.getVisibiltyArray();
 				//Fill render buffer, color values is either the given value or a picking color
 				if (picking){
 					for (int i=0; i<c.getNumObjects(); i++){
 						if (visible[i]){
 							Vec3 ra = objects.get(i);
-							float[] col = viewer.getNextPickingColor(c.getObjects().get(i));
+							float[] col = viewer.getNextPickingColor(objects.get(i));
 							buf.put(col[0]); buf.put(col[1]); buf.put(col[2]); buf.put(1f);
 							buf.put(ra.x); buf.put(ra.y); buf.put(ra.z); buf.put(sizes[i]);
 						}
@@ -273,7 +274,7 @@ public class SphereRenderer {
 			
 			//Occlusion test
 			if (j+cellRenderRingBuffer.size()<ard.getRenderableCells().size()){
-				ObjectRenderData<?>.Cell futureCell = ard.getRenderableCells().get(j+cellRenderRingBuffer.size());
+				ObjectRenderData<T>.Cell futureCell = ard.getRenderableCells().get(j+cellRenderRingBuffer.size());
 	
 				if (hasRenderedCell){
 					gl.glBindVertexArray(viewer.getDefaultVAO());
