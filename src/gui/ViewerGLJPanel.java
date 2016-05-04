@@ -476,7 +476,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		if (drawIntoFBO != null)
 			drawIntoFBO.unbind(gl);
 		
-		gl.glDisable(GL.GL_BLEND);
 		if (!picking)
 			fboDeferredBuffer.bind(gl, false);
 		
@@ -928,7 +927,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			} else sphereRenderer.drawSpheres(gl, renderData, picking);
 		} else {
 			//Render as RBVs
-			gl.glDisable(GL.GL_BLEND);
 			final float[] lineDirColor = new float[]{0.5f, 0.5f, 0.5f};
 			RBVStorage storage = atomData.getRbvStorage();
 			for (int i=0, len = atomData.getAtoms().size(); i<len; i++){
@@ -1612,12 +1610,10 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		
 		gl.glClear(GL.GL_COLOR_BUFFER_BIT);
 		//Render in Picking mode
-		gl.glDisable(GL.GL_BLEND);
 		gl.glEnable(GL.GL_SCISSOR_TEST);
 		gl.glScissor(p.x-picksize/2, viewport[3] - p.y-picksize/2, picksize, picksize);
 		renderScene(gl, true ,0, null);
 		gl.glDisable(GL.GL_SCISSOR_TEST);
-		gl.glEnable(GL.GL_BLEND);
 		
 		if (pickList.size() > 16777214){
 			JLogPanel.getJLogPanel().addError("Picking not possible", "Too many objects in the scene. Only 2^24 objects can be visible for picking."

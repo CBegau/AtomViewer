@@ -155,8 +155,6 @@ public class ArrowRenderer {
 		float[] yArray = ord.getData().getDataArray(yIndex).getData();
 		float[] zArray = ord.getData().getDataArray(zIndex).getData();
 		
-		gl.glDisable(GL.GL_BLEND);
-		
 		for (int i=0; i<ord.getRenderableCells().size(); ++i){
 			ObjectRenderData<Atom>.Cell c = ord.getRenderableCells().get(i);
 			
@@ -181,14 +179,11 @@ public class ArrowRenderer {
 				}
 			}
 		}
-
-		if (!picking) gl.glEnable(GL.GL_BLEND);
 	}
 	
 	private void drawVectorsInstanced(GL3 gl, ObjectRenderData<Atom> ord, boolean picking, int xIndex,
 			int yIndex, int zIndex, float scalingFactor, boolean normalize, float thickness, float headThickScale){
 		VertexDataStorage.unbindAll(gl);
-		gl.glDisable(GL.GL_BLEND); //Transparency can cause troubles and should be avoided, disabling blending might be faster then
 		
 		//Select the rendering shader
 		Shader shader = BuiltInShader.ARROW_INSTANCED_DEFERRED.getShader();
@@ -300,8 +295,6 @@ public class ArrowRenderer {
 		gl.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, 0);
 		
 		Shader.disableLastUsedShader(gl);
-
-		if (!picking) gl.glEnable(GL.GL_BLEND);
 	}
 	
 	private static void initVDS(GL3 gl,Shader s){

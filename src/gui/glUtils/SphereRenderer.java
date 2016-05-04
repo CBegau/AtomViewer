@@ -64,7 +64,6 @@ public class SphereRenderer {
 			return;
 		}
 		
-		gl.glDisable(GL.GL_BLEND); //Transparency can cause troubles and should be avoided, disabling blending might be faster then
 		gl.glDisable(GL.GL_CULL_FACE); // The billboard is always correctly oriented, do not bother testing
 		
 		//Select the rendering shader
@@ -127,12 +126,10 @@ public class SphereRenderer {
 		gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
 		Shader.disableLastUsedShader(gl);
 		
-		if (!picking) gl.glEnable(GL.GL_BLEND);
 		gl.glEnable(GL.GL_CULL_FACE);
 	}
 
 	private <T extends Vec3 & Pickable> void drawSpheresInstanced(GL3 gl, ObjectRenderData<T> ard, boolean picking){
-		gl.glDisable(GL.GL_BLEND); //Transparency can cause troubles and should be avoided, disabling blending might be faster then
 		gl.glDisable(GL.GL_CULL_FACE); // The billboard is always correctly oriented, do not bother testing
 		
 		//Select the rendering shader
@@ -318,7 +315,6 @@ public class SphereRenderer {
 		Shader.disableLastUsedShader(gl);
 
 		viewer.updateModelViewInShader(gl, visTestShader, viewer.getModelViewMatrix(), viewer.getProjectionMatrix());
-		if (!picking) gl.glEnable(GL.GL_BLEND);
 		gl.glEnable(GL.GL_CULL_FACE);
 	}
 

@@ -88,6 +88,7 @@ public class TextRenderer {
 	
 	public void endRendering(GL3 gl){
 		gl.glActiveTexture(GL3.GL_TEXTURE0);
+		gl.glDisable(GL3.GL_BLEND);
 		Shader.popShader();
 		
 	}

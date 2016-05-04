@@ -717,7 +717,6 @@ public class Skeletonizer extends DataContainer {
 			}
 			ord.reinitUpdatedCells();
 			viewer.drawSpheres(gl, ord, false);
-			gl.glDisable(GL.GL_BLEND);
 		}
 		
 		//Render the dislocation core elements
