@@ -479,15 +479,12 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 			}
 		});
 		
-		
-		if (Configuration.experimentalFeatures){
-			final JMenuItem toolchainMenu = new JMenu("Toolchain");
-			toolchainMenu.add(saveToolchainMenuItem);
-			toolchainMenu.add(applyToolchainMenuItem);
-			toolchainMenu.add(applyToAllToolchainMenuItem);
-			processingMenu.add(toolchainMenu);
-		}
-		
+		final JMenuItem toolchainMenu = new JMenu("Toolchain (experimental)");
+		toolchainMenu.add(saveToolchainMenuItem);
+		toolchainMenu.add(applyToolchainMenuItem);
+		toolchainMenu.add(applyToAllToolchainMenuItem);
+		processingMenu.add(toolchainMenu);
+	
 		menu.add(processingMenu);
 		
 		final JMenuItem settingsMenu = new JMenu("Settings");

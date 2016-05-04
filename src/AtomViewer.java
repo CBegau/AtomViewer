@@ -5,7 +5,6 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
 import gui.JMainWindow;
-import model.Configuration;
 
 
 public class AtomViewer {
@@ -22,10 +21,6 @@ public class AtomViewer {
 			    jar.close();
 			}
 		} catch (Exception e){}
-		
-		if (args.length != 0 && args[0].equals("-exp")){
-			Configuration.experimentalFeatures = true;
-		}
 		
 		JMainWindow.startAtomViewer(args);
 	}

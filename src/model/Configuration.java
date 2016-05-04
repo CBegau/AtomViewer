@@ -32,8 +32,6 @@ public class Configuration {
 	 */
 	public static final boolean RUN_AS_STICKWARE = true;
 	
-	public static boolean experimentalFeatures = false;
-	
 	private static File lastOpenedFolder = null;
 	private static File lastOpenedExportFolder = null;
 	private static MDFileLoader currentFileLoader = null;
