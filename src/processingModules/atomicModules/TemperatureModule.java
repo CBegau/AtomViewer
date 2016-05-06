@@ -51,13 +51,17 @@ public class TemperatureModule extends ClonableProcessingModule{
 	private float scalingFactor = 11605f;
 	@ExportableValue
 	private boolean spatialAverage = true;
+	@ExportableValue
+    private boolean ignoreFixedAtoms = true;
 	
 	@Override
 	public String getFunctionDescription() {
 		return "Computes the temperature T per atom from a velocity vector δv and the atomic mass m as T=|δv|*m/3. "
 				+ "The velocity vector δv is the difference of the atom's velocity "
 				+ "and the center of mass velocity of all atoms within the given cutoff radius."
-				+" If requested, the temperature per atom is averaged within the cutoff radius.";
+				+ " If requested, the temperature per atom is averaged within the cutoff radius."
+				+ " If requested, atoms with an absolute velocity of exactly 0.0 are considered "
+				+ "as fixed atoms and ignored for temperature calculations.";
 	}
 	
 	@Override
@@ -114,24 +118,10 @@ public class TemperatureModule extends ClonableProcessingModule{
 			nnb = new NearestNeighborBuilder<Atom>(data.getBox(), centerOfMassVelocityRadius, true);
 		else nnb = null;
 		
-		int m = -1;
-		int v_x = -1;
-		int v_y = -1;
-		int v_z = -1;
-		for (int i=0; i<data.getDataColumnInfos().size(); i++){
-			DataColumnInfo cci = data.getDataColumnInfos().get(i);
-			if (cci.getComponent() == Component.MASS)
-				m = i;
-			
-			if (cci.getComponent() == Component.VELOCITY_X)
-				v_x = i;
-			
-			if (cci.getComponent() == Component.VELOCITY_Y)
-				v_y = i;
-			
-			if (cci.getComponent() == Component.VELOCITY_Z)
-				v_z = i;
-		}
+		int m = data.getComponentIndex(Component.MASS);
+		int v_x = data.getComponentIndex(Component.VELOCITY_X);
+		int v_y = data.getComponentIndex(Component.VELOCITY_Y);
+		int v_z = data.getComponentIndex(Component.VELOCITY_Z);
 		
 		int temperatureIndex = data.getDataColumnIndex(temperatureColumn);
 		if (m == -1  || temperatureIndex == -1 || v_x == -1 || v_y == -1 || v_z == -1)
@@ -141,6 +131,8 @@ public class TemperatureModule extends ClonableProcessingModule{
 		final float[] vxArray = data.getDataArray(v_x).getData();
 		final float[] vyArray = data.getDataArray(v_y).getData();
 		final float[] vzArray = data.getDataArray(v_z).getData();
+		int vAbsIndex = data.getDataColumnIndex(data.getDataColumnInfos().get(v_x).getVectorComponents()[3]);
+		final float[] vAbsArray = data.getDataArray(vAbsIndex).getData();
 		final float[] temperatureArray = data.getDataArray(temperatureIndex).getData();
 		
 		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
@@ -168,21 +160,31 @@ public class TemperatureModule extends ClonableProcessingModule{
 						float totThermalEnergy = 0f;
 						
 						if (centerOfMassVelocityRadius > 0){
+						    if (ignoreFixedAtoms && vAbsArray[i] == 0.f){ //Fixed atoms have no temperature
+						        temperatureArray[i] = 0f;
+						        continue;
+						    }
+						    
 							float av_x = vx;
 							float av_y = vy;
 							float av_z = vz;
+							int nn = 1;
 							
 							ArrayList<Atom> neigh = nnb.getNeigh(a);
 							for (Atom n : neigh){
 								int id = n.getID();
-								av_x += vxArray[id];
-								av_y += vyArray[id];
-								av_z += vzArray[id];
+								if (!ignoreFixedAtoms || vAbsArray[id]!=0f) {
+								    //Ignore fixed atoms if requested
+								    av_x += vxArray[id];
+								    av_y += vyArray[id];
+								    av_z += vzArray[id];
+								    nn++;
+								}
 							}
 							
-							av_x /= (neigh.size()+1);
-							av_y /= (neigh.size()+1);
-							av_z /= (neigh.size()+1);
+							av_x /= nn;
+							av_y /= nn;
+							av_z /= nn;
 							
 							totThermalEnergy = massArray[i] *
 									((vx-av_x)*(vx-av_x) + (vy-av_y)*(vy-av_y) + (vz-av_z)*(vz-av_z));
@@ -190,16 +192,18 @@ public class TemperatureModule extends ClonableProcessingModule{
 							if (spatialAverage){
 								for (Atom n : neigh){
 									int id = n.getID();
-									float ax = vxArray[id];
-									float ay = vyArray[id];
-									float az = vzArray[id];
-									float am = massArray[id];
-									
-									totThermalEnergy += am *
-											((ax-av_x)*(ax-av_x) + (ay-av_y)*(ay-av_y) + (az-av_z)*(az-av_z));	
+									if (!ignoreFixedAtoms || vAbsArray[id]!=0f){
+    									float ax = vxArray[id];
+    									float ay = vyArray[id];
+    									float az = vzArray[id];
+    									float am = massArray[id];
+    									
+    									totThermalEnergy += am *
+    											((ax-av_x)*(ax-av_x) + (ay-av_y)*(ay-av_y) + (az-av_z)*(az-av_z));
+									}
 								}
 								
-								totThermalEnergy /= (neigh.size()+1);
+								totThermalEnergy /= nn;
 							}
 						} else {
 							totThermalEnergy = massArray[i] * (vx*vx + vy*vy + vz*vz);
@@ -244,12 +248,15 @@ public class TemperatureModule extends ClonableProcessingModule{
 				, "", centerOfMassVelocityRadius, 0f, 1000f);
 		FloatProperty scaling = dialog.addFloat("scalingFactor", "Scaling factor (e.g. 1eV->11605K)", "", scalingFactor, 0f, 1e20f);
 		BooleanProperty average = dialog.addBoolean("spacialAverage", "Enable spatial averaging", 
-				"The temperatures of each particle are averaged within the cutoff radius", spatialAverage);
+				"The temperatures of each particle are averaged within the cutoff radius.", spatialAverage);
+		BooleanProperty ignoreFixed = dialog.addBoolean("ignoreFixed", "Identify and ignore fixed atoms", 
+                "Atoms with a v=0.0 are considered as fixed and ignored.", ignoreFixedAtoms);
 		boolean ok = dialog.showDialog();
 		if (ok){
 			this.centerOfMassVelocityRadius = comRadius.getValue();
 			this.scalingFactor = scaling.getValue();
 			this.spatialAverage = average.getValue();
+			this.ignoreFixedAtoms = ignoreFixed.getValue();
 		}
 		return ok;
 	}
