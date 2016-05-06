@@ -198,4 +198,9 @@ public class Vec3Double{
 		Vec3Double v = p3.subClone(p1);
 		return u.cross(v).normalize();
 	}
+	
+    @Override
+    public String toString() {
+        return String.format("(%f, %f, %f)", x, y, z);
+    }
 }
