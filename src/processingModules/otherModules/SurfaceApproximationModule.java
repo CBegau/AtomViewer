@@ -157,6 +157,7 @@ public class SurfaceApproximationModule extends ClonableProcessingModule {
 			gbc.gridy = 0; gbc.gridx = 0;
 			gbc.gridwidth = 2;
 			this.add(showSurfaceCheckbox, gbc);
+			showMeshCheckbox.setEnabled(showSurfaceCheckbox.isSelected());
 			
 			gbc.gridwidth = 1;
 			gbc.gridx = 0; gbc.gridy++;
@@ -182,7 +183,7 @@ public class SurfaceApproximationModule extends ClonableProcessingModule {
 			showSurfaceCheckbox.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent arg0) {
-					showMeshCheckbox.setEnabled(showMeshCheckbox.isSelected());
+					showMeshCheckbox.setEnabled(showSurfaceCheckbox.isSelected());
 					RenderingConfiguration.getViewer().reDraw();
 				}
 			});
@@ -214,13 +215,13 @@ public class SurfaceApproximationModule extends ClonableProcessingModule {
 		@Override
 		public void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, AtomData data) {
 			getDataControlPanel(); //Make sure that singleton is created to prevent null-pointer
-			if (dataPanel.transparency>=0.98f) drawMesh(viewer, gl, renderRange, picking, data, false);
+			if (dataPanel.transparency>=0.99f) drawMesh(viewer, gl, renderRange, picking, data, false);
 		}
 		
 		@Override
 		public void drawTransparentObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, AtomData data) {
 			getDataControlPanel();
-			if (dataPanel.transparency<0.98f && dataPanel.transparency>0.02f)
+			if (dataPanel.transparency<0.99f && dataPanel.transparency>0.02f)
 				drawMesh(viewer, gl, renderRange, picking, data, true);
 		}
 		
