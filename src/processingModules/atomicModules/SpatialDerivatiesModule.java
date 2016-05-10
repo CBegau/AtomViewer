@@ -191,9 +191,9 @@ public class SpatialDerivatiesModule extends ClonableProcessingModule implements
 						
 						grad.divide(density);
 						
-						gxArray[i] = grad.x;
-						gyArray[i] = grad.y;
-						gzArray[i] = grad.z;
+						gxArray[i] = -grad.x;
+						gyArray[i] = -grad.y;
+						gzArray[i] = -grad.z;
 						gnArray[i] = grad.getLength();
 					}
 					ProgressMonitor.getProgressMonitor().addToCounter((end-start)%1000);
