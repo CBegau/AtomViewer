@@ -283,7 +283,6 @@ public class SpatialAveragingModule extends ClonableProcessingModule implements 
 			@Override
 			public void stateChanged(ChangeEvent e) {
 				considerMassButton.setEnabled(smoothingButton.isSelected());
-				
 			}
 		});
 		String smoothingTooltip = "Computes a weightend average over neighbors based on distance and density<br>"
@@ -292,6 +291,7 @@ public class SpatialAveragingModule extends ClonableProcessingModule implements 
 		arithmeticButton.setToolTipText("Computes the arithmetic average over all nearby neighbors without weighting.");
 		smoothingButton.setSelected(this.useSmoothingKernel);
 		arithmeticButton.setSelected(!this.useSmoothingKernel);
+		considerMassButton.setEnabled(smoothingButton.isSelected());
 		dialog.addComponent(arithmeticButton);
 		dialog.addComponent(smoothingButton);
 		dialog.addComponent(considerMassButton);

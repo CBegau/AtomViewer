@@ -314,12 +314,12 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 			@Override
 			public void stateChanged(ChangeEvent e) {
 				considerMassButton.setEnabled(smoothingButton.isSelected());
-				
 			}
 		});
 		
 		smoothingButton.setSelected(useSmoothingKernel);
 		arithmeticButton.setSelected(!useSmoothingKernel);
+		considerMassButton.setEnabled(smoothingButton.isSelected());
 		dialog.addComponent(arithmeticButton);
 		dialog.addComponent(smoothingButton);
 		dialog.addComponent(considerMassButton);
