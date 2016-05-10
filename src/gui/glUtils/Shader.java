@@ -40,9 +40,9 @@ public class Shader {
 		
 		"void main(void)"+
 		"{"+
-		"gl_Position = mvpm * vec4(v,1);"+
-		"FrontColor  = Color;"+
-		"TexCoord0   = Tex;"+
+		"  gl_Position = mvpm * vec4(v,1);"+
+		"  FrontColor  = Color;"+
+		"  TexCoord0   = Tex;"+
 		"}"
 	;
 	
@@ -57,9 +57,9 @@ public class Shader {
 		
 		"void main(void)"+
 		"{"+
-		"gl_Position = mvpm * vec4(v,1);"+
-		"FrontColor  = Color;"+
-		"TexCoord0   = Tex;"+
+		"  gl_Position = mvpm * vec4(v,1);"+
+		"  FrontColor  = Color;"+
+		"  TexCoord0   = Tex;"+
 		"}"
 	;
 	
@@ -329,14 +329,15 @@ public class Shader {
 		"    vec4 position = texture(posTexture, TexCoord0.st);"+
 		"    vec3 norm = normTexel.xyz;"+
 		"    vec3 v = (mvm*position).xyz;"+
-		"    vec3 lv = normalize(lightPos - v);"+
+		"    vec3 lightvec = normalize(lightPos - v);"+
 		//ambient, diffusion and occlusion factors for lighting
-		"	 float occ = ambientOcclusion==1 ? texture(occlusionTexture, TexCoord0.st).r : 0.;"+
-		"    float diff = max(0.0, dot(norm, lv));"+
-		//In case of specular lighting use an ambient factor of 0.5 otherwise 0.3
-		"    float ambient = 0.5 - ads*0.2;"+
-		//Multiply specular value with the ads uniform, disables effect if required
-		"    float spec = max(0.0, dot(norm, reflect(-lv, norm)))*ads;"+
+		"    float diff = max(0.0, dot(norm, lightvec));"+
+	    //In case of specular lighting use an ambient factor of 0.5 otherwise 0.3
+	    "    float ambient = 0.5 - ads*0.2;"+
+		"    float occ = ambientOcclusion==1 ? texture(occlusionTexture, TexCoord0.st).r : 0.;"+
+		"    vec3 vReflection = normalize(reflect(-lightvec, norm));"+
+	    //Multiply specular value with the ads uniform, disables effect if required
+		"    float spec = max(0.0, dot(norm, vReflection)) * ads;"+
 		"    float fSpec = pow(spec, 96.0);"+
 		"    vFragColor.rgb = (vFragColor.rgb*(diff+ambient) + fSpec)-occ;"+
 		
@@ -678,21 +679,16 @@ public class Shader {
 		"#endif\n"+
 		"void main(void) {"+
 		"  vFragPosition = FrontColor;\n"+
-		"  if (noShading != 1){\n"+
-		"    vec3 norm = normalize(normal);"+
-		"    vec3 lv = normalize(lightvec);"+
-		"    float ambient = 0.5 - ads*0.2;"+
-		"    if (ads == 1){\n"+
-		"      float diff = max(0.0, dot(norm, lv));"+
-		"      vec3 vReflection = normalize(reflect(-lv, norm));"+
-		"      float spec = max(0.0, dot(norm, vReflection));"+
-		"      float fSpec = pow(spec, 96.0);"+
-		"      vFragPosition.rgb *= vec3(diff+ambient);"+
-		"      vFragPosition.rgb += vec3(fSpec);"+
-		"    } else {\n"+
-		"      vFragPosition.rgb *= (max(dot(norm, lv), 0.) + ambient);"+
-		"    }\n"+
-		"  }\n"+
+		"  vec3 norm = normalize(normal);"+
+		"  vec3 lv = normalize(lightvec);"+
+		"  float ambient = 0.5 - ads*0.2;"+
+	    "  float diff = max(0.0, dot(norm, lv));"+
+	    "  vec3 vReflection = normalize(reflect(-lv, norm));"+
+        "  float spec = max(0.0, dot(norm, vReflection)) * ads ;"+
+        "  float fSpec = pow(spec, 96.0);"+
+	    "  vFragPosition.rgb *= (noShading==1 ? 1 : (diff + ambient));"+
+		"  vFragPosition.rgb += fSpec * (1 - noShading);"+
+
 //		"  float w = FrontColor.a*max(0.01, 3000.*(1.-gl_FragCoord.z)*(1.-gl_FragCoord.z)*(1.-gl_FragCoord.z));\n"+
 		"  float w = FrontColor.a*max(0.01, (1./gl_FragCoord.z)*(1./gl_FragCoord.z));\n"+
 		"  vFragAccu = vec4(vFragPosition.rgb*FrontColor.a*w, (FrontColor.a));\n"+
@@ -1108,7 +1104,7 @@ public class Shader {
 				new int[]{ATTRIB_VERTEX, ATTRIB_NORMAL}, 
 				new String[]{"v", "norm"}),
 		OID_ADS_VERTX_COLOR(
-				new String[]{defaultVertexShader},
+				new String[]{defaultPPLVertexShaderUniformColor},
 				new String[]{oidTransparencyFragmentShader},
 				new int[]{ATTRIB_VERTEX, ATTRIB_NORMAL, ATTRIB_COLOR},
 				new String[]{"v", "norm", "Color"}),
