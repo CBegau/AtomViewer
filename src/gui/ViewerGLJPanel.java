@@ -557,12 +557,12 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			oidComposer.enable(gl);
 			updateModelViewInShader(gl, oidComposer, mvm, pm);
 			
-			gl.glUniform1i(gl.glGetUniformLocation(oidComposer.getProgram(), "RevealageTexture"), Shader.FRAG_POSITION);
-			gl.glUniform1i(gl.glGetUniformLocation(oidComposer.getProgram(), "AccuTexture"), Shader.FRAG_ACCU);
+			gl.glUniform1i(gl.glGetUniformLocation(oidComposer.getProgram(), "RevealageTexture"), Shader.FRAG_ALPHA_ACCU);
+			gl.glUniform1i(gl.glGetUniformLocation(oidComposer.getProgram(), "AccuTexture"), Shader.FRAG_COLOR_ACCU);
 			
-			gl.glActiveTexture(GL.GL_TEXTURE0+Shader.FRAG_POSITION);
+			gl.glActiveTexture(GL.GL_TEXTURE0+Shader.FRAG_ALPHA_ACCU);
 			gl.glBindTexture(GL.GL_TEXTURE_2D, fboDeferredBuffer.getPositionTextureName());
-			gl.glActiveTexture(GL.GL_TEXTURE0+Shader.FRAG_ACCU);
+			gl.glActiveTexture(GL.GL_TEXTURE0+Shader.FRAG_COLOR_ACCU);
 			gl.glBindTexture(GL.GL_TEXTURE_2D, fboDeferredBuffer.getNormalTextureName());
 			gl.glDepthFunc(GL.GL_ALWAYS);
 			fullScreenQuad.draw(gl, GL.GL_TRIANGLE_STRIP);

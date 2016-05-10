@@ -27,7 +27,8 @@ public class Shader {
 	public final static int FRAG_COLOR = 0;
 	public final static int FRAG_NORMAL = 1;
 	public final static int FRAG_POSITION = 2;
-	public final static int FRAG_ACCU = 1;
+	public final static int FRAG_COLOR_ACCU = 1;
+	public final static int FRAG_ALPHA_ACCU = 2;
 	
 	private final static String defaultVertexShader = 
         "#ifdef UNIFORM_COLOR\n"+
@@ -645,8 +646,8 @@ public class Shader {
 	
 	private final static String oidTransparencyFragmentShader = 
 		"in vec4 FrontColor;\n"+
-		"out vec4 vFragPosition;\n"+
-		"out vec4 vFragAccu;\n"+
+		"out vec4 vFragAlphaAccu;\n"+
+		"out vec4 vFragColorAccu;\n"+
 		"#ifdef NO_LIGHTING\n"+
 		"const int noShading = 1;\n"+
 		"const int ads = 0;\n"+
@@ -659,7 +660,7 @@ public class Shader {
 		"uniform int ads = 1;\n"+
 		"#endif\n"+
 		"void main(void) {"+
-		"  vFragPosition = FrontColor;\n"+
+		"  vFragColorAccu = FrontColor;\n"+
 		"  vec3 norm = normalize(normal);"+
 		"  vec3 lv = normalize(lightvec);"+
 		"  float ambient = 0.5 - ads*0.2;"+
@@ -667,13 +668,13 @@ public class Shader {
 	    "  vec3 vReflection = normalize(reflect(-lv, norm));"+
         "  float spec = max(0.0, dot(norm, vReflection)) * ads ;"+
         "  float fSpec = pow(spec, 96.0);"+
-	    "  vFragPosition.rgb *= (noShading==1 ? 1 : (diff + ambient));"+
-		"  vFragPosition.rgb += fSpec * (1 - noShading);"+
+	    "  vFragColorAccu.rgb *= (noShading==1 ? 1 : (diff + ambient));"+
+		"  vFragColorAccu.rgb += fSpec * (1 - noShading);"+
 
 //		"  float w = FrontColor.a*max(0.01, 3000.*(1.-gl_FragCoord.z)*(1.-gl_FragCoord.z)*(1.-gl_FragCoord.z));\n"+
 		"  float w = FrontColor.a*max(0.01, (1./gl_FragCoord.z)*(1./gl_FragCoord.z));\n"+
-		"  vFragAccu = vec4(vFragPosition.rgb*FrontColor.a*w, (FrontColor.a));\n"+
-		"  vFragPosition = vec4(FrontColor.a)*w;\n"+	
+		"  vFragColorAccu = vec4(vFragColorAccu.rgb*FrontColor.a*w, (FrontColor.a));\n"+
+		"  vFragAlphaAccu = vec4(FrontColor.a)*w;\n"+	
 		"}"
 	;
 	
@@ -868,7 +869,8 @@ public class Shader {
 		gl.glBindFragDataLocation(program, FRAG_COLOR, "vFragColor");
 		gl.glBindFragDataLocation(program, FRAG_NORMAL, "vFragNormal");
 		gl.glBindFragDataLocation(program, FRAG_POSITION, "vFragPosition");
-		gl.glBindFragDataLocation(program, FRAG_ACCU, "vFragAccu");
+		gl.glBindFragDataLocation(program, FRAG_COLOR_ACCU, "vFragColorAccu");
+		gl.glBindFragDataLocation(program, FRAG_ALPHA_ACCU, "vFragAlphaAccu");
 		
 		gl.glLinkProgram(program);
 		gl.glValidateProgram(program);
