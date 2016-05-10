@@ -29,25 +29,13 @@ public class Shader {
 	public final static int FRAG_POSITION = 2;
 	public final static int FRAG_ACCU = 1;
 	
-	private final static String defaultVertexShaderUniformColor = 
-		"in vec3 v;" +
-		"in vec2 Tex;" +
-		"out vec4 FrontColor;" +
-		"out vec2 TexCoord0;" +
-		
-		"uniform vec4 Color;" +
-		"uniform mat4 mvpm;"+
-		
-		"void main(void)"+
-		"{"+
-		"  gl_Position = mvpm * vec4(v,1);"+
-		"  FrontColor  = Color;"+
-		"  TexCoord0   = Tex;"+
-		"}"
-	;
-	
 	private final static String defaultVertexShader = 
-		"in vec4 Color;" +
+        "#ifdef UNIFORM_COLOR\n"+
+        "uniform vec4 Color;\n"+
+        "#else\n"+
+        "in vec4 Color;\n"+
+        "#endif\n"+
+	        
 		"in vec3 v;" +
 		"in vec2 Tex;" +
 		"out vec4 FrontColor;" +
@@ -66,22 +54,16 @@ public class Shader {
 	private final static String anaglyphFragmentShader = 
 		"uniform sampler2D left;"+
 		"uniform sampler2D right;"+
-		"uniform int stereo;"+
 		"in vec2 TexCoord0;"+
 		"out vec4 vFragColor;"+
 	 
 		"void main(void)"+
 		"{"+
 		"vec4 ColorL = texture(left, TexCoord0.st);"+
-		"if (stereo == 1) {"+
-		   "vec4 ColorR = texture(right, TexCoord0.st);"+
-		   "float GrayR = dot(vec3(0.3, 0.59, 0.11), vec3(ColorR));"+
-		   "vFragColor  = vec4( GrayR, ColorL.g, ColorL.b, 1.) + vec4(1.-ColorR.a, 1.-ColorL.a, 1.-ColorL.a, 1);"+
-		   "vFragColor.a = 1.0;"+
-		"} else {"+
-		   "vFragColor  = ColorL;"+
-		   "vFragColor.a = 1.0;"+
-		"}"+
+		"vec4 ColorR = texture(right, TexCoord0.st);"+
+		"float GrayR = dot(vec3(0.3, 0.59, 0.11), vec3(ColorR));"+
+		"vFragColor  = vec4( GrayR, ColorL.g, ColorL.b, 1.) + vec4(1.-ColorR.a, 1.-ColorL.a, 1.-ColorL.a, 1);"+
+		"vFragColor.a = 1.0;"+
 		"}"
 	;
 		
@@ -105,13 +87,13 @@ public class Shader {
 		"}"
 	;	
 	
-	private final static String oidPPLVertexShader = 
+	private final static String pplVertexShader = 
 		"in vec3 v;\n"+
 		"in vec3 norm;\n"+
-		"#ifdef PER_VERTEX_COLOR\n"+
-		"in vec4 Color;\n"+
-		"#else\n"+
+		"#ifdef UNIFORM_COLOR\n"+
 		"uniform vec4 Color;\n"+
+		"#else\n"+
+		"in vec4 Color;\n"+
 		"#endif\n"+
 		"out vec3 lightvec;"+
 		"out vec4 FrontColor;"+
@@ -560,10 +542,6 @@ public class Shader {
 		"}"
 	;
 	
-	private final static String instancedMacro =
-		"#define INSTANCED 1\n"
-	;
-	
 	private final static String fxaaVertexShader =
 		"in vec3 v;" +
 		"in vec2 Tex;" +
@@ -713,6 +691,13 @@ public class Shader {
 		"  vFragColor = vec4(accum.rgb / clamp(accum.a, 1e-4, 5e4), r);\n"+
 		"}"
 	;
+	
+    private final static String instancedMacro = 
+            "#define INSTANCED 1\n"
+    ;
+    private final static String uniformColorMacro =
+            "#define UNIFORM_COLOR 1\n"
+    ;
 
 	private static Shader lastUsedShader = null;
 	
@@ -985,7 +970,7 @@ public class Shader {
 	public enum BuiltInShader {
 		//Shader for forward rendering
 		VERTEX_ARRAY_COLOR_UNIFORM(
-				new String[]{defaultVertexShaderUniformColor}, 
+		        new String[]{uniformColorMacro, defaultVertexShader},
 				new String[]{simpleColorFragmentShader},
 				new int[]{ATTRIB_VERTEX}, 
 				new String[]{"v"}),
@@ -995,10 +980,20 @@ public class Shader {
 				new int[]{ATTRIB_VERTEX, ATTRIB_COLOR}, 
 				new String[]{"v", "Color"}),
 		PLAIN_TEXTURED(
-				new String[]{defaultVertexShaderUniformColor},
+		        new String[]{uniformColorMacro, defaultVertexShader},
 				new String[]{simpleTextureShader},
 				new int[]{ATTRIB_VERTEX, ATTRIB_TEX0},
 				new String[]{"v", "Tex"}),
+		ADS_UNIFORM_COLOR(
+		        new String[]{uniformColorMacro, pplVertexShader},
+                new String[]{pplFragmentwithADSShader},
+                new int[]{ATTRIB_VERTEX, ATTRIB_NORMAL},
+                new String[]{"v", "norm"}),
+        ADS_VERTEX_COLOR(
+                new String[]{pplVertexShader},
+                new String[]{pplFragmentwithADSShader},
+                new int[]{ATTRIB_VERTEX, ATTRIB_NORMAL, ATTRIB_COLOR},
+                new String[]{"v", "norm", "Color"}),
 		
 		//Render from deferred buffers
 		DEFERRED_ADS_RENDERING(
@@ -1086,18 +1081,18 @@ public class Shader {
 				new String[]{oidTransparencyComposer},
 				new int[]{ATTRIB_VERTEX, ATTRIB_TEX0},
 				new String[]{"v", "Tex"}),
-		OID_VERTEX_ARRAY_COLOR_UNIFORM(
-				new String[]{defaultVertexShaderUniformColor}, 
+		OID_VERTEX_ARRAY_NO_LIGHTING(
+				new String[]{uniformColorMacro, defaultVertexShader}, 
 				new String[]{"#define NO_LIGHTING 1\n",oidTransparencyFragmentShader},
 				new int[]{ATTRIB_VERTEX}, 
 				new String[]{"v"}),
 		OID_ADS_UNIFORM_COLOR(
-				new String[]{oidPPLVertexShader},
+				new String[]{uniformColorMacro, pplVertexShader},
 				new String[]{oidTransparencyFragmentShader},
 				new int[]{ATTRIB_VERTEX, ATTRIB_NORMAL}, 
 				new String[]{"v", "norm"}),
-		OID_ADS_VERTX_COLOR(
-				new String[]{"#define PER_VERTEX_COLOR 1\n"+oidPPLVertexShader},
+		OID_ADS_VERTEX_COLOR(
+				new String[]{pplVertexShader},
 				new String[]{oidTransparencyFragmentShader},
 				new int[]{ATTRIB_VERTEX, ATTRIB_NORMAL, ATTRIB_COLOR},
 				new String[]{"v", "norm", "Color"}),

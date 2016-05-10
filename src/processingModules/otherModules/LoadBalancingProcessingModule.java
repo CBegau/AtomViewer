@@ -237,7 +237,7 @@ public class LoadBalancingProcessingModule extends ClonableProcessingModule {
 			if (picking)
 				BuiltInShader.NO_LIGHTING.getShader().enable(gl);
 			else 
-				BuiltInShader.OID_ADS_VERTX_COLOR.getShader().enable(gl);
+				BuiltInShader.OID_ADS_VERTEX_COLOR.getShader().enable(gl);
 			
 			int numElements = 0;
 			VertexDataStorageLocal vds = 

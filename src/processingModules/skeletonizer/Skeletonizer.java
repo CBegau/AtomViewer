@@ -615,7 +615,7 @@ public class Skeletonizer extends DataContainer {
 	}
 	
 	private void drawSurfaces(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, AtomData data){
-		Shader shader = (picking?BuiltInShader.VERTEX_ARRAY_COLOR_UNIFORM:BuiltInShader.OID_VERTEX_ARRAY_COLOR_UNIFORM).getShader();
+		Shader shader = (picking?BuiltInShader.VERTEX_ARRAY_COLOR_UNIFORM:BuiltInShader.OID_VERTEX_ARRAY_NO_LIGHTING).getShader();
 		shader.enable(gl);
 		boolean cullingEnabled = gl.glIsEnabled(GL.GL_CULL_FACE);
 		gl.glDisable(GL.GL_CULL_FACE);

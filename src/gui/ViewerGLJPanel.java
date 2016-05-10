@@ -387,22 +387,22 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			fbo.bind(gl, false);
 			gl.glViewport(0, 0, width, height);
 		}
-		
-		GLMatrix proj = createFlatProjectionMatrix();
-		updateModelViewInShader(gl, BuiltInShader.ANAGLYPH_TEXTURED.getShader(), new GLMatrix(), proj);
-		
 		gl.glDisable(GL.GL_DEPTH_TEST);
-	    BuiltInShader.ANAGLYPH_TEXTURED.getShader().enable(gl);
+		Shader s = (RenderOption.STEREO.isEnabled()?BuiltInShader.ANAGLYPH_TEXTURED:BuiltInShader.PLAIN_TEXTURED).getShader();
+		GLMatrix proj = createFlatProjectionMatrix();
+		s.enable(gl);
+		updateModelViewInShader(gl, s, new GLMatrix(), proj);
+		
+		int c = gl.glGetUniformLocation(s.getProgram(), "Color");
+		gl.glUniform4f(c, 1f, 1f, 1f, 1f);
 	    
 		gl.glActiveTexture(GL.GL_TEXTURE0);
 		gl.glBindTexture(GL.GL_TEXTURE_2D, fboLeft.getColorTextureName());
 		
-		int uniLocation = gl.glGetUniformLocation(BuiltInShader.ANAGLYPH_TEXTURED.getShader().getProgram(), "stereo");
-		gl.glUniform1i(uniLocation, 0);
-		if (RenderOption.STEREO.isEnabled()){	//Bind second texture
+		if (RenderOption.STEREO.isEnabled()){	//Bind second texture for stereo
 			gl.glActiveTexture(GL.GL_TEXTURE1);
 			gl.glBindTexture(GL.GL_TEXTURE_2D, fboRight.getColorTextureName());		    
-		    gl.glUniform1i(uniLocation, 1);
+			gl.glActiveTexture(GL.GL_TEXTURE0);
 		}
 	   
 		fullScreenQuad.draw(gl, GL.GL_TRIANGLE_STRIP);
@@ -417,8 +417,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			}
 			
 			updateModelViewInShader(gl, BuiltInShader.FXAA.getShader(), new GLMatrix(), proj);
-			
-			gl.glActiveTexture(GL.GL_TEXTURE0);
 			gl.glBindTexture(GL.GL_TEXTURE_2D, fboDeferredBuffer.getColorTextureName());
 			BuiltInShader.FXAA.getShader().enable(gl);
 			
@@ -428,9 +426,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		if (fbo!=null)
 			fbo.unbind(gl);
 
-		gl.glActiveTexture(GL.GL_TEXTURE0);
 		gl.glEnable(GL.GL_DEPTH_TEST);
-		
 	    Shader.disableLastUsedShader(gl);
 	}
 	
@@ -1842,6 +1838,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		GLMatrix pmvp = projection.clone();
 		pmvp.mult(modelView);
 		Shader.pushShader();
+		
 		gl.glUseProgram(shader.getProgram());
 		gl.glUniformMatrix4fv(gl.glGetUniformLocation(shader.getProgram(), "mvm"), 1, false, modelView.getMatrix());
 		gl.glUniformMatrix3fv(gl.glGetUniformLocation(shader.getProgram(), "nm"), 1, false, modelView.getNormalMatrix());
