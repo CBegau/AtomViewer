@@ -502,7 +502,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 				for (int i=0; i<m.length; i++)
 					s += m[i]+";";
 				String message = "This string represents the current point of view. To reproduce images later, please store this string."; 
-				JOptionPane.showInputDialog(JMainWindow.this, message, "Import POV", JOptionPane.PLAIN_MESSAGE, null, null, s);
+				JOptionPane.showInputDialog(JMainWindow.this, message, "Export POV", JOptionPane.PLAIN_MESSAGE, null, null, s);
 			}
 		});
 		
@@ -512,7 +512,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				String input = JOptionPane.showInputDialog(
-						JMainWindow.this, "Please insert the point of view", "Export POV",  JOptionPane.PLAIN_MESSAGE);
+						JMainWindow.this, "Please insert the point of view", "Import POV",  JOptionPane.PLAIN_MESSAGE);
 				if (input != null && !input.isEmpty()){
 					try {
 					String[] split = input.trim().split(";");
