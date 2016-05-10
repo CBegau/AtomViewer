@@ -86,10 +86,10 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 		} else {
 			String name = toAverageColumn.getVectorName()+"(av.)";
 			DataColumnInfo[] vec = toAverageColumn.getVectorComponents();
-			DataColumnInfo avX = new DataColumnInfo("", vec[0].getId()+"_av",vec[0].getUnit());
-			DataColumnInfo avY = new DataColumnInfo("", vec[1].getId()+"_av", vec[0].getUnit());
-			DataColumnInfo avZ = new DataColumnInfo("", vec[2].getId()+"_av", vec[0].getUnit());
-			DataColumnInfo avA = new DataColumnInfo("", vec[3].getId()+"_av", vec[0].getUnit());
+			DataColumnInfo avX = new DataColumnInfo("", vec[0].getId()+"_avVec",vec[0].getUnit());
+			DataColumnInfo avY = new DataColumnInfo("", vec[1].getId()+"_avVec", vec[0].getUnit());
+			DataColumnInfo avZ = new DataColumnInfo("", vec[2].getId()+"_avVec", vec[0].getUnit());
+			DataColumnInfo avA = new DataColumnInfo("", vec[3].getId()+"_avVec", vec[0].getUnit());
 			
 			avX.setAsFirstVectorComponent(avY, avZ, avA, name);
 			
