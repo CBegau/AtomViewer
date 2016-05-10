@@ -698,7 +698,8 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	private void drawIndent(GL3 gl, boolean picking){
 		if (!RenderOption.INDENTER.isEnabled()) return;
 		
-		Shader s = picking?BuiltInShader.ADS_UNIFORM_COLOR.getShader():BuiltInShader.OID_ADS_UNIFORM_COLOR.getShader();
+		Shader s = picking?BuiltInShader.VERTEX_ARRAY_COLOR_UNIFORM.getShader()
+		        :BuiltInShader.OID_ADS_UNIFORM_COLOR.getShader();
 		s.enable(gl);
 			
 		GLMatrix mvm = modelViewMatrix.clone();
@@ -948,7 +949,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	//TODO Put this method into a data-container
 	private void drawGrain(GL3 gl, boolean picking){
 		if (!RenderOption.GRAINS.isEnabled() || !atomData.isPolyCrystalline()) return;
-		Shader s = picking?BuiltInShader.ADS_UNIFORM_COLOR.getShader():BuiltInShader.OID_ADS_UNIFORM_COLOR.getShader();
+		Shader s = picking?BuiltInShader.VERTEX_ARRAY_COLOR_UNIFORM.getShader():BuiltInShader.OID_ADS_UNIFORM_COLOR.getShader();
 		s.enable(gl);
 		int colorUniform = gl.glGetUniformLocation(s.getProgram(), "Color");
 

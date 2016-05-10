@@ -105,10 +105,14 @@ public class Shader {
 		"}"
 	;	
 	
-	private final static String defaultPPLVertexShaderUniformColor = 
-		"in vec3 v;"+
-		"in vec3 norm;"+
-		"uniform vec4 Color;"+
+	private final static String oidPPLVertexShader = 
+		"in vec3 v;\n"+
+		"in vec3 norm;\n"+
+		"#ifdef PER_VERTEX_COLOR\n"+
+		"in vec4 Color;\n"+
+		"#else\n"+
+		"uniform vec4 Color;\n"+
+		"#endif\n"+
 		"out vec3 lightvec;"+
 		"out vec4 FrontColor;"+
 		"out vec3 normal;"+
@@ -120,9 +124,8 @@ public class Shader {
 		"void main(void) {"+
 		"  FrontColor     = Color;\n"+
 		"  vec4 vp        = vec4(v, 1.);\n"+
-		"  vec3 v         = vec3(mvm * vp);\n"+
 		"  normal         = normalize(nm * norm);\n"+
-		"  lightvec       = normalize(lightPos - v);\n"+
+		"  lightvec       = normalize(lightPos - (mvm * vp).xyz);\n"+
 		"  gl_Position    = mvpm * vp;\n"+
 		"}"
 	;
@@ -697,19 +700,19 @@ public class Shader {
 	;
 	
 	private final static String oidTransparencyComposer = 
-			"uniform sampler2D RevealageTexture;"+
-			"uniform sampler2D AccuTexture;"+
-			
-			"in vec2 TexCoord0;"+
-			"out vec4 vFragColor;"+
-			
-			"void main(void) {"+
-			"  vec4 accum = texture(AccuTexture, TexCoord0.st);"+
-			"  float r = accum.a;\n"+
-			"  accum.a = texture(RevealageTexture, TexCoord0.st).r;"+
-			"  vFragColor = vec4(accum.rgb / clamp(accum.a, 1e-4, 5e4), r);\n"+
-			"}"
-		;
+		"uniform sampler2D RevealageTexture;"+
+		"uniform sampler2D AccuTexture;"+
+		
+		"in vec2 TexCoord0;"+
+		"out vec4 vFragColor;"+
+		
+		"void main(void) {"+
+		"  vec4 accum = texture(AccuTexture, TexCoord0.st);"+
+		"  float r = accum.a;\n"+
+		"  accum.a = texture(RevealageTexture, TexCoord0.st).r;"+
+		"  vFragColor = vec4(accum.rgb / clamp(accum.a, 1e-4, 5e4), r);\n"+
+		"}"
+	;
 
 	private static Shader lastUsedShader = null;
 	
@@ -996,16 +999,6 @@ public class Shader {
 				new String[]{simpleTextureShader},
 				new int[]{ATTRIB_VERTEX, ATTRIB_TEX0},
 				new String[]{"v", "Tex"}),
-		ADS_UNIFORM_COLOR(
-				new String[]{defaultPPLVertexShaderUniformColor},
-				new String[]{pplFragmentwithADSShader},
-				new int[]{ATTRIB_VERTEX, ATTRIB_NORMAL},
-				new String[]{"v", "norm"}),
-		ADS_VERTEX_COLOR(
-				new String[]{defaultVertexShader},
-				new String[]{pplFragmentwithADSShader},
-				new int[]{ATTRIB_VERTEX, ATTRIB_NORMAL, ATTRIB_COLOR},
-				new String[]{"v", "norm", "Color"}),
 		
 		//Render from deferred buffers
 		DEFERRED_ADS_RENDERING(
@@ -1099,12 +1092,12 @@ public class Shader {
 				new int[]{ATTRIB_VERTEX}, 
 				new String[]{"v"}),
 		OID_ADS_UNIFORM_COLOR(
-				new String[]{defaultPPLVertexShaderUniformColor},
+				new String[]{oidPPLVertexShader},
 				new String[]{oidTransparencyFragmentShader},
 				new int[]{ATTRIB_VERTEX, ATTRIB_NORMAL}, 
 				new String[]{"v", "norm"}),
 		OID_ADS_VERTX_COLOR(
-				new String[]{defaultPPLVertexShaderUniformColor},
+				new String[]{"#define PER_VERTEX_COLOR 1\n"+oidPPLVertexShader},
 				new String[]{oidTransparencyFragmentShader},
 				new int[]{ATTRIB_VERTEX, ATTRIB_NORMAL, ATTRIB_COLOR},
 				new String[]{"v", "norm", "Color"}),
