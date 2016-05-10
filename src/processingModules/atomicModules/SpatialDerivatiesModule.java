@@ -74,11 +74,11 @@ public class SpatialDerivatiesModule extends ClonableProcessingModule implements
 		if (existingGradientColumns.containsKey(toDeriveColumn)){
 			this.gradientColumn = existingGradientColumns.get(toDeriveColumn);
 		} else {
-			String name = "Δ"+toDeriveColumn.getName();
+			String name = "grad"+toDeriveColumn.getName();
 			DataColumnInfo avX = new DataColumnInfo(toDeriveColumn.getName()+"_dx", toDeriveColumn.getId()+"_grad_x", "");
 			DataColumnInfo avY = new DataColumnInfo(toDeriveColumn.getName()+"_dy", toDeriveColumn.getId()+"_grad_y", "");
 			DataColumnInfo avZ = new DataColumnInfo(toDeriveColumn.getName()+"_dz", toDeriveColumn.getId()+"_grad_z","");
-			DataColumnInfo avA = new DataColumnInfo("|Δ"+toDeriveColumn.getId()+"|", toDeriveColumn.getId()+"_grad_abs", "");
+			DataColumnInfo avA = new DataColumnInfo("|grad("+toDeriveColumn.getId()+")|", toDeriveColumn.getId()+"_grad_abs", "");
 			
 			avX.setAsFirstVectorComponent(avY, avZ, avA, name, false);
 			
