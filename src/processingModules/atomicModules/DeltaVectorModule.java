@@ -165,10 +165,10 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 		} else {
 			String name = "Δ"+toDeltaColumn.getVectorName();
 			DataColumnInfo[] vec = toDeltaColumn.getVectorComponents();
-			DataColumnInfo deltaX = new DataColumnInfo("", vec[0].getId()+"_delta",vec[0].getUnit());
-			DataColumnInfo deltaY = new DataColumnInfo("", vec[1].getId()+"_delta", vec[0].getUnit());
-			DataColumnInfo deltaZ = new DataColumnInfo("", vec[2].getId()+"_delta", vec[0].getUnit());
-			DataColumnInfo deltaA = new DataColumnInfo("", vec[3].getId()+"_delta", vec[0].getUnit());
+			DataColumnInfo deltaX = new DataColumnInfo("", vec[0].getId()+"_deltaVec",vec[0].getUnit());
+			DataColumnInfo deltaY = new DataColumnInfo("", vec[1].getId()+"_deltaVec", vec[0].getUnit());
+			DataColumnInfo deltaZ = new DataColumnInfo("", vec[2].getId()+"_deltaVec", vec[0].getUnit());
+			DataColumnInfo deltaA = new DataColumnInfo("", vec[3].getId()+"_deltaVec", vec[0].getUnit());
 			
 			deltaX.setAsFirstVectorComponent(deltaY, deltaZ, deltaA, name);
 			
@@ -239,9 +239,9 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
             throw new RuntimeException();
         }
 		
-		final float[] xRefArray = data.getDataArray(xRefIndex).getData();
-		final float[] yRefArray = data.getDataArray(yRefIndex).getData();
-		final float[] zRefArray = data.getDataArray(zRefIndex).getData();
+		final float[] xRefArray = referenceAtomData.getDataArray(xRefIndex).getData();
+		final float[] yRefArray = referenceAtomData.getDataArray(yRefIndex).getData();
+		final float[] zRefArray = referenceAtomData.getDataArray(zRefIndex).getData();
 		
 		DataColumnInfo d = existingDeltaColumns.get(toDeltaColumn);
 		final int deltaXIndex = data.getDataColumnIndex(d.getVectorComponents()[0]);
