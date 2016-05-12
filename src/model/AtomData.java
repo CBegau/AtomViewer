@@ -197,8 +197,8 @@ public class AtomData {
 		}
 	}
 
-	public ArrayList<DataContainer> getAdditionalData() {
-		return additionalData;
+	public List<DataContainer> getAdditionalData() {
+		return Collections.unmodifiableList(additionalData);
 	}
 	
 	/**
@@ -550,6 +550,16 @@ public class AtomData {
 		}
 		if (!replaced) this.additionalData.add(dc);
 	}
+	
+	/**
+	 * Removes a data container
+	 * @param dc
+	 */
+	public void removeDataContainer(DataContainer dc){
+        this.additionalData.remove(dc);
+        Configuration.setCurrentAtomData(this, true, false);
+    }
+	
 	
 	@Override
 	public String toString() {

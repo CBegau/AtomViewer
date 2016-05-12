@@ -283,6 +283,8 @@ public class ImdFileLoader extends MDFileLoader{
             byte[] rbvBuffer = new byte[6*inc];
             Vec3 rbv = new Vec3(), lineDirection = new Vec3();
             
+            int elementOffset = (header.numberColumn!= -1) ? 4 : 0;
+            
             while (filesize > bytesRead){
                 if (atomsRead%10000 == 0){   //Update the progressBar
                     ProgressMonitor.getProgressMonitor().setCounter(fis.getChannel().position());
@@ -304,7 +306,7 @@ public class ImdFileLoader extends MDFileLoader{
                     num = bar.readIntSingle(byteBuffer, 0);
                 }
                 if (header.elementColumn != -1){    //Read type if present, always 32bit
-                    element = (byte)bar.readIntSingle(byteBuffer, (header.numberColumn!= -1) ? 4 : 0);
+                    element = (byte)bar.readIntSingle(byteBuffer, elementOffset);
                     if (element+1 > idc.maxElementNumber) idc.maxElementNumber = (byte)(element + 1);
                 }
                 
