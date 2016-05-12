@@ -151,6 +151,27 @@ public class CommonUtils {
 	}
 	
 	/**
+	 * Return the uncompressed size (modulo 2^32) of a gzip file.  
+	 * @param f
+	 * @return
+	 * @throws IOException
+	 */
+	public final static long getGzipFilesize(File f) throws IOException{
+        //For gzip-compressed files, the stream size modulo 2^32 is stored in the
+        //last 4 bytes of the file in little endian 
+	    RandomAccessFile raf = new RandomAccessFile(f, "r");
+        byte[] w = new byte[4];
+        try {
+            raf.seek(raf.length()-4);
+            raf.readFully(w, 0, 4);
+        } finally {
+            raf.close();
+        }
+        //Little to big endian conversion
+        return ((long)(w[3]&0xff) << 24 | (long)(w[2]&0xff) << 16 | (long)(w[1]&0xff) << 8 | (long)(w[0]&0xff));
+	}
+	
+	/**
 	 * Creates a BufferedReader from a FileInputStream with optional Gzip decompression
 	 * and larger buffers
 	 * @param fis

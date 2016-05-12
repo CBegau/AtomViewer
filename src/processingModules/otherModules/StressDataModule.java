@@ -195,24 +195,16 @@ public class StressDataModule extends ClonableProcessingModule {
 				} else if (format.equals("l") || format.equals("b") || format.equals("L") || format.equals("B")) {
 					//Binary reader
 					fis = new FileInputStream(stressFile);
-					BufferedInputStream bis;
+					InputStream bis;
 					long filesize = 0l;
 					
 					if (stressFile.getName().endsWith(".gz")){
 						//Setup streams for compressed files
-						//read streamSize from the last 4 bytes in the file
-						RandomAccessFile raf = new RandomAccessFile(stressFile, "r");
-						long l = raf.length();
-						raf.seek(l-4);
-						
-						byte[] w = new byte[4];
-						raf.readFully(w, 0, 4);
-						filesize = (w[3]) << 24 | (w[2]&0xff) << 16 | (w[1]&0xff) << 8 | (w[0]&0xff);
-						raf.close();
-						bis = new BufferedInputStream(new GZIPInputStream(new FileInputStream(stressFile)), 4096);
+					    filesize = CommonUtils.getGzipFilesize(stressFile);
+						bis = new BufferedInputStream(new GZIPInputStream(fis), 4096);
 					} else {
-						bis = new BufferedInputStream(new FileInputStream(stressFile), 16384);
-						filesize = fis.available();
+					    filesize = fis.available();
+						bis = new BufferedInputStream(fis, 16384);
 					}
 
 					boolean littleEndian = format.equals("l") || format.equals("L");

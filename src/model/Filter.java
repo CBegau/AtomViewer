@@ -26,9 +26,9 @@ public interface Filter<T extends Vec3> {
 	 * A dummy filter that accepts everything
 	 * @param <T>
 	 */
-	public class AcceptAllFilter<T extends Vec3> implements Filter<T>{
+	public final class AcceptAllFilter<T extends Vec3> implements Filter<T>{
 		@Override
-		public boolean accept(T a) {
+		public final boolean accept(T a) {
 			return true;
 		}
 	}

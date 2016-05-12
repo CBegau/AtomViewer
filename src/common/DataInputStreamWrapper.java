@@ -59,6 +59,11 @@ public abstract class DataInputStreamWrapper {
 		return ledis.readByte();
 	}
 	
+	public int read(byte[] b) throws IOException{
+        bytesRead+=b.length;
+        return ledis.read(b);
+    }
+	
 	public long getBytesRead() {
 		return bytesRead;
 	}
