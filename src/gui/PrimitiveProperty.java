@@ -231,6 +231,10 @@ public abstract class PrimitiveProperty<T> extends JPanel{
 			this.setDefaultValue(Integer.parseInt(s));
 			this.setToDefault();
 		}
+		
+        public void addChangeListener(ChangeListener cl) {
+            this.valueSpinner.addChangeListener(cl);
+        }
 	}
 
 	public static class FloatProperty extends PrimitiveProperty<Float>{
@@ -303,6 +307,10 @@ public abstract class PrimitiveProperty<T> extends JPanel{
 			this.setDefaultValue(Float.parseFloat(s));
 			this.setToDefault();
 		}
+		
+        public void addChangeListener(ChangeListener cl) {
+            this.valueSpinner.addChangeListener(cl);
+        }
 	}
 
 	public static class BooleanProperty extends PrimitiveProperty<Boolean>{
@@ -396,6 +404,10 @@ public abstract class PrimitiveProperty<T> extends JPanel{
 			this.setDefaultValue(Boolean.parseBoolean(s));
 			this.setToDefault();
 		}
+		
+		public void addActionListener(ActionListener al){
+            this.valueCheckbox.addActionListener(al);
+        }
 	}
 	
 	public static class ReferenceModeProperty extends PrimitiveProperty<Toolchain.ReferenceMode>{
@@ -481,7 +493,6 @@ public abstract class PrimitiveProperty<T> extends JPanel{
 		
 		public void addActionListener(ActionListener al){
 			this.referenceModeComboBox.addActionListener(al);
-			this.referenceDataComboBox.addActionListener(al);
 		}
 		
 	}
