@@ -19,9 +19,7 @@ package model;
 
 import java.util.ArrayList;
 
-import common.Vec3;
-
-public class FilterSet<T extends Vec3> implements Filter<T>{
+public class FilterSet<T> implements Filter<T>{
     ArrayList<Filter<T>> filter = new ArrayList<Filter<T>>();
     
     @Override

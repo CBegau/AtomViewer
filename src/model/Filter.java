@@ -17,16 +17,14 @@
 // with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
 package model;
 
-import common.Vec3;
-
-public interface Filter<T extends Vec3> {
+public interface Filter<T> {
 	public boolean accept(T a);
 	
 	/**
 	 * A dummy filter that accepts everything
 	 * @param <T>
 	 */
-	public final class AcceptAllFilter<T extends Vec3> implements Filter<T>{
+	public final class AcceptAllFilter<T> implements Filter<T>{
 		@Override
 		public final boolean accept(T a) {
 			return true;
