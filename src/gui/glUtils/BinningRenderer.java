@@ -31,7 +31,7 @@ public class BinningRenderer {
             for (int y = 0; y < data.getNumBinY(); y++) {
                 for (int z = 0; z < data.getNumBinZ(); z++) {
                     Bin b = data.getBin(x, y, z);
-                    if (filter.accept(b)){
+                    if (b.getNumberOfParticles() > 0 && filter.accept(b)){
                     
                         if (picking) vds.setColor(viewer.getNextPickingColor(b));
                         else vds.setColor(ColorTable.getIntensityGLColor(min, max, b.getAvg(), transparency));

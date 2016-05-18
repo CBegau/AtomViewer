@@ -144,6 +144,10 @@ public class BinnedData {
             return (float)(sum/(num>0?num:1));
         }
         
+        public int getNumberOfParticles() {
+            return num;
+        }
+        
         @Override
         public Collection<?> getHighlightedObjects() {
             return null;

@@ -6,6 +6,7 @@ import gui.ViewerGLJPanel;
 
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
@@ -40,6 +41,11 @@ public class BinningDataContainer extends DataContainer {
 		private JSlider transparencySlider = new JSlider(0, 100, 100);
 	    private JSpinner lowerLimitSpinner = new JSpinner(new SpinnerNumberModel(0., -50., 50., 0.0001));
 	    private JSpinner upperLimitSpinner = new JSpinner(new SpinnerNumberModel(0., -50., 50., 0.0001));
+	    
+	    private JSpinner xBlocksSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 5000, 1));
+	    private JSpinner yBlocksSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 5000, 1));
+	    private JSpinner zBlocksSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 5000, 1));
+	    
 	    private JButton resetButton = new JButton("Auto adjust min/max");
 	    JCheckBox filterCheckboxMin = new JCheckBox("Filter <min");
 	    JCheckBox filterCheckboxMax = new JCheckBox("Filter >max");
@@ -81,6 +87,13 @@ public class BinningDataContainer extends DataContainer {
 			this.add(transparencySlider, gbc); gbc.gridy++;
 	        this.add(valueComboBox, gbc); gbc.gridy++;
 	        
+	        JPanel cont = new JPanel();
+            cont.setLayout(new GridLayout(2,3));
+            cont.add(new JLabel("x")); cont.add(new JLabel("y")); cont.add(new JLabel("z"));
+            cont.add(xBlocksSpinner); cont.add(yBlocksSpinner); cont.add(zBlocksSpinner);
+            gbc.gridwidth = 2;
+            this.add(cont, gbc); gbc.gridy++;
+	        
 	        gbc.gridwidth = 1;
 	        this.add(new JLabel("Min."), gbc); gbc.gridx++;
 	        this.add(new JLabel("Max."), gbc); gbc.gridx = 0; 
@@ -89,6 +102,7 @@ public class BinningDataContainer extends DataContainer {
 	        this.add(upperLimitSpinner, gbc); gbc.gridx = 0;
 	        gbc.gridy++;
 	        
+	        gbc.gridwidth = 1;
 	        this.add(filterCheckboxMin, gbc); gbc.gridx++;
 	        this.add(filterCheckboxMax, gbc); gbc.gridx = 0;
 	        gbc.gridy++;
@@ -97,7 +111,18 @@ public class BinningDataContainer extends DataContainer {
 	        
 	        gbc.gridwidth = 2;
 	        this.add(resetButton, gbc); gbc.gridy++;
-						
+	        
+	        ChangeListener subdivideChangeListener = new ChangeListener() {
+                @Override
+                public void stateChanged(ChangeEvent e) {
+                    binnedData = computeBin(Configuration.getCurrentAtomData());
+                    if (isVisible) RenderingConfiguration.getViewer().reDraw();
+                }
+            };
+	        xBlocksSpinner.addChangeListener(subdivideChangeListener);
+	        yBlocksSpinner.addChangeListener(subdivideChangeListener);
+	        zBlocksSpinner.addChangeListener(subdivideChangeListener);
+            
 			transparencySlider.addChangeListener(new ChangeListener() {
 				@Override
 				public void stateChanged(ChangeEvent e) {
@@ -226,7 +251,11 @@ public class BinningDataContainer extends DataContainer {
 	}
 
 	private BinnedData computeBin(AtomData data){
-	    return new BinnedData(5, 5, 5, data, dataPanel.selectedColumn, false);	        
+	    int x = ((Number)dataPanel.xBlocksSpinner.getValue()).intValue();
+	    int y = ((Number)dataPanel.yBlocksSpinner.getValue()).intValue();
+	    int z = ((Number)dataPanel.zBlocksSpinner.getValue()).intValue();
+	    
+	    return new BinnedData(x, y, z, data, dataPanel.selectedColumn, false);	        
 	}
 	
     @Override
