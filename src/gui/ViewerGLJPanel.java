@@ -791,7 +791,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		final CrystalStructure cs = atomData.getCrystalStructure();
 		final int numEle = cs.getNumberOfElements();
 
-		final AtomFilterSet atomFilterSet = RenderingConfiguration.getAtomFilterset();
+		final FilterSet<Atom> atomFilterSet = RenderingConfiguration.getAtomFilterset();
 		
 		final float[] sphereSize = cs.getSphereSizeScalings();
 		float maxSphereSize = 0f;

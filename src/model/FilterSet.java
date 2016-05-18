@@ -19,28 +19,29 @@ package model;
 
 import java.util.ArrayList;
 
-public class AtomFilterSet implements Filter<Atom>{
+import common.Vec3;
 
-	ArrayList<Filter<Atom>> filter = new ArrayList<Filter<Atom>>();
-	
-	@Override
-	public boolean accept(Atom a) {
-		for (int i=0; i<filter.size(); i++)
-			if (!filter.get(i).accept(a)) return false;
-		return true;
-	}
-	
-	public AtomFilterSet addFilter(Filter<Atom> af){
-		if (af != null && !filter.contains(af))
-			filter.add(af);
-		return this;
-	}
-	
-	public void removeFilter(Filter<Atom> af){
-		filter.remove(af);
-	}
-	
-	public void clear(){
-		filter.clear();
-	}
+public class FilterSet<T extends Vec3> implements Filter<T>{
+    ArrayList<Filter<T>> filter = new ArrayList<Filter<T>>();
+    
+    @Override
+    public boolean accept(T a) {
+        for (int i=0; i<filter.size(); i++)
+            if (!filter.get(i).accept(a)) return false;
+        return true;
+    }
+    
+    public FilterSet<T> addFilter(Filter<T> af){
+        if (af != null && !filter.contains(af))
+            filter.add(af);
+        return this;
+    }
+    
+    public void removeFilter(Filter<T> af){
+        filter.remove(af);
+    }
+    
+    public void clear(){
+        filter.clear();
+    }
 }

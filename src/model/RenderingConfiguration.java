@@ -195,7 +195,7 @@ public class RenderingConfiguration {
 	private static DataColumnInfo selectedColumn = null;
 	private static DataColumnInfo selectedVectorColumn = null;
 	
-	private static final AtomFilterSet atomFilterSet = new AtomFilterSet();
+	private static final FilterSet<Atom> atomFilterSet = new FilterSet<Atom>();
 	
 	private static ViewerGLJPanel viewer;
 	
@@ -284,7 +284,7 @@ public class RenderingConfiguration {
 		return defaultFontSize/12f;
 	}
 	
-	public static AtomFilterSet getAtomFilterset() {
+	public static FilterSet<Atom> getAtomFilterset() {
 		return atomFilterSet;
 	}
 }

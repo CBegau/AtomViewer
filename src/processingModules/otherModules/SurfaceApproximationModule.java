@@ -271,7 +271,7 @@ public class SurfaceApproximationModule extends ClonableProcessingModule {
 		
 		
 		public boolean processData(AtomData atomData) throws Exception {
-			AtomFilterSet afs = null;
+			FilterSet<Atom> afs = null;
 			if (filter) afs = RenderingConfiguration.getAtomFilterset();
 			List<Atom> atoms = atomData.getAtoms();
 			if (afs != null){

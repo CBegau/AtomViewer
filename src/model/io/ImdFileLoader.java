@@ -101,7 +101,7 @@ public class ImdFileLoader extends MDFileLoader{
 					return a.getType() != defaultType;
 				}
 			};
-			af = new AtomFilterSet().addFilter(atomFilter).addFilter(defaultAtomFilter);
+			af = new FilterSet<Atom>().addFilter(atomFilter).addFilter(defaultAtomFilter);
 		}
 		
 		return new AtomData(previous, this.readFile(f, af));
