@@ -34,7 +34,7 @@ public class BinningRenderer {
                     if (b.getNumberOfParticles() > 0 && filter.accept(b)){
                     
                         if (picking) vds.setColor(viewer.getNextPickingColor(b));
-                        else vds.setColor(ColorTable.getIntensityGLColor(min, max, b.getAvg(), transparency));
+                        else vds.setColor(ColorTable.getIntensityGLColor(min, max, b.getMean(), transparency));
                         
                         Vec3[] corners = b.getCorners();
                         

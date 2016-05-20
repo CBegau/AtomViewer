@@ -121,8 +121,8 @@ public class BinnedData {
         float max = Float.NEGATIVE_INFINITY;
         
         for (Bin b: bins){
-            min = Math.min(min, b.getAvg());
-            max = Math.max(max, b.getAvg());
+            min = Math.min(min, b.getMean());
+            max = Math.max(max, b.getMean());
         }
         return new float[]{min, max};
     }
@@ -140,8 +140,16 @@ public class BinnedData {
             this.indexZ = indexZ;
         }
         
-        public float getAvg() {
+        public float getMean() {
             return (float)(sum/(num>0?num:1));
+        }
+        
+        public double getSum() {
+            return sum;
+        }
+        
+        public double getVectorSumNorm(){
+            return sumVec.getLength();
         }
         
         public int getNumberOfParticles() {
@@ -172,8 +180,8 @@ public class BinnedData {
                     Float.toString(box.getVolume()/(numBinX*numBinY*numBinZ)));
             keys.add("Number of particles"); values.add(Integer.toString(num));
             if (dci.isVectorComponent()){
-                keys.add("Sum"); values.add(sumVec.toString());
-                keys.add("Mean"); values.add(sumVec.divideClone((num>0?num:1)).toString());
+                keys.add("Vector sum"); values.add(sumVec.toString());
+                keys.add("Vector mean"); values.add(sumVec.divideClone((num>0?num:1)).toString());
             } else {
                 keys.add("Sum"); values.add(Double.toString(sum));
                 keys.add("Mean"); values.add(Double.toString(sum/(num>0?num:1)));

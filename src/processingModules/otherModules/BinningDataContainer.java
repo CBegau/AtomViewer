@@ -297,7 +297,7 @@ public class BinningDataContainer extends DataContainer {
             
             @Override
             public boolean accept(Bin b) {
-                float avg = b.getAvg();
+                float avg = b.getMean();
                 if ((filterMin && avg < minMax[0]) || (filterMax && avg > minMax[1]))
                     return inversed;
                 return !inversed;
