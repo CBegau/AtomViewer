@@ -25,6 +25,7 @@ import model.DataColumnInfo.Component;
 import model.mesh.Mesh;
 import model.polygrain.Grain;
 import processingModules.DataContainer;
+import processingModules.otherModules.BinningDataContainer;
 import gui.glUtils.*;
 import gui.glUtils.Shader.BuiltInShader;
 
@@ -77,7 +78,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	}
 	
 	public enum AtomRenderType {
-		TYPE, ELEMENTS, GRAINS, DATA, VECTOR_DATA
+		TYPE, ELEMENTS, GRAINS, DATA, VECTOR_DATA, BINS
 	};
 	
 	private static final long serialVersionUID = 1L;
@@ -147,6 +148,8 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	private long timeToRenderFrame = 0l;
 	
 	private int defaultVAO = -1;
+	
+	private BinningDataContainer binnedData = new BinningDataContainer();
 	
 	public ViewerGLJPanel(int width, int height, GLCapabilities caps) {
 		super(caps);
@@ -482,7 +485,12 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		for (DataContainer dc : atomData.getAdditionalData())
 			dc.drawSolidObjects(this, gl, renderInterval, picking, atomData);
 		
-		drawAtoms(gl, picking);
+		if (atomRenderType == AtomRenderType.BINS){
+		    if (!binnedData.isTransparenceRenderingRequired()){
+		        binnedData.drawSolidObjects(this, gl, renderInterval, picking, atomData);
+		    }
+		} else drawAtoms(gl, picking);
+		
 		
 		if (!picking) fboDeferredBuffer.unbind(gl);
 		
@@ -537,6 +545,10 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		for (DataContainer dc : atomData.getAdditionalData())
 			dc.drawTransparentObjects(this, gl, renderInterval, picking, atomData);
 
+		if (atomRenderType == AtomRenderType.BINS && binnedData.isTransparenceRenderingRequired()){
+            binnedData.drawTransparentObjects(this, gl, renderInterval, picking, atomData);
+        }
+		
 		drawIndent(gl, picking);
 		
 		if (!picking) {

@@ -25,7 +25,6 @@ import java.util.*;
 
 import processingModules.*;
 import processingModules.atomicModules.AtomClassificationModule;
-import processingModules.otherModules.BinningDataContainer;
 import processingModules.otherModules.DeleteColumnModule;
 import processingModules.otherModules.VectorNormModule;
 import processingModules.toolchain.Toolchain;
@@ -196,8 +195,6 @@ public class AtomData {
 			});
 			countAtomTypes();
 		}
-		
-		additionalData.add(new BinningDataContainer());
 	}
 
 	public List<DataContainer> getAdditionalData() {

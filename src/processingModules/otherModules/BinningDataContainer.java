@@ -11,11 +11,16 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.*;
 
 import com.jogamp.opengl.GL3;
 
 import common.CommonUtils;
+import common.Vec3;
 
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
@@ -38,7 +43,11 @@ public class BinningDataContainer extends DataContainer {
 	
 	public class JBinningControlPanel extends JDataPanel {
 		private static final long serialVersionUID = 1L;
-		private JSlider transparencySlider = new JSlider(0, 100, 100);
+		
+		float transparency = 1f;
+		DataColumnInfo selectedColumn;
+		
+		private JSlider transparencySlider = new JSlider(0, 100, 0);
 	    private JSpinner lowerLimitSpinner = new JSpinner(new SpinnerNumberModel(0., -50., 50., 0.0001));
 	    private JSpinner upperLimitSpinner = new JSpinner(new SpinnerNumberModel(0., -50., 50., 0.0001));
 	    
@@ -49,12 +58,10 @@ public class BinningDataContainer extends DataContainer {
 	    private JButton resetButton = new JButton("Auto adjust min/max");
 	    JCheckBox filterCheckboxMin = new JCheckBox("Filter <min");
 	    JCheckBox filterCheckboxMax = new JCheckBox("Filter >max");
-	    JCheckBox inverseFilterCheckbox = new JCheckBox("Inverse filtering");
-	    private JComboBox valueComboBox = new JComboBox();
-	    private boolean isVisible = false;
+	    JCheckBox inverseFilterCheckbox = new JCheckBox("Inverse filter");
+	    JButton exportButton = new JButton("Export");
 	    
-	    DataColumnInfo selectedColumn;
-	    float transparency = 1f;
+	    private JComboBox valueComboBox = new JComboBox();
 	    
 		public JBinningControlPanel() {
 			super("Binning");
@@ -106,7 +113,8 @@ public class BinningDataContainer extends DataContainer {
 	        this.add(filterCheckboxMin, gbc); gbc.gridx++;
 	        this.add(filterCheckboxMax, gbc); gbc.gridx = 0;
 	        gbc.gridy++;
-	        this.add(inverseFilterCheckbox, gbc); gbc.gridx = 0;
+	        this.add(inverseFilterCheckbox, gbc); gbc.gridx++;
+	        this.add(exportButton, gbc); gbc.gridx = 0;
 	        gbc.gridy++;
 	        
 	        gbc.gridwidth = 2;
@@ -116,7 +124,7 @@ public class BinningDataContainer extends DataContainer {
                 @Override
                 public void stateChanged(ChangeEvent e) {
                     binnedData = computeBin(Configuration.getCurrentAtomData());
-                    if (isVisible) RenderingConfiguration.getViewer().reDraw();
+                    RenderingConfiguration.getViewer().reDraw();
                 }
             };
 	        xBlocksSpinner.addChangeListener(subdivideChangeListener);
@@ -127,7 +135,6 @@ public class BinningDataContainer extends DataContainer {
 				@Override
 				public void stateChanged(ChangeEvent e) {
 					transparency = 1-(transparencySlider.getValue()*0.01f);
-					isVisible = transparency > 1e-6f;
 					RenderingConfiguration.getViewer().reDraw();
 				}
 			});
@@ -143,52 +150,43 @@ public class BinningDataContainer extends DataContainer {
                                 minMaxStorage.put(selectedColumn, binnedData.getMinMax());
                             setSpinner();
                         }
-                        if (isVisible) RenderingConfiguration.getViewer().reDraw();
+                        RenderingConfiguration.getViewer().reDraw();
                     }
                 }
             });
 	        
-	        lowerLimitSpinner.addChangeListener(new ChangeListener() {
-	            @Override
-	            public void stateChanged(ChangeEvent e) {
-	                float value = ((Number)lowerLimitSpinner.getValue()).floatValue();
-	                minMaxStorage.get(selectedColumn)[0] = value;
-	                if (isVisible) RenderingConfiguration.getViewer().reDraw();
-	            }
-	        });
+	        ChangeListener minMaxSpinnerListener = new ChangeListener() {
+                @Override
+                public void stateChanged(ChangeEvent e) {
+                    float low = ((Number)lowerLimitSpinner.getValue()).floatValue();
+                    float up = ((Number)upperLimitSpinner.getValue()).floatValue();
+                    minMaxStorage.get(selectedColumn)[0] = low;
+                    minMaxStorage.get(selectedColumn)[1] = up;
+                    RenderingConfiguration.getViewer().reDraw();
+                }
+            };
+            
+            ActionListener minMaxListener = new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent arg0) {
+                    RenderingConfiguration.setFilterMin(filterCheckboxMin.isSelected());
+                    RenderingConfiguration.setFilterMax(filterCheckboxMax.isSelected());
+                    inverseFilterCheckbox.setEnabled(filterCheckboxMin.isSelected() || filterCheckboxMax.isSelected());
+                    RenderingConfiguration.getViewer().reDraw();
+                }
+            };
 	        
-	        upperLimitSpinner.addChangeListener(new ChangeListener() {
-	            @Override
-	            public void stateChanged(ChangeEvent e) {
-	                float value = ((Number)upperLimitSpinner.getValue()).floatValue();
-                    minMaxStorage.get(selectedColumn)[1] = value;
-	                if (isVisible) RenderingConfiguration.getViewer().reDraw();
-	            }
-	        });
+	        lowerLimitSpinner.addChangeListener(minMaxSpinnerListener);
+	        upperLimitSpinner.addChangeListener(minMaxSpinnerListener);
 	        
-	        filterCheckboxMin.addActionListener(new ActionListener() {
-	            @Override
-	            public void actionPerformed(ActionEvent arg0) {
-	                RenderingConfiguration.setFilterMin(filterCheckboxMin.isSelected());
-	                inverseFilterCheckbox.setEnabled(filterCheckboxMin.isSelected() || filterCheckboxMax.isSelected());
-	                if (isVisible) RenderingConfiguration.getViewer().reDraw();
-	            }
-	        });
-	        
-	        filterCheckboxMax.addActionListener(new ActionListener() {
-	            @Override
-	            public void actionPerformed(ActionEvent arg0) {
-	                RenderingConfiguration.setFilterMax(filterCheckboxMax.isSelected());
-	                inverseFilterCheckbox.setEnabled(filterCheckboxMin.isSelected() || filterCheckboxMax.isSelected());
-	                if (isVisible) RenderingConfiguration.getViewer().reDraw();
-	            }
-	        });
+	        filterCheckboxMin.addActionListener(minMaxListener);
+	        filterCheckboxMax.addActionListener(minMaxListener);
 	        
 	        inverseFilterCheckbox.addActionListener(new ActionListener() {
 	            @Override
 	            public void actionPerformed(ActionEvent arg0) {
 	                RenderingConfiguration.setFilterInversed(inverseFilterCheckbox.isSelected());
-	                if (isVisible) RenderingConfiguration.getViewer().reDraw();
+	                RenderingConfiguration.getViewer().reDraw();
 	            }
 	        });
 	        
@@ -197,9 +195,34 @@ public class BinningDataContainer extends DataContainer {
 	            public void actionPerformed(ActionEvent e) {
 	                minMaxStorage.put(selectedColumn, binnedData.getMinMax());
 	                setSpinner();
-	                if (isVisible) RenderingConfiguration.getViewer().reDraw();
+	                RenderingConfiguration.getViewer().reDraw();
 	            }
 	        });
+	        
+	        exportButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent arg0) {
+                    BinningDataContainer bdc = (BinningDataContainer)(
+                            Configuration.getCurrentAtomData().getDataContainer(BinningDataContainer.class));
+                    
+                    JFileChooser chooser = new JFileChooser();
+                    int ok = chooser.showSaveDialog(JBinningControlPanel.this);
+                    if (ok == JFileChooser.APPROVE_OPTION){
+                        File f = chooser.getSelectedFile();
+                        FileOutputStream fos;
+                        DataOutputStream dos = null;
+                        
+                        try {
+                            fos = new FileOutputStream(f);
+                            dos = new DataOutputStream(fos);
+                            bdc.exportData(dos);
+                            dos.close();    
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            });
 	        
 	        this.validate();
 	        
@@ -243,10 +266,16 @@ public class BinningDataContainer extends DataContainer {
 		    computeBin(Configuration.getCurrentAtomData());
 		    setSpinner();
 		}
+		
+		public void update() {
+            resetDropDown();
+            computeBin(Configuration.getCurrentAtomData());
+            setSpinner();
+        }
 
 		@Override
 		public boolean isDataVisible() {
-			return isVisible;
+			return true;
 		}
 	}
 
@@ -280,7 +309,6 @@ public class BinningDataContainer extends DataContainer {
     
     private void drawObjects(ViewerGLJPanel viewer, GL3 gl, final RenderRange renderRange, boolean picking){
         if (binnedData == null) return;
-        if (!dataPanel.isVisible) return;
         
         final float[] minMax = minMaxStorage.get(dataPanel.selectedColumn);
         FilterSet<Bin> binFilter = new FilterSet<BinnedData.Bin>();
@@ -306,9 +334,23 @@ public class BinningDataContainer extends DataContainer {
         renderer.drawBins(viewer, gl, binFilter, picking, binnedData, dataPanel.transparency, minMax[0], minMax[1]);
         viewer.drawLegendThisFrame(Float.toString(minMax[0]), "", Float.toString(minMax[1]));
     }
+    
+    public void exportData(DataOutputStream os) throws IOException{
+        if (binnedData == null) return;
+        for (int x = 0; x<binnedData.getNumBinX(); x++){
+            for (int y = 0; y<binnedData.getNumBinY(); y++){
+                for (int z = 0; z<binnedData.getNumBinZ(); z++){
+                    Bin b = binnedData.getBin(x, y, z);
+                    Vec3 c = b.getCenterOfObject();
+                    os.writeBytes(String.format("%d %d %d %f %f %f %f %f %d\n", x,y,z, c.x, c.y, c.z, 
+                            b.getMean(), b.getSum(), b.getNumberOfParticles()));
+                }   
+            }    
+        }
+    }
 
     @Override
-    public JDataPanel getDataControlPanel() {
+    public JBinningControlPanel getDataControlPanel() {
         if (dataPanel == null) dataPanel = new JBinningControlPanel();
         return dataPanel;
     }

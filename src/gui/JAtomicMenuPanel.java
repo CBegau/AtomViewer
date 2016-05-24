@@ -42,6 +42,8 @@ import model.Configuration.AtomDataChangedListener;
 import model.polygrain.Grain;
 import processingModules.DataContainer;
 import processingModules.otherModules.DeleteColumnModule;
+import processingModules.otherModules.BinningDataContainer;
+import processingModules.otherModules.BinningDataContainer.JBinningControlPanel;
 
 public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 	private static final long serialVersionUID = 1L;
@@ -72,6 +74,7 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 	private JRadioButton drawAsElementsButton = new JRadioButton("Elements");
 	private JRadioButton drawAsDataButton = new JRadioButton("Data Values");
 	private JRadioButton drawAsVectorDataButton = new JRadioButton("Vector Data");
+	private JRadioButton drawAsBinsButton = new JRadioButton("Bins");
 	private JCheckBox drawClusterCheckBox = new JCheckBox("Grain boundaries");
 	
 	private Container elementIgnoreContainer = new Container();	
@@ -81,6 +84,7 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 	
 	private JDataColumnControlPanel dataColumnPanel;
 	private JVectorDataColumnControlPanel vectorDataColumnPanel;
+	private JBinningControlPanel binningPanel;
 	
 	private JPanel dataPanel = new JPanel();
 	private GridBagConstraints dataPanelContraints = new GridBagConstraints();
@@ -179,6 +183,7 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		bg.add(drawAsGrainsButton);
 		bg.add(drawAsDataButton);
 		bg.add(drawAsVectorDataButton);
+		bg.add(drawAsBinsButton);
 		
 		ActionListener al = new ActionListener() {
 			@Override
@@ -206,7 +211,11 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 				} else if (arg0.getActionCommand().equals(drawAsVectorDataButton.getText())){
 					if (viewer!=null) viewer.setAtomRenderMethod(AtomRenderType.VECTOR_DATA);
 					vectorDataColumnPanel.setVisible(true);
-				}
+				} else if (arg0.getActionCommand().equals(drawAsBinsButton.getText())){
+                    if (viewer!=null) viewer.setAtomRenderMethod(AtomRenderType.BINS);
+                    binningPanel.setVisible(true);
+                }
+				
 				JAtomicMenuPanel.this.revalidate();	
 			}
 		};
@@ -221,18 +230,22 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		drawAsDataButton.setActionCommand(drawAsDataButton.getText());
 		drawAsVectorDataButton.addActionListener(al);
 		drawAsVectorDataButton.setActionCommand(drawAsVectorDataButton.getText());
+		drawAsBinsButton.addActionListener(al);
+        drawAsBinsButton.setActionCommand(drawAsBinsButton.getText());
 		
 		userInterfaceContainer.add(drawAsTypesButton, gbc); gbc.gridy++;
 		userInterfaceContainer.add(drawAsElementsButton, gbc); gbc.gridy++;
 		userInterfaceContainer.add(drawAsGrainsButton, gbc); gbc.gridy++;
 		userInterfaceContainer.add(drawAsDataButton, gbc); gbc.gridy++;
 		userInterfaceContainer.add(drawAsVectorDataButton, gbc); gbc.gridy++;
+		userInterfaceContainer.add(drawAsBinsButton, gbc); gbc.gridy++;
 
 		drawAsTypesButton.setVisible(false);
 		drawAsElementsButton.setVisible(false);
 		drawAsGrainsButton.setVisible(false);
 		drawAsDataButton.setVisible(false);
 		drawAsVectorDataButton.setVisible(false);
+		drawAsBinsButton.setVisible(false);
 		
 		elementIgnoreContainer.setLayout(new GridBagLayout());
 		elementScrollPane = new JScrollPane(elementIgnoreContainer, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
@@ -249,6 +262,10 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		vectorDataColumnPanel = new JVectorDataColumnControlPanel(this);
 		userInterfaceContainer.add(vectorDataColumnPanel, gbc); gbc.gridy++;
 		vectorDataColumnPanel.setVisible(false);
+		
+		binningPanel = new BinningDataContainer().getDataControlPanel();
+		userInterfaceContainer.add(binningPanel, gbc); gbc.gridy++;
+		binningPanel.setVisible(false);
 		
 		drawClusterCheckBox.addActionListener(new ActionListener() {
 			@Override
@@ -537,9 +554,14 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		if (drawAsDataButton.isSelected() && !enableDataPanel){
 			drawAsTypesButton.doClick();
 		}
+		drawAsBinsButton.setVisible(enableDataPanel);
+		binningPanel.update();
 			
 		dataColumnPanel.resetDropDown();
 		if (e.isResetGUI()) dataColumnPanel.resetValues();
+		if (drawAsBinsButton.isSelected() && !enableDataPanel){
+            drawAsTypesButton.doClick();
+        }
 		
 		//Check if there are any vector columns that need to be displayed  
 		boolean enableVectorDataPanel = false;
@@ -551,6 +573,7 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		if (drawAsVectorDataButton.isSelected() && !enableVectorDataPanel){
 			drawAsTypesButton.doClick();
 		}
+		
 		vectorDataColumnPanel.resetDropDown();
 		if (e.isResetGUI()) vectorDataColumnPanel.resetValues();
 		
@@ -638,7 +661,7 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		private JButton deleteButton = new JButton("Delete values");
 		private JCheckBox filterCheckboxMin = new JCheckBox("Filter <min");
 		private JCheckBox filterCheckboxMax = new JCheckBox("Filter >max");
-		private JCheckBox inverseFilterCheckbox = new JCheckBox("Inverse filtering");
+		private JCheckBox inverseFilterCheckbox = new JCheckBox("Inverse filter");
 		private DataColumnInfo selectedColumn;
 		private JComboBox valueComboBox = new JComboBox();
 		
