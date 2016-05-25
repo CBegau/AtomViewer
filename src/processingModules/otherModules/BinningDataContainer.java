@@ -247,6 +247,10 @@ public class BinningDataContainer extends DataContainer {
                                                // actionListeners
             valueComboBox.removeAllItems();
             List<DataColumnInfo> dci = Configuration.getCurrentAtomData().getDataColumnInfos();
+            if (dci.size() == 0) {
+                selectedColumn = null;
+                return;
+            }
             for (int i = 0; i < dci.size(); i++)
                 valueComboBox.addItem(dci.get(i));
             
@@ -280,6 +284,9 @@ public class BinningDataContainer extends DataContainer {
 	}
 
 	private BinnedData computeBin(AtomData data){
+	    if (dataPanel.selectedColumn == null) {
+	        return null;
+	    }
 	    int x = ((Number)dataPanel.xBlocksSpinner.getValue()).intValue();
 	    int y = ((Number)dataPanel.yBlocksSpinner.getValue()).intValue();
 	    int z = ((Number)dataPanel.zBlocksSpinner.getValue()).intValue();
