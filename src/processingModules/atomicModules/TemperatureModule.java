@@ -66,7 +66,7 @@ public class TemperatureModule extends ClonableProcessingModule{
 	
 	@Override
 	public String getRequirementDescription() {
-		return null;
+		return "Mass and velocities are required per particle";
 	}
 	
 	@Override
