@@ -63,6 +63,11 @@ public class YSZStructure extends FCCStructure {
 	}
 	
 	@Override
+	public int getSurfaceType() {
+	    return 7;
+	}
+	
+	@Override
 	public int getNumberOfElements() {
 		return hasArtificialPlaceHolderAtoms.getValue() ? 4 : 3;
 	}
@@ -186,4 +191,17 @@ public class YSZStructure extends FCCStructure {
 		}; 
 	}
 
+	@Override
+	public boolean isRBVToBeCalculated(Atom a){
+	    if (a.getElement()%getNumberOfElements() == 1)
+	        return false;
+	    int type = a.getType();
+	    return (type > 1 && type < 7);
+	};
+	
+	@Override
+    public boolean considerAtomAsNeighborDuringRBVCalculation(Atom a) {
+        return a.getElement()%getNumberOfElements() != 1;
+    }
+	
 }
