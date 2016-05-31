@@ -32,6 +32,7 @@ import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL3;
 
 import model.Atom;
+import model.DataColumnInfo;
 
 /**
  * Rendering arrows in a Gl context.
@@ -137,20 +138,21 @@ public class ArrowRenderer {
 	 * @param gl
 	 * @param ord
 	 * @param picking
-	 * @param xIndex
-	 * @param yIndex
-	 * @param zIndex
+	 * @param dciVector A vector based DataColumnInfo object
 	 * @param scalingFactor
 	 * @param normalize
 	 */
-	public void drawVectors(GL3 gl, ObjectRenderData<Atom> ord, boolean picking, int xIndex,
-			int yIndex, int zIndex, float scalingFactor, float thickness, boolean normalize){
-		
+	public void drawVectors(GL3 gl, ObjectRenderData<Atom> ord, boolean picking, DataColumnInfo dciVector,
+	        float scalingFactor, float thickness, boolean normalize){
+		assert(dciVector.isVectorComponent());
+	    
 		if (ViewerGLJPanel.openGLVersion>=3.3 && ord.isSubdivided()){
-			drawVectorsInstanced(gl, ord, picking, xIndex, yIndex, zIndex, scalingFactor, normalize, thickness, 2f);
+			drawVectorsInstanced(gl, ord, picking, dciVector, scalingFactor, normalize, thickness, 2f);
 			return;
 		}
-		
+		int xIndex = ord.getData().getDataColumnIndex(dciVector.getVectorComponents()[0]);
+        int yIndex = ord.getData().getDataColumnIndex(dciVector.getVectorComponents()[1]);
+        int zIndex = ord.getData().getDataColumnIndex(dciVector.getVectorComponents()[2]);
 		float[] xArray = ord.getData().getDataArray(xIndex).getData();
 		float[] yArray = ord.getData().getDataArray(yIndex).getData();
 		float[] zArray = ord.getData().getDataArray(zIndex).getData();
@@ -181,8 +183,8 @@ public class ArrowRenderer {
 		}
 	}
 	
-	private void drawVectorsInstanced(GL3 gl, ObjectRenderData<Atom> ord, boolean picking, int xIndex,
-			int yIndex, int zIndex, float scalingFactor, boolean normalize, float thickness, float headThickScale){
+	private void drawVectorsInstanced(GL3 gl, ObjectRenderData<Atom> ord, boolean picking, DataColumnInfo dciVector,
+	        float scalingFactor, boolean normalize, float thickness, float headThickScale){
 		VertexDataStorage.unbindAll(gl);
 		
 		//Select the rendering shader
@@ -224,9 +226,12 @@ public class ArrowRenderer {
 		
 		ord.sortCells(viewer.getModelViewMatrix());
 
-		float[] xArray = ord.getData().getDataArray(xIndex).getData();
-		float[] yArray = ord.getData().getDataArray(yIndex).getData();
-		float[] zArray = ord.getData().getDataArray(zIndex).getData();
+        int xIndex = ord.getData().getDataColumnIndex(dciVector.getVectorComponents()[0]);
+        int yIndex = ord.getData().getDataColumnIndex(dciVector.getVectorComponents()[1]);
+        int zIndex = ord.getData().getDataColumnIndex(dciVector.getVectorComponents()[2]);
+        float[] xArray = ord.getData().getDataArray(xIndex).getData();
+        float[] yArray = ord.getData().getDataArray(yIndex).getData();
+        float[] zArray = ord.getData().getDataArray(zIndex).getData();
 		
 		for (int j=0; j<ord.getRenderableCells().size(); j++){
 			ObjectRenderData<Atom>.Cell c = ord.getRenderableCells().get(j);

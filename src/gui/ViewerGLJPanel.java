@@ -926,10 +926,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			
 			//Draw the spheres using the pre-computed render cells
 			if (atomRenderType == AtomRenderType.VECTOR_DATA){
-				int v1 = atomData.getDataColumnIndex(dataInfo.getVectorComponents()[0]);
-				int v2 = atomData.getDataColumnIndex(dataInfo.getVectorComponents()[1]);
-				int v3 = atomData.getDataColumnIndex(dataInfo.getVectorComponents()[2]);
-				arrowRenderer.drawVectors(gl, renderData, picking, v1, v2, v3, 
+				arrowRenderer.drawVectors(gl, renderData, picking, dataInfo, 
 						RenderingConfiguration.getVectorDataScaling(),
 						RenderingConfiguration.getVectorDataThickness(), 
 						RenderingConfiguration.isNormalizedVectorData());
@@ -1815,7 +1812,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	
 	public float estimateUnitLengthInPixels(){
 		if (atomData == null) return 1f;
-		float boxSize = atomData.getBox().getHeight().maxComponent();
+		float boxSize = globalMaxBounds.maxComponent();
 		float unitFraction = 1f/boxSize;	//Apply scaling factor as in modelview
 		
 		float size = 0f;
