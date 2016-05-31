@@ -7,4 +7,4 @@ then
   cd $script_dir
 fi
 
-java -jar -Djogl.debug.DebugGL -Xmx3000M $script_dir/AtomViewer.jar $@
+java -jar -Djogl.debug.DebugGL -ea -Xmx3000M $script_dir/AtomViewer.jar $@
