@@ -158,10 +158,13 @@ public class BinningDataContainer extends DataContainer {
 	        ChangeListener minMaxSpinnerListener = new ChangeListener() {
                 @Override
                 public void stateChanged(ChangeEvent e) {
-                    float low = ((Number)lowerLimitSpinner.getValue()).floatValue();
-                    float up = ((Number)upperLimitSpinner.getValue()).floatValue();
-                    minMaxStorage.get(selectedColumn)[0] = low;
-                    minMaxStorage.get(selectedColumn)[1] = up;
+                    if (e.getSource() == lowerLimitSpinner){
+                        float low = ((Number)lowerLimitSpinner.getValue()).floatValue();
+                        minMaxStorage.get(selectedColumn)[0] = low;
+                    } else {
+                        float up = ((Number)upperLimitSpinner.getValue()).floatValue();
+                        minMaxStorage.get(selectedColumn)[1] = up;
+                    }
                     RenderingConfiguration.getViewer().reDraw();
                 }
             };
@@ -235,12 +238,7 @@ public class BinningDataContainer extends DataContainer {
 	        lowerLimitSpinner.setValue(minMax[0]);
 	        upperLimitSpinner.setValue(minMax[1]);
 	    }
-		
-		 public void resetValues(){
-		        if (selectedColumn!= null && Configuration.getCurrentAtomData().getDataColumnInfos().size() != 0)
-		            selectedColumn.findRange(Configuration.getCurrentAtomData(), false);
-		    }
-		    
+  
         public void resetDropDown() {
             DataColumnInfo s = selectedColumn; // Save from overwriting during
                                                // switching which triggers
@@ -266,9 +264,7 @@ public class BinningDataContainer extends DataContainer {
 		
 		@Override
 		public void update(DataContainer dc) {
-		    resetDropDown();
-		    computeBin(Configuration.getCurrentAtomData());
-		    setSpinner();
+		    update();
 		}
 		
 		public void update() {
