@@ -195,6 +195,7 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 				dataColumnPanel.setVisible(false);
 				vectorDataColumnPanel.setVisible(false);
 				colorShiftButton.setVisible(false);
+				binningPanel.setVisible(false);
 				
 				if (arg0.getActionCommand().equals(drawAsTypesButton.getText())){
 					if (viewer!=null) viewer.setAtomRenderMethod(AtomRenderType.TYPE);
