@@ -18,7 +18,7 @@ import processingModules.toolchain.Toolchainable.ToolchainSupport;
 public class SkeletonizerModule extends ClonableProcessingModule {
 
 	@ExportableValue
-	private float meshingThreshold = -1;
+	private float meshingThreshold = 1.1f;
 	
 	@ExportableValue
 	private boolean skeletonizeBetweenGrains = false;
@@ -52,7 +52,7 @@ public class SkeletonizerModule extends ClonableProcessingModule {
 						+ "<br> A factor of one usually is equal to the nearest neighbor distance."
 						+ "<br> Larger values create smoother dislcoations curves, but can suppress fine details like stair-rods or"
 						+ "only slightly seperated partial dislocation cores"
-						+ "<br> Min: 1.0, Max: 2.0</html>", 1.1f, 1f, 2f);
+						+ "<br> Min: 1.0, Max: 2.0</html>", meshingThreshold, 1f, 2f);
 		
 		BooleanProperty multipleGrains = dialog.addBoolean("skeletonizeGrains", "Create a single dislocation network across multiple grains",
 				"If selected, grain or phase boundaries are ignored during creation of a dislocation network. "
