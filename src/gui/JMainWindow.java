@@ -62,7 +62,7 @@ import model.RenderingConfiguration.Options;
 
 public class JMainWindow extends JFrame implements WindowListener, AtomDataChangedListener {
 
-	public static final String VERSION = "3.0 devel"; 
+	public static final String VERSION = "3.0"; 
 	public static String buildVersion = "";
 	
 	private static final long serialVersionUID = 1L;
