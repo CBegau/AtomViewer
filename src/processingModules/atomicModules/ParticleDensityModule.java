@@ -184,8 +184,7 @@ public class ParticleDensityModule extends ClonableProcessingModule {
 				+ "instead of particle density (if possible)");
 		if (data.getComponentIndex(Component.MASS)==-1) considerMassButton.setEnabled(false);
 		
-		String wrappedToolTip = CommonUtils.getWordWrappedString("Computed average is the weightend average of all particles based on their distance d "
-				+ "<br> (2-d)³-4(1-d)³ for d&lt;1/2r <br> (2-d)³ for 1/2r&lt;d&lt;r", smoothingButton);
+		String wrappedToolTip = CommonUtils.getWordWrappedString("Use a cubic spline smoothing kernel as described in (Monaghan, Rep. Prog. Phys 68, 2005)", smoothingButton);
 		
 		smoothingButton.setToolTipText(wrappedToolTip);
 		arithmeticButton.setToolTipText("Computed average is the arithmetic average");
