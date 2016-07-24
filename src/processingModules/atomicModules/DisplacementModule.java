@@ -190,5 +190,10 @@ public class DisplacementModule extends ClonableProcessingModule {
 		
 		return null;
 	}
+	
+	@Override
+	public ReferenceMode getReferenceModeUsed() {
+		return referenceMode;
+	}
 
 }

@@ -25,6 +25,7 @@ import javax.swing.JFrame;
 
 import processingModules.ProcessingModule;
 import processingModules.ProcessingResult;
+import processingModules.toolchain.Toolchain.ReferenceMode;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 import Jama.Matrix;
 import model.Atom;
@@ -308,6 +309,11 @@ public final class MonoclinicNiTi extends B2NiTi implements ProcessingModule{
 		try {
 			return (ProcessingModule)(super.clone());
 		} catch (CloneNotSupportedException e) {}
+		return null;
+	}
+	
+	@Override
+	public ReferenceMode getReferenceModeUsed() {
 		return null;
 	}
 }

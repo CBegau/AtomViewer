@@ -203,4 +203,8 @@ public class SlipVectorModule extends ClonableProcessingModule{
 		return null;
 	}
 
+	@Override
+	public ReferenceMode getReferenceModeUsed() {
+		return referenceMode;
+	}
 }

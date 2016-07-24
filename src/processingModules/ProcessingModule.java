@@ -22,6 +22,7 @@ import javax.swing.JFrame;
 
 import model.AtomData;
 import model.DataColumnInfo;
+import processingModules.toolchain.Toolchain.ReferenceMode;
 
 public interface ProcessingModule extends Cloneable {
 	
@@ -89,4 +90,11 @@ public interface ProcessingModule extends Cloneable {
 	 * @return
 	 */
 	public ProcessingModule clone();
+	
+	/**
+	 * Return which reference mode the processing module is using.
+	 * If null is returned, no references are needed. 
+	 * @return
+	 */
+	public ReferenceMode getReferenceModeUsed();
 }

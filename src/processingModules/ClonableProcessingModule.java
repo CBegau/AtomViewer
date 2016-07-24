@@ -1,5 +1,7 @@
 package processingModules;
 
+import processingModules.toolchain.Toolchain.ReferenceMode;
+
 /**
  * An abstract class that implements the clone routine of ProcessingModule
  * ProcessingModules that do not extends other classes can extend this class
@@ -14,6 +16,11 @@ public abstract class ClonableProcessingModule implements ProcessingModule{
 		} catch (CloneNotSupportedException e) {
 			e.printStackTrace();
 		}
+		return null;
+	}
+	
+	@Override
+	public ReferenceMode getReferenceModeUsed() {
 		return null;
 	}
 }

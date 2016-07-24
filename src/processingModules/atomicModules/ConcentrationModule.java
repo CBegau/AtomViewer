@@ -45,6 +45,7 @@ import processingModules.ProcessingModule;
 import processingModules.ProcessingResult;
 import processingModules.toolchain.Toolchain;
 import processingModules.toolchain.Toolchainable;
+import processingModules.toolchain.Toolchain.ReferenceMode;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
 import common.ThreadPool;
 import gnu.trove.set.hash.TIntHashSet;
@@ -263,5 +264,10 @@ public class ConcentrationModule implements Toolchainable, Cloneable, Processing
 		clone.radius = this.radius;
 		clone.elements.addAll(this.elements);
 		return clone;
+	}
+	
+	@Override
+	public ReferenceMode getReferenceModeUsed() {
+		return null;
 	}
 }

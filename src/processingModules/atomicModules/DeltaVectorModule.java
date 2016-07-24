@@ -305,6 +305,11 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 	}
 	
 	@Override
+	public ReferenceMode getReferenceModeUsed() {
+		return referenceMode;
+	}
+	
+	@Override
 	public void exportParameters(XMLStreamWriter xmlOut)
 			throws XMLStreamException, IllegalArgumentException, IllegalAccessException {
 		xmlOut.writeStartElement("toDeltaColumn");

@@ -274,6 +274,11 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 				referenceAtomData.getName(), data.getName(), toDeltaColumn.getName(), sumOfAllDeltas.getSum());
 		return new DataContainer.DefaultDataContainerProcessingResult(null, s);
 	}
+	
+	@Override
+	public ReferenceMode getReferenceModeUsed() {
+		return referenceMode;
+	}
 
 	@Override
 	public void exportParameters(XMLStreamWriter xmlOut)
