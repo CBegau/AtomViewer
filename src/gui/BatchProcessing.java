@@ -6,26 +6,12 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.regex.Pattern;
 
-import javax.management.RuntimeErrorException;
 import javax.swing.SwingWorker;
 
-import model.Atom;
-import model.AtomData;
-import model.Configuration;
-import model.Filter;
-import model.ImportConfiguration;
-import model.RenderingConfiguration;
-import model.io.CfgFileLoader;
-import model.io.ImdFileLoader;
-import model.io.ImdFileWriter;
-import model.io.LammpsAsciiDumpLoader;
-import model.io.MDFileLoader;
-import model.io.XYZFileLoader;
-import processingModules.DataContainer;
+import model.*;
+import model.io.*;
 import processingModules.ProcessingModule;
-import processingModules.skeletonizer.Skeletonizer;
 import processingModules.toolchain.Toolchain;
 import processingModules.toolchain.Toolchain.ReferenceMode;
 
@@ -34,13 +20,7 @@ public class BatchProcessing {
 	private enum Arguments {INPUT_FORMAT, INPUT_FILES, REFERENCE_FILE, CRYSTAL_CONF, PBC, OUTPUT_PATTERN, OUTPUT_FORMAT, TOOLCHAIN}
 	
 	public void processBatch(String[] args){
-		
-		
-		/*
-		 * -if: input format: valid 
-		 * -of: out
-		 */
-		
+	
 		try {
 			HashMap<Arguments, String[]> arguments = this.splitCommandLineArguemnts(args);
 			
@@ -105,11 +85,7 @@ public class BatchProcessing {
 			RenderingConfiguration.setHeadless(true);
 			
 
-			
 			ImportConfiguration ic = ImportConfiguration.getNewInstance();
-			
-			//TODO load reference file if requested
-			//TODO loop over all files
 			
 			//Set periodicity
 			if(arguments.get(Arguments.PBC) != null){
@@ -123,36 +99,91 @@ public class BatchProcessing {
 				ic.getPeriodicBoundaryConditions()[2] = false;
 			}
 			
+			AtomData reference = null;
+			//Load reference file if requested
+			if (arguments.get(Arguments.REFERENCE_FILE) != null){
+				File inputFile = new File(arguments.get(Arguments.REFERENCE_FILE)[0]);
+				if (!inputFile.exists())
+					throw new RuntimeException("Reference file "+
+							arguments.get(Arguments.REFERENCE_FILE)[0]+" not found");
+				
+				readCrystalConf(arguments, ic, inputFile);
 
-			ic.readConfigurationFile(new File(args[2]));
-			File inputFile = new File(args[1]);
-
-			Configuration.create();
-			
-			Configuration.setLastOpenedFolder(inputFile.getParentFile());
-			Filter<Atom> filter = ImportConfiguration.getInstance().getCrystalStructure().getIgnoreAtomsDuringImportFilter();
-			
-			AtomData data = fileLoader.readInputData(inputFile, null, filter);
-			
-			if (toolchain != null){
-				for (ProcessingModule pm : toolchain.getProcessingModules()){
-					data.applyProcessingModule(pm);
+				Configuration.create();
+				
+				Configuration.setLastOpenedFolder(inputFile.getParentFile());
+				Filter<Atom> filter = ImportConfiguration.getInstance().getCrystalStructure().getIgnoreAtomsDuringImportFilter();
+				
+				reference = fileLoader.readInputData(inputFile, null, filter);
+				reference.setAsReferenceForProcessingModule();
+				if (toolchain != null){
+					for (ProcessingModule pm : toolchain.getProcessingModules()){
+						reference.applyProcessingModule(pm);
+					}
 				}
 			}
 			
+			AtomData previousFile = null;
+			AtomData firstFile = null;
+			int countFiles = 0;
 			
-			//TODO change the output system
-			boolean binaryFormat = true;
-			boolean exportDislocations = false;
-			
-			if (args.length > 5){
-				for (int i=5; i<args.length; i++){
-					if (args[i].equals("-A"))
-						binaryFormat = false;
-					if (args[i].equals("-DN"))
-						exportDislocations = true;
+			//loop over all files
+			if (arguments.get(Arguments.INPUT_FILES) != null){
+				for (String f : arguments.get(Arguments.INPUT_FILES)){
+					File inputFile = new File(f);
+					if (!inputFile.exists())
+						throw new RuntimeException("Input file "+f+" not found");
+					
+					readCrystalConf(arguments, ic, inputFile);
+	
+					Configuration.create();
+					
+					Configuration.setLastOpenedFolder(inputFile.getParentFile());
+					Filter<Atom> filter = ImportConfiguration.getInstance().getCrystalStructure().getIgnoreAtomsDuringImportFilter();
+					
+					if (keepFirstFile){
+						previousFile = firstFile;
+						previousFile.setNextToNull();
+					}
+					AtomData data = fileLoader.readInputData(inputFile, previousFile, filter);
+					if (toolchain != null){
+						for (ProcessingModule pm : toolchain.getProcessingModules()){
+							data.applyProcessingModule(pm);
+						}
+					}
+					if (keepFirstFile && countFiles == 0){
+						firstFile = data;
+					}
+					
+					if (keepPreviousFile){
+						if (data.getPrevious()!=null)
+							data.getPrevious().setNextToNull();
+						previousFile = data;
+					}
+					
+					//File output
+					//TODO select file format
+					String outfile = String.format("%s.%05d.chkpt",
+							arguments.get(Arguments.OUTPUT_PATTERN)[0], countFiles);
+					ImdFileWriter writer = new ImdFileWriter(false, false);
+					writer.writeFile(null, outfile, data, null);
+					countFiles++;
+					
+//					DataContainer dc = Configuration.getCurrentAtomData().getDataContainer(Skeletonizer.class);
+//					Skeletonizer skel = null;
+//					if (dc != null)
+//						skel = (Skeletonizer)dc;
+//					
+//					if (exportDislocations && skel != null){
+//						outfile = args[4]+"_dislocation.txt";
+//						skel.writeDislocationSkeleton(new File(outfile));
+//					}
+
+					
 				}
 			}
+			
+		
 
 //			Code snippet to render to an offscreen buffer and create a "screenshot" from this 
 //			try {			
@@ -176,19 +207,7 @@ public class BatchProcessing {
 //				e.printStackTrace();
 //			}
 			
-			String outfile = args[4];
-			ImdFileWriter writer = new ImdFileWriter(binaryFormat, binaryFormat);
-			writer.writeFile(null, outfile, data, null);
-			
-			DataContainer dc = Configuration.getCurrentAtomData().getDataContainer(Skeletonizer.class);
-			Skeletonizer skel = null;
-			if (dc != null)
-				skel = (Skeletonizer)dc;
-			
-			if (exportDislocations && skel != null){
-				outfile = args[4]+"_dislocation.txt";
-				skel.writeDislocationSkeleton(new File(outfile));
-			}
+		
 		} catch (Exception e) {
 			if (args.length < 5 || !args[0].equals("-h")){
 				System.out.println("*************************************************");
@@ -208,13 +227,96 @@ public class BatchProcessing {
 		
 		System.exit(0);
 	}
+
+	private void readCrystalConf(HashMap<Arguments, String[]> arguments, ImportConfiguration ic, File inputFile) {
+		if (arguments.get(Arguments.CRYSTAL_CONF) != null){
+			File confFile = new File(arguments.get(Arguments.CRYSTAL_CONF)[0]);
+			if (!confFile.exists())
+				throw new RuntimeException("crystal.conf file "+
+					arguments.get(Arguments.CRYSTAL_CONF)[0]+" not found");
+			ic.readConfigurationFile(confFile);
+		} else {
+			File confFile = new File(inputFile.getAbsolutePath(),"crystal.conf");
+			if (!confFile.exists())
+				throw new RuntimeException("crystal.conf file "+
+					confFile.getAbsolutePath()+" not found");
+		}
+	}
 	
 	private HashMap<Arguments, String[]> splitCommandLineArguemnts(String[] args) throws RuntimeException{
 		HashMap<Arguments, String[]> arguments = new HashMap<BatchProcessing.Arguments, String[]>();
-		ArrayList<String> argsToParameter = new ArrayList<String>();
 		
 		for (int i=0; i<args.length; i++){
 			if (args[i].startsWith("-")){
+				//Read input format
+				if (args[i].startsWith("-if")){
+					if (args.length<i+1 || args[i+1].startsWith("-")) 
+						throw new RuntimeException("Input format missing after -if");
+					arguments.put(Arguments.INPUT_FORMAT, new String[]{args[i+1]});
+				}
+				
+				//Read output format
+				if (args[i].startsWith("-of")){
+					if (args.length<i+1 || args[i+1].startsWith("-")) 
+						throw new RuntimeException("Output format missing after -of");
+					arguments.put(Arguments.OUTPUT_FORMAT, new String[]{args[i+1]});
+				}
+				
+				//Read Toolchain file
+				if (args[i].startsWith("-tc")){
+					if (args.length<i+1 || args[i+1].startsWith("-")) 
+						throw new RuntimeException("Toolchain file missing after -tc");
+					arguments.put(Arguments.TOOLCHAIN, new String[]{args[i+1]});
+				}
+				
+				//Read Toolchain file
+				if (args[i].startsWith("-ref")){
+					if (args.length<i+1 || args[i+1].startsWith("-")) 
+						throw new RuntimeException("Reference file missing after -ref");
+					arguments.put(Arguments.REFERENCE_FILE, new String[]{args[i+1]});
+				}
+				
+				//Read crystal.conf file
+				if (args[i].startsWith("-cc")){
+					if (args.length<i+1 || args[i+1].startsWith("-")) 
+						throw new RuntimeException("Crystal.conf file missing after -cc");
+					arguments.put(Arguments.CRYSTAL_CONF, new String[]{args[i+1]});
+				}
+				
+				//Read Output filename patter
+				if (args[i].startsWith("-o")){
+					if (args.length<i+1 || args[i+1].startsWith("-")) 
+						throw new RuntimeException("Output pattern missing after -o");
+					arguments.put(Arguments.OUTPUT_PATTERN, new String[]{args[i+1]});
+				}
+				
+				//Read Input files
+				if (args[i].startsWith("-i")){
+					ArrayList<String> inputfiles = new ArrayList<String>();
+					if (args.length<i+1 || args[i+1].startsWith("-")) 
+						throw new RuntimeException("Input files missing after -i");
+					
+					int j = i+1;
+					while (j<args.length && !args[j].startsWith("-")){
+						inputfiles.add(args[j]);
+						j++;
+					}
+					
+					arguments.put(Arguments.INPUT_FILES, inputfiles.toArray(new String[inputfiles.size()]));
+				}
+				
+				if (args[i].startsWith("-pbc")){
+					String[] pbcs = new String[3];
+					for (int j = 1; j<=3;j++){
+						if (args.length<i+j || args[i+j].startsWith("-"))
+							throw new RuntimeException("PBCs missing after -pbc");
+						if (!args[i+j].equals("1") && !args[i+j].equals("0"))
+							throw new RuntimeException("PBCs must be either 0 or 1");
+						pbcs[j-1] = args[i+j];
+					}
+						
+					arguments.put(Arguments.PBC, pbcs);
+				}
 				
 			}
 		}
