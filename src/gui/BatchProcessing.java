@@ -23,6 +23,8 @@ public class BatchProcessing {
 	
 		try {
 			HashMap<Arguments, String[]> arguments = this.splitCommandLineArguemnts(args);
+			if (arguments.get(Arguments.INPUT_FILES) == null)
+				throw new RuntimeException("No input files specified");
 			
 			MDFileLoader fileLoader;
 			if (arguments.get(Arguments.INPUT_FORMAT)!=null){
@@ -162,10 +164,18 @@ public class BatchProcessing {
 					}
 					
 					//File output
-					//TODO select file format
-					String outfile = String.format("%s.%05d.chkpt",
-							arguments.get(Arguments.OUTPUT_PATTERN)[0], countFiles);
-					ImdFileWriter writer = new ImdFileWriter(false, false);
+					String outfile;
+					if (arguments.get(Arguments.INPUT_FILES).length >1)
+						outfile = String.format("%s.%05d.chkpt", arguments.get(Arguments.OUTPUT_PATTERN)[0], countFiles);
+					else outfile = arguments.get(Arguments.OUTPUT_PATTERN)[0];
+					
+					boolean binaryOutput = false;
+					if (arguments.get(Arguments.OUTPUT_FORMAT) != null && 
+							arguments.get(Arguments.OUTPUT_FORMAT)[0].equals("imd_b")){
+						binaryOutput = true;
+					}
+					
+					ImdFileWriter writer = new ImdFileWriter(binaryOutput, false);
 					writer.writeFile(null, outfile, data, null);
 					countFiles++;
 					
@@ -178,8 +188,6 @@ public class BatchProcessing {
 //						outfile = args[4]+"_dislocation.txt";
 //						skel.writeDislocationSkeleton(new File(outfile));
 //					}
-
-					
 				}
 			}
 			
@@ -212,14 +220,26 @@ public class BatchProcessing {
 			if (args.length < 5 || !args[0].equals("-h")){
 				System.out.println("*************************************************");
 				System.out.println("ERROR: Insufficient parameters for batch processing");
-				System.out.println("USAGE: -b <inputFile> <crystalConfFile> <viewerConfFile> <outputFile> -options1 -option2...");
+				System.out.println("USAGE: -b -i <Input Files> -o <output pattern> [-options ...] ");
 				System.out.println();
-				System.out.println("<inputFile>: Input file");
-				System.out.println("<crystalConfFile>: File containing the crystal information (usually named crystal.conf)");
-				System.out.println("<outputFile>: Output file");
-				System.out.println("Further options");
-				System.out.println("-A: Write output in ASCII format and not in binary");
-				System.out.println("-DN: Write dislocation network (if created)");
+				System.out.println("-i <input Files>: List of all input files to be processed");
+				System.out.println("-o <output prefix>: If only a single input file is specified, the given argument will be the output filename.");
+				System.out.println("                    For multiple input files, the output files will start by this prefix.");
+				System.out.println("Optional arguments:");
+				System.out.println("-if <format>: Select input format. Valid formats:");
+				System.out.println("              imd: IMD format (default)");
+				System.out.println("              lammps: Lammps ascii dump");
+				System.out.println("              xyz: (extended) XYZ format");
+				System.out.println("              cfg: Cfg format");
+				System.out.println("-of <format>: Select output format. Valid formats:");
+				System.out.println("              imd_a: Output in IMD ASCII format (default)");
+				System.out.println("              imd_b: Output in IMD binary format");
+				System.out.println("-cc <crystal.Conf file>: File containing the crystal information (usually named crystal.conf).");
+				System.out.println("                         If not give, AtomViewer tries to read the file from the same folder as the input files");
+				System.out.println("-tc <Toolchain file>: Toolchain file to be applied to each input file");
+				System.out.println("-ref <Reference file>: A reference file is needed for a toolchain");
+				System.out.println("-pbc <0|1 0|1 0|1>: Enable/disable periodicity. By default periodicity is diabled. If PBCs are provide by the input file, this setting is ignored.");
+				System.out.println("                    If PBCs are provide by the input file, this setting is ignored.");
 				System.out.println("*************************************************");
 				System.exit(1);
 			}
