@@ -52,7 +52,7 @@ public class ImdFileWriter extends MDFileWriter {
 		
 		compressedRBV.setValue(true);
 		binaryExport.setValue(binary);
-		gzippedExport.setValue(true);
+		gzippedExport.setValue(gzipped);
 	}
 	
 	@Override

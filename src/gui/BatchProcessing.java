@@ -20,7 +20,10 @@ public class BatchProcessing {
 	private enum Arguments {INPUT_FORMAT, INPUT_FILES, REFERENCE_FILE, CRYSTAL_CONF, PBC, OUTPUT_PATTERN, OUTPUT_FORMAT, TOOLCHAIN}
 	
 	public void processBatch(String[] args){
-	
+		if (!args[0].equals("-b")){
+			printInfo();
+			System.exit(1);
+		}
 		try {
 			HashMap<Arguments, String[]> arguments = this.splitCommandLineArguemnts(args);
 			if (arguments.get(Arguments.INPUT_FILES) == null)
@@ -92,9 +95,9 @@ public class BatchProcessing {
 			//Set periodicity
 			if(arguments.get(Arguments.PBC) != null){
 				String[] pbc = arguments.get(Arguments.PBC);
-				ic.getPeriodicBoundaryConditions()[0] = pbc[0]=="1";
-				ic.getPeriodicBoundaryConditions()[1] = pbc[1]=="1";
-				ic.getPeriodicBoundaryConditions()[2] = pbc[2]=="1";
+				ic.getPeriodicBoundaryConditions()[0] = pbc[0].equals("1");
+				ic.getPeriodicBoundaryConditions()[1] = pbc[1].equals("1");
+				ic.getPeriodicBoundaryConditions()[2] = pbc[2].equals("1");
 			} else {	//Default is no periodicity
 				ic.getPeriodicBoundaryConditions()[0] = false;
 				ic.getPeriodicBoundaryConditions()[1] = false;
@@ -176,6 +179,8 @@ public class BatchProcessing {
 					}
 					
 					ImdFileWriter writer = new ImdFileWriter(binaryOutput, false);
+					writer.setDataToExport(true, true, true, true, true, 
+							data.getDataColumnInfos().toArray(new DataColumnInfo[data.getDataColumnInfos().size()]));
 					writer.writeFile(null, outfile, data, null);
 					countFiles++;
 					
@@ -217,32 +222,12 @@ public class BatchProcessing {
 			
 		
 		} catch (Exception e) {
-			if (args.length < 5 || !args[0].equals("-h")){
-				System.out.println("*************************************************");
-				System.out.println("ERROR: Insufficient parameters for batch processing");
-				System.out.println("USAGE: -b -i <Input Files> -o <output pattern> [-options ...] ");
-				System.out.println();
-				System.out.println("-i <input Files>: List of all input files to be processed");
-				System.out.println("-o <output prefix>: If only a single input file is specified, the given argument will be the output filename.");
-				System.out.println("                    For multiple input files, the output files will start by this prefix.");
-				System.out.println("Optional arguments:");
-				System.out.println("-if <format>: Select input format. Valid formats:");
-				System.out.println("              imd: IMD format (default)");
-				System.out.println("              lammps: Lammps ascii dump");
-				System.out.println("              xyz: (extended) XYZ format");
-				System.out.println("              cfg: Cfg format");
-				System.out.println("-of <format>: Select output format. Valid formats:");
-				System.out.println("              imd_a: Output in IMD ASCII format (default)");
-				System.out.println("              imd_b: Output in IMD binary format");
-				System.out.println("-cc <crystal.Conf file>: File containing the crystal information (usually named crystal.conf).");
-				System.out.println("                         If not give, AtomViewer tries to read the file from the same folder as the input files");
-				System.out.println("-tc <Toolchain file>: Toolchain file to be applied to each input file");
-				System.out.println("-ref <Reference file>: A reference file is needed for a toolchain");
-				System.out.println("-pbc <0|1 0|1 0|1>: Enable/disable periodicity. By default periodicity is diabled. If PBCs are provide by the input file, this setting is ignored.");
-				System.out.println("                    If PBCs are provide by the input file, this setting is ignored.");
-				System.out.println("*************************************************");
-				System.exit(1);
-			}
+			System.out.println("*************************************************");
+			System.out.println("ERROR in batch processing");
+			System.out.println(e.getMessage());
+			e.printStackTrace();
+			
+			System.exit(1);
 		}
 		
 		System.exit(0);
@@ -256,11 +241,42 @@ public class BatchProcessing {
 					arguments.get(Arguments.CRYSTAL_CONF)[0]+" not found");
 			ic.readConfigurationFile(confFile);
 		} else {
-			File confFile = new File(inputFile.getAbsolutePath(),"crystal.conf");
+			File confFile = new File(inputFile.getParentFile(),"crystal.conf");
 			if (!confFile.exists())
 				throw new RuntimeException("crystal.conf file "+
 					confFile.getAbsolutePath()+" not found");
+			ic.readConfigurationFile(confFile);
 		}
+	}
+	
+	private void printInfo(){
+		System.out.println("*************************************************");
+		System.out.println("USAGE: -b -i <Input Files> -o <output prefix> [-options ...] ");
+		System.out.println();
+		System.out.println("-i <input Files>: List of all input files to be processed");
+		System.out.println("-o <output prefix>: If only a single input file is specified,");
+		System.out.println("                    the given argument will be the output filename.");
+		System.out.println("                    For multiple input files,");
+		System.out.println("                    the output files will start by this prefix.");
+		System.out.println("Optional arguments:");
+		System.out.println("-if <format>: Select input format. Valid formats:");
+		System.out.println("              imd: IMD format (default)");
+		System.out.println("              lammps: Lammps ascii dump");
+		System.out.println("              xyz: (extended) XYZ format");
+		System.out.println("              cfg: Cfg format");
+		System.out.println("-of <format>: Select output format. Valid formats:");
+		System.out.println("              imd_a: Output in IMD ASCII format (default)");
+		System.out.println("              imd_b: Output in IMD binary format");
+		System.out.println("-cc <crystal.Conf file>: File containing the crystal information");
+		System.out.println("                         (usually named crystal.conf).If not give, ");
+		System.out.println("                         AtomViewer tries to read the file");
+		System.out.println("                         from the same folder as the input files");
+		System.out.println("-tc <Toolchain file>: Toolchain file to be applied to each input file");
+		System.out.println("-ref <Reference file>: A reference file is needed for a toolchain");
+		System.out.println("-pbc <0|1 0|1 0|1>: Enable/disable periodicity. By default");
+		System.out.println("                    periodicity is disabled. If PBCs are provide by the");
+		System.out.println("                    input file, this setting is ignored.");
+		System.out.println("*************************************************");
 	}
 	
 	private HashMap<Arguments, String[]> splitCommandLineArguemnts(String[] args) throws RuntimeException{
@@ -269,49 +285,49 @@ public class BatchProcessing {
 		for (int i=0; i<args.length; i++){
 			if (args[i].startsWith("-")){
 				//Read input format
-				if (args[i].startsWith("-if")){
+				if (args[i].equals("-if")){
 					if (args.length<i+1 || args[i+1].startsWith("-")) 
 						throw new RuntimeException("Input format missing after -if");
 					arguments.put(Arguments.INPUT_FORMAT, new String[]{args[i+1]});
 				}
 				
 				//Read output format
-				if (args[i].startsWith("-of")){
+				if (args[i].equals("-of")){
 					if (args.length<i+1 || args[i+1].startsWith("-")) 
 						throw new RuntimeException("Output format missing after -of");
 					arguments.put(Arguments.OUTPUT_FORMAT, new String[]{args[i+1]});
 				}
 				
 				//Read Toolchain file
-				if (args[i].startsWith("-tc")){
+				if (args[i].equals("-tc")){
 					if (args.length<i+1 || args[i+1].startsWith("-")) 
 						throw new RuntimeException("Toolchain file missing after -tc");
 					arguments.put(Arguments.TOOLCHAIN, new String[]{args[i+1]});
 				}
 				
 				//Read Toolchain file
-				if (args[i].startsWith("-ref")){
+				if (args[i].equals("-ref")){
 					if (args.length<i+1 || args[i+1].startsWith("-")) 
 						throw new RuntimeException("Reference file missing after -ref");
 					arguments.put(Arguments.REFERENCE_FILE, new String[]{args[i+1]});
 				}
 				
 				//Read crystal.conf file
-				if (args[i].startsWith("-cc")){
+				if (args[i].equals("-cc")){
 					if (args.length<i+1 || args[i+1].startsWith("-")) 
 						throw new RuntimeException("Crystal.conf file missing after -cc");
 					arguments.put(Arguments.CRYSTAL_CONF, new String[]{args[i+1]});
 				}
 				
 				//Read Output filename patter
-				if (args[i].startsWith("-o")){
+				if (args[i].equals("-o")){
 					if (args.length<i+1 || args[i+1].startsWith("-")) 
-						throw new RuntimeException("Output pattern missing after -o");
+						throw new RuntimeException("Output prefix missing after -o");
 					arguments.put(Arguments.OUTPUT_PATTERN, new String[]{args[i+1]});
 				}
 				
 				//Read Input files
-				if (args[i].startsWith("-i")){
+				if (args[i].equals("-i")){
 					ArrayList<String> inputfiles = new ArrayList<String>();
 					if (args.length<i+1 || args[i+1].startsWith("-")) 
 						throw new RuntimeException("Input files missing after -i");
@@ -325,7 +341,7 @@ public class BatchProcessing {
 					arguments.put(Arguments.INPUT_FILES, inputfiles.toArray(new String[inputfiles.size()]));
 				}
 				
-				if (args[i].startsWith("-pbc")){
+				if (args[i].equals("-pbc")){
 					String[] pbcs = new String[3];
 					for (int j = 1; j<=3;j++){
 						if (args.length<i+j || args[i+j].startsWith("-"))
