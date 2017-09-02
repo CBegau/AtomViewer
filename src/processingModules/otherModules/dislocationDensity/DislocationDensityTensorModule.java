@@ -306,7 +306,7 @@ public class DislocationDensityTensorModule extends ClonableProcessingModule {
 		private static final long serialVersionUID = 1L;
 		
 		public JCheckBox enableCheckBox = new JCheckBox("Show DDT");
-		private JComboBox axisComboBox = new JComboBox(new String[]{"X-Axis","Y-Axis","Z-Axis"});
+		private JComboBox<String> axisComboBox = new JComboBox<>(new String[]{"X-Axis","Y-Axis","Z-Axis"});
 		private JRadioButton[][] tensorComp = new JRadioButton[3][3];
 		private JRadioButton tensorSum;
 		private JRadioButton scalarDens;

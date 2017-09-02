@@ -47,7 +47,7 @@ public class JCrystalConfigurationDialog extends JDialog{
 	private DecimalFormat decimalFormat = new DecimalFormat();
 	private JFormattedTextField latticeConstTextField = new JFormattedTextField(decimalFormat);
 	private JFormattedTextField[][] crystalOrientation = new JFormattedTextField[3][3];
-	private JComboBox crystalStructureComboBox = new JComboBox();
+	private JComboBox<CrystalStructure> crystalStructureComboBox = new JComboBox<>();
 	private CrystalStructure crystalStructure;
 	private JButton okButton = new JButton("OK");
 	private JButton cancelButton = new JButton("cancel");
@@ -616,7 +616,7 @@ public class JCrystalConfigurationDialog extends JDialog{
 		}
 	}
 	
-	private static class JComponentComboBox extends JComboBox{
+	private static class JComponentComboBox extends JComboBox<DataColumnInfo.Component>{
 		private static final long serialVersionUID = 1L;
 
 		public JComponentComboBox() {

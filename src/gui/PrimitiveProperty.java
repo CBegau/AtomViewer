@@ -413,7 +413,8 @@ public abstract class PrimitiveProperty<T> extends JPanel{
 	public static class ReferenceModeProperty extends PrimitiveProperty<Toolchain.ReferenceMode>{
 		private static final long serialVersionUID = -6929224822842986638L;
 		protected ReferenceMode mode, defaultMode;
-		protected JComboBox referenceModeComboBox, referenceDataComboBox;
+		protected JComboBox<ReferenceMode> referenceModeComboBox;
+		protected JComboBox<AtomData> referenceDataComboBox;
 		protected JPanel editorPanel;
 		
 		public ReferenceModeProperty(String id, String label, String tooltip, ReferenceMode defaultMode) {
@@ -421,12 +422,12 @@ public abstract class PrimitiveProperty<T> extends JPanel{
 			this.defaultMode = defaultMode;
 			this.mode = defaultMode;
 			
-			referenceModeComboBox = new JComboBox();
+			referenceModeComboBox = new JComboBox<>();
 			for (ReferenceMode r : Toolchain.ReferenceMode.values())
 				referenceModeComboBox.addItem(r);
 			referenceModeComboBox.setSelectedItem(defaultMode);
 			
-			referenceDataComboBox = new JComboBox();
+			referenceDataComboBox = new JComboBox<>();
 			for (AtomData d : Configuration.getAtomDataIterable()){
 				referenceDataComboBox.addItem(d);
 			}

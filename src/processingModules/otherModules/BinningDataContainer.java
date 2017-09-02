@@ -61,7 +61,7 @@ public class BinningDataContainer extends DataContainer {
 	    JCheckBox inverseFilterCheckbox = new JCheckBox("Inverse filter");
 	    JButton exportButton = new JButton("Export");
 	    
-	    private JComboBox valueComboBox = new JComboBox();
+	    private JComboBox<DataColumnInfo> valueComboBox = new JComboBox<DataColumnInfo>();
 	    
 		public JBinningControlPanel() {
 			super("Binning");

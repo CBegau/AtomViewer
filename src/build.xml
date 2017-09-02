@@ -24,7 +24,7 @@
 		<delete>
 			<fileset dir="${binDir}" includes="**/*.class" />
 		</delete>
-		<javac includeantruntime="false" srcdir="." debug="on" destdir="${binDir}" source="1.6" target="1.6">
+		<javac includeantruntime="false" srcdir="." debug="on" destdir="${binDir}" source="1.8" target="1.8">
 			<include name="**/*.*" />
 			<classpath refid="build.classpath" />
 			<compilerarg line="-encoding utf-8"/>

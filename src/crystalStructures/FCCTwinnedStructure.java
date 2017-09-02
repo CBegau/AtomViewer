@@ -150,6 +150,7 @@ public class FCCTwinnedStructure extends FCCStructure {
 	@Override
 	public List<Grain> identifyGrains(final AtomData data, float meshSize) {
 		if (!data.isGrainsImported()){
+			final int surfaceType = this.getSurfaceType();
 			List<Grain> grains = new Vector<Grain>();
 			//Reset grain ID
 			for (Atom a : data.getAtoms())
@@ -170,7 +171,7 @@ public class FCCTwinnedStructure extends FCCStructure {
 					new NearestNeighborBuilder<Atom>(data.getBox(),getNearestNeighborSearchRadius());
 			
 			for (int i=0; i<data.getAtoms().size();i++){
-				if (data.getAtoms().get(i).getType() != 6){
+				if (data.getAtoms().get(i).getType() != surfaceType){
 					nnb.add(data.getAtoms().get(i));
 				}
 			}
@@ -189,7 +190,7 @@ public class FCCTwinnedStructure extends FCCStructure {
 						ArrayList<Tupel<Atom,Integer>> assigns = new ArrayList<Tupel<Atom, Integer>>();
 						for (int j=start; j<end; j++){
 							Atom a = data.getAtoms().get(j);
-							if (a.getGrain() == Atom.DEFAULT_GRAIN && a.getType() != 6){
+							if (a.getGrain() == Atom.DEFAULT_GRAIN && a.getType() != surfaceType){
 								ArrayList<Atom> nei = nnb.getNeigh(a);
 								if (nei.size() != 0){
 									int[] ng = new int[nei.size()];

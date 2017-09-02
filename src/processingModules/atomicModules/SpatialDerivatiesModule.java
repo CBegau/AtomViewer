@@ -219,7 +219,7 @@ public class SpatialDerivatiesModule extends ClonableProcessingModule implements
 		dialog.add(new JSeparator());
 		FloatProperty avRadius = dialog.addFloat("avRadius", "Radius of the sphere", "", this.radius, 0f, 1000f);
 		
-		JComboBox averageComponentsComboBox = new JComboBox();
+		JComboBox<DataColumnInfo> averageComponentsComboBox = new JComboBox<>();
 		for (DataColumnInfo dci : data.getDataColumnInfos())
 			averageComponentsComboBox.addItem(dci);
 		

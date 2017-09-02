@@ -111,7 +111,7 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 		final ReferenceModeProperty rp = dialog.addReferenceMode("referenceMode", 
 				"Select reference configuration", referenceMode);
 		
-		final JComboBox dataComboBox = new JComboBox();
+		final JComboBox<DataColumnInfo> dataComboBox = new JComboBox<>();
 		
 		List<DataColumnInfo> common = new ArrayList<DataColumnInfo>(data.getDataColumnInfos());
 		

@@ -31,8 +31,6 @@ import java.util.Collections;
 
 import javax.swing.*;
 import javax.swing.border.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 
 import common.ColorTable;
 import common.Vec3;
@@ -134,37 +132,30 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		rbvVisibleToogleButton.setVisible(false);
 		userInterfaceContainer.add(infoPanel, gbc); gbc.gridy++;
 		
-		atomsVisibleToggleButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				if (atomData == null) return;
-				if (atomsVisibleToggleButton.isSelected()){
-					for (int i=0; i<ignoreTypeCheckbox.length; i++){
-						ignoreTypeCheckbox[i].setEnabled(false);
-						RenderingConfiguration.getViewer().setTypeIgnored(i, true);
-					}
-					atomsVisibleToggleButton.setText("Show atoms");
-				} else {
-					for (int i=0; i<ignoreTypeCheckbox.length; i++){
-						ignoreTypeCheckbox[i].setEnabled(true);
-						RenderingConfiguration.getViewer().setTypeIgnored(i, !ignoreTypeCheckbox[i].isSelected());
-					}
-					atomsVisibleToggleButton.setText("Hide atoms");
+		atomsVisibleToggleButton.addActionListener(l -> {
+			if (atomData == null) return;
+			if (atomsVisibleToggleButton.isSelected()){
+				for (int i=0; i<ignoreTypeCheckbox.length; i++){
+					ignoreTypeCheckbox[i].setEnabled(false);
+					RenderingConfiguration.getViewer().setTypeIgnored(i, true);
 				}
-				RenderingConfiguration.getViewer().updateAtoms();
+				atomsVisibleToggleButton.setText("Show atoms");
+			} else {
+				for (int i=0; i<ignoreTypeCheckbox.length; i++){
+					ignoreTypeCheckbox[i].setEnabled(true);
+					RenderingConfiguration.getViewer().setTypeIgnored(i, !ignoreTypeCheckbox[i].isSelected());
+				}
+				atomsVisibleToggleButton.setText("Hide atoms");
 			}
+			RenderingConfiguration.getViewer().updateAtoms();
 		});
 		
-		rbvVisibleToogleButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
+		
+		rbvVisibleToogleButton.addActionListener(l -> {
 				RenderingConfiguration.getViewer().setRenderingAtomsAsRBV(JAtomicMenuPanel.this.rbvVisibleToogleButton.isSelected());
-			}
 		});
 		
-		colorShiftButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
+		colorShiftButton.addActionListener(l -> {
 				JColorShiftDialog d = new JColorShiftDialog(
 						parentFrame,
 						RenderingConfiguration.getViewer().getColorShiftForElements().o1,
@@ -172,10 +163,7 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 						atomData.getCrystalStructure());
 				Vec3 hsv = d.getShift();
 				RenderingConfiguration.getViewer().setColorShiftForElements(hsv.x, hsv.y, hsv.z, d.isShiftForVTypes());
-			}
 		});
-		
-		
 		
 		ButtonGroup bg = new ButtonGroup();
 		bg.add(drawAsTypesButton);
@@ -268,9 +256,7 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		userInterfaceContainer.add(binningPanel, gbc); gbc.gridy++;
 		binningPanel.setVisible(false);
 		
-		drawClusterCheckBox.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
+		drawClusterCheckBox.addActionListener(l -> {
 				RenderOption.GRAINS.setEnabled(drawClusterCheckBox.isSelected());
 				if (drawClusterCheckBox.isSelected()){
 					grainScrollPane.setVisible(true);
@@ -278,8 +264,8 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 					grainScrollPane.setVisible(drawAsGrainsButton.isSelected());
 				}
 				JAtomicMenuPanel.this.revalidate();	
-			}
 		});
+		
 		userInterfaceContainer.add(drawClusterCheckBox, gbc); gbc.gridy++;
 		drawClusterCheckBox.setVisible(false);
 		
@@ -311,12 +297,10 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		innerp.setLayout(new GridLayout(1,4)); 
 		p.add(orderButton);
 		p.add(innerp);
-		orderButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
+		orderButton.addActionListener(l -> {
 				new JOrderAtomDataSet(parent);
-			}
 		});
+		
 		orderButton.setActionCommand("changeOrder");
 		orderButton.setEnabled(false);
 		innerp.add(fastRewindButton);
@@ -597,13 +581,10 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		
 		public JIgnoreTypeCheckbox(final int number){
 			this.setSelected(true);
-			this.addActionListener(new ActionListener(){
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					if (atomData != null){
-						RenderingConfiguration.getViewer().setTypeIgnored(number, !JIgnoreTypeCheckbox.this.isSelected());
-						RenderingConfiguration.getViewer().updateAtoms();
-					}
+			this.addActionListener(l->{
+				if (atomData != null){
+					RenderingConfiguration.getViewer().setTypeIgnored(number, !JIgnoreTypeCheckbox.this.isSelected());
+					RenderingConfiguration.getViewer().updateAtoms();
 				}
 			});
 		}
@@ -616,13 +597,10 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 			this.setText(Integer.toString(number)+" "+label);
 			this.setSelected(!RenderingConfiguration.getViewer().isElementIgnored(number));
 			this.setSize(new Dimension(200, (int)(20*RenderingConfiguration.getGUIScalingFactor())));
-			this.addActionListener(new ActionListener(){
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					if (atomData!=null){
-						RenderingConfiguration.getViewer().setElementIgnored(number, !JIgnoreElementCheckbox.this.isSelected());
-						RenderingConfiguration.getViewer().updateAtoms();
-					}
+			this.addActionListener(l -> {
+				if (atomData!=null){
+					RenderingConfiguration.getViewer().setElementIgnored(number, !JIgnoreElementCheckbox.this.isSelected());
+					RenderingConfiguration.getViewer().updateAtoms();
 				}
 			});
 		}
@@ -639,13 +617,10 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 			float[] color = RenderingConfiguration.getViewer().getGrainColor(number);
 			this.setBackground(new Color(color[0], color[1], color[2]));
 			this.setSize(new Dimension(200, (int)(20*RenderingConfiguration.getGUIScalingFactor())));
-			this.addActionListener(new ActionListener(){
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					if (atomData!=null){
-						RenderingConfiguration.getViewer().setGrainIgnored(number, !JIgnoreGrainCheckbox.this.isSelected());
-						RenderingConfiguration.getViewer().updateAtoms();
-					}
+			this.addActionListener(l->{
+				if (atomData!=null){
+					RenderingConfiguration.getViewer().setGrainIgnored(number, !JIgnoreGrainCheckbox.this.isSelected());
+					RenderingConfiguration.getViewer().updateAtoms();
 				}
 			});
 		}
@@ -664,7 +639,7 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		private JCheckBox filterCheckboxMax = new JCheckBox("Filter >max");
 		private JCheckBox inverseFilterCheckbox = new JCheckBox("Inverse filter");
 		private DataColumnInfo selectedColumn;
-		private JComboBox valueComboBox = new JComboBox();
+		private JComboBox<DataColumnInfo> valueComboBox = new JComboBox<>();
 		
 		private boolean isResetActive = false;
 		
@@ -731,111 +706,81 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 			
 			this.validate();
 			
-			valueComboBox.addActionListener(new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent arg0) {
-					if (isResetActive) return;
-					selectedColumn = (DataColumnInfo)valueComboBox.getSelectedItem();
-					setSpinner();
-					RenderingConfiguration.setSelectedColumn(selectedColumn);
-					RenderingConfiguration.getViewer().updateAtoms();
-				}
+			valueComboBox.addActionListener(l-> {
+				if (isResetActive) return;
+				selectedColumn = (DataColumnInfo)valueComboBox.getSelectedItem();
+				setSpinner();
+				RenderingConfiguration.setSelectedColumn(selectedColumn);
+				RenderingConfiguration.getViewer().updateAtoms();
 			});
 			
-			lowerLimitSpinner.addChangeListener(new ChangeListener() {
-				@Override
-				public void stateChanged(ChangeEvent e) {
-					selectedColumn.setLowerLimit(((Number)lowerLimitSpinner.getValue()).floatValue());
-					RenderingConfiguration.getViewer().updateAtoms();
-				}
+			lowerLimitSpinner.addChangeListener(l-> {
+				selectedColumn.setLowerLimit(((Number)lowerLimitSpinner.getValue()).floatValue());
+				RenderingConfiguration.getViewer().updateAtoms();
 			});
 			
-			upperLimitSpinner.addChangeListener(new ChangeListener() {
-				@Override
-				public void stateChanged(ChangeEvent e) {
-					selectedColumn.setUpperLimit(((Number)upperLimitSpinner.getValue()).floatValue());
-					RenderingConfiguration.getViewer().updateAtoms();
-				}
+			upperLimitSpinner.addChangeListener(l -> {
+				selectedColumn.setUpperLimit(((Number)upperLimitSpinner.getValue()).floatValue());
+				RenderingConfiguration.getViewer().updateAtoms();
 			});
 			
-			filterCheckboxMin.addActionListener(new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent arg0) {
-					RenderingConfiguration.setFilterMin(filterCheckboxMin.isSelected());
-					RenderingConfiguration.getViewer().updateAtoms();
-					inverseFilterCheckbox.setEnabled(filterCheckboxMin.isSelected() || filterCheckboxMax.isSelected());
-				}
+			filterCheckboxMin.addActionListener(l -> {
+				RenderingConfiguration.setFilterMin(filterCheckboxMin.isSelected());
+				RenderingConfiguration.getViewer().updateAtoms();
+				inverseFilterCheckbox.setEnabled(filterCheckboxMin.isSelected() || filterCheckboxMax.isSelected());
 			});
 			
-			filterCheckboxMax.addActionListener(new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent arg0) {
-					RenderingConfiguration.setFilterMax(filterCheckboxMax.isSelected());
-					RenderingConfiguration.getViewer().updateAtoms();
-					inverseFilterCheckbox.setEnabled(filterCheckboxMin.isSelected() || filterCheckboxMax.isSelected());
-				}
+			filterCheckboxMax.addActionListener(l -> {
+				RenderingConfiguration.setFilterMax(filterCheckboxMax.isSelected());
+				RenderingConfiguration.getViewer().updateAtoms();
+				inverseFilterCheckbox.setEnabled(filterCheckboxMin.isSelected() || filterCheckboxMax.isSelected());
 			});
 			
-			inverseFilterCheckbox.addActionListener(new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent arg0) {
-					RenderingConfiguration.setFilterInversed(inverseFilterCheckbox.isSelected());
-					RenderingConfiguration.getViewer().updateAtoms();
-				}
+			inverseFilterCheckbox.addActionListener(l -> {
+				RenderingConfiguration.setFilterInversed(inverseFilterCheckbox.isSelected());
+				RenderingConfiguration.getViewer().updateAtoms();
 			});
 			
-			resetAllButton.addActionListener(new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					selectedColumn.findRange(atomData, true);
-					lowerLimitSpinner.setValue(selectedColumn.getLowerLimit());
-					upperLimitSpinner.setValue(selectedColumn.getUpperLimit());
-					RenderingConfiguration.getViewer().updateAtoms();
-				}
+			resetAllButton.addActionListener(l-> {
+				selectedColumn.findRange(atomData, true);
+				lowerLimitSpinner.setValue(selectedColumn.getLowerLimit());
+				upperLimitSpinner.setValue(selectedColumn.getUpperLimit());
+				RenderingConfiguration.getViewer().updateAtoms();
 			});
 			
-			resetButton.addActionListener(new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					selectedColumn.findRange(atomData, false);
-					lowerLimitSpinner.setValue(selectedColumn.getLowerLimit());
-					upperLimitSpinner.setValue(selectedColumn.getUpperLimit());
-					RenderingConfiguration.getViewer().updateAtoms();
-				}
+			resetButton.addActionListener(l -> {
+				selectedColumn.findRange(atomData, false);
+				lowerLimitSpinner.setValue(selectedColumn.getLowerLimit());
+				upperLimitSpinner.setValue(selectedColumn.getUpperLimit());
+				RenderingConfiguration.getViewer().updateAtoms();
 			});
 			
-			makeSymButton.addActionListener(new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					float min = ((Number)lowerLimitSpinner.getValue()).floatValue();
-					float max = ((Number)upperLimitSpinner.getValue()).floatValue();
-					
-					if (min<0f && max>0f){
-						float symValue = Math.max(Math.abs(min), Math.abs(max));
-						lowerLimitSpinner.setValue(-symValue);
-						upperLimitSpinner.setValue(symValue);
-					} else if (min>0f && max>0f){
-						lowerLimitSpinner.setValue(0f);
-					} else if (min<0f && max<0f){
-						upperLimitSpinner.setValue(0f);
-					}
-					RenderingConfiguration.getViewer().updateAtoms();
+			makeSymButton.addActionListener(l -> {
+				float min = ((Number)lowerLimitSpinner.getValue()).floatValue();
+				float max = ((Number)upperLimitSpinner.getValue()).floatValue();
+				
+				if (min<0f && max>0f){
+					float symValue = Math.max(Math.abs(min), Math.abs(max));
+					lowerLimitSpinner.setValue(-symValue);
+					upperLimitSpinner.setValue(symValue);
+				} else if (min>0f && max>0f){
+					lowerLimitSpinner.setValue(0f);
+				} else if (min<0f && max<0f){
+					upperLimitSpinner.setValue(0f);
 				}
+				RenderingConfiguration.getViewer().updateAtoms();
 			});
 			
-			deleteButton.addActionListener(new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					String text = "Are you sure to delete"+ (selectedColumn.isVectorComponent()?" the vector data of ": " ")+
-							selectedColumn.getName();
-					int result = JOptionPane.showConfirmDialog(JDataColumnControlPanel.this.parentPanel,
-							text, "Delete "+selectedColumn.getName(), JOptionPane.OK_CANCEL_OPTION);
-					if (result == JOptionPane.OK_OPTION){
-						try {
-							atomData.applyProcessingModule(new DeleteColumnModule(selectedColumn));
-						} catch (Exception e1) { e1.printStackTrace(); }
-						Configuration.setCurrentAtomData(atomData, true, false);
-					}
+			deleteButton.addActionListener(l -> {
+				String text = "Are you sure to delete"+ (selectedColumn.isVectorComponent()?" the vector data of ": " ")+
+						selectedColumn.getName();
+				int result = JOptionPane.showConfirmDialog(JDataColumnControlPanel.this.parentPanel,
+						text, "Delete "+selectedColumn.getName(), JOptionPane.OK_CANCEL_OPTION);
+				if (result == JOptionPane.OK_OPTION){
+					try {
+						atomData.applyProcessingModule(new DeleteColumnModule(selectedColumn));
+					} catch (Exception e1) { e1.printStackTrace(); }
+					Configuration.setCurrentAtomData(atomData, true, false);
 				}
 			});
 		}
@@ -903,7 +848,7 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 		private JCheckBox normalizeCheckbox = new JCheckBox("Normalize");
 		private DataColumnInfo selectedColumn;
 		private DataColumnInfo selectedColumnAbs;
-		private JComboBox valueComboBox = new JComboBox();
+		private JComboBox<DataColumnInfo.VectorDataColumnInfo> valueComboBox = new JComboBox<>();
 		
 		private boolean isResetActive = false;
 		
@@ -969,102 +914,69 @@ public class JAtomicMenuPanel extends JPanel implements AtomDataChangedListener{
 			this.add(vectorThicknessSpinner, gbc);
 			
 			this.validate();
-			valueComboBox.addActionListener(new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent arg0) {
-					if (valueComboBox.getSelectedItem() != null && !isResetActive){
-						selectedColumn = ((DataColumnInfo.VectorDataColumnInfo)valueComboBox.getSelectedItem()).getDci();
-						setSpinner();
-						RenderingConfiguration.setSelectedVectorColumn(selectedColumn);
-						RenderingConfiguration.getViewer().updateAtoms();
-					}
-				}
-			});
-			
-			lowerLimitSpinner.addChangeListener(new ChangeListener() {
-				@Override
-				public void stateChanged(ChangeEvent e) {
-					selectedColumnAbs.setLowerLimit(((Number)lowerLimitSpinner.getValue()).floatValue());
+			valueComboBox.addActionListener(l -> {
+				if (valueComboBox.getSelectedItem() != null && !isResetActive){
+					selectedColumn = ((DataColumnInfo.VectorDataColumnInfo)valueComboBox.getSelectedItem()).getDci();
+					setSpinner();
+					RenderingConfiguration.setSelectedVectorColumn(selectedColumn);
 					RenderingConfiguration.getViewer().updateAtoms();
 				}
 			});
 			
-			upperLimitSpinner.addChangeListener(new ChangeListener() {
-				@Override
-				public void stateChanged(ChangeEvent e) {
-					selectedColumnAbs.setUpperLimit(((Number)upperLimitSpinner.getValue()).floatValue());
-					RenderingConfiguration.getViewer().updateAtoms();
-				}
+			lowerLimitSpinner.addChangeListener(l -> {
+				selectedColumnAbs.setLowerLimit(((Number)lowerLimitSpinner.getValue()).floatValue());
+				RenderingConfiguration.getViewer().updateAtoms();
 			});
 			
-			filterCheckboxMin.addActionListener(new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent arg0) {
-					RenderingConfiguration.setFilterMin(filterCheckboxMin.isSelected());
-					RenderingConfiguration.getViewer().updateAtoms();
-					inverseFilterCheckbox.setEnabled(filterCheckboxMin.isSelected() || filterCheckboxMax.isSelected());
-				}
+			upperLimitSpinner.addChangeListener(l -> {
+				selectedColumnAbs.setUpperLimit(((Number)upperLimitSpinner.getValue()).floatValue());
+				RenderingConfiguration.getViewer().updateAtoms();
 			});
 			
-			filterCheckboxMax.addActionListener(new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent arg0) {
-					RenderingConfiguration.setFilterMax(filterCheckboxMax.isSelected());
-					RenderingConfiguration.getViewer().updateAtoms();
-					inverseFilterCheckbox.setEnabled(filterCheckboxMin.isSelected() || filterCheckboxMax.isSelected());
-				}
+			filterCheckboxMin.addActionListener(l -> {
+				RenderingConfiguration.setFilterMin(filterCheckboxMin.isSelected());
+				RenderingConfiguration.getViewer().updateAtoms();
+				inverseFilterCheckbox.setEnabled(filterCheckboxMin.isSelected() || filterCheckboxMax.isSelected());
 			});
 			
-			inverseFilterCheckbox.addActionListener(new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent arg0) {
-					RenderingConfiguration.setFilterInversed(inverseFilterCheckbox.isSelected());
-					RenderingConfiguration.getViewer().updateAtoms();
-				}
+			filterCheckboxMax.addActionListener(l -> {
+				RenderingConfiguration.setFilterMax(filterCheckboxMax.isSelected());
+				RenderingConfiguration.getViewer().updateAtoms();
+				inverseFilterCheckbox.setEnabled(filterCheckboxMin.isSelected() || filterCheckboxMax.isSelected());
 			});
 			
-			resetAllButton.addActionListener(new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					selectedColumnAbs.findRange(atomData, true);
-					lowerLimitSpinner.setValue(selectedColumnAbs.getLowerLimit());
-					upperLimitSpinner.setValue(selectedColumnAbs.getUpperLimit());
-					RenderingConfiguration.getViewer().updateAtoms();
-				}
+			inverseFilterCheckbox.addActionListener(l-> {
+				RenderingConfiguration.setFilterInversed(inverseFilterCheckbox.isSelected());
+				RenderingConfiguration.getViewer().updateAtoms();
 			});
 			
-			resetButton.addActionListener(new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					selectedColumnAbs.findRange(atomData, false);
-					lowerLimitSpinner.setValue(selectedColumnAbs.getLowerLimit());
-					upperLimitSpinner.setValue(selectedColumnAbs.getUpperLimit());
-					RenderingConfiguration.getViewer().updateAtoms();
-				}
+			resetAllButton.addActionListener(l -> {
+				selectedColumnAbs.findRange(atomData, true);
+				lowerLimitSpinner.setValue(selectedColumnAbs.getLowerLimit());
+				upperLimitSpinner.setValue(selectedColumnAbs.getUpperLimit());
+				RenderingConfiguration.getViewer().updateAtoms();
 			});
 			
-			normalizeCheckbox.addActionListener(new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					RenderingConfiguration.setNormalizedVectorData(normalizeCheckbox.isSelected());
-					RenderingConfiguration.getViewer().reDraw();
-				}
+			resetButton.addActionListener(l -> {
+				selectedColumnAbs.findRange(atomData, false);
+				lowerLimitSpinner.setValue(selectedColumnAbs.getLowerLimit());
+				upperLimitSpinner.setValue(selectedColumnAbs.getUpperLimit());
+				RenderingConfiguration.getViewer().updateAtoms();
 			});
 			
-			vectorScalingSpinner.addChangeListener(new ChangeListener() {
-				@Override
-				public void stateChanged(ChangeEvent e) {
-					RenderingConfiguration.setVectorDataScaling(((Number)vectorScalingSpinner.getValue()).floatValue());
-					RenderingConfiguration.getViewer().reDraw();
-				}
+			normalizeCheckbox.addActionListener(l -> {
+				RenderingConfiguration.setNormalizedVectorData(normalizeCheckbox.isSelected());
+				RenderingConfiguration.getViewer().reDraw();
+			});
+			
+			vectorScalingSpinner.addChangeListener(l -> {
+				RenderingConfiguration.setVectorDataScaling(((Number)vectorScalingSpinner.getValue()).floatValue());
+				RenderingConfiguration.getViewer().reDraw();
 			});
 		
-			vectorThicknessSpinner.addChangeListener(new ChangeListener() {
-				@Override
-				public void stateChanged(ChangeEvent e) {
-					RenderingConfiguration.setVectorDataThickness(((Number)vectorThicknessSpinner.getValue()).floatValue()*0.1f);
-					RenderingConfiguration.getViewer().reDraw();
-				}
+			vectorThicknessSpinner.addChangeListener(l -> {
+				RenderingConfiguration.setVectorDataThickness(((Number)vectorThicknessSpinner.getValue()).floatValue()*0.1f);
+				RenderingConfiguration.getViewer().reDraw();
 			});
 		}
 		

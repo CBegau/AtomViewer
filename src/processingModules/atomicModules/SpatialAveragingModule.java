@@ -261,7 +261,7 @@ public class SpatialAveragingModule extends ClonableProcessingModule implements 
 				+ "cubic spline smoothing kernel as described in (Monaghan, Rep. Prog. Phys 68, 2005)");
 		dialog.add(new JSeparator());
 		
-		JComboBox averageComponentsComboBox = new JComboBox();
+		JComboBox<DataColumnInfo> averageComponentsComboBox = new JComboBox<>();
 		for (DataColumnInfo dci : data.getDataColumnInfos())
 			averageComponentsComboBox.addItem(dci);
 		

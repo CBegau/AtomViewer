@@ -111,7 +111,7 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 		final ReferenceModeProperty rp = dialog.addReferenceMode("referenceMode", 
 				"Select reference configuration", referenceMode);
 		
-		final JComboBox dataComboBox = new JComboBox();
+		final JComboBox<DataColumnInfo.VectorDataColumnInfo> dataComboBox = new JComboBox<>();
 		
 		List<DataColumnInfo> common = new ArrayList<DataColumnInfo>();
 		for (DataColumnInfo dci: data.getDataColumnInfos())

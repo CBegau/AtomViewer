@@ -472,7 +472,7 @@ public class StressDataModule extends ClonableProcessingModule {
 		private JRangeSlider rangeSlider = new JRangeSlider(0,100);
 		private JLabel upperRangeLimit = new JLabel("");
 		private JLabel lowerRangeLimit = new JLabel("");
-		private JComboBox stressComboBox = new JComboBox(new String[]{"xx","yy","zz","yz","zx","xy","vonMises"});
+		private JComboBox<String> stressComboBox = new JComboBox<>(new String[]{"xx","yy","zz","yz","zx","xy","vonMises"});
 		private JCheckBox invertIntervalCheckBox = new JCheckBox("Invert interval", invertInterval);
 		private JCheckBox showStressCheckbox = new JCheckBox("Show Stress", false);
 		
