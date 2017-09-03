@@ -5,9 +5,6 @@ import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.Properties;
 
@@ -22,7 +19,6 @@ import javax.swing.JPanel;
 import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
-import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import common.CommonUtils;
@@ -56,25 +52,18 @@ public abstract class PrimitiveProperty<T> extends JPanel{
 		if (this.editorNeedsGlue()) editorPanel.add(Box.createHorizontalGlue());
 		
 		final JButton reset = new JButton("default");
-		reset.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent arg0) {
-				setToDefault();
-			}
-		});
+		
+		reset.addActionListener(l->setToDefault());
 		
 		reset.setAlignmentX(Component.RIGHT_ALIGNMENT);
 		
 		if (addDefaultButton) editorPanel.add(reset);
 		this.add(editorPanel);
 		
-		this.getEditor().addPropertyChangeListener(new PropertyChangeListener() {
-			@Override
-			public void propertyChange(PropertyChangeEvent evt) {
-				boolean e = getEditor().isEnabled();
-				reset.setEnabled(e);
-				if (label!=null) label.setEnabled(e);
-			}
+		this.getEditor().addPropertyChangeListener(l -> {
+			boolean e = getEditor().isEnabled();
+			reset.setEnabled(e);
+			if (label!=null) label.setEnabled(e);
 		});
 	}
 		
@@ -183,11 +172,8 @@ public abstract class PrimitiveProperty<T> extends JPanel{
 			assert (value>=min && value<=max);
 			
 			valueSpinner = new JSpinner(new SpinnerNumberModel(value, min, max, 1));
-			valueSpinner.addChangeListener(new ChangeListener() {
-				@Override
-				public void stateChanged(ChangeEvent arg0) {
+			valueSpinner.addChangeListener(arg0 -> {
 					value = ((Integer)(((JSpinner)arg0.getSource()).getValue())).intValue();
-				}
 			});
 			super.initControlPanel(addDefaultButton);
 		}
@@ -259,11 +245,8 @@ public abstract class PrimitiveProperty<T> extends JPanel{
 			valueSpinner = new JSpinner(new SpinnerNumberModel(value, min, max, value/1000f));
 			JSpinner.NumberEditor numberEditor = new JSpinner.NumberEditor(valueSpinner,"0.######");
 			valueSpinner.setEditor(numberEditor);
-			valueSpinner.addChangeListener(new ChangeListener() {
-				@Override
-				public void stateChanged(ChangeEvent arg0) {
-					value = ((Double)(((JSpinner)arg0.getSource()).getValue())).floatValue();
-				}
+			valueSpinner.addChangeListener(arg0 -> {
+				value = ((Double)(((JSpinner)arg0.getSource()).getValue())).floatValue();
 			});
 			super.initControlPanel(addDefaultButton);
 		}
@@ -442,13 +425,10 @@ public abstract class PrimitiveProperty<T> extends JPanel{
 			editorPanel.add(referenceDataComboBox);
 			editorPanel.add(new JLabel(""));
 			
-			referenceModeComboBox.addItemListener(new ItemListener() {
-				@Override
-				public void itemStateChanged(ItemEvent e) {
-					if (e.getStateChange() == ItemEvent.SELECTED){
-						referenceDataComboBox.setEnabled(e.getItem().equals(ReferenceMode.REF));
-						l.setEnabled(e.getItem().equals(ReferenceMode.REF));
-					}
+			referenceModeComboBox.addItemListener(e -> {
+				if (e.getStateChange() == ItemEvent.SELECTED){
+					referenceDataComboBox.setEnabled(e.getItem().equals(ReferenceMode.REF));
+					l.setEnabled(e.getItem().equals(ReferenceMode.REF));
 				}
 			});
 			
@@ -498,5 +478,3 @@ public abstract class PrimitiveProperty<T> extends JPanel{
 		
 	}
 }
-
-

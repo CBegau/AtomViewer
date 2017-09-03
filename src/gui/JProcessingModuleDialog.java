@@ -113,37 +113,27 @@ public class JProcessingModuleDialog extends JDialog {
 		
 		final JButton applyButton = new JButton("Apply on current data sets");
 		applyButton.setEnabled(false);
-		applyButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				selectedProcessingModule = ((ModuleTreeWrapper)moduleTree.getSelectionPath().getLastPathComponent()).module;
-				if (selectedProcessingModule!=null && 
-						selectedProcessingModule.isApplicable(Configuration.getCurrentAtomData()))
-				state = SelectedState.ONE_FILE;
-				dispose();
-			}
+		applyButton.addActionListener(l -> {
+			selectedProcessingModule = ((ModuleTreeWrapper)moduleTree.getSelectionPath().getLastPathComponent()).module;
+			if (selectedProcessingModule!=null && 
+					selectedProcessingModule.isApplicable(Configuration.getCurrentAtomData()))
+			state = SelectedState.ONE_FILE;
+			dispose();
 		});
 		
 		final JButton applyAllButton = new JButton("Apply on all opened data sets");
 		applyAllButton.setEnabled(false);
-		applyAllButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				selectedProcessingModule = ((ModuleTreeWrapper)moduleTree.getSelectionPath().getLastPathComponent()).module;
-				if (selectedProcessingModule!=null)
-					state = SelectedState.ALL_FILES;
-				dispose();
-			}
+		applyAllButton.addActionListener(l -> {
+			selectedProcessingModule = ((ModuleTreeWrapper)moduleTree.getSelectionPath().getLastPathComponent()).module;
+			if (selectedProcessingModule!=null)
+				state = SelectedState.ALL_FILES;
+			dispose();
 		});
 
 		
 		final JButton cancelButton = new JButton("Cancel");
-		cancelButton.addActionListener(new ActionListener(){
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				dispose();
-			}
-		});
+		cancelButton.addActionListener(l->dispose());
+		
 		this.setLayout(new BorderLayout());
 		this.add(new JScrollPane(moduleTree,
 				JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED), BorderLayout.WEST);
@@ -188,28 +178,25 @@ public class JProcessingModuleDialog extends JDialog {
 		
 		this.add(c,BorderLayout.SOUTH);
 		
-		moduleTree.addTreeSelectionListener(new TreeSelectionListener() {
-			@Override
-			public void valueChanged(TreeSelectionEvent e) {
-				Object o = moduleTree.getSelectionPath().getLastPathComponent();
-				if (o instanceof ModuleTreeWrapper){
-					ProcessingModule pm = ((ModuleTreeWrapper)o).module;
-					
-					int size = Math.max(20, descriptionContainer.getSize().width-20);
-					String req = pm.getRequirementDescription();
-					if (req == null || req.isEmpty()) req = "none";
-					requirementlabel.setText("<html><table><tr><td width='"+size+"'>"+ req +"</td></tr></table></html>");
-					descriptionlabel.setText("<html><table><tr><td width='"+size+"'>"+ pm.getFunctionDescription() +"</td></tr></table></html>");
-					
-					boolean applicable = pm.isApplicable(Configuration.getCurrentAtomData());
-					applyButton.setEnabled(applicable);
-					applyAllButton.setEnabled(pm.canBeAppliedToMultipleFilesAtOnce() && applicable);
-				} else {
-					requirementlabel.setText("");
-					descriptionlabel.setText("");
-					applyAllButton.setEnabled(false);
-					applyButton.setEnabled(false);
-				}
+		moduleTree.addTreeSelectionListener(e -> {			
+			Object o = moduleTree.getSelectionPath().getLastPathComponent();
+			if (o instanceof ModuleTreeWrapper){
+				ProcessingModule pm = ((ModuleTreeWrapper)o).module;
+				
+				int size = Math.max(20, descriptionContainer.getSize().width-20);
+				String req = pm.getRequirementDescription();
+				if (req == null || req.isEmpty()) req = "none";
+				requirementlabel.setText("<html><table><tr><td width='"+size+"'>"+ req +"</td></tr></table></html>");
+				descriptionlabel.setText("<html><table><tr><td width='"+size+"'>"+ pm.getFunctionDescription() +"</td></tr></table></html>");
+				
+				boolean applicable = pm.isApplicable(Configuration.getCurrentAtomData());
+				applyButton.setEnabled(applicable);
+				applyAllButton.setEnabled(pm.canBeAppliedToMultipleFilesAtOnce() && applicable);
+			} else {
+				requirementlabel.setText("");
+				descriptionlabel.setText("");
+				applyAllButton.setEnabled(false);
+				applyButton.setEnabled(false);
 			}
 		});
 		

@@ -45,22 +45,19 @@ public class ProgressMonitor {
 	private ProgressMonitor(SwingWorker<?,?> worker) {
 		this.worker = worker;
 		if (worker != null){
-			Thread t = new Thread(new Runnable() {
-				@Override
-				public void run() {
-					long oldValue = counter;
-					while(true){
-						if (destroyed) return;
-						if (started)
-							if (oldValue != counter){
-								if (max>0)
-									ProgressMonitor.this.worker.firePropertyChange("operation_progress", null, (counter*100)/max);
-								oldValue = counter;
-							}
-						try {
-							Thread.sleep(updateInterval);
-						} catch (InterruptedException e) {}
-					}
+			Thread t = new Thread( () -> {
+				long oldValue = counter;
+				while(true){
+					if (destroyed) return;
+					if (started)
+						if (oldValue != counter){
+							if (max>0)
+								ProgressMonitor.this.worker.firePropertyChange("operation_progress", null, (counter*100)/max);
+							oldValue = counter;
+						}
+					try {
+						Thread.sleep(updateInterval);
+					} catch (InterruptedException e) {}
 				}
 			});
 			t.start();

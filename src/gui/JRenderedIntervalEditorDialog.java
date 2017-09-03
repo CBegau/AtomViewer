@@ -185,29 +185,26 @@ public class JRenderedIntervalEditorDialog extends JDialog{
 		this.add(resetButton,gbc); gbc.gridx++;
 		this.add(cancelButton,gbc);
 		
-		okButton.addActionListener(new ActionListener(){
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				try {
-					for (int i=0; i<6; i++){
-						if (limitActiveCheckboxes[i].isSelected())
-							interval.setCurrentLimit(i, ((Number)(limits[i].getValue())).floatValue());
-					}
-					ArrayList<float[]> customPlanes = new ArrayList<float[]>();
-					for (int i=0; i<6; i++){
-						if (customPlaneCheckBoxes[i].isSelected()){
-							float[] p = new float[customPlaneTextField.length];
-							for (int j=0 ;j < customPlaneTextField.length; j++)
-								p[j] = ((Number)(customPlaneTextField[i][j].getValue())).floatValue();
-							customPlanes.add(p);
-						}
-					}
-					interval.setCustomClippingPlanes(customPlanes);
-					
-					dispose();
-				} catch (NumberFormatException ex){
-					JOptionPane.showMessageDialog(null, "Please enter only numbers");
+		okButton.addActionListener(l->{
+			try {
+				for (int i=0; i<6; i++){
+					if (limitActiveCheckboxes[i].isSelected())
+						interval.setCurrentLimit(i, ((Number)(limits[i].getValue())).floatValue());
 				}
+				ArrayList<float[]> custPlanes = new ArrayList<float[]>();
+				for (int i=0; i<6; i++){
+					if (customPlaneCheckBoxes[i].isSelected()){
+						float[] p = new float[customPlaneTextField.length];
+						for (int j=0 ;j < customPlaneTextField.length; j++)
+							p[j] = ((Number)(customPlaneTextField[i][j].getValue())).floatValue();
+						custPlanes.add(p);
+					}
+				}
+				interval.setCustomClippingPlanes(custPlanes);
+				
+				dispose();
+			} catch (NumberFormatException ex){
+				JOptionPane.showMessageDialog(null, "Please enter only numbers");
 			}
 		});
 		
@@ -222,12 +219,15 @@ public class JRenderedIntervalEditorDialog extends JDialog{
 			}
 		});
 		
-		cancelButton.addActionListener(new ActionListener(){
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				dispose();
+		resetButton.addActionListener(l->{
+			interval.reset();
+			for (int i=0; i<6; i++){
+				limits[i].setText(Float.toString(interval.getGlobalLimit(i)));
+				limitActiveCheckboxes[i].setSelected(false);
 			}
 		});
+		
+		cancelButton.addActionListener(l->dispose());
 		
 		this.setModalityType(Dialog.DEFAULT_MODALITY_TYPE);
 		this.pack();
@@ -241,12 +241,9 @@ public class JRenderedIntervalEditorDialog extends JDialog{
 		private static final long serialVersionUID = 1L;
 
 		public JActivateCheckbox(final int i, final JTextField textfield) {
-			this.addActionListener(new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent arg0) {
-					JRenderedIntervalEditorDialog.this.interval.setLimitActive(i, JActivateCheckbox.this.isSelected());
-				}
-			});
+			this.addActionListener(l->
+				JRenderedIntervalEditorDialog.this.interval.setLimitActive(i, JActivateCheckbox.this.isSelected())
+			);
 		}
 	}
 	
