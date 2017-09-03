@@ -412,8 +412,7 @@ public class AtomData {
 	}
 	
 	public void setAsReferenceForProcessingModule() {
-		for (AtomData data : Configuration.getAtomDataIterable(this))
-			data.isReferenceForProcessingModule = false;
+		Configuration.getAtomDataIterable(this).forEach(data->isReferenceForProcessingModule = false);
 		this.isReferenceForProcessingModule = true;
 	}
 	

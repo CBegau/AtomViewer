@@ -19,8 +19,6 @@
 package gui;
 import java.awt.*;
 import java.awt.event.*;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -96,46 +94,40 @@ public class JMDFileChooser extends JFileChooser{
 		float factor = RenderingConfiguration.getGUIScalingFactor();
 		this.setPreferredSize(new Dimension((int)(720*factor),(int)(500*factor)));
 		
-		this.addPropertyChangeListener(new PropertyChangeListener() {
-			@Override
-			public void propertyChange(PropertyChangeEvent evt) {
-				if (JFileChooser.DIRECTORY_CHANGED_PROPERTY == evt.getPropertyName()){
-					confFileFound = false;
-					File confFile = new File(getCurrentDirectory(),CONF_FILE);
-					if (confFile.exists()) {
-						confFileFound = true;
-						importConfig.readConfigurationFile(confFile);
-					}
-					
-					components.revalidate();
-				} else if (JFileChooser.SELECTED_FILE_CHANGED_PROPERTY == evt.getPropertyName()){
-					components.editCrystalConfButton.setEnabled(getSelectedFile() != null);
+		this.addPropertyChangeListener(evt -> {
+			if (JFileChooser.DIRECTORY_CHANGED_PROPERTY == evt.getPropertyName()){
+				confFileFound = false;
+				File confFile = new File(getCurrentDirectory(),CONF_FILE);
+				if (confFile.exists()) {
+					confFileFound = true;
+					importConfig.readConfigurationFile(confFile);
 				}
+				
+				components.revalidate();
+			} else if (JFileChooser.SELECTED_FILE_CHANGED_PROPERTY == evt.getPropertyName()){
+				components.editCrystalConfButton.setEnabled(getSelectedFile() != null);
 			}
 		});
 		
 		this.firePropertyChange(JFileChooser.DIRECTORY_CHANGED_PROPERTY, null, this.getCurrentDirectory());
 		
-		this.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent arg0) {
-				if (arg0.getActionCommand().equals(JFileChooser.APPROVE_SELECTION)){
-					if (!isConfFileFound()) {
-						File selectedFile = JMDFileChooser.this.getSelectedFile();
-						if (JMDFileChooser.this.getSelectedFiles().length >= 1){
-							selectedFile = JMDFileChooser.this.getSelectedFiles()[0];
-						}
-						JCrystalConfigurationDialog ccd = 
-								new JCrystalConfigurationDialog(JMDFileChooser.this.owner, 
-										getCurrentDirectory(), selectedFile, false);
-						if (ccd.isSavedSuccessfully()) {
-							confFileFound = true;
-							importConfig.readConfigurationFile(new File(getCurrentDirectory(),CONF_FILE));
-						}
+		this.addActionListener(arg0 -> {
+			if (arg0.getActionCommand().equals(JFileChooser.APPROVE_SELECTION)){
+				if (!isConfFileFound()) {
+					File selectedFile = JMDFileChooser.this.getSelectedFile();
+					if (JMDFileChooser.this.getSelectedFiles().length >= 1){
+						selectedFile = JMDFileChooser.this.getSelectedFiles()[0];
 					}
-				
-					importConfig.saveProperties(propertiesFile);
+					JCrystalConfigurationDialog ccd = 
+							new JCrystalConfigurationDialog(JMDFileChooser.this.owner, 
+									getCurrentDirectory(), selectedFile, false);
+					if (ccd.isSavedSuccessfully()) {
+						confFileFound = true;
+						importConfig.readConfigurationFile(new File(getCurrentDirectory(),CONF_FILE));
+					}
 				}
+			
+				importConfig.saveProperties(propertiesFile);
 			}
 		});
 
@@ -193,23 +185,19 @@ public class JMDFileChooser extends JFileChooser{
 				if (Configuration.getCurrentFileLoader() == null) Configuration.setCurrentFileLoader(loader);
 				b.setSelected(loader.equals(Configuration.getCurrentFileLoader()));
 				fileLoaderButtonGroup.add(b);
-				b.addActionListener(new ActionListener() {
-					@Override
-					public void actionPerformed(ActionEvent e) {
-						Configuration.setCurrentFileLoader(loader);
+				b.addActionListener(l -> {
+					Configuration.setCurrentFileLoader(loader);
 
-						//remove old file filter before adding a new one
-						JMDFileChooser.this.resetChoosableFileFilters();
-						JMDFileChooser.this.setFileFilter(null);
-						JMDFileChooser.this.setFileFilter(loader.getDefaultFileFilter());
-						
-						
-						optionsPanel.removeAll();
-						for (PrimitiveProperty<?> p : loader.getOptions()){
-							optionsPanel.add(p);
-						}
-						optionsPanel.revalidate();
+					//remove old file filter before adding a new one
+					JMDFileChooser.this.resetChoosableFileFilters();
+					JMDFileChooser.this.setFileFilter(null);
+					JMDFileChooser.this.setFileFilter(loader.getDefaultFileFilter());
+					
+					optionsPanel.removeAll();
+					for (PrimitiveProperty<?> pp : loader.getOptions()){
+						optionsPanel.add(pp);
 					}
+					optionsPanel.revalidate();
 				});
 			}
 			p.add(new JSeparator(), gbc); gbc.gridy++;
@@ -250,22 +238,19 @@ public class JMDFileChooser extends JFileChooser{
 			p.add(disposeDefaultAtomsCheckBox, gbc); gbc.gridy++;
 			p.add(optionsPanel, gbc); gbc.gridy++;
 			
-			ActionListener simpleCheckBoxListener = new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					String command = e.getActionCommand();
-					
-					if (command.equals("pbc_x"))
-						importConfig.getPeriodicBoundaryConditions()[0] = ((JCheckBox)(e.getSource())).isSelected();
-					else if (command.equals("pbc_y"))
-						importConfig.getPeriodicBoundaryConditions()[1] = ((JCheckBox)(e.getSource())).isSelected();
-					else if (command.equals("pbc_z"))
-						importConfig.getPeriodicBoundaryConditions()[2] = ((JCheckBox)(e.getSource())).isSelected();
-					else if (command.equals("disposeDefaultAtoms"))
-						ImportStates.DISPOSE_DEFAULT.setState(((JCheckBox)e.getSource()).isSelected());
-					else if (command.equals("appendFiles"))
-						ImportStates.APPEND_FILES.setState(((JCheckBox)e.getSource()).isSelected());
-				}
+			ActionListener simpleCheckBoxListener = e -> {
+				String command = e.getActionCommand();
+				
+				if (command.equals("pbc_x"))
+					importConfig.getPeriodicBoundaryConditions()[0] = ((JCheckBox)(e.getSource())).isSelected();
+				else if (command.equals("pbc_y"))
+					importConfig.getPeriodicBoundaryConditions()[1] = ((JCheckBox)(e.getSource())).isSelected();
+				else if (command.equals("pbc_z"))
+					importConfig.getPeriodicBoundaryConditions()[2] = ((JCheckBox)(e.getSource())).isSelected();
+				else if (command.equals("disposeDefaultAtoms"))
+					ImportStates.DISPOSE_DEFAULT.setState(((JCheckBox)e.getSource()).isSelected());
+				else if (command.equals("appendFiles"))
+					ImportStates.APPEND_FILES.setState(((JCheckBox)e.getSource()).isSelected());
 			};
 			
 			disposeDefaultAtomsCheckBox.setActionCommand("disposeDefaultAtoms");
@@ -281,20 +266,17 @@ public class JMDFileChooser extends JFileChooser{
 			zCheckBox.setActionCommand("pbc_z");
 			zCheckBox.addActionListener(simpleCheckBoxListener);
 			
-			editCrystalConfButton.addActionListener(new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent arg0) {
-					File selectedFile = JMDFileChooser.this.getSelectedFile();
-					if (JMDFileChooser.this.getSelectedFiles().length >= 1)
-						selectedFile = JMDFileChooser.this.getSelectedFiles()[0];
-					
-					JCrystalConfigurationDialog ccd = 
-							new JCrystalConfigurationDialog(JMDFileChooser.this.owner, 
-									getCurrentDirectory(), selectedFile, true);
-					if (ccd.isSavedSuccessfully()) {
-						confFileFound = true;
-						importConfig.readConfigurationFile(new File(getCurrentDirectory(),CONF_FILE));
-					}
+			editCrystalConfButton.addActionListener(arg0 -> {
+				File selectedFile = JMDFileChooser.this.getSelectedFile();
+				if (JMDFileChooser.this.getSelectedFiles().length >= 1)
+					selectedFile = JMDFileChooser.this.getSelectedFiles()[0];
+				
+				JCrystalConfigurationDialog ccd = 
+						new JCrystalConfigurationDialog(JMDFileChooser.this.owner, 
+								getCurrentDirectory(), selectedFile, true);
+				if (ccd.isSavedSuccessfully()) {
+					confFileFound = true;
+					importConfig.readConfigurationFile(new File(getCurrentDirectory(),CONF_FILE));
 				}
 			});
 			
@@ -307,7 +289,6 @@ public class JMDFileChooser extends JFileChooser{
 	                button.doClick();
 			}
 		
-			
 		}
 	}
 }

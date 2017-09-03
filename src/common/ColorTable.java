@@ -431,27 +431,24 @@ public class ColorTable {
 
 	public static final float[][] loadColorsFromFile(File f) throws IOException {
 		ArrayList<float[]> c = new ArrayList<float[]>();
-		BufferedReader lnr = new BufferedReader(new FileReader(f));
-		
-		String s = lnr.readLine();
-		Pattern p = Pattern.compile("\\s+");
-		
-		try {
-			while (s!=null){
-				String[] parts = p.split(s);
-				if (parts.length<3) return null;
-				float[] c1 = new float[3];
-				c1[0] = Float.parseFloat(parts[0]);
-				c1[1] = Float.parseFloat(parts[1]);
-				c1[2] = Float.parseFloat(parts[2]);
-				c.add(c1);
-				
-				s = lnr.readLine();
-			}	
-		} catch (NumberFormatException nf){
-			return null;
-		} finally {
-			if (lnr!=null) lnr.close();
+		try (BufferedReader lnr = new BufferedReader(new FileReader(f))){
+			String s = lnr.readLine();
+			Pattern p = Pattern.compile("\\s+");
+			try {
+				while (s!=null){
+					String[] parts = p.split(s);
+					if (parts.length<3) return null;
+					float[] c1 = new float[3];
+					c1[0] = Float.parseFloat(parts[0]);
+					c1[1] = Float.parseFloat(parts[1]);
+					c1[2] = Float.parseFloat(parts[2]);
+					c.add(c1);
+					
+					s = lnr.readLine();
+				}	
+			} catch (NumberFormatException nf){
+				return null;
+			}
 		}
 		
 		return ((float[][]) c.toArray(new float[c.size()][]));
@@ -493,10 +490,10 @@ public class ColorTable {
 	}
 	
 	public static final void saveColorsToFile(File f, float[][] colors) throws IOException {
-		PrintWriter pw = new PrintWriter(f);
-		for (int i=0; i<colors.length; i++)
-			pw.printf("%f %f %f\n", colors[i][0], colors[i][1], colors[i][2]);
-		pw.close();
+		try (PrintWriter pw = new PrintWriter(f)){
+			for (int i=0; i<colors.length; i++)
+				pw.printf("%f %f %f\n", colors[i][0], colors[i][1], colors[i][2]);
+		}
 	}
 	
 }

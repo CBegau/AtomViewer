@@ -23,8 +23,6 @@ import java.awt.Dimension;
 import java.awt.Frame;
 import java.awt.GraphicsDevice;
 import java.awt.GridLayout;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
@@ -89,39 +87,30 @@ public class JOrderAtomDataSet extends JDialog {
 		
 		this.add(wrapperPanel, BorderLayout.EAST);
 		
-		upButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				int start = atomDataTable.getSelectedRow();
-				if (start != -1 && start!=0){
-					int count = atomDataTable.getSelectedRowCount();
-					model.moveSelected(start, count, start-1);
-					atomDataTable.getSelectionModel().setSelectionInterval(start-1, start-2+count);
-				}
-			}
-		});
-		
-		downButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				int start = atomDataTable.getSelectedRow();
+		upButton.addActionListener(l -> {
+			int start = atomDataTable.getSelectedRow();
+			if (start != -1 && start!=0){
 				int count = atomDataTable.getSelectedRowCount();
-				if (start != -1 && start+count<atomDataTable.getRowCount()){
-					model.moveSelected(start, count, start+1);
-					atomDataTable.getSelectionModel().setSelectionInterval(start+1, start+count);
-				}
+				model.moveSelected(start, count, start-1);
+				atomDataTable.getSelectionModel().setSelectionInterval(start-1, start-2+count);
 			}
 		});
 		
-		delButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				int selectionStart = atomDataTable.getSelectedRow();
-				if (selectionStart != -1){
-					int selectionCount = atomDataTable.getSelectedRowCount();
-					model.deleteSelected(selectionStart, selectionCount);
-				}
+		downButton.addActionListener(l -> {
+			int start = atomDataTable.getSelectedRow();
+			int count = atomDataTable.getSelectedRowCount();
+			if (start != -1 && start+count<atomDataTable.getRowCount()){
+				model.moveSelected(start, count, start+1);
+				atomDataTable.getSelectionModel().setSelectionInterval(start+1, start+count);
 			}
+		});
+		
+		delButton.addActionListener(l -> {
+			int selectionStart = atomDataTable.getSelectedRow();
+			if (selectionStart != -1){
+				int selectionCount = atomDataTable.getSelectedRowCount();
+				model.deleteSelected(selectionStart, selectionCount);
+			}			
 		});
 		
 		JPanel p = new JPanel();
@@ -132,37 +121,29 @@ public class JOrderAtomDataSet extends JDialog {
 		p.add(cancelButton);
 		this.add(p, BorderLayout.SOUTH);
 		
-		cancelButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				dispose();
-			}
-		});
+		cancelButton.addActionListener(l -> dispose());
 		
-		okButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				//rebuild the chain of data
-				AtomData current = Configuration.getCurrentAtomData();
-				boolean currentFound = false;
-				
-				AtomData previous = null;
-				for (AtomData d : model.atomDataList){
-					d.setPrevious(previous);
-					previous = d;
-					if (d == current)
-						currentFound = true;
-					d.setNextToNull();
-				}
-				
-				if(!currentFound){
-					if (!model.atomDataList.isEmpty()){
-						current = model.atomDataList.get(0);
-					} else current = null;
-				}
-				Configuration.setCurrentAtomData(current, true, false);
-				dispose();
+		okButton.addActionListener(l -> {
+			//rebuild the chain of data
+			AtomData current = Configuration.getCurrentAtomData();
+			boolean currentFound = false;
+			
+			AtomData previous = null;
+			for (AtomData d : model.atomDataList){
+				d.setPrevious(previous);
+				previous = d;
+				if (d == current)
+					currentFound = true;
+				d.setNextToNull();
 			}
+			
+			if(!currentFound){
+				if (!model.atomDataList.isEmpty()){
+					current = model.atomDataList.get(0);
+				} else current = null;
+			}
+			Configuration.setCurrentAtomData(current, true, false);
+			dispose();
 		});
 		
 		this.setModalityType(Dialog.DEFAULT_MODALITY_TYPE);

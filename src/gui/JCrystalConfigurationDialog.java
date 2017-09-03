@@ -119,39 +119,30 @@ public class JCrystalConfigurationDialog extends JDialog{
 		latticeConstTextField.setValue(3);
 		gbc.gridx = 0;
 		
-		crystalStructureComboBox.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent arg0) {
-				crystalStructure = (CrystalStructure)crystalStructureComboBox.getSelectedItem();
-				createCrystalPropertiesContainer();
-			}
+		crystalStructureComboBox.addActionListener(l -> {
+			crystalStructure = (CrystalStructure)crystalStructureComboBox.getSelectedItem();
+			createCrystalPropertiesContainer();
 		});
 		crystalStructureComboBox.setSelectedIndex(0);
 		
 		gbc.gridx = 0;
 		gbc.gridy++;
 		
-		okButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				try {
-					readDataValueTable();
-					writeConfigurationFile(folder);
-				} catch (IOException e1) {
-					JOptionPane.showMessageDialog(null, "Error writing crystal.conf", "Error", JOptionPane.ERROR_MESSAGE);
-					dispose();
-				}
-				isSavedSuccessfully = true;
+		okButton.addActionListener(l -> {
+			try {
+				readDataValueTable();
+				writeConfigurationFile(folder);
+			} catch (IOException e1) {
+				JOptionPane.showMessageDialog(null, "Error writing crystal.conf", "Error", JOptionPane.ERROR_MESSAGE);
 				dispose();
 			}
+			isSavedSuccessfully = true;
+			dispose();
 		});
 		
-		cancelButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				isSavedSuccessfully = false;
-				dispose();
-			}
+		cancelButton.addActionListener(l -> {
+			isSavedSuccessfully = false;
+			dispose();
 		});
 		
 		//Test if crystal.conf exists

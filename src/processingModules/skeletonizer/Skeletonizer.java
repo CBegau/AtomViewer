@@ -403,53 +403,53 @@ public class Skeletonizer extends DataContainer {
 	 * @throws FileNotFoundException
 	 */
 	public boolean writeDislocationSkeleton(File f) throws FileNotFoundException{
-		PrintWriter pw = new PrintWriter(f);
-		
-		TreeMap<Integer, SkeletonNode> nodeMap = new TreeMap<Integer,SkeletonNode>();
-		for (Dislocation d : dislocations)
-			for (SkeletonNode n : d.getLine())
-				nodeMap.put(n.getID(), n);
-		
-		pw.println("#total number of nodes");
-		pw.println(nodeMap.size());
-		pw.println("#number x y z");
-		for (SkeletonNode n : nodeMap.values())
-			pw.println(n.getID()+" "+n.x+" "+n.y+" "+n.z);
-		
-		pw.println("#total number of dislocations");
-		pw.println(dislocations.size());
-		pw.println("#number numberOfNodes n_1 n_2 ... n_n BV_x BV_y BV_z BV_identified");
-		pw.println("#BV_identified: (y) if Burgers vector is identified, (n) if just a numerical average is known");
-		for (Dislocation d : dislocations){
-			pw.print(d.getID()+" "+d.getLine().length+" ");
-			for (SkeletonNode n : d.getLine())
-				pw.print(n.getID()+" ");
-			if (d.getBurgersVectorInfo() != null){
-				BurgersVectorInformation bvInfo = d.getBurgersVectorInfo();
-				if (bvInfo.getBurgersVector().getType() == BurgersVector.BurgersVectorType.UNDEFINED) {
-					CrystalRotationTools crt;
-					if (data.isPolyCrystalline()) {
-						if (d.getGrain() != null)
-							crt = d.getGrain().getCystalRotationTools();
-						else 
-							crt = data.getCrystalRotation();
-					}
-					else crt = data.getCrystalRotation();
+		boolean error = false;
+		try (PrintWriter pw = new PrintWriter(f)){
+			TreeMap<Integer, SkeletonNode> nodeMap = new TreeMap<Integer,SkeletonNode>();
+			for (Dislocation d : dislocations)
+				for (SkeletonNode n : d.getLine())
+					nodeMap.put(n.getID(), n);
+			
+			pw.println("#total number of nodes");
+			pw.println(nodeMap.size());
+			pw.println("#number x y z");
+			for (SkeletonNode n : nodeMap.values())
+				pw.println(n.getID()+" "+n.x+" "+n.y+" "+n.z);
+			
+			pw.println("#total number of dislocations");
+			pw.println(dislocations.size());
+			pw.println("#number numberOfNodes n_1 n_2 ... n_n BV_x BV_y BV_z BV_identified");
+			pw.println("#BV_identified: (y) if Burgers vector is identified, (n) if just a numerical average is known");
+			for (Dislocation d : dislocations){
+				pw.print(d.getID()+" "+d.getLine().length+" ");
+				for (SkeletonNode n : d.getLine())
+					pw.print(n.getID()+" ");
+				if (d.getBurgersVectorInfo() != null){
+					BurgersVectorInformation bvInfo = d.getBurgersVectorInfo();
+					if (bvInfo.getBurgersVector().getType() == BurgersVector.BurgersVectorType.UNDEFINED) {
+						CrystalRotationTools crt;
+						if (data.isPolyCrystalline()) {
+							if (d.getGrain() != null)
+								crt = d.getGrain().getCystalRotationTools();
+							else 
+								crt = data.getCrystalRotation();
+						}
+						else crt = data.getCrystalRotation();
+							
+						Vec3 abv = crt.getInCrystalCoordinates(bvInfo.getAverageResultantBurgersVector());
+						pw.println(String.format("%.4f %.4f %.4f n", abv.x, abv.y, abv.z));
 						
-					Vec3 abv = crt.getInCrystalCoordinates(bvInfo.getAverageResultantBurgersVector());
-					pw.println(String.format("%.4f %.4f %.4f n", abv.x, abv.y, abv.z));
-					
+					} else {
+						Vec3 bv = bvInfo.getBurgersVector().getInCrystalCoordinates();
+						pw.println(String.format("%.4f %.4f %.4f y", bv.x, bv.y, bv.z));
+					}
 				} else {
-					Vec3 bv = bvInfo.getBurgersVector().getInCrystalCoordinates();
-					pw.println(String.format("%.4f %.4f %.4f y", bv.x, bv.y, bv.z));
+					pw.println("0.0 0.0 0.0 n");
 				}
-			} else {
-				pw.println("0.0 0.0 0.0 n");
 			}
+			error = pw.checkError();
 		}
 		
-		boolean error = pw.checkError();
-		pw.close();
 		return error;
 	}
 	

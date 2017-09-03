@@ -36,7 +36,6 @@ import javax.swing.JTextPane;
 import javax.swing.ListSelectionModel;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.text.Document;
@@ -143,23 +142,19 @@ public class JLogPanel extends JPanel{
 		
 		splitPane.setPreferredSize(new Dimension(400,300));
 		
-		this.logTable.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
-			String begin =  String.format("<html><head></head><body >");
+		this.logTable.getSelectionModel().addListSelectionListener((ListSelectionEvent e)-> {
+			String begin =  "<html><head></head><body >";
 			String end = "</body></html>";
-					
-			@Override
-			public void valueChanged(ListSelectionEvent e) {
-				int index = logTable.getSelectedRow();
-				if (!e.getValueIsAdjusting() && index != -1 && index < model.entries.size()){
-					if (model.getEntry(index).detail.startsWith("<html>"))
-						detailsPane.setText(model.getEntry(index).detail);
-					else detailsPane.setText(begin + model.getEntry(index).detail + end);
-				}
-				if (index == -1){
-					detailsPane.setText("");
-				}
-				detailsPane.setCaretPosition(0);
+			int index = logTable.getSelectedRow();
+			if (!e.getValueIsAdjusting() && index != -1 && index < model.entries.size()){
+				if (model.getEntry(index).detail.startsWith("<html>"))
+					detailsPane.setText(model.getEntry(index).detail);
+				else detailsPane.setText(begin + model.getEntry(index).detail + end);
 			}
+			if (index == -1){
+				detailsPane.setText("");
+			}
+			detailsPane.setCaretPosition(0);
 		});
 	}
 	

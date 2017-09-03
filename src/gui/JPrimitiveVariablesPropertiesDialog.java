@@ -1,8 +1,6 @@
 package gui;
 
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.util.ArrayList;
 
 import javax.swing.*;
@@ -39,19 +37,13 @@ public class JPrimitiveVariablesPropertiesDialog extends JDialog {
 		
 		JButton okButton = new JButton("OK");
 		JButton cancelButton = new JButton("cancel");
-		cancelButton.addActionListener(new ActionListener(){
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				ok = false;
-				dispose();
-			}
+		cancelButton.addActionListener(l->{
+			ok = false;
+			dispose();
 		});
-		okButton.addActionListener(new ActionListener(){
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				ok = true;
-				dispose();
-			}
+		okButton.addActionListener(l->{
+			ok = true;
+			dispose();
 		});
 		
 		gbc.gridwidth = 1;

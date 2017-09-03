@@ -102,6 +102,12 @@ public class Toolchain {
 		return Collections.unmodifiableList(processingModules);
 	}
 	
+	/**
+	 * Saves the current toolchain in xml-format to the given output stream
+	 * @param os stream to write output
+	 * @return true if toolchain is saved completly
+	 * @throws Exception
+	 */
 	public boolean saveToolchain(OutputStream os) throws Exception {
 		XMLStreamWriter xmlout = XMLOutputFactory.newInstance().createXMLStreamWriter(new OutputStreamWriter(os, "utf-8"));
 		boolean writeComplete = true;
@@ -129,6 +135,12 @@ public class Toolchain {
 		return writeComplete;
 	}
 	
+	/**
+	 * Reads a toolchain from an input stream
+	 * @param is stream to read input. The stream itself is not closed
+	 * @return the toolchain read from file
+	 * @throws Exception
+	 */
 	public static Toolchain readToolchain(InputStream is) throws Exception{
 		Toolchain tc = new Toolchain();
 		
