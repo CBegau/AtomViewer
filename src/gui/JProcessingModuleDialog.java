@@ -45,6 +45,7 @@ public class JProcessingModuleDialog extends JDialog {
 		atomicGP.insert(new ModuleTreeWrapper(new TemperatureModule()), 1);
 		atomicGP.insert(new ModuleTreeWrapper(new LatticeRotationModule()), 2);
 		atomicGP.insert(new ModuleTreeWrapper(new SlipVectorModule()), 3);
+		atomicGP.insert(new ModuleTreeWrapper(new CommonNeighborsAnalysisModule()), 4);
 		
 		DefaultMutableTreeNode atomicDens = new DefaultMutableTreeNode("Densities & Volumes");
 		atomic.add(atomicDens);

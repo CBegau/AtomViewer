@@ -19,11 +19,9 @@
 package processingModules.atomicModules;
 
 import gui.JPrimitiveVariablesPropertiesDialog;
-import gui.ProgressMonitor;
 import gui.PrimitiveProperty.*;
 
 import java.util.ArrayList;
-import java.util.stream.IntStream;
 
 import javax.swing.JFrame;
 
@@ -35,6 +33,7 @@ import processingModules.ProcessingResult;
 import processingModules.ClonableProcessingModule;
 import processingModules.toolchain.Toolchainable.ExportableValue;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
+import common.ThreadPool;
 import common.Vec3;
 
 @ToolchainSupport()
@@ -95,13 +94,7 @@ public class CentroSymmetryModule extends ClonableProcessingModule {
 		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), radius, true);
 		nnb.addAll(data.getAtoms());		
 		
-		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
-		final int progressBarUpdateInterval = Math.min(1, (int)(data.getAtoms().size()/200));
-		//Parallel calculation of volume/density, iterate over all indices in a stream
-		IntStream.range(0, data.getAtoms().size()).parallel().forEach(i -> {
-			if (i%progressBarUpdateInterval == 0)
-				ProgressMonitor.getProgressMonitor().addToCounter(progressBarUpdateInterval);
-			
+		ThreadPool.executeAsParallelStream(data.getAtoms().size(), i -> {
 			Atom a = data.getAtoms().get(i);
 
 			float csd = 0f;
@@ -135,9 +128,7 @@ public class CentroSymmetryModule extends ClonableProcessingModule {
 			csd *= scaling;
 			csdArray[i] = csd;
 		});
-		
-		ProgressMonitor.getProgressMonitor().stop();
-		
+			
 		return null;
 	}
 

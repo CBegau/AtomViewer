@@ -21,10 +21,10 @@ package gui;
 import javax.swing.SwingWorker;
 
 public class ProgressMonitor {
-	
 	private static ProgressMonitor currentMonitor = new ProgressMonitor(null);
 	
 	private SwingWorker<?,?> worker;
+	//Time in ms in which the progress bar updates
 	private int updateInterval = 100;
 	
 	private long max;

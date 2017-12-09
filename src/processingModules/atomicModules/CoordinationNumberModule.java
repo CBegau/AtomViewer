@@ -19,11 +19,7 @@
 package processingModules.atomicModules;
 
 import gui.JPrimitiveVariablesPropertiesDialog;
-import gui.ProgressMonitor;
 import gui.PrimitiveProperty.*;
-
-import java.util.Vector;
-import java.util.concurrent.Callable;
 
 import javax.swing.JFrame;
 import javax.swing.JSeparator;
@@ -79,39 +75,16 @@ public class CoordinationNumberModule extends ClonableProcessingModule {
 
 	@Override
 	public ProcessingResult process(final AtomData data) throws Exception {
-		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
-		
 		final int v = data.getDataColumnIndex(coordNumColumn);
 		final float[] vArray = data.getDataArray(v).getData();
 		
 		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), radius, true);
 		nnb.addAll(data.getAtoms());
 		
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int j = i;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					final int start = (int)(((long)data.getAtoms().size() * j)/ThreadPool.availProcessors());
-					final int end = (int)(((long)data.getAtoms().size() * (j+1))/ThreadPool.availProcessors());
-					
-					for (int i=start; i<end; i++){
-						if ((i-start)%1000 == 0)
-							ProgressMonitor.getProgressMonitor().addToCounter(1000);
-						
-						Atom a = data.getAtoms().get(i);
-						vArray[i] = nnb.getNeigh(a).size();
-					}
-					
-					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
-					return null;
-				}
-			});
-		}
-		ThreadPool.executeParallel(parallelTasks);	
-		
-		ProgressMonitor.getProgressMonitor().stop();
+		ThreadPool.executeAsParallelStream(data.getAtoms().size(), i->{
+			Atom a = data.getAtoms().get(i);
+			vArray[i] = nnb.getNeigh(a).size();
+		});
 		return null;
 	}
 

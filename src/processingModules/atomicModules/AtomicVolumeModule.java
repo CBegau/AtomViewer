@@ -19,10 +19,7 @@
 package processingModules.atomicModules;
 
 import gui.JPrimitiveVariablesPropertiesDialog;
-import gui.ProgressMonitor;
 import gui.PrimitiveProperty.*;
-
-import java.util.stream.IntStream;
 
 import javax.swing.JFrame;
 import javax.swing.JSeparator;
@@ -35,6 +32,7 @@ import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
 import processingModules.toolchain.Toolchainable.ExportableValue;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
+import common.ThreadPool;
 import common.VoronoiVolume;
 
 @ToolchainSupport()
@@ -98,24 +96,18 @@ public class AtomicVolumeModule extends ClonableProcessingModule {
 		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), radius, true);
 		nnb.addAll(data.getAtoms());
 		
-		final int progressBarUpdateInterval = Math.min(1, (int)(data.getAtoms().size()/200));
-		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
 		//Parallel calculation of volume/density, iterate over all indices in a stream
-		IntStream.range(0, data.getAtoms().size()).parallel().forEach(i -> {
-			if (i%progressBarUpdateInterval == 0)
-				ProgressMonitor.getProgressMonitor().addToCounter(progressBarUpdateInterval);
-			
+		ThreadPool.executeAsParallelStream(data.getAtoms().size(), i -> {
 			Atom a = data.getAtoms().get(i);
 			float value = VoronoiVolume.getVoronoiVolume(nnb.getNeighVec(a));
 			
 			//Volume could not be computed/is not plausible
-			if (value > sphereVolume)	
+			if (value > sphereVolume)
 				value = 0f;
 			else if (computeDensity && value > 1e-8f) value = 1f/value;
 			if (computeDensity && value < 0f) value = 0f;
-			vArray[i] = value*scalingFactor;	//Store result
+			vArray[i] = value*scalingFactor;	//Store result);
 		});
-		ProgressMonitor.getProgressMonitor().stop();
 		
 		return null;
 	}

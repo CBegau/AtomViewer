@@ -20,13 +20,10 @@ package processingModules.atomicModules;
 
 import gui.JLogPanel;
 import gui.JPrimitiveVariablesPropertiesDialog;
-import gui.ProgressMonitor;
 import gui.PrimitiveProperty.*;
 
 import java.awt.GridLayout;
 import java.util.ArrayList;
-import java.util.Vector;
-import java.util.concurrent.Callable;
 
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
@@ -101,80 +98,50 @@ public class ConcentrationModule implements Toolchainable, Cloneable, Processing
 
 	@Override
 	public ProcessingResult process(final AtomData data) throws Exception {
-		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
-		
 		final int v = data.getDataColumnIndex(concAsWeightPercent?weigthConcentrationColumn:atomicConcentrationColumn);
 		final int m = data.getComponentIndex(Component.MASS);
 		final float[] vArray = data.getDataArray(v).getData();
+		final int numElements = data.getCrystalStructure().getNumberOfElements();
 		
 		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), radius, true);
 		nnb.addAll(data.getAtoms());
 		
-		
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int j = i;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					final int start = (int)(((long)data.getAtoms().size() * j)/ThreadPool.availProcessors());
-					final int end = (int)(((long)data.getAtoms().size() * (j+1))/ThreadPool.availProcessors());
-					final int numElements = data.getCrystalStructure().getNumberOfElements();
-					
-					if (!concAsWeightPercent){
-						for (int i=start; i<end; i++){
-							if ((i-start)%1000 == 0)
-								ProgressMonitor.getProgressMonitor().addToCounter(1000);
-							
-							Atom a = data.getAtoms().get(i);	
-							
-							float inElement = 0f;
-							if (elements.contains(a.getElement()%numElements)) inElement++;
-							ArrayList<Atom> nn = nnb.getNeigh(a);
-							for (Atom n : nn){
-								if (elements.contains(n.getElement()%numElements)) inElement++;
-							}
-							vArray[i] = (inElement/(nn.size()+1.f))*100f; 
-						}
-					} else {
-						
-						if (m == -1){
-							JLogPanel.getJLogPanel().addWarning("Mass not found",
-								String.format("Concentration in weigth percent selected, but mass column is missing in %s", 
-										data.getName()));
-						} else {
-							final float[] massArray = data.getDataArray(m).getData();
-							
-							for (int i=start; i<end; i++){
-								if ((i-start)%1000 == 0)
-									ProgressMonitor.getProgressMonitor().addToCounter(1000);
-								
-								Atom a = data.getAtoms().get(i);	
-								
-								float inMass = 0f;
-								float totalMass = massArray[i];
-								
-								if (elements.contains(a.getElement()%numElements)) inMass += massArray[i];
-								
-								
-								ArrayList<Atom> nn = nnb.getNeigh(a);
-								for (Atom n : nn){
-									if (elements.contains(n.getElement()%numElements)) inMass += massArray[n.getID()];
-									totalMass += massArray[n.getID()];
-								}
-								vArray[i] = (inMass/totalMass)*100f; 
-							}
-						}
-					}
-					
-					ProgressMonitor.getProgressMonitor().addToCounter((end-start)%1000);
-					return null;
+		if (!concAsWeightPercent){
+			ThreadPool.executeAsParallelStream(data.getAtoms().size(), i->{
+				Atom a = data.getAtoms().get(i);	
+				
+				float inElement = 0f;
+				if (elements.contains(a.getElement()%numElements)) inElement++;
+				ArrayList<Atom> nn = nnb.getNeigh(a);
+				for (Atom n : nn){
+					if (elements.contains(n.getElement()%numElements)) inElement++;
 				}
+				vArray[i] = (inElement/(nn.size()+1.f))*100f; 
+			});
+		} else {
+			final float[] massArray = data.getDataArray(m).getData();
+			if (m == -1) {
+				JLogPanel.getJLogPanel().addWarning("Mass not found",
+						String.format("Concentration in weigth percent selected, but mass column is missing in %s",
+								data.getName()));
+			}
+			ThreadPool.executeAsParallelStream(data.getAtoms().size(), i -> {
+				Atom a = data.getAtoms().get(i);
+
+				float inMass = 0f;
+				float totalMass = massArray[i];
+
+				if (elements.contains(a.getElement() % numElements)) inMass += massArray[i];
+
+				ArrayList<Atom> nn = nnb.getNeigh(a);
+				for (Atom n : nn) {
+					if (elements.contains(n.getElement() % numElements)) inMass += massArray[n.getID()];
+					totalMass += massArray[n.getID()];
+				}
+				vArray[i] = (inMass / totalMass) * 100f;
 			});
 		}
-		ThreadPool.executeParallel(parallelTasks);	
-		
-		ProgressMonitor.getProgressMonitor().stop();
+
 		return null;
 	}
 

@@ -20,6 +20,10 @@ package common;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.IntConsumer;
+import java.util.stream.IntStream;
+
+import gui.ProgressMonitor;
 
 /**
  * Pool of worker threads. One thread is created per processor.
@@ -62,6 +66,7 @@ public class ThreadPool {
 	 * @param <V> The returned type of each Callable instance. If no return is required use Void 
 	 * @param c List of callables
 	 * @return List of Future objects, holding the returned values
+	 * @deprecated
 	 */
 	public static <V> List<Future<V>> executeParallel(List<? extends Callable<V>> c){
 		try {
@@ -122,6 +127,27 @@ public class ThreadPool {
 	 */
 	public static <V> Future<V> submitSecondLevel(Callable<V> c){
 		return secondLevelThreadPool.submit(c);
+	}
+	
+	/**
+	 * Perform the given action in parallel and updates a progress monitor if possible
+	 * @param size the number of elements to be processed in the action to properly set the progress monitor
+	 * @param action an action to be performed in parallel
+	 */
+	public static void executeAsParallelStream(int size, IntConsumer action) {
+		final int progressBarUpdateInterval = Math.min(1, (int)(size/200));
+		ProgressMonitor.getProgressMonitor().start(size);
+		IntConsumer actionWithProgressBarUpdate = 
+				action.andThen( i->{
+					if (i%progressBarUpdateInterval == 0) 
+						ProgressMonitor.getProgressMonitor().addToCounter(progressBarUpdateInterval);
+					}
+				);
+		
+		//Parallel calculation of volume/density, iterate over all indices in a stream
+		IntStream.range(0, size).parallel().forEach(actionWithProgressBarUpdate);
+		
+		ProgressMonitor.getProgressMonitor().stop();
 	}
 	
 	public static int availProcessors(){

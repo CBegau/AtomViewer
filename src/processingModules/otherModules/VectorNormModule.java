@@ -17,11 +17,6 @@
 // with AtomViewer. If not, see <http://www.gnu.org/licenses/>
 package processingModules.otherModules;
 
-import gui.ProgressMonitor;
-
-import java.util.Vector;
-import java.util.concurrent.Callable;
-
 import javax.swing.JFrame;
 
 import common.ThreadPool;
@@ -92,33 +87,10 @@ public class VectorNormModule extends ClonableProcessingModule {
 		final float[] arrayZ = data.getDataArray(indexZ).getData();
 		final float[] arrayNorm = data.getDataArray(indexNorm).getData();
 		
-		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
-		
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int j = i;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					
-					final int start = (int)(((long)data.getAtoms().size() * j)/ThreadPool.availProcessors());
-					final int end = (int)(((long)data.getAtoms().size() * (j+1))/ThreadPool.availProcessors());
-					
-					for (int i=start; i<end; i++){
-						if ((i-start)%10000 == 0) ProgressMonitor.getProgressMonitor().addToCounter(10000);
-						arrayNorm[i] = (float)Math.sqrt(arrayX[i]*arrayX[i] + arrayY[i]*arrayY[i] + arrayZ[i]*arrayZ[i]);
-					}
-					
-					ProgressMonitor.getProgressMonitor().addToCounter(end-start%10000);
-					return null;
-				}
-			});
-		}
-		ThreadPool.executeParallel(parallelTasks);	
-		
-		ProgressMonitor.getProgressMonitor().stop();
-		
+		//Compute normals
+		ThreadPool.executeAsParallelStream(data.getAtoms().size(), i->{
+			arrayNorm[i] = (float)Math.sqrt(arrayX[i]*arrayX[i] + arrayY[i]*arrayY[i] + arrayZ[i]*arrayZ[i]);
+		});		
 		return null;
 	}
-
 }
