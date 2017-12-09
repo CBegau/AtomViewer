@@ -23,8 +23,7 @@ import gui.ProgressMonitor;
 import gui.PrimitiveProperty.*;
 
 import java.util.ArrayList;
-import java.util.Vector;
-import java.util.concurrent.Callable;
+import java.util.stream.IntStream;
 
 import javax.swing.JFrame;
 
@@ -36,7 +35,6 @@ import processingModules.ProcessingResult;
 import processingModules.ClonableProcessingModule;
 import processingModules.toolchain.Toolchainable.ExportableValue;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
-import common.ThreadPool;
 import common.Vec3;
 
 @ToolchainSupport()
@@ -76,7 +74,7 @@ public class CentroSymmetryModule extends ClonableProcessingModule {
 				+ "<br>The implementation here is generalized in certain aspects: "
 				+ "The CSD value is divided by the given radius, in order to be invariant to different lattice constant. "
 				+ "Furthermore, it can compute the centrosymmetry for an arbitrary number of bonds, or a fixed number of nearest neighbors. "
-				+ "<br>The results of the original algorithm can be reproduced if the scaling factor is set equal to the cut-off radius and the"
+				+ "<br>The results of the original algorithm can be reproduced if the scaling factor is set equal to the cut-off radius and the "
 				+ "number of bonds is limited to 12.";
 	}
 	
@@ -92,68 +90,51 @@ public class CentroSymmetryModule extends ClonableProcessingModule {
 
 	@Override
 	public ProcessingResult process(final AtomData data) throws Exception {
-		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), radius, true);
-		
 		final float[] csdArray = data.getDataArray(data.getDataColumnIndex(centroSymmetryColumn)).getData();
 		
-		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
-
+		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), radius, true);
 		nnb.addAll(data.getAtoms());		
 		
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int j = i;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					
-					final int start = (int)(((long)data.getAtoms().size() * j)/ThreadPool.availProcessors());
-					final int end = (int)(((long)data.getAtoms().size() * (j+1))/ThreadPool.availProcessors());
-					
-					for (int i=start; i<end; i++){
-						if ((i-start)%1000 == 0)
-							ProgressMonitor.getProgressMonitor().addToCounter(1000);
-						
-						Atom a = data.getAtoms().get(i);
+		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
+		final int progressBarUpdateInterval = Math.min(1, (int)(data.getAtoms().size()/200));
+		//Parallel calculation of volume/density, iterate over all indices in a stream
+		IntStream.range(0, data.getAtoms().size()).parallel().forEach(i -> {
+			if (i%progressBarUpdateInterval == 0)
+				ProgressMonitor.getProgressMonitor().addToCounter(progressBarUpdateInterval);
+			
+			Atom a = data.getAtoms().get(i);
 
-						float csd = 0f;
-						
-						ArrayList<Vec3> neigh;
-						if (adaptiveCentroSymmetry)
-							neigh = nnb.getNeighVec(a, maxBonds);
-						else neigh = nnb.getNeighVec(a);
-						
-						boolean[] paired = new boolean[neigh.size()];
-						for (int j=0; j<neigh.size(); j++){
-							
-							if (!paired[j]){
-								Vec3 inv = neigh.get(j).multiplyClone(-1f);
-								int minIndex = j;
-								float minDistance = 4*radius*radius;
-								for (int k=j+1; k<neigh.size(); k++){
-									float d = inv.getSqrDistTo(neigh.get(k));
-									if (d<minDistance) {
-										minIndex = k;
-										minDistance = d;
-									}
-								}
-								
-								csd += minDistance;
-								paired[minIndex] = true;
-							}
+			float csd = 0f;
+			
+			ArrayList<Vec3> neigh;
+			if (adaptiveCentroSymmetry)
+				neigh = nnb.getNeighVec(a, maxBonds);
+			else neigh = nnb.getNeighVec(a);
+			
+			boolean[] paired = new boolean[neigh.size()];
+			for (int j=0; j<neigh.size(); j++){
+				
+				if (!paired[j]){
+					Vec3 inv = neigh.get(j).multiplyClone(-1f);
+					int minIndex = j;
+					float minDistance = 4*radius*radius;
+					for (int k=j+1; k<neigh.size(); k++){
+						float d = inv.getSqrDistTo(neigh.get(k));
+						if (d<minDistance) {
+							minIndex = k;
+							minDistance = d;
 						}
-						
-						csd /= radius;
-						csd *= scaling;
-						csdArray[i] = csd;
 					}
 					
-					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
-					return null;
+					csd += minDistance;
+					paired[minIndex] = true;
 				}
-			});
-		}
-		ThreadPool.executeParallel(parallelTasks);	
+			}
+			
+			csd /= radius;
+			csd *= scaling;
+			csdArray[i] = csd;
+		});
 		
 		ProgressMonitor.getProgressMonitor().stop();
 		

@@ -22,8 +22,7 @@ import gui.JPrimitiveVariablesPropertiesDialog;
 import gui.ProgressMonitor;
 import gui.PrimitiveProperty.*;
 
-import java.util.Vector;
-import java.util.concurrent.Callable;
+import java.util.stream.IntStream;
 
 import javax.swing.JFrame;
 import javax.swing.JSeparator;
@@ -36,7 +35,6 @@ import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
 import processingModules.toolchain.Toolchainable.ExportableValue;
 import processingModules.toolchain.Toolchainable.ToolchainSupport;
-import common.ThreadPool;
 import common.VoronoiVolume;
 
 @ToolchainSupport()
@@ -91,47 +89,32 @@ public class AtomicVolumeModule extends ClonableProcessingModule {
 
 	@Override
 	public ProcessingResult process(final AtomData data) throws Exception {
-		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), radius, true);
+		final float sphereVolume = (radius*radius*radius)*((float)Math.PI)*(4f/3f);
+		//Get the array where to store results
 		final int v = computeDensity ? 
 				data.getDataColumnIndex(densityColumn) : data.getDataColumnIndex(volumeColumn);
-		final float sphereVolume = (radius*radius*radius)*((float)Math.PI)*(4f/3f);
 		final float[] vArray = data.getDataArray(v).getData();
-		
-		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
-		
+		//Build nearest neighbor graph
+		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), radius, true);
 		nnb.addAll(data.getAtoms());
 		
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int j = i;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					final int start = (int)(((long)data.getAtoms().size() * j)/ThreadPool.availProcessors());
-					final int end = (int)(((long)data.getAtoms().size() * (j+1))/ThreadPool.availProcessors());
-					
-					for (int i=start; i<end; i++){
-						if ((i-start)%1000 == 0)
-							ProgressMonitor.getProgressMonitor().addToCounter(1000);
-						
-						Atom a = data.getAtoms().get(i);
-						
-						float value = VoronoiVolume.getVoronoiVolume(nnb.getNeighVec(a));
-						
-						if (value > sphereVolume)
-							value = 0f;
-						else if (computeDensity && value > 1e-8f) value = 1f/value;
-						if (computeDensity && value < 0f) value = 0f;
-						vArray[i] = value*scalingFactor;
-					}
-					
-					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
-					return null;
-				}
-			});
-		}
-		ThreadPool.executeParallel(parallelTasks);	
-		
+		final int progressBarUpdateInterval = Math.min(1, (int)(data.getAtoms().size()/200));
+		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
+		//Parallel calculation of volume/density, iterate over all indices in a stream
+		IntStream.range(0, data.getAtoms().size()).parallel().forEach(i -> {
+			if (i%progressBarUpdateInterval == 0)
+				ProgressMonitor.getProgressMonitor().addToCounter(progressBarUpdateInterval);
+			
+			Atom a = data.getAtoms().get(i);
+			float value = VoronoiVolume.getVoronoiVolume(nnb.getNeighVec(a));
+			
+			//Volume could not be computed/is not plausible
+			if (value > sphereVolume)	
+				value = 0f;
+			else if (computeDensity && value > 1e-8f) value = 1f/value;
+			if (computeDensity && value < 0f) value = 0f;
+			vArray[i] = value*scalingFactor;	//Store result
+		});
 		ProgressMonitor.getProgressMonitor().stop();
 		
 		return null;
@@ -141,12 +124,12 @@ public class AtomicVolumeModule extends ClonableProcessingModule {
 	public boolean showConfigurationDialog(JFrame frame, AtomData data) {
 		JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(frame, "Compute atomic volume/density");
 		dialog.addLabel(getFunctionDescription());
-		dialog.addLabel("The result of the volume has the unit of '(length unit)^3', the density '(length unit)^-3'");
+		dialog.addLabel("The result of the volume has the unit of '(length unit)³', the density '1/(length unit)³'");
 		dialog.add(new JSeparator());
 		FloatProperty avRadius = dialog.addFloat("avRadius", "Radius of a sphere to find neighbors for a voronoi cell construction."
 				, "", radius, 0f, 1000f);
 		BooleanProperty density = dialog.addBoolean("compDensity", "Compute density instead of volume", "", computeDensity);
-		FloatProperty scaling = dialog.addFloat("scalingFactor", "Scaling factor for the result (e.g. to nmÂ³)", "", scalingFactor, 0f, 1e20f);
+		FloatProperty scaling = dialog.addFloat("scalingFactor", "Scaling factor for the result (e.g. to nm³)", "", scalingFactor, 0f, 1e20f);
 		boolean ok = dialog.showDialog();
 		if (ok){
 			this.computeDensity = density.getValue();
