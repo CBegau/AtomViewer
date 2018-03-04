@@ -7,12 +7,9 @@ import gui.ViewerGLJPanel;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
-import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
 import java.io.DataOutputStream;
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.*;
@@ -138,91 +135,65 @@ public class BinningDataContainer extends DataContainer {
 					RenderingConfiguration.getViewer().reDraw();
 				}
 			});
-	        valueComboBox.addItemListener(new ItemListener() {
-                @Override
-                public void itemStateChanged(ItemEvent e) {
-                    if (e.getStateChange() == ItemEvent.DESELECTED) return;
-                    else  if (e.getStateChange() == ItemEvent.SELECTED){
-                        selectedColumn = (DataColumnInfo)valueComboBox.getSelectedItem();
-                        if (selectedColumn != null){
-                            binnedData = computeBin(Configuration.getCurrentAtomData());
-                            if (!minMaxStorage.containsKey(selectedColumn))
-                                minMaxStorage.put(selectedColumn, binnedData.getMinMax());
-                            setSpinner();
-                        }
-                        RenderingConfiguration.getViewer().reDraw();
+			transparencySlider.addChangeListener(e -> {
+				transparency = 1-(transparencySlider.getValue()*0.01f);
+				RenderingConfiguration.getViewer().reDraw();
+			});
+	        valueComboBox.addItemListener(e-> {
+                if (e.getStateChange() == ItemEvent.DESELECTED) return;
+                else  if (e.getStateChange() == ItemEvent.SELECTED){
+                    selectedColumn = (DataColumnInfo)valueComboBox.getSelectedItem();
+                    if (selectedColumn != null){
+                        binnedData = computeBin(Configuration.getCurrentAtomData());
+                        if (!minMaxStorage.containsKey(selectedColumn))
+                            minMaxStorage.put(selectedColumn, binnedData.getMinMax());
+                        setSpinner();
                     }
+                    RenderingConfiguration.getViewer().reDraw();
                 }
             });
+	       
+            ActionListener minMaxListener = (e->{
+                RenderingConfiguration.setFilterMin(filterCheckboxMin.isSelected());
+                RenderingConfiguration.setFilterMax(filterCheckboxMax.isSelected());
+                inverseFilterCheckbox.setEnabled(filterCheckboxMin.isSelected() || filterCheckboxMax.isSelected());
+                RenderingConfiguration.getViewer().reDraw();
+            });
 	        
-	        ChangeListener minMaxSpinnerListener = new ChangeListener() {
-                @Override
-                public void stateChanged(ChangeEvent e) {
-                    if (e.getSource() == lowerLimitSpinner){
-                        float low = ((Number)lowerLimitSpinner.getValue()).floatValue();
-                        minMaxStorage.get(selectedColumn)[0] = low;
-                    } else {
-                        float up = ((Number)upperLimitSpinner.getValue()).floatValue();
-                        minMaxStorage.get(selectedColumn)[1] = up;
-                    }
-                    RenderingConfiguration.getViewer().reDraw();
-                }
-            };
-            
-            ActionListener minMaxListener = new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent arg0) {
-                    RenderingConfiguration.setFilterMin(filterCheckboxMin.isSelected());
-                    RenderingConfiguration.setFilterMax(filterCheckboxMax.isSelected());
-                    inverseFilterCheckbox.setEnabled(filterCheckboxMin.isSelected() || filterCheckboxMax.isSelected());
-                    RenderingConfiguration.getViewer().reDraw();
-                }
-            };
-	        
-	        lowerLimitSpinner.addChangeListener(minMaxSpinnerListener);
-	        upperLimitSpinner.addChangeListener(minMaxSpinnerListener);
+	        lowerLimitSpinner.addChangeListener(e->{ 
+	        	float low = ((Number)lowerLimitSpinner.getValue()).floatValue();
+	        	minMaxStorage.get(selectedColumn)[0] = low;}
+	        );
+	        upperLimitSpinner.addChangeListener(e->{
+	        	float up = ((Number)upperLimitSpinner.getValue()).floatValue();
+                minMaxStorage.get(selectedColumn)[1] = up;
+	        });
 	        
 	        filterCheckboxMin.addActionListener(minMaxListener);
 	        filterCheckboxMax.addActionListener(minMaxListener);
 	        
-	        inverseFilterCheckbox.addActionListener(new ActionListener() {
-	            @Override
-	            public void actionPerformed(ActionEvent arg0) {
-	                RenderingConfiguration.setFilterInversed(inverseFilterCheckbox.isSelected());
-	                RenderingConfiguration.getViewer().reDraw();
-	            }
+	        inverseFilterCheckbox.addActionListener(arg0-> {
+                RenderingConfiguration.setFilterInversed(inverseFilterCheckbox.isSelected());
+                RenderingConfiguration.getViewer().reDraw();
 	        });
 	        
-	        resetButton.addActionListener(new ActionListener() {
-	            @Override
-	            public void actionPerformed(ActionEvent e) {
-	                minMaxStorage.put(selectedColumn, binnedData.getMinMax());
-	                setSpinner();
-	                RenderingConfiguration.getViewer().reDraw();
-	            }
+	        resetButton.addActionListener(e->{
+                minMaxStorage.put(selectedColumn, binnedData.getMinMax());
+                setSpinner();
+                RenderingConfiguration.getViewer().reDraw();
 	        });
 	        
-	        exportButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent arg0) {
-                    BinningDataContainer bdc = (BinningDataContainer)(
-                            Configuration.getCurrentAtomData().getDataContainer(BinningDataContainer.class));
-                    
-                    JFileChooser chooser = new JFileChooser();
-                    int ok = chooser.showSaveDialog(JBinningControlPanel.this);
-                    if (ok == JFileChooser.APPROVE_OPTION){
-                        File f = chooser.getSelectedFile();
-                        FileOutputStream fos;
-                        DataOutputStream dos = null;
-                        
-                        try {
-                            fos = new FileOutputStream(f);
-                            dos = new DataOutputStream(fos);
-                            bdc.exportData(dos);
-                            dos.close();    
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
+	        exportButton.addActionListener(arg0->{
+                BinningDataContainer bdc = (BinningDataContainer)(
+                        Configuration.getCurrentAtomData().getDataContainer(BinningDataContainer.class));
+                
+                JFileChooser chooser = new JFileChooser();
+                int ok = chooser.showSaveDialog(JBinningControlPanel.this);
+                if (ok == JFileChooser.APPROVE_OPTION){
+                    try (DataOutputStream dos = new DataOutputStream(new FileOutputStream(chooser.getSelectedFile()))){
+                        bdc.exportData(dos);
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
                 }
             });
@@ -315,12 +286,11 @@ public class BinningDataContainer extends DataContainer {
         
         final float[] minMax = minMaxStorage.get(dataPanel.selectedColumn);
         FilterSet<Bin> binFilter = new FilterSet<BinnedData.Bin>();
-        binFilter.addFilter(new Filter<BinnedData.Bin>() {
-            @Override
-            public boolean accept(Bin b) {
-                return renderRange.isInInterval(b.getCenterOfObject());
-            }
+        
+        binFilter.addFilter(b-> {
+        	return renderRange.isInInterval(b.getCenterOfObject());
         });
+        
         binFilter.addFilter(new Filter<BinnedData.Bin>() {
             final boolean filterMax = dataPanel.filterCheckboxMax.isSelected();
             final boolean filterMin = dataPanel.filterCheckboxMin.isSelected();

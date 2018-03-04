@@ -19,12 +19,10 @@
 package processingModules.otherModules;
 
 import gui.JPrimitiveVariablesPropertiesDialog;
-import gui.ProgressMonitor;
 import gui.PrimitiveProperty.*;
 
 import java.awt.event.InputEvent;
 import java.util.*;
-import java.util.concurrent.*;
 
 import javax.swing.JFrame;
 
@@ -157,7 +155,7 @@ public final class VacancyDetectionModule extends ClonableProcessingModule {
 			final NearestNeighborBuilder<Vacancy> possibleVacancies = new NearestNeighborBuilder<Vacancy>(data.getBox(), minDistanceToAtom, false);
 			
 			//This list is holding candidates that need to be tested for vacancy positions
-			final ArrayList<Atom> nextToVancanyCandidateAtoms = new ArrayList<Atom>();
+			final ArrayList<Atom> nextToVancanyCandidateAtoms = new ArrayList<>();
 			
 
 			//Insert all atoms in the different lists
@@ -171,109 +169,79 @@ public final class VacancyDetectionModule extends ClonableProcessingModule {
 				}
 			}
 			
-			ProgressMonitor.getProgressMonitor().start(nextToVancanyCandidateAtoms.size());
-
-			/*
-			 * Identify possible vacancy sites for each defect atom in parallel.
-			 * In this case, vacancy sites are typically identified multiple times.
-			 * Here, the sites are identified and stored. The reduction of duplicates
-			 * is done in a later step
-			 */
-			Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();		
-			for (int i = 0; i < ThreadPool.availProcessors(); i++){
-			
-				final int j = i;
-				parallelTasks.add(new Callable<Void>() {
+			ThreadPool.executeAsParallelStream(nextToVancanyCandidateAtoms.size(), k->{
+				//First get the nearest defect atoms for an atom possibly next to a vacancy
+				Atom a = nextToVancanyCandidateAtoms.get(k);
+				ArrayList<Vec3> nnb = defectedNearestNeighbors.getNeighVec(a);
+				if (nnb.size() < 4) return;
 				
-					@Override
-					public Void call() throws Exception {
+				
+				//A convex hull may be required, but is only computed on demand
+				//thus here initialized with null
+				ArrayList<Tupel<Vec3,Vec3>> convexHull = null;
+				
+				//Compute the voronoi diagram around the atom and its neighbors
+				//Vacancies can be positions that are far enough away from any defect atom
+				List<Vec3> voronoiVertices = VoronoiVolume.getVoronoiVertices(nnb);
+				
+				for (Vec3 voro : voronoiVertices){
+					//Exclude points that are either too close to be a vacancy position
+					//or that are too far away and actually are boundary points in the voronoi diagram
+					if (voro.getLength() < minDistanceToAtom || voro.getLength() > defectCutoff)
+						return;
 					
-						final int start = ThreadPool.getSliceStart(nextToVancanyCandidateAtoms.size(), j);
-						final int end = ThreadPool.getSliceEnd(nextToVancanyCandidateAtoms.size(), j);
-						
-						for (int k = start; k < end; k++) {
-							if (k % 1000 == 0) ProgressMonitor.getProgressMonitor().addToCounter(1000);
-							
-							//First get the nearest defect atoms for an atom possibly next to a vacancy
-							Atom a = nextToVancanyCandidateAtoms.get(k);
-							ArrayList<Vec3> nnb = defectedNearestNeighbors.getNeighVec(a);
-							if (nnb.size() < 4) continue;
-							
-							
-							//A convex hull may be required, but is only computed on demand
-							//thus here initialized with null
-							ArrayList<Tupel<Vec3,Vec3>> convexHull = null;
-							
-							//Compute the voronoi diagram around the atom and its neighbors
-							//Vacancies can be positions that are far enough away from any defect atom
-							List<Vec3> voronoiVertices = VoronoiVolume.getVoronoiVertices(nnb);
-							
-							for (Vec3 voro : voronoiVertices){
-								//Exclude points that are either too close to be a vacancy position
-								//or that are too far away and actually are boundary points in the voronoi diagram
-								if (voro.getLength() < minDistanceToAtom || voro.getLength() > defectCutoff)
-									continue;
-								
-								//The voronoi vertex is in the local coordinate system of atom a
-								//Move it back into the global coordinate system and correct periodicity if needed
-								Vec3 absolutePoint = voro.addClone(a);
-								data.getBox().backInBox(absolutePoint);
-								
-								//Compute the distance from the voronoi vertex to all atoms
-								//Test if all of them are further away than the minimal distance
-								final List<Vec3> neigh = allNearestNeighbors.getNeighVec(absolutePoint);
-								float minDist = nndSearch;
-								boolean valid = true;
-								for (Vec3 p : neigh) {
-									float d = p.getLength();
-									minDist = Math.min(d, minDist);
-									if (minDist < minDistanceToAtom) {
-										valid = false;
-										break;
-									}
-								}
-								
-								//Test if vertex is inside a convex hull if requested
-								if (testForSurfaces && valid){
-									if (convexHull == null) {
-										//Compute the convex hull if needed
-										nnb.add(new Vec3(0f, 0f, 0f)); //Add the central atom
-										convexHull = getConvexHullBoundaryPlanes(nnb);
-									}
-									valid = isInConvexHull(voro, convexHull);
-								}
-								    
-								//The vertex is far enough away from any atom
-								if (valid) {
-									Vacancy v = new Vacancy(absolutePoint, minDist);
-									//Start with the first step in the reduction of points that are found multiple times
-									synchronized (possibleVacancies) {
-										//Get the already identified vacancies close to the new one
-										List<Tupel<Vacancy,Vec3>> nearOnes = possibleVacancies.getNeighAndNeighVec(v);
-										Vacancy bestFit = v;
-										//Delete those points that are close to the new vacancy
-										//The one that has the largest distance to an atom will survive
-										for (Tupel<Vacancy,Vec3> t : nearOnes){
-											if (t.o2.getLength()<0.01f*minDistanceToAtom){
-												if (bestFit.dist<t.o1.dist)
-													bestFit = t.o1;
-												possibleVacancies.remove(t.o1);
-											}
-										}
-
-										possibleVacancies.add(bestFit);
-											
-										
-									}
+					//The voronoi vertex is in the local coordinate system of atom a
+					//Move it back into the global coordinate system and correct periodicity if needed
+					Vec3 absolutePoint = voro.addClone(a);
+					data.getBox().backInBox(absolutePoint);
+					
+					//Compute the distance from the voronoi vertex to all atoms
+					//Test if all of them are further away than the minimal distance
+					final List<Vec3> neigh = allNearestNeighbors.getNeighVec(absolutePoint);
+					float minDist = nndSearch;
+					boolean valid = true;
+					for (Vec3 p : neigh) {
+						float d = p.getLength();
+						minDist = Math.min(d, minDist);
+						if (minDist < minDistanceToAtom) {
+							valid = false;
+							break;
+						}
+					}
+					
+					//Test if vertex is inside a convex hull if requested
+					if (testForSurfaces && valid){
+						if (convexHull == null) {
+							//Compute the convex hull if needed
+							nnb.add(new Vec3(0f, 0f, 0f)); //Add the central atom
+							convexHull = getConvexHullBoundaryPlanes(nnb);
+						}
+						valid = isInConvexHull(voro, convexHull);
+					}
+					    
+					//The vertex is far enough away from any atom
+					if (valid) {
+						Vacancy v = new Vacancy(absolutePoint, minDist);
+						//Start with the first step in the reduction of points that are found multiple times
+						synchronized (possibleVacancies) {
+							//Get the already identified vacancies close to the new one
+							List<Tupel<Vacancy,Vec3>> nearOnes = possibleVacancies.getNeighAndNeighVec(v);
+							Vacancy bestFit = v;
+							//Delete those points that are close to the new vacancy
+							//The one that has the largest distance to an atom will survive
+							for (Tupel<Vacancy,Vec3> t : nearOnes){
+								if (t.o2.getLength()<0.01f*minDistanceToAtom){
+									if (bestFit.dist<t.o1.dist)
+										bestFit = t.o1;
+									possibleVacancies.remove(t.o1);
 								}
 							}
+
+							possibleVacancies.add(bestFit);
 						}
-						ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
-						return null;
 					}
-				});
-			}
-			ThreadPool.executeParallel(parallelTasks);
+				}
+			});
 			
 			
 			//Start the second part of the reduction part
@@ -282,13 +250,10 @@ public final class VacancyDetectionModule extends ClonableProcessingModule {
 			List<Vacancy> possibleVacancyList = possibleVacancies.getAllElements();
 			possibleVacancies.removeAll();
 			
-			Collections.sort(possibleVacancyList, new Comparator<Vacancy>() {
-				@Override
-				public int compare(Vacancy o1, Vacancy o2) {
-					if (o1.dist>o2.dist) return 1;
-					else if (o1.dist<o2.dist) return -1;
-					else return 0;
-				}
+			Collections.sort(possibleVacancyList, (Vacancy o1, Vacancy o2)->{
+				if (o1.dist>o2.dist) return 1;
+				else if (o1.dist<o2.dist) return -1;
+				else return 0;
 			});
 			
 			//Again, insert vacancies one by one
@@ -310,8 +275,6 @@ public final class VacancyDetectionModule extends ClonableProcessingModule {
 			
 			//Copy data into the final results container
 			this.particles.addAll(possibleVacancies.getAllElements());
-			
-			ProgressMonitor.getProgressMonitor().stop();
 		}
 		
 		//Calculate the center of mass for given set of points
@@ -335,7 +298,7 @@ public final class VacancyDetectionModule extends ClonableProcessingModule {
 		 * a pair of Vec3. The first element is the normal of the face, the second one a vertex
 		 */
 		private ArrayList<Tupel<Vec3, Vec3>> getConvexHullBoundaryPlanes(List<Vec3> list) {
-			ArrayList<Tupel<Vec3, Vec3>> convexHull = new ArrayList<Tupel<Vec3, Vec3>>();
+			ArrayList<Tupel<Vec3, Vec3>> convexHull = new ArrayList<>();
 			
 			if (list.size() < 4) return convexHull;
 			

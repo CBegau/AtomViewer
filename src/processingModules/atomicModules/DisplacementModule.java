@@ -19,11 +19,8 @@ package processingModules.atomicModules;
 
 import gui.JLogPanel;
 import gui.JPrimitiveVariablesPropertiesDialog;
-import gui.ProgressMonitor;
 import gui.PrimitiveProperty.ReferenceModeProperty;
 
-import java.util.Vector;
-import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.JFrame;
@@ -144,49 +141,22 @@ public class DisplacementModule extends ClonableProcessingModule {
 		final float[] zArray = data.getDataArray(data.getDataColumnIndex(cci[2])).getData();
 		final float[] nArray = data.getDataArray(data.getDataColumnIndex(cci[3])).getData();
 		
-		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
-		
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int j = i;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					
-					final int start = (int)(((long)data.getAtoms().size() * j)/ThreadPool.availProcessors());
-					final int end = (int)(((long)data.getAtoms().size() * (j+1))/ThreadPool.availProcessors());
-					
-					for (int i=start; i<end; i++){
-						if ((i-start)%1000 == 0)
-							ProgressMonitor.getProgressMonitor().addToCounter(1000);
-						
-						Atom a = data.getAtoms().get(i);
-						Atom a_ref = atomsMap.get(a.getNumber());
-						if (a_ref!=null){
-							Vec3 displ = data.getBox().getPbcCorrectedDirection(a_ref, a);
-							xArray[i] = displ.x;
-							yArray[i] = displ.y;
-							zArray[i] = displ.z;
-							nArray[i] = displ.getLength();
-						} else {
-							if (!mismatchWarningShown.getAndSet(true)){
-								JLogPanel.getJLogPanel().addWarning("Inaccurate displacement vectors", 
-										String.format("Atom IDs in %s could not be matched to the reference %s."
-												+ "Computed  displacement vectors between these file may be inaccurate", 
-										data.getName(), referenceAtomData.getName()));
-							}
-							xArray[i] = 0f; yArray[i] = 0f; zArray[i] = 0f; nArray[i] = 0f;
-						}
-					}
-					
-					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
-					return null;
-				}
-			});
-		}
-		ThreadPool.executeParallel(parallelTasks);	
-		
-		ProgressMonitor.getProgressMonitor().stop();
+		ThreadPool.executeAsParallelStream(data.getAtoms().size(), i->{
+			Atom a = data.getAtoms().get(i);
+			Atom a_ref = atomsMap.get(a.getNumber());
+			if (a_ref!=null){
+				Vec3 displ = data.getBox().getPbcCorrectedDirection(a_ref, a);
+				xArray[i] = displ.x;
+				yArray[i] = displ.y;
+				zArray[i] = displ.z;
+				nArray[i] = displ.getLength();
+			} else if (!mismatchWarningShown.getAndSet(true)){
+				JLogPanel.getJLogPanel().addWarning("Inaccurate displacement vectors", 
+						String.format("Atom IDs in %s could not be matched to the reference %s."
+								+ "Computed  displacement vectors between these file may be inaccurate", 
+						data.getName(), referenceAtomData.getName()));
+			}
+		});
 		
 		return null;
 	}

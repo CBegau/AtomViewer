@@ -17,8 +17,8 @@ import processingModules.toolchain.Toolchainable.ToolchainSupport;
 public class DeleteColumnModule extends ClonableProcessingModule implements Toolchainable{
 	
 	DataColumnInfo toRemove;
-	//This is the indicator used for import from a toolchain, since the column
-	//the file is referring to might not exist at that moment 
+	//This is the indicator used for import from a toolchain
+	//the column name the toolchain file is referring to might not exist at that moment 
 	private String toRemoveID;
 	
 	public DeleteColumnModule() {}

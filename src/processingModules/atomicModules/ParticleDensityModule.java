@@ -20,12 +20,9 @@ package processingModules.atomicModules;
 
 import gui.JLogPanel;
 import gui.JPrimitiveVariablesPropertiesDialog;
-import gui.ProgressMonitor;
 import gui.PrimitiveProperty.*;
 
 import java.util.ArrayList;
-import java.util.Vector;
-import java.util.concurrent.Callable;
 
 import javax.swing.ButtonGroup;
 import javax.swing.JCheckBox;
@@ -94,12 +91,11 @@ public class ParticleDensityModule extends ClonableProcessingModule {
 
 	@Override
 	public ProcessingResult process(final AtomData data) throws Exception {
-		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
 		final float sphereVolume = radius*radius*radius*((float)Math.PI)*(4f/3f);
 		
 		final int v = data.getDataColumnIndex(densityColumn);
 		
-		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), radius, true);
+		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<>(data.getBox(), radius, true);
 		nnb.addAll(data.getAtoms());
 		
 		final int massColumn = data.getComponentIndex(Component.MASS);
@@ -111,56 +107,39 @@ public class ParticleDensityModule extends ClonableProcessingModule {
 		final float[] massArray = scaleMass ? data.getDataArray(massColumn).getData() : null;
 		final float[] densityArray = data.getDataArray(v).getData();
 		
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int j = i;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					final int start = (int)(((long)data.getAtoms().size() * j)/ThreadPool.availProcessors());
-					final int end = (int)(((long)data.getAtoms().size() * (j+1))/ThreadPool.availProcessors());
-					
-					for (int i=start; i<end; i++){
-						if ((i-start)%1000 == 0)
-							ProgressMonitor.getProgressMonitor().addToCounter(1000);
-						
-						Atom a = data.getAtoms().get(i);	
-						
-						if (!useSmoothKernel){
-							if (scaleMass){
-								float density = 0f;
-								for (Atom n : nnb.getNeigh(a))
-									density += massArray[n.getID()];
-								densityArray[i] = density/sphereVolume*scalingFactor;
-							} else {
-								float density = ((nnb.getNeigh(a).size()+1)/sphereVolume);
-								densityArray[i] = density*scalingFactor; 
-							}
-						} else {
-							ArrayList<Tupel<Atom,Vec3>> neigh = nnb.getNeighAndNeighVec(a);
-							float mass = scaleMass ? massArray[i] : 1f;
-							
-							//Include central particle a with d = 0
-							float density = mass*CommonUtils.getM4SmoothingKernelWeight(0f, radius*0.5f);
-							//Estimate local density based on distance to other particles
-							for (int k=0, len = neigh.size(); k<len; k++){
-								Tupel<Atom,Vec3> n = neigh.get(k);
-								mass = scaleMass ? massArray[n.o1.getID()] : 1f;
-								density += mass * CommonUtils.getM4SmoothingKernelWeight(n.o2.getLength(), radius*0.5f);
-							}
-							//Temporarily store the density of the particle 
-							densityArray[i] = density*scalingFactor; 
-						}
-					}
-					
-					ProgressMonitor.getProgressMonitor().addToCounter((end-start)%1000);
-					return null;
+		
+		if (!useSmoothKernel){
+			final float oneByScalingTimesVolume = 1f/sphereVolume*scalingFactor; 
+			if (scaleMass) {
+				ThreadPool.executeAsParallelStream(data.getAtoms().size(), i->{
+					float density = 0f;
+					for (Atom n : nnb.getNeigh(data.getAtoms().get(i)))
+						density += massArray[n.getID()];
+					densityArray[i] = density*oneByScalingTimesVolume;
+				});	
+			} else {
+				ThreadPool.executeAsParallelStream(data.getAtoms().size(), i->{
+					densityArray[i] = (nnb.getNeigh(data.getAtoms().get(i)).size()+1)*oneByScalingTimesVolume; 
+				});
+			}
+		} else {
+			ThreadPool.executeAsParallelStream(data.getAtoms().size(), i->{
+				ArrayList<Tupel<Atom,Vec3>> neigh = nnb.getNeighAndNeighVec(data.getAtoms().get(i));
+				float mass = scaleMass ? massArray[i] : 1f;
+				
+				//Include central particle a with d = 0
+				float density = mass*CommonUtils.getM4SmoothingKernelWeight(0f, radius*0.5f);
+				//Estimate local density based on distance to other particles
+				for (int k=0, len = neigh.size(); k<len; k++){
+					Tupel<Atom,Vec3> n = neigh.get(k);
+					mass = scaleMass ? massArray[n.o1.getID()] : 1f;
+					density += mass * CommonUtils.getM4SmoothingKernelWeight(n.o2.getLength(), radius*0.5f);
 				}
+				//Temporarily store the density of the particle 
+				densityArray[i] = density*scalingFactor; 
 			});
 		}
-		ThreadPool.executeParallel(parallelTasks);	
-		
-		ProgressMonitor.getProgressMonitor().stop();
+			
 		return null;
 	}
 

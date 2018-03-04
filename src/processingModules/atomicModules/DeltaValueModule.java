@@ -19,7 +19,6 @@ package processingModules.atomicModules;
 
 import gui.JLogPanel;
 import gui.JPrimitiveVariablesPropertiesDialog;
-import gui.ProgressMonitor;
 import gui.PrimitiveProperty.ReferenceModeProperty;
 
 import java.awt.event.ActionEvent;
@@ -27,8 +26,6 @@ import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Vector;
-import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.JComboBox;
@@ -183,7 +180,7 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 		}
 		
 		
-		final TIntObjectHashMap<Atom> atomsMap = new TIntObjectHashMap<Atom>();
+		final TIntObjectHashMap<Atom> atomsMap = new TIntObjectHashMap<>();
 		for (Atom a : referenceAtomData.getAtoms()){
 			Atom oldValue = atomsMap.put(a.getNumber(), a);
 			if (oldValue != null){
@@ -223,53 +220,24 @@ public class DeltaValueModule extends ClonableProcessingModule implements Toolch
 		final float[] valueArray = data.getDataArray(valueIndex).getData();
 		final float[] refValueArray = referenceAtomData.getDataArray(refValueIndex).getData();
 		
-		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
-		final Object mutex = new Object();
-		
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int j = i;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					
-					final int start = (int)(((long)data.getAtoms().size() * j)/ThreadPool.availProcessors());
-					final int end = (int)(((long)data.getAtoms().size() * (j+1))/ThreadPool.availProcessors());
-					KahanSum sum = new KahanSum();
-					
-					for (int i=start; i<end; i++){
-						if ((i-start)%1000 == 0)
-							ProgressMonitor.getProgressMonitor().addToCounter(1000);
-						
-						Atom a = data.getAtoms().get(i);
-						Atom a_ref = atomsMap.get(a.getNumber());
+		ThreadPool.executeAsParallelStream(data.getAtoms().size(), i->{	
+			Atom a = data.getAtoms().get(i);
+			Atom a_ref = atomsMap.get(a.getNumber());
 
-						if (a_ref!=null){
-							float value = valueArray[i]-refValueArray[a_ref.getID()];
-							deltaArray[i] = value;
-							sum.add(value);
-						} else {
-							if (!mismatchWarningShown.getAndSet(true)){
-								JLogPanel.getJLogPanel().addWarning(String.format("Inaccurate differences for %s", toDeltaColumn.getName()), 
-										String.format("Atom IDs in %s could not be matched to the reference %s."
-												+ "Computed differences between these file may be inaccurate", 
-										data.getName(), referenceAtomData.getName()));
-							}
-							deltaArray[i] = 0f;
-						}
-					}
-					
-					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
-					synchronized (mutex) {
-						sumOfAllDeltas.add(sum.getSum());
-					}
-					return null;
-				}
-			});
-		}
-		ThreadPool.executeParallel(parallelTasks);	
+			if (a_ref!=null){
+				deltaArray[i] = valueArray[i]-refValueArray[a_ref.getID()];
+			} else if (!mismatchWarningShown.getAndSet(true)){
+					JLogPanel.getJLogPanel().addWarning(String.format("Inaccurate differences for %s", toDeltaColumn.getName()), 
+							String.format("Atom IDs in %s could not be matched to the reference %s."
+									+ "Computed differences between these file may be inaccurate", 
+							data.getName(), referenceAtomData.getName()));
+			}			
+		});
 		
-		ProgressMonitor.getProgressMonitor().stop();
+		for (float f : deltaArray)
+			sumOfAllDeltas.add(f);
+		
+		
 		String s = String.format("Total difference between file %s and %s in %s: %f", 
 				referenceAtomData.getName(), data.getName(), toDeltaColumn.getName(), sumOfAllDeltas.getSum());
 		return new DataContainer.DefaultDataContainerProcessingResult(null, s);

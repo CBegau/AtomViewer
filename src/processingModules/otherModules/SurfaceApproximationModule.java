@@ -5,22 +5,16 @@ import gui.glUtils.Shader.BuiltInShader;
 import gui.glUtils.Shader;
 import gui.JColorSelectPanel;
 import gui.JPrimitiveVariablesPropertiesDialog;
-import gui.ProgressMonitor;
 import gui.RenderRange;
 import gui.ViewerGLJPanel;
 
 import java.awt.Color;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.util.*;
-import java.util.concurrent.Callable;
 
 import com.jogamp.opengl.GL3;
 import javax.swing.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 
 import common.ThreadPool;
 import model.*;
@@ -172,28 +166,19 @@ public class SurfaceApproximationModule extends ClonableProcessingModule {
 			gbc.gridy++;
 			this.add(showMeshCheckbox, gbc);
 
-			showMeshCheckbox.addActionListener(new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					showMesh = showMeshCheckbox.isSelected();
-					RenderingConfiguration.getViewer().reDraw();
-				}
+			showMeshCheckbox.addActionListener(e-> {
+				showMesh = showMeshCheckbox.isSelected();
+				RenderingConfiguration.getViewer().reDraw();
 			});
 			
-			showSurfaceCheckbox.addActionListener(new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent arg0) {
-					showMeshCheckbox.setEnabled(showSurfaceCheckbox.isSelected());
-					RenderingConfiguration.getViewer().reDraw();
-				}
+			showSurfaceCheckbox.addActionListener(e-> {
+				showMeshCheckbox.setEnabled(showSurfaceCheckbox.isSelected());
+				RenderingConfiguration.getViewer().reDraw();
 			});
 			
-			transparencySlider.addChangeListener(new ChangeListener() {
-				@Override
-				public void stateChanged(ChangeEvent e) {
-					transparency = 1-(transparencySlider.getValue()*0.01f);
-					RenderingConfiguration.getViewer().reDraw();
-				}
+			transparencySlider.addChangeListener(e-> {
+				transparency = 1-(transparencySlider.getValue()*0.01f);
+				RenderingConfiguration.getViewer().reDraw();
 			});
 		}
 
@@ -210,7 +195,7 @@ public class SurfaceApproximationModule extends ClonableProcessingModule {
 	}
 	
 	private class SurfaceApproximationDataContainer extends DataContainer{
-		private ArrayList<Mesh> meshes = new ArrayList<Mesh>();
+		private ArrayList<Mesh> meshes = new ArrayList<>();
 		
 		@Override
 		public void drawSolidObjects(ViewerGLJPanel viewer, GL3 gl, RenderRange renderRange, boolean picking, AtomData data) {
@@ -275,7 +260,7 @@ public class SurfaceApproximationModule extends ClonableProcessingModule {
 			if (filter) afs = RenderingConfiguration.getAtomFilterset();
 			List<Atom> atoms = atomData.getAtoms();
 			if (afs != null){
-				ArrayList<Atom> filteredAtoms = new ArrayList<Atom>();
+				ArrayList<Atom> filteredAtoms = new ArrayList<>();
 				for (Atom a : atomData.getAtoms()){
 					if (afs.accept(a))
 						filteredAtoms.add(a);
@@ -283,10 +268,7 @@ public class SurfaceApproximationModule extends ClonableProcessingModule {
 				atoms = filteredAtoms;
 			}
 			
-			
-			
 			if (clusterAnalysis){
-				
 				GrainDetectionCriteria gdc = new GrainDetectionCriteria() {
 					@Override
 					public boolean includeAtom(AtomToGrainObject atom, List<AtomToGrainObject> neighbors) {
@@ -317,50 +299,31 @@ public class SurfaceApproximationModule extends ClonableProcessingModule {
 			} else {
 				this.meshes.add(new Mesh(atoms, cellSize, simplification, atomData.getBox()));
 			}
+		
+			ThreadPool.executeAsParallelStream(meshes.size(), i->processMesh(meshes.get(i)));
 			
-			Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-			for (int i=0; i<meshes.size(); i++){
-				final int j = i;
-				parallelTasks.add(new Callable<Void>() {
-					@Override
-					public Void call() throws Exception {
-						processMesh(meshes.get(j));
-						return null;
-					}
-				});
-			}
-			
-			int steps = meshes.size()*(11 + (smooth?10:3));
-			ProgressMonitor.getProgressMonitor().start(steps);
-			
-			ThreadPool.executeParallel(parallelTasks);
-
-			ProgressMonitor.getProgressMonitor().stop();
 			return true;
 		}
 		
 		private void processMesh(Mesh mesh){
-			ProgressMonitor pg = ProgressMonitor.getProgressMonitor();
-
-			mesh.createMesh(); 				pg.addToCounter(1);
+			mesh.createMesh();
 			
 			//Mesh postprocessing
-			mesh.cornerPreservingSmooth();	pg.addToCounter(1);
-			mesh.cornerPreservingSmooth();	pg.addToCounter(1);
-			mesh.cornerPreservingSmooth();	pg.addToCounter(1);
-			mesh.shrink(offset);			pg.addToCounter(1);
-			mesh.cornerPreservingSmooth();	pg.addToCounter(1);
-			mesh.shrink(offset);			pg.addToCounter(1);
-			mesh.cornerPreservingSmooth();	pg.addToCounter(1);
-			mesh.shrink(offset);			pg.addToCounter(1);
+			mesh.cornerPreservingSmooth();
+			mesh.cornerPreservingSmooth();
+			mesh.cornerPreservingSmooth();
+			mesh.shrink(offset);
+			mesh.cornerPreservingSmooth();
+			mesh.shrink(offset);
+			mesh.cornerPreservingSmooth();
+			mesh.shrink(offset);
 			for (int i=0; i<(smooth?10:3); i++){
 				mesh.smooth();
-				pg.addToCounter(1);
 			}
 		
-			mesh.simplifyMesh(6f*(float)Math.pow(simplification,3.)); pg.addToCounter(1);
+			mesh.simplifyMesh(6f*(float)Math.pow(simplification,3.));
 			
-			mesh.finalizeMesh(); pg.addToCounter(1);
+			mesh.finalizeMesh();
 		}
 
 		@Override

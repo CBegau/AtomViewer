@@ -90,6 +90,7 @@ public class ThreadPool {
 	 * @param c
 	 * @return
 	 */
+	@Deprecated
 	public static <V> Future<V> submit(Callable<V> c){
 		return threadPool.submit(c);
 	}
@@ -103,6 +104,7 @@ public class ThreadPool {
 	 * @param c List of callables
 	 * @return List of Future objects, holding the returned values
 	 */
+	@Deprecated
 	public static <V> List<Future<V>> executeParallelSecondLevel(List<? extends Callable<V>> c){
 		try {
 			List<Future<V>> futures = secondLevelThreadPool.invokeAll(c);
@@ -125,6 +127,7 @@ public class ThreadPool {
 	 * @param c
 	 * @return
 	 */
+	@Deprecated
 	public static <V> Future<V> submitSecondLevel(Callable<V> c){
 		return secondLevelThreadPool.submit(c);
 	}
@@ -135,7 +138,8 @@ public class ThreadPool {
 	 * @param action an action to be performed in parallel
 	 */
 	public static void executeAsParallelStream(int size, IntConsumer action) {
-		final int progressBarUpdateInterval = Math.min(1, (int)(size/200));
+		if (size<=0) return;
+		final int progressBarUpdateInterval = Math.max(1, (int)(size/200));
 		ProgressMonitor.getProgressMonitor().start(size);
 		IntConsumer actionWithProgressBarUpdate = 
 				action.andThen( i->{
@@ -152,25 +156,5 @@ public class ThreadPool {
 	
 	public static int availProcessors(){
 		return processors;
-	}
-	
-	/**
-	 * Provides start value to split a loop into several equal parts
-	 * @param totalElements the total number of element in a loop
-	 * @param subprocessID the id of a subprocess, must be within [0,..,availProcessors()]
-	 * @return
-	 */
-	public static int getSliceStart(int totalElements, int subprocessID){
-		return (int)(((long)totalElements * subprocessID)/ThreadPool.availProcessors());
-	}
-	
-	/**
-	 * Provides end value to split a loop into several equal parts
-	 * @param totalElements the total number of element in a loop
-	 * @param subprocessID the id of a subprocess, must be within [0,..,availProcessors()]
-	 * @return
-	 */
-	public static int getSliceEnd(int totalElements, int subprocessID){
-		return (int)(((long)totalElements * (subprocessID+1))/ThreadPool.availProcessors());
 	}
 }

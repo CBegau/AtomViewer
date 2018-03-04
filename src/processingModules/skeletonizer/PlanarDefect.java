@@ -78,12 +78,12 @@ public class PlanarDefect implements Pickable{
 			Map<PlanarDefectAtom, PlanarDefect> defectMap){
 
 		List<Atom> sfAtoms = data.getCrystalStructure().getStackingFaultAtoms(data);
-		TreeSet<PlanarDefectAtom> planarDefectAtoms = new TreeSet<PlanarDefectAtom>();
+		TreeSet<PlanarDefectAtom> planarDefectAtoms = new TreeSet<>();
 		int id = 0;
 		for (Atom a: sfAtoms)
 			planarDefectAtoms.add(new PlanarDefectAtom(a, id++));
 		
-		NearestNeighborBuilder<PlanarDefectAtom> nnb = new NearestNeighborBuilder<PlanarDefectAtom>(
+		NearestNeighborBuilder<PlanarDefectAtom> nnb = new NearestNeighborBuilder<>(
 				data.getBox(), data.getCrystalStructure().getNearestNeighborSearchRadius());
 		
 		for (PlanarDefectAtom p : planarDefectAtoms)
@@ -98,7 +98,7 @@ public class PlanarDefect implements Pickable{
 					defectMap, null, data);
 		} else {
 			//For polycrystalline material, split everything into separate grains
-			HashMap<Integer, TreeSet<PlanarDefectAtom>> sfPerGrain = new HashMap<Integer, TreeSet<PlanarDefectAtom>>();
+			HashMap<Integer, TreeSet<PlanarDefectAtom>> sfPerGrain = new HashMap<>();
 			for (PlanarDefectAtom a : planarDefectAtoms){
 				if (a.getAtom().getGrain() != Atom.IGNORED_GRAIN && !sfPerGrain.containsKey(a.getAtom().getGrain())){
 					sfPerGrain.put(a.getAtom().getGrain(), new TreeSet<PlanarDefectAtom>());
@@ -107,10 +107,10 @@ public class PlanarDefect implements Pickable{
 			}
 			planarDefectAtoms.clear();	//Not needed anymore, dereference all its members
 			
-			ArrayList<PlanarDefect> def = new ArrayList<PlanarDefect>();
+			ArrayList<PlanarDefect> def = new ArrayList<>();
 			
 			for (Entry<Integer, TreeSet<PlanarDefectAtom>> e : sfPerGrain.entrySet()){
-				sfPerGrain.remove(e);	//reference in the map is not needed anymore
+				sfPerGrain.remove(e.getKey());	//reference in the map is not needed anymore
 				if (e.getKey() != Atom.DEFAULT_GRAIN  && e.getKey() != Atom.IGNORED_GRAIN){
 					Grain g = data.getGrains(e.getKey()); 
 					

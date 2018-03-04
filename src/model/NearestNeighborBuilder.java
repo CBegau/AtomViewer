@@ -19,9 +19,8 @@
 package model;
 
 import java.util.*;
-import java.util.concurrent.Callable;
+import java.util.stream.IntStream;
 
-import common.ThreadPool;
 import common.Tupel;
 import common.Vec3;
 
@@ -111,32 +110,17 @@ public class NearestNeighborBuilder<T extends Vec3> {
 	
 	public void addAll(final List<? extends T> c, final Filter<T> filter){
 		if (threadSafeAdd){
-			Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-			for (int i=0; i<ThreadPool.availProcessors(); i++){
-				final int j = i;
-				parallelTasks.add(new Callable<Void>() {
-					@Override
-					public Void call() throws Exception {
-						final int start = (int)(((long)c.size() * j)/ThreadPool.availProcessors());
-						final int end = (int)(((long)c.size() * (j+1))/ThreadPool.availProcessors());
-						
-						if (filter == null){
-							for (int i=start; i<end; i++){
-								add(c.get(i));
-							}
-						} else {
-							for (int i=start; i<end; i++){
-								T t = c.get(i);
-								if (filter.accept(t))
-									add(t);
-							}
-						}
-						
-						return null;
-					}
+			if (filter == null) {
+				IntStream.range(0, c.size()).parallel().forEach(i->{
+					add(c.get(i));
+				});
+			} else {
+				IntStream.range(0, c.size()).parallel().forEach(i->{
+					T t = c.get(i);
+					if (filter.accept(t))
+						add(t);
 				});
 			}
-			ThreadPool.executeParallel(parallelTasks);
 		} else {
 			if (filter == null){
 				for (int i=0; i<c.size(); i++){
@@ -176,7 +160,7 @@ public class NearestNeighborBuilder<T extends Vec3> {
 					// waiting for the lock
 					//Create a wrapped array list that synchronizes only add and remove
 					if (cells[p] == null) 
-						cells[p] = new LimitedSynchronizedList<T>(5);
+						cells[p] = new LimitedSynchronizedList<>(5);
 				}
 			}
 		} else {
@@ -192,7 +176,7 @@ public class NearestNeighborBuilder<T extends Vec3> {
 	 * @return
 	 */
 	public List<T> getAllElements(){
-		ArrayList<T> ele = new ArrayList<T>();
+		ArrayList<T> ele = new ArrayList<>();
 		for (List<T> c : cells){
 			if (c != null)
 				ele.addAll(c);
@@ -323,7 +307,7 @@ public class NearestNeighborBuilder<T extends Vec3> {
 		
 		boolean safeAccess = (!accessNeverSafe && x>0 && y>0 && z>0 && x<dimX-1 && y<dimY-1 && z<dimZ-1);
 		
-		ArrayList<Vec3> neigh = new ArrayList<Vec3>(15);
+		ArrayList<Vec3> neigh = new ArrayList<>(15);
 		
 		if (safeAccess){
 			//No need to handle boundary conditions
@@ -395,7 +379,7 @@ public class NearestNeighborBuilder<T extends Vec3> {
 		
 		boolean safeAccess = (!accessNeverSafe && x>0 && y>0 && z>0 && x<dimX-1 && y<dimY-1 && z<dimZ-1);
 		
-		ArrayList<Tupel<T, Vec3>> neigh = new ArrayList<Tupel<T, Vec3>>(15);
+		ArrayList<Tupel<T, Vec3>> neigh = new ArrayList<>(15);
 		
 		if (safeAccess){
 			//No need to handle boundary conditions
@@ -461,7 +445,7 @@ public class NearestNeighborBuilder<T extends Vec3> {
 	 */
 	public ArrayList<T> getNeigh(Vec3 c, int maxNeigh){
 		ArrayList<Tupel<T,Vec3>> n = getNeighAndNeighVec(c, maxNeigh);
-		ArrayList<T> nb = new ArrayList<T>();
+		ArrayList<T> nb = new ArrayList<>();
 		for (Tupel<T,Vec3> t : n)
 			nb.add(t.o1);
 		
@@ -481,12 +465,10 @@ public class NearestNeighborBuilder<T extends Vec3> {
 		ArrayList<Tupel<T,Vec3>> n = getNeighAndNeighVec(c);
 		if (n.size()<=maxNeigh) return n;
 		
-		Collections.sort(n, new Comparator<Tupel<T,Vec3>>() {
-			@Override
-			public int compare(Tupel<T,Vec3> o1, Tupel<T,Vec3> o2) {
-				return (int)Math.signum(o1.getO2().getLengthSqr()-o2.getO2().getLengthSqr());
-			}
+		Collections.sort(n, (Tupel<T,Vec3> o1, Tupel<T,Vec3> o2)-> {
+			return (int)Math.signum(o1.getO2().getLengthSqr()-o2.getO2().getLengthSqr());
 		});
+		
 		ArrayList<Tupel<T,Vec3>> n2 = new ArrayList<Tupel<T,Vec3>>();
 		for (int i=0; i<maxNeigh; i++)
 			n2.add(n.get(i));
@@ -507,11 +489,8 @@ public class NearestNeighborBuilder<T extends Vec3> {
 		ArrayList<Vec3> n = getNeighVec(c);
 		if (n.size()<=maxNeigh) return n;
 		
-		Collections.sort(n, new Comparator<Vec3>() {
-			@Override
-			public int compare(Vec3 o1, Vec3 o2) {
-				return (int)Math.signum(o1.getLengthSqr()-o2.getLengthSqr());
-			}
+		Collections.sort(n, (Vec3 o1, Vec3 o2)->{
+			return (int)Math.signum(o1.getLengthSqr()-o2.getLengthSqr());
 		});
 		ArrayList<Vec3> n2 = new ArrayList<Vec3>();
 		for (int i=0; i<maxNeigh; i++)

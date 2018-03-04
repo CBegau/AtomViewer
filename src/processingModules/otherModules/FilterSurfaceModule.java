@@ -23,9 +23,8 @@ import gui.ProgressMonitor;
 import gui.PrimitiveProperty.*;
 
 import java.util.ArrayList;
-import java.util.Vector;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CyclicBarrier;
+import java.util.Collections;
+import java.util.List;
 
 import javax.swing.JFrame;
 
@@ -102,54 +101,29 @@ public class FilterSurfaceModule extends ClonableProcessingModule {
 		if (halfSpaceAnalysis)
 			halfSpaceAnalysis(data, nnb);
 		
-		final CyclicBarrier cb = new CyclicBarrier(ThreadPool.availProcessors());
+		List<Atom> filteredAtoms = Collections.synchronizedList(new ArrayList<>());
 		
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int j = i;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					//parallel filtering of atoms in contact with the surface
-					ArrayList<Atom> filteredAtoms = new ArrayList<Atom>();
-					int start = (int)(((long)data.getAtoms().size() * j)/ThreadPool.availProcessors());
-					int end = (int)(((long)data.getAtoms().size() * (j+1))/ThreadPool.availProcessors());
-
-					for (int i=start; i<end; i++){
-						if ((i-start)%1000 == 0)
-							ProgressMonitor.getProgressMonitor().addToCounter(1000);
-						Atom a = data.getAtoms().get(i);
-						if (a.getType() != surfaceType){
-							ArrayList<Atom> n = nnb.getNeigh(a);
-							int count = 0;
-							for (int j=0; j<n.size(); j++){	
-								if (n.get(j).getType() == surfaceType) {
-									count++;
-								}
-							}
-							if (count>=minSurfaceNeighbors) filteredAtoms.add(a);
-						}
+		ThreadPool.executeAsParallelStream(data.getAtoms().size(), i->{
+			Atom a = data.getAtoms().get(i);
+			if (a.getType() != surfaceType){
+				ArrayList<Atom> n = nnb.getNeigh(a);
+				int count = 0;
+				for (int j=0; j<n.size(); j++){	
+					if (n.get(j).getType() == surfaceType) {
+						count++;
 					}
-					
-					//wait if all processes are finished with the identification of 
-					//surface atoms, then relabel them and delete the RBV is applicable 
-					cb.await();
-					for (Atom a: filteredAtoms){
-						a.setType(surfaceType);
-						data.getRbvStorage().removeAtom(a);
-					}
-					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
-					return null;
 				}
-			});
+				if (count>=minSurfaceNeighbors) filteredAtoms.add(a);
+			}
+		});
+		
+		//Relabel atoms
+		for (Atom a: filteredAtoms) {
+			a.setType(surfaceType);
+			data.getRbvStorage().removeAtom(a);
 		}
 		
-		for (int i=0; i<cycles;i++)
-			ThreadPool.executeParallel(parallelTasks);
-		
 		data.countAtomTypes();
-		
-		ProgressMonitor.getProgressMonitor().stop();
 		
 		return null;
 	}
@@ -158,53 +132,34 @@ public class FilterSurfaceModule extends ClonableProcessingModule {
 	private void halfSpaceAnalysis(final AtomData data, final NearestNeighborBuilder<Atom> nnb) throws Exception {
 		final int surfaceType = data.getCrystalStructure().getSurfaceType();
 		
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int j = i;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					//parallel filtering of atoms in contact with the surface
-					int start = (int)(((long)data.getAtoms().size() * j)/ThreadPool.availProcessors());
-					int end = (int)(((long)data.getAtoms().size() * (j+1))/ThreadPool.availProcessors());
-
-					for (int i=start; i<end; i++){
-						if ((i-start)%1000 == 0)
-							ProgressMonitor.getProgressMonitor().addToCounter(1000);
-						Atom a = data.getAtoms().get(i);
-						
-						if (a.getType() != surfaceType){
-							ArrayList<Vec3> neigh = nnb.getNeighVec(a);
-								
-							//Test if all atoms are located almost in a half-space of the center atom
-							//Compute the sum of all neighbor vectors and negate 
-							Vec3 con = new Vec3();
-							for (Vec3 n : neigh)
-								con.sub(n);
-							//Normalize this vector --> this normal splits the volume into two half-spaces 
-							con.normalize();
-							boolean surface = true;
-							//Test if all neighbors either on one side of the halfplane (dot product < 0) or only 
-							//slightly off
-							for (Vec3 n : neigh){
-								if (con.dot(n.normalizeClone())>0.35f){
-									surface = false;
-									break;
-								}
-							}
-							if (surface){
-								a.setType(surfaceType);
-								data.getRbvStorage().removeAtom(a);
-							}
-						}
+		ThreadPool.executeAsParallelStream(data.getAtoms().size(), i->{
+			Atom a = data.getAtoms().get(i);
+			
+			if (a.getType() != surfaceType){
+				ArrayList<Vec3> neigh = nnb.getNeighVec(a);
+					
+				//Test if all atoms are located almost in a half-space of the center atom
+				//Compute the sum of all neighbor vectors and negate 
+				Vec3 con = new Vec3();
+				for (Vec3 n : neigh)
+					con.sub(n);
+				//Normalize this vector --> this normal splits the volume into two half-spaces 
+				con.normalize();
+				boolean surface = true;
+				//Test if all neighbors either on one side of the halfplane (dot product < 0) or only 
+				//slightly off
+				for (Vec3 n : neigh){
+					if (con.dot(n.normalizeClone())>0.35f){
+						surface = false;
+						break;
 					}
-					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
-					return null;
 				}
-			});
-		}
-		
-		ThreadPool.executeParallel(parallelTasks);
+				if (surface){
+					a.setType(surfaceType);
+					data.getRbvStorage().removeAtom(a);
+				}
+			}
+		});
 	}
 	
 	@Override

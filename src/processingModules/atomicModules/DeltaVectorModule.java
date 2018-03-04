@@ -19,16 +19,11 @@ package processingModules.atomicModules;
 
 import gui.JLogPanel;
 import gui.JPrimitiveVariablesPropertiesDialog;
-import gui.ProgressMonitor;
 import gui.PrimitiveProperty.ReferenceModeProperty;
 
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Vector;
-import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.JComboBox;
@@ -125,23 +120,20 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 		for (DataColumnInfo dci : common)
 			dataComboBox.addItem(new DataColumnInfo.VectorDataColumnInfo(dci));
 		
-		rp.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				dataComboBox.removeAllItems();
-				List<DataColumnInfo> common = new ArrayList<DataColumnInfo>();
-				for (DataColumnInfo dci: data.getDataColumnInfos())
-					if (dci.isFirstVectorComponent()) common.add(dci);
-				
-				if (rp.getValue() == ReferenceMode.REF)
-					common.retainAll(rp.getReferenceAtomData().getDataColumnInfos());
-				else
-					common.retainAll(Toolchain.getReferenceData(data, rp.getValue()).getDataColumnInfos());
-				
-				for (DataColumnInfo dci : common)
-					dataComboBox.addItem(new DataColumnInfo.VectorDataColumnInfo(dci));
-				dataComboBox.revalidate();
-			}
+		rp.addActionListener(e-> {
+			dataComboBox.removeAllItems();
+			List<DataColumnInfo> commonDCI = new ArrayList<DataColumnInfo>();
+			for (DataColumnInfo dci: data.getDataColumnInfos())
+				if (dci.isFirstVectorComponent()) commonDCI.add(dci);
+			
+			if (rp.getValue() == ReferenceMode.REF)
+				commonDCI.retainAll(rp.getReferenceAtomData().getDataColumnInfos());
+			else
+				commonDCI.retainAll(Toolchain.getReferenceData(data, rp.getValue()).getDataColumnInfos());
+			
+			for (DataColumnInfo dci : commonDCI)
+				dataComboBox.addItem(new DataColumnInfo.VectorDataColumnInfo(dci));
+			dataComboBox.revalidate();
 		});
 		
 		dialog.addLabel("Select vector common in both files");
@@ -253,53 +245,25 @@ public class DeltaVectorModule extends ClonableProcessingModule implements Toolc
 		final float[] deltaZArray = data.getDataArray(deltaZIndex).getData();
 		final float[] deltaNArray = data.getDataArray(deltaNIndex).getData();
 		
-		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
-		
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int j = i;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					
-					final int start = (int)(((long)data.getAtoms().size() * j)/ThreadPool.availProcessors());
-					final int end = (int)(((long)data.getAtoms().size() * (j+1))/ThreadPool.availProcessors());
-					
-					for (int i=start; i<end; i++){
-						if ((i-start)%1000 == 0)
-							ProgressMonitor.getProgressMonitor().addToCounter(1000);
-						
-						Atom a = data.getAtoms().get(i);
-						Atom a_ref = atomsMap.get(a.getNumber());
+		ThreadPool.executeAsParallelStream(data.getAtoms().size(), i->{
+			Atom a = data.getAtoms().get(i);
+			Atom a_ref = atomsMap.get(a.getNumber());
 
-						if (a_ref!=null){
-							int refID = a_ref.getID();
-							float x = xArray[i] - xRefArray[refID];						
-							float y = yArray[i] - yRefArray[refID];
-							float z = zArray[i] - zRefArray[refID];
-							
-							deltaXArray[i] = x; deltaYArray[i] = y; deltaZArray[i] = z;
-							deltaNArray[i] = (float)Math.sqrt(x*x + y*y +z*z); 
-						} else {
-							if (!mismatchWarningShown.getAndSet(true)){
-								JLogPanel.getJLogPanel().addWarning(String.format("Inaccurate differences for %s", toDeltaColumn.getName()), 
-										String.format("Atom IDs in %s could not be matched to the reference %s."
-												+ "Computed differences between these file may be inaccurate", 
-										data.getName(), referenceAtomData.getName()));
-							}
-							deltaXArray[i] = 0f; deltaYArray[i] = 0f; deltaZArray[i] = 0f;
-							deltaNArray[i] = 0f;
-						}
-					}
-					
-					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
-					return null;
-				}
-			});
-		}
-		ThreadPool.executeParallel(parallelTasks);	
-		
-		ProgressMonitor.getProgressMonitor().stop();
+			if (a_ref!=null){
+				int refID = a_ref.getID();
+				float x = xArray[i] - xRefArray[refID];						
+				float y = yArray[i] - yRefArray[refID];
+				float z = zArray[i] - zRefArray[refID];
+				
+				deltaXArray[i] = x; deltaYArray[i] = y; deltaZArray[i] = z;
+				deltaNArray[i] = (float)Math.sqrt(x*x + y*y +z*z); 
+			} else if (!mismatchWarningShown.getAndSet(true)){
+				JLogPanel.getJLogPanel().addWarning(String.format("Inaccurate differences for %s", toDeltaColumn.getName()), 
+						String.format("Atom IDs in %s could not be matched to the reference %s."
+								+ "Computed differences between these file may be inaccurate", 
+						data.getName(), referenceAtomData.getName()));
+			}
+		});
 		
 		return null;
 	}

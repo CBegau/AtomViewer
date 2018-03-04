@@ -38,7 +38,7 @@ import gnu.trove.list.array.TFloatArrayList;
 public class AtomData {
 	/**
 	 * Simulation box size, origin is at (0,0,0)
-	 * Atoms outside this box, but this reduced performance in many routines based 
+	 * Atoms outside this box are permitted, but this causes reduced performance in many routines based 
 	 * on nearest neighbors.
 	 */
 	private BoxParameter box;
@@ -53,7 +53,7 @@ public class AtomData {
 	 * Only used in polycrystalline / polyphase material:
 	 * Each subgrain is assigned a number, each atom is assigned a number of the grain its belongs to
 	 */
-	private HashMap<Integer, Grain> grains = new HashMap<Integer, Grain>();
+	private HashMap<Integer, Grain> grains = new HashMap<>();
 	private boolean grainsImported = false;
 	
 	/**
@@ -81,11 +81,11 @@ public class AtomData {
 	 * Data of any type, providing their own rendering routines and
 	 * control panels are stored in this list.
 	 */
-	private ArrayList<DataContainer> additionalData = new ArrayList<DataContainer>();
+	private ArrayList<DataContainer> additionalData = new ArrayList<>();
 	
 	/**
 	 * Container storing resultant Burgers vectors
-	 * TODO: This should be replaced using by a derived class of the generic DataContainer
+	 * TODO: This should be replaced by a derived class of the generic DataContainer
 	 * For historic reasons, this module is still somewhat privileged
 	 */
 	private RBVStorage rbvStorage = new RBVStorage();
@@ -214,7 +214,7 @@ public class AtomData {
 	 * This method should only be called internally
 	 * For public access an instance of {@link DeleteColumnModule} should be created
 	 * and passed to {@link #applyProcessingModule(ProcessingModule) applyProcessingModule} method.
-	 * This way it will be correctly recorded in a toolchain is needed 
+	 * This way it will be correctly recorded in a toolchain if needed 
 	 * @param dci
 	 */
 	public void removeDataColumnInfo(DataColumnInfo dci){
@@ -290,7 +290,7 @@ public class AtomData {
 	public StringBuilder plotNeighborsGraph(final Atom... atomsToPlot){
 		StringBuilder sb = new StringBuilder();
 		final float d = defaultCrystalStructure.getNearestNeighborSearchRadius();
-		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(box, d, true);
+		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<>(box, d, true);
 		Filter<Atom> filter = new Filter<Atom>() {
 			@Override
 			public boolean accept(Atom a) {

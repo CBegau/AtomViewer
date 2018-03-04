@@ -121,14 +121,11 @@ public class GrainIdentificationModule extends ClonableProcessingModule {
 		if (orderGrainsBySize){
 			ArrayList<Grain> sortedGrains = new ArrayList<Grain>(gr);
 			
-			Collections.sort(gr, new Comparator<Grain>() {
-				@Override
-				public int compare(Grain o1, Grain o2) {
-					double diff = o1.getMesh().getVolume() - o2.getMesh().getVolume();
-					if (diff<0.) return 1;
-					if (diff>0.) return -1;
-					return 0;
-				}
+			Collections.sort(gr, (Grain o1, Grain o2)-> {
+				double diff = o1.getMesh().getVolume() - o2.getMesh().getVolume();
+				if (diff<0.) return 1;
+				if (diff>0.) return -1;
+				return 0;
 			});
 			
 			for (int i=0; i<sortedGrains.size(); i++){

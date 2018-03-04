@@ -32,7 +32,6 @@ import java.util.zip.GZIPInputStream;
 
 import com.jogamp.opengl.GL3;
 import javax.swing.*;
-import javax.swing.event.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 import model.AtomData;
@@ -105,7 +104,7 @@ public class StressDataModule extends ClonableProcessingModule {
 	
 
 	private class StressDataContainer extends DataContainer{
-		private ArrayList<StressValue> stresses = new ArrayList<StressValue>();
+		private ArrayList<StressValue> stresses = new ArrayList<>();
 		private float[] minStress = new float[7];
 		private float[] maxStress = new float[7];
 		
@@ -115,6 +114,7 @@ public class StressDataModule extends ClonableProcessingModule {
 			DataInputStreamWrapper dis = null;
 			FileInputStream fis = null;
 			
+			//TODO: Change to try-with-ressource
 			if (stressFile.getName().endsWith(".gz")){
 				//Directly read gzip-compressed files
 				lnr = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(stressFile))));
@@ -483,24 +483,18 @@ public class StressDataModule extends ClonableProcessingModule {
 			this.setLayout(new GridLayout(6,1));
 			
 			this.add(showStressCheckbox);
-			this.showStressCheckbox.addActionListener(new ActionListener() {				
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					if (viewer!=null) viewer.reDraw();
-				}
+			this.showStressCheckbox.addActionListener(e-> {
+				if (viewer!=null) viewer.reDraw();
 			});
 			
 			this.add(stressComboBox);
-			stressComboBox.addActionListener(new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent arg0) {
-					showStressValue = stressComboBox.getSelectedIndex();
-					double range = globalMaxStress[showStressValue]-globalMinStress[showStressValue];
-					double min = globalMinStress[showStressValue];
-					upperRangeLimit.setText(String.format("Max: %.2f GPa;Set: %.2f GPa", globalMaxStress[showStressValue], rangeSlider.getUpperValue()*0.01f*range+min));
-					lowerRangeLimit.setText(String.format("Min: %.2f GPa;Set: %.2f GPa", globalMinStress[showStressValue], rangeSlider.getValue()*0.01f*range+min));
-					if (viewer!=null) viewer.reDraw();
-				}
+			stressComboBox.addActionListener(arg0-> {
+				showStressValue = stressComboBox.getSelectedIndex();
+				double range = globalMaxStress[showStressValue]-globalMinStress[showStressValue];
+				double min = globalMinStress[showStressValue];
+				upperRangeLimit.setText(String.format("Max: %.2f GPa;Set: %.2f GPa", globalMaxStress[showStressValue], rangeSlider.getUpperValue()*0.01f*range+min));
+				lowerRangeLimit.setText(String.format("Min: %.2f GPa;Set: %.2f GPa", globalMinStress[showStressValue], rangeSlider.getValue()*0.01f*range+min));
+				if (viewer!=null) viewer.reDraw();
 			});
 			
 			upperRangeLimit.setText("Max: 0 GPa");
@@ -509,33 +503,28 @@ public class StressDataModule extends ClonableProcessingModule {
 			
 			this.add(upperRangeLimit);
 			this.add(rangeSlider);
-			rangeSlider.addChangeListener(new ChangeListener() {
-				@Override
-				public void stateChanged(ChangeEvent e) {
-					setLowerLimit(rangeSlider.getValue()*0.01f);
-					setUpperLimit(rangeSlider.getUpperValue()*0.01f);
-					if (viewer!=null) viewer.repaint();
-					double range = globalMaxStress[showStressValue] - globalMinStress[showStressValue];
-					double min = globalMinStress[showStressValue];
-					rangeSlider.setToolTipText(String.format("lower limit = %.2f upper limit = %.2f", 
-							rangeSlider.getValue()*0.01f*range+min,
-							rangeSlider.getUpperValue()*0.01f*range+min));
-					upperRangeLimit.setText(String.format("Max: %.2f GPa;Set: %.2f GPa", globalMaxStress[showStressValue], rangeSlider.getUpperValue()*0.01f*range+min));
-					lowerRangeLimit.setText(String.format("Min: %.2f GPa;Set: %.2f GPa", globalMinStress[showStressValue], rangeSlider.getValue()*0.01f*range+min));
-					
-					if (viewer!=null) viewer.reDraw();
-				}
+			rangeSlider.addChangeListener(e-> {
+				setLowerLimit(rangeSlider.getValue()*0.01f);
+				setUpperLimit(rangeSlider.getUpperValue()*0.01f);
+				if (viewer!=null) viewer.repaint();
+				double range = globalMaxStress[showStressValue] - globalMinStress[showStressValue];
+				double min = globalMinStress[showStressValue];
+				rangeSlider.setToolTipText(String.format("lower limit = %.2f upper limit = %.2f", 
+						rangeSlider.getValue()*0.01f*range+min,
+						rangeSlider.getUpperValue()*0.01f*range+min));
+				upperRangeLimit.setText(String.format("Max: %.2f GPa;Set: %.2f GPa", globalMaxStress[showStressValue], rangeSlider.getUpperValue()*0.01f*range+min));
+				lowerRangeLimit.setText(String.format("Min: %.2f GPa;Set: %.2f GPa", globalMinStress[showStressValue], rangeSlider.getValue()*0.01f*range+min));
+				
+				if (viewer!=null) viewer.reDraw();
 			});
+			
 			rangeSlider.setValue(20);
 			rangeSlider.setUpperValue(100);
 			this.add(lowerRangeLimit);
 			this.add(invertIntervalCheckBox);
-			invertIntervalCheckBox.addActionListener(new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					invertInterval = invertIntervalCheckBox.isSelected();
-					if (viewer!=null) viewer.reDraw();
-				}
+			invertIntervalCheckBox.addActionListener(e-> {
+				invertInterval = invertIntervalCheckBox.isSelected();
+				if (viewer!=null) viewer.reDraw();
 			});
 		}
 		

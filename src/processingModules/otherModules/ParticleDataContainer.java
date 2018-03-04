@@ -26,8 +26,6 @@ import gui.glUtils.ObjectRenderData;
 import java.awt.Color;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,8 +34,6 @@ import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 
 import common.FastTFloatArrayList;
 import common.Vec3;
@@ -183,20 +179,12 @@ public abstract class ParticleDataContainer<T extends Vec3 & Pickable> extends D
 					new JSpinner(new SpinnerNumberModel(particleSize, 0.1, 10., 0.01));
 			this.add(sphereSizeSpinner, gbc);
 			
-			sphereSizeSpinner.addChangeListener(new ChangeListener() {
-				@Override
-				public void stateChanged(ChangeEvent arg0) {
-					particleSize = ((Number)sphereSizeSpinner.getModel().getValue()).floatValue();
-					viewer.updateAtoms();
-				}
+			sphereSizeSpinner.addChangeListener(arg0->{
+				particleSize = ((Number)sphereSizeSpinner.getModel().getValue()).floatValue();
+				viewer.updateAtoms();
 			});
 			
-			showParticlesCheckbox.addActionListener(new ActionListener() {
-				@Override
-				public void actionPerformed(ActionEvent arg0) {
-					viewer.updateAtoms();
-				}
-			});
+			showParticlesCheckbox.addActionListener(arg0->viewer.updateAtoms());
 		}
 		
 		public float getParticleSize() {
