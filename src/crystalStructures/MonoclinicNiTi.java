@@ -19,7 +19,7 @@
 package crystalStructures;
 
 import java.util.*;
-import java.util.concurrent.Callable;
+import java.util.stream.IntStream;
 
 import javax.swing.JFrame;
 
@@ -32,7 +32,6 @@ import model.Atom;
 import model.AtomData;
 import model.DataColumnInfo;
 import model.NearestNeighborBuilder;
-import common.ThreadPool;
 import common.Vec3;
 import common.ColorTable.ColorBarScheme;
 
@@ -43,16 +42,6 @@ public final class MonoclinicNiTi extends B2NiTi implements ProcessingModule{
 	
 	private static DataColumnInfo variantColumn = new DataColumnInfo("Variant", "variant", "",  
 			0f, 13f, true, ColorBarScheme.MARTENSITE_COLORING);
-	
-	//Both in <100>/<010>/<001> orientation
-//	private static double[][] neighPerfTiTi = new double[][]{
-//			{1.7999935 , 2.3601036, 0.0},
-//			{-2.5458164, 2.3601036, 0.0},
-//			{2.172903  ,-1.974308 , 0.0},
-//			{-2.172905 ,-1.974308 , 0.0},
-//			{0.0       , 0.0      , 2.8998308},
-//			{0.0       , 0.0      ,-2.8998299}
-//		};
 	
 	private static Vec3[] neighPerfNiNi = new Vec3[]{
 			new Vec3(1.7925072f , 1.9250374f , 0.0f),
@@ -140,25 +129,13 @@ public final class MonoclinicNiTi extends B2NiTi implements ProcessingModule{
 			else martArray[i] = IGNORED_VARIANT;
 		}
 		
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int j = i;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					final int start = (int)(((long)data.getAtoms().size() * j)/ThreadPool.availProcessors());
-					final int end = (int)(((long)data.getAtoms().size() * (j+1))/ThreadPool.availProcessors());
-					for (int i=start; i<end; i++){
-						Atom a = data.getAtoms().get(i);
-						if (a.getElement() % 2 == 1 && (a.getType() == 3 || a.getType() == 4))
-							martArray[i] = getVariant(a, nnb, rot);
-						else martArray[i] = IGNORED_VARIANT;
-					}
-					return null;
-				}
-			});
-		}
-		ThreadPool.executeParallel(parallelTasks);
+		IntStream.range(0, data.getAtoms().size()).parallel().forEach(i->{
+			Atom a = data.getAtoms().get(i);
+			if (a.getElement() % 2 == 1 && (a.getType() == 3 || a.getType() == 4))
+				martArray[i] = getVariant(a, nnb, rot);
+			else martArray[i] = IGNORED_VARIANT;
+		});
+		
 		return null;
 	}
 	

@@ -27,6 +27,7 @@ import gui.glUtils.Shader.BuiltInShader;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.IntStream;
 
 import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL3;
@@ -96,23 +97,9 @@ public class Skeletonizer extends DataContainer {
 				new NearestNeighborBuilder<SkeletonNode>(data.getBox(), meshingThreshold, true);
 		nnb.addAll(nodes);
 		final boolean sameGrainsOnly = data.isPolyCrystalline() && !skeletonizeOverGrains;
+		
 		//Parallel build
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int j = i;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					int start = (int)(((long)nodes.size() * j)/ThreadPool.availProcessors());
-					int end = (int)(((long)nodes.size() * (j+1))/ThreadPool.availProcessors());
-
-					for (int i=start; i<end; i++)
-						nodes.get(i).buildNeigh(nnb, sameGrainsOnly);
-					return null;
-				}
-			});
-		}
-		ThreadPool.executeParallel(parallelTasks);
+		IntStream.range(0, nodes.size()).parallel().forEach(i->nodes.get(i).buildNeigh(nnb, sameGrainsOnly));
 		
 		this.transform(data);
 		return true;

@@ -41,7 +41,7 @@ import java.io.InputStream;
 import java.nio.*;
 import java.text.DecimalFormat;
 import java.util.*;
-import java.util.concurrent.Callable;
+import java.util.stream.IntStream;
 
 import javax.imageio.ImageIO;
 import com.jogamp.opengl.*;
@@ -846,40 +846,25 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			
 			//Identify if individual particle radii are given
 			final int radiusColumn = atomData.getComponentIndex(DataColumnInfo.Component.PARTICLE_RADIUS);
-					
-			Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-			for (int i=0; i<ThreadPool.availProcessors(); i++){
-				final int j = i;
-				parallelTasks.add(new Callable<Void>() {
-					@Override
-					public Void call() throws Exception {
-						final int start = (int)(((long)renderData.getRenderableCells().size() * j)/ThreadPool.availProcessors());
-						final int end = (int)(((long)renderData.getRenderableCells().size() * (j+1))/ThreadPool.availProcessors());
-						
-						for (int i = start; i < end; i++) {
-							ObjectRenderData<Atom>.Cell cell = renderData.getRenderableCells().get(i);
-							for (int j=0; j<cell.getNumObjects();j++){
-								Atom c = cell.getObjects().get(j);
-								if (atomFilterSet.accept(c)) {
-									cell.getVisibiltyArray()[j] = true;
-									//Assign default or individual particle radius
-									cell.getSizeArray()[j] = radiusColumn == -1 ? sphereSize[c.getElement() % numEle] :
-										c.getData(radiusColumn, atomData) * sphereSize[c.getElement() % numEle];
-									float[] color = colFunc.getColor(c);
-									cell.getColorArray()[j*3+0] = color[0];
-									cell.getColorArray()[j*3+1] = color[1];
-									cell.getColorArray()[j*3+2] = color[2];
-								} else {
-									cell.getVisibiltyArray()[j] = false;
-								}
-							}
-						}
-						return null;
-					}
-				});
-			}
 			
-			ThreadPool.executeParallel(parallelTasks);
+			IntStream.range(0, renderData.getRenderableCells().size()).parallel().forEach(i->{
+				ObjectRenderData<Atom>.Cell cell = renderData.getRenderableCells().get(i);
+				for (int j=0; j<cell.getNumObjects();j++){
+					Atom c = cell.getObjects().get(j);
+					if (atomFilterSet.accept(c)) {
+						cell.getVisibiltyArray()[j] = true;
+						//Assign default or individual particle radius
+						cell.getSizeArray()[j] = radiusColumn == -1 ? sphereSize[c.getElement() % numEle] :
+							c.getData(radiusColumn, atomData) * sphereSize[c.getElement() % numEle];
+						float[] color = colFunc.getColor(c);
+						cell.getColorArray()[j*3+0] = color[0];
+						cell.getColorArray()[j*3+1] = color[1];
+						cell.getColorArray()[j*3+2] = color[2];
+					} else {
+						cell.getVisibiltyArray()[j] = false;
+					}
+				}
+			});
 			
 			renderData.reinitUpdatedCells();
 		}

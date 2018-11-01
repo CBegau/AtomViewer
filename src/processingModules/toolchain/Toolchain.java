@@ -206,7 +206,7 @@ public class Toolchain {
 		String module = reader.getAttributeValue(null, "name");
 		
 		Class<?> clz = Class.forName(module);
-		ProcessingModule pm = (ProcessingModule)clz.newInstance();
+		ProcessingModule pm = (ProcessingModule)clz.getDeclaredConstructor().newInstance();
 		
 		int version = Integer.parseInt(reader.getAttributeValue(null, "version"));
 		int requiredVersion = clz.getAnnotation(ToolchainSupport.class).version();

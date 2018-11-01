@@ -19,12 +19,9 @@
 package processingModules.atomicModules;
 
 import gui.JPrimitiveVariablesPropertiesDialog;
-import gui.ProgressMonitor;
 import gui.PrimitiveProperty.*;
 
 import java.util.ArrayList;
-import java.util.Vector;
-import java.util.concurrent.Callable;
 
 import javax.swing.JFrame;
 import javax.swing.JSeparator;
@@ -113,10 +110,9 @@ public class TemperatureModule extends ClonableProcessingModule{
 	
 	@Override
 	public ProcessingResult process(final AtomData data) throws Exception {
-		final NearestNeighborBuilder<Atom> nnb;
-		if (centerOfMassVelocityRadius > 0)
-			nnb = new NearestNeighborBuilder<Atom>(data.getBox(), centerOfMassVelocityRadius, true);
-		else nnb = null;
+		final NearestNeighborBuilder<Atom> nnb = centerOfMassVelocityRadius > 0
+				? new NearestNeighborBuilder<>(data.getBox(), centerOfMassVelocityRadius, true)
+				: null;
 		
 		int m = data.getComponentIndex(Component.MASS);
 		int v_x = data.getComponentIndex(Component.VELOCITY_X);
@@ -134,93 +130,74 @@ public class TemperatureModule extends ClonableProcessingModule{
 		int vAbsIndex = data.getDataColumnIndex(data.getDataColumnInfos().get(v_x).getVectorComponents()[3]);
 		final float[] vAbsArray = data.getDataArray(vAbsIndex).getData();
 		final float[] temperatureArray = data.getDataArray(temperatureIndex).getData();
-		
-		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
-		
+				
 		if (centerOfMassVelocityRadius > 0)
 			nnb.addAll(data.getAtoms());
 		
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int j = i;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					final int start = (int)(((long)data.getAtoms().size() * j)/ThreadPool.availProcessors());
-					final int end = (int)(((long)data.getAtoms().size() * (j+1))/ThreadPool.availProcessors());
-					for (int i=start; i<end; i++){
-						if ((i-start)%1000 == 0)
-							ProgressMonitor.getProgressMonitor().addToCounter(1000);
-						
-						Atom a = data.getAtoms().get(i);
-						float vx = vxArray[i];
-						float vy = vyArray[i];
-						float vz = vzArray[i];
-						
-						float totThermalEnergy = 0f;
-						
-						if (centerOfMassVelocityRadius > 0){
-						    if (ignoreFixedAtoms && vAbsArray[i] == 0.f){ //Fixed atoms have no temperature
-						        temperatureArray[i] = 0f;
-						        continue;
-						    }
-						    
-							float av_x = vx;
-							float av_y = vy;
-							float av_z = vz;
-							int nn = 1;
-							
-							ArrayList<Atom> neigh = nnb.getNeigh(a);
-							for (Atom n : neigh){
-								int id = n.getID();
-								if (!ignoreFixedAtoms || vAbsArray[id]!=0f) {
-								    //Ignore fixed atoms if requested
-								    av_x += vxArray[id];
-								    av_y += vyArray[id];
-								    av_z += vzArray[id];
-								    nn++;
-								}
-							}
-							
-							av_x /= nn;
-							av_y /= nn;
-							av_z /= nn;
-							
-							totThermalEnergy = massArray[i] *
-									((vx-av_x)*(vx-av_x) + (vy-av_y)*(vy-av_y) + (vz-av_z)*(vz-av_z));
-							
-							if (spatialAverage){
-								for (Atom n : neigh){
-									int id = n.getID();
-									if (!ignoreFixedAtoms || vAbsArray[id]!=0f){
-    									float ax = vxArray[id];
-    									float ay = vyArray[id];
-    									float az = vzArray[id];
-    									float am = massArray[id];
-    									
-    									totThermalEnergy += am *
-    											((ax-av_x)*(ax-av_x) + (ay-av_y)*(ay-av_y) + (az-av_z)*(az-av_z));
-									}
-								}
+		ThreadPool.executeAsParallelStream(data.getAtoms().size(), i->{
+			Atom a = data.getAtoms().get(i);
+			float vx = vxArray[i];
+			float vy = vyArray[i];
+			float vz = vzArray[i];
+			
+			float totThermalEnergy = 0f;
+			
+			if (centerOfMassVelocityRadius > 0){
+			    if (ignoreFixedAtoms && vAbsArray[i] == 0.f){ //Fixed atoms have no temperature
+			        temperatureArray[i] = 0f;
+			    } else {
+					float av_x = vx;
+					float av_y = vy;
+					float av_z = vz;
+					int nn = 1;
+					
+					ArrayList<Atom> neigh = nnb.getNeigh(a);
+					for (Atom n : neigh){
+						int id = n.getID();
+						if (!ignoreFixedAtoms || vAbsArray[id]!=0f) {
+						    //Ignore fixed atoms if requested
+						    av_x += vxArray[id];
+						    av_y += vyArray[id];
+						    av_z += vzArray[id];
+						    nn++;
+						}
+					}
+					
+					av_x /= nn;
+					av_y /= nn;
+					av_z /= nn;
+					
+					totThermalEnergy = massArray[i] *
+							((vx-av_x)*(vx-av_x) + (vy-av_y)*(vy-av_y) + (vz-av_z)*(vz-av_z));
+					
+					if (spatialAverage){
+						for (Atom n : neigh){
+							int id = n.getID();
+							if (!ignoreFixedAtoms || vAbsArray[id]!=0f){
+								float ax = vxArray[id];
+								float ay = vyArray[id];
+								float az = vzArray[id];
+								float am = massArray[id];
 								
-								totThermalEnergy /= nn;
+								totThermalEnergy += am *
+										((ax-av_x)*(ax-av_x) + (ay-av_y)*(ay-av_y) + (az-av_z)*(az-av_z));
 							}
-						} else {
-							totThermalEnergy = massArray[i] * (vx*vx + vy*vy + vz*vz);
 						}
 						
-						//final scaling to (average) temperature
-						totThermalEnergy /= 3f;
-						totThermalEnergy *= scalingFactor;
-						
-						temperatureArray[i] = totThermalEnergy;
+						totThermalEnergy /= nn;
 					}
-					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
-					return null;
-				}
-			});
-		}
-		ThreadPool.executeParallel(parallelTasks);
+			    }
+			} else {
+				totThermalEnergy = massArray[i] * (vx*vx + vy*vy + vz*vz);
+			}
+			
+			//final scaling to (average) temperature
+			totThermalEnergy /= 3f;
+			totThermalEnergy *= scalingFactor;
+			
+			temperatureArray[i] = totThermalEnergy;
+		});
+		
 		
 		double[] tempPerElement = new double[data.getNumberOfElements()];
 		int[] numPerElement = new int[data.getNumberOfElements()];
@@ -233,8 +210,7 @@ public class TemperatureModule extends ClonableProcessingModule{
 		s.append("Average temperatures for elements in "+data.getName()+"<br>");
 		for (int i=0; i<tempPerElement.length; i++)
 			s.append(String.format("Element %d: %.6f<br>", i, numPerElement[i]==0 ? 0. : tempPerElement[i]/numPerElement[i]));
-				
-		ProgressMonitor.getProgressMonitor().stop();
+		
 
 		return new DataContainer.DefaultDataContainerProcessingResult(null, s.toString());
 	}

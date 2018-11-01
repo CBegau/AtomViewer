@@ -271,7 +271,7 @@ public abstract class PrimitiveProperty<T> extends JPanel{
 		public  void setToDefault() {
 			this.value = defaultValue;
 			if (valueSpinner!=null){
-				valueSpinner.setValue(new Double((double)this.value));
+				valueSpinner.setValue(this.value);
 			}
 		}
 		

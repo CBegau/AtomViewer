@@ -20,7 +20,6 @@ import common.CommonUtils;
 import common.Vec3;
 
 import javax.swing.*;
-import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import model.*;
@@ -64,9 +63,9 @@ public class BinningDataContainer extends DataContainer {
 			super("Binning");
 			
 			//Create the label table
-			Hashtable<Integer, JLabel> labelTable = new Hashtable<Integer, JLabel>();
-			labelTable.put( new Integer( 0 ), new JLabel("Opaque") );
-			labelTable.put( new Integer( 100 ), new JLabel("Transparent") );
+			Hashtable<Integer, JLabel> labelTable = new Hashtable<>();
+			labelTable.put(0, new JLabel("Opaque") );
+			labelTable.put(100, new JLabel("Transparent") );
 			
 			transparencySlider.setPaintTicks(true);
 			transparencySlider.setMajorTickSpacing(100);
@@ -117,23 +116,17 @@ public class BinningDataContainer extends DataContainer {
 	        gbc.gridwidth = 2;
 	        this.add(resetButton, gbc); gbc.gridy++;
 	        
-	        ChangeListener subdivideChangeListener = new ChangeListener() {
-                @Override
-                public void stateChanged(ChangeEvent e) {
-                    binnedData = computeBin(Configuration.getCurrentAtomData());
-                    RenderingConfiguration.getViewer().reDraw();
-                }
-            };
+			ChangeListener subdivideChangeListener = (e -> {
+				binnedData = computeBin(Configuration.getCurrentAtomData());
+				RenderingConfiguration.getViewer().reDraw();
+			});
 	        xBlocksSpinner.addChangeListener(subdivideChangeListener);
 	        yBlocksSpinner.addChangeListener(subdivideChangeListener);
 	        zBlocksSpinner.addChangeListener(subdivideChangeListener);
             
-			transparencySlider.addChangeListener(new ChangeListener() {
-				@Override
-				public void stateChanged(ChangeEvent e) {
-					transparency = 1-(transparencySlider.getValue()*0.01f);
-					RenderingConfiguration.getViewer().reDraw();
-				}
+			transparencySlider.addChangeListener(e->{
+				transparency = 1-(transparencySlider.getValue()*0.01f);
+				RenderingConfiguration.getViewer().reDraw();
 			});
 			transparencySlider.addChangeListener(e -> {
 				transparency = 1-(transparencySlider.getValue()*0.01f);
@@ -285,7 +278,7 @@ public class BinningDataContainer extends DataContainer {
         if (binnedData == null) return;
         
         final float[] minMax = minMaxStorage.get(dataPanel.selectedColumn);
-        FilterSet<Bin> binFilter = new FilterSet<BinnedData.Bin>();
+        FilterSet<Bin> binFilter = new FilterSet<>();
         
         binFilter.addFilter(b-> {
         	return renderRange.isInInterval(b.getCenterOfObject());

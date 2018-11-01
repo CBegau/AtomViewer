@@ -21,10 +21,8 @@ package model.mesh;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Vector;
-import java.util.concurrent.Callable;
+import java.util.stream.IntStream;
 
-import common.ThreadPool;
 import common.Tupel;
 import common.Vec3;
 import model.BoxParameter;
@@ -86,10 +84,9 @@ public class ClosestTriangleSearchBruteForce<T extends Vec3> extends ClosestTria
 
 	@Override
 	public List<T> getElementsWithinThreshold(List<T> sites) {
-		final ArrayList<T> elementsWithinThreshold = new ArrayList<T>();
-		final List<T> sync = Collections.synchronizedList(elementsWithinThreshold); 
+		final List<T> elementsWithinThreshold = Collections.synchronizedList(new ArrayList<>()); 
 		
-		final ArrayList<MeshDistanceHelper<T>> sitesToTest = new ArrayList<MeshDistanceHelper<T>>();
+		final ArrayList<MeshDistanceHelper<T>> sitesToTest = new ArrayList<>();
 		
 		final NearestNeighborBuilder<MeshDistanceHelper<T>> nnb =
 				new NearestNeighborBuilder<MeshDistanceHelper<T>>(box, nearestNeighborDistance);
@@ -99,61 +96,46 @@ public class ClosestTriangleSearchBruteForce<T extends Vec3> extends ClosestTria
 			sitesToTest.add(amdh);
 			nnb.add(amdh);
 		}
+		
+		IntStream.range(0, sitesToTest.size()).parallel().forEach(i->{
+			MeshDistanceHelper<T> a = sitesToTest.get(i);
+			if (Thread.interrupted()) return;
+			
+			//Each element is associated with maximum and minimum value for the distance
+			//to the mesh, initially 0 to infinity.
+			
+			//If the threshold distance is within the range of possible values
+			//Compute the exact value
+			if (a.minDist<threshold && a.maxDist>threshold){
+				a.minDist = (float)Math.sqrt(sqrDistToMeshElement(a));
+				if (a.minDist<threshold) //The exact distance is not known, it is only
+					a.minDist = 0f;		// guaranteed that it is <threshold in this case
+				a.maxDist = a.minDist;
+			}
+			
+			//In the case the maximum possible distance is smaller than the threshold, accept 
+			if (a.maxDist <= threshold){
+				elementsWithinThreshold.add(a.v);
+			}
+			
+			//Update the information of neighboring particles,
+			//shrink their range of possible values for min/max, based on the min/max values of
+			//the current point and the distance between the points.
+			//There is no need to synchronize the updates between threads
+			//Race conditions could result in a wider range than needed, but this does not change
+			//the final result
+			ArrayList<Tupel<MeshDistanceHelper<T>, Vec3>> nn = nnb.getNeighAndNeighVec(a);
+			for (Tupel<MeshDistanceHelper<T>, Vec3> t : nn){
+				MeshDistanceHelper<T> n = t.o1;
+				float max = a.maxDist+t.o2.getLength();
+				float min = Math.max(0f, a.minDist-t.o2.getLength());
 				
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int j = i;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					
-					int start = (int)(((long)sitesToTest.size() * j)/ThreadPool.availProcessors());
-					int end = (int)(((long)sitesToTest.size() * (j+1))/ThreadPool.availProcessors());
-					
-					//Each element is associated with maximum and minimum value for the distance
-					//to the mesh, initially 0 to infinity.
-					for (int i=start; i<end; i++){
-						MeshDistanceHelper<T> a = sitesToTest.get(i);
-						if (Thread.interrupted()) return null;
-						
-						//If the threshold distance is within the range of possible values
-						//Compute the exact value
-						if (a.minDist<threshold && a.maxDist>threshold){
-							a.minDist = (float)Math.sqrt(sqrDistToMeshElement(a));
-							if (a.minDist<threshold) //The exact distance is not known, it is only
-								a.minDist = 0f;		// guaranteed that it is <threshold in this case
-							a.maxDist = a.minDist;
-						}
-						
-						//In the case the maximum possible distance is smaller than the threshold, accept 
-						if (a.maxDist <= threshold){
-							sync.add(a.v);
-						}
-						
-						//Update the information of neighboring particles,
-						//shrink their range of possible values for min/max, based on the min/max values of
-						//the current point and the distance between the points.
-						//There is no need to synchronize the updates between threads
-						//Race conditions could result in a wider range than needed, but this does not change
-						//the final result
-						ArrayList<Tupel<MeshDistanceHelper<T>, Vec3>> nn = nnb.getNeighAndNeighVec(a);
-						for (Tupel<MeshDistanceHelper<T>, Vec3> t : nn){
-							MeshDistanceHelper<T> n = t.o1;
-							float max = a.maxDist+t.o2.getLength();
-							float min = Math.max(0f, a.minDist-t.o2.getLength());
-							
-							if (max < n.maxDist)
-								n.maxDist = max;
-							if (min > n.minDist)
-								n.minDist = min;
-						}
-					}
-				
-					return null;
-				}
-			});
-		};
-		ThreadPool.executeParallel(parallelTasks);
+				if (max < n.maxDist)
+					n.maxDist = max;
+				if (min > n.minDist)
+					n.minDist = min;
+			}
+		});
 		
 		return elementsWithinThreshold;
 	}
@@ -169,7 +151,6 @@ public class ClosestTriangleSearchBruteForce<T extends Vec3> extends ClosestTria
 			this.minDist = 0f;	//Unknown value
 			this.maxDist = Float.POSITIVE_INFINITY;	//Unknown value
 		}
-		
 	}
 	
 }

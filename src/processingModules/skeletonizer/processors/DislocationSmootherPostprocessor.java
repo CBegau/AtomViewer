@@ -18,10 +18,8 @@
 package processingModules.skeletonizer.processors;
 
 import java.util.ArrayList;
-import java.util.Vector;
-import java.util.concurrent.Callable;
+import java.util.stream.IntStream;
 
-import common.ThreadPool;
 import common.Vec3;
 import model.BoxParameter;
 import processingModules.skeletonizer.Dislocation;
@@ -37,37 +35,23 @@ public class DislocationSmootherPostprocessor implements SkeletonDislocationPost
 		final ArrayList<Dislocation> dis = skel.getDislocations();
 		final BoxParameter box = skel.getAtomData().getBox();
 		
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int j = i;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					int start = (int)(((long)dis.size() * j)/ThreadPool.availProcessors());
-					int end = (int)(((long)dis.size() * (j+1))/ThreadPool.availProcessors());
-					//Iterate over each dislocation in parallel and smooth each one
-					for (int j=start; j<end; j++){
-						Dislocation d = dis.get(j);
-						if (d.getLine().length>2){
-							Vec3[] pos = new Vec3[d.getLine().length-2];
-							//Ignore first and last node. Junctions are not moved 
-							for (int i=1; i<d.getLine().length-1; i++){
-								SkeletonNode n = d.getLine()[i];
-								Vec3 n1 = box.getPbcCorrectedDirection(n, d.getLine()[i-1]);
-								Vec3 n2 = box.getPbcCorrectedDirection(n, d.getLine()[i+1]);
-								
-								//Computing new position, depending on the current location and the vectors
-								//to neighboring nodes
-								pos[i-1] = n.subClone(n1.add(n2).multiply(0.25f));
-							}
-							for (int i=1; i<d.getLine().length-1; i++)
-								d.getLine()[i].setTo(pos[i-1]);
-						}
-					}
-					return null;
+		IntStream.range(0, dis.size()).parallel().forEach(j->{
+			Dislocation d = dis.get(j);
+			if (d.getLine().length>2){
+				Vec3[] pos = new Vec3[d.getLine().length-2];
+				//Ignore first and last node. Junctions are not moved 
+				for (int i=1; i<d.getLine().length-1; i++){
+					SkeletonNode n = d.getLine()[i];
+					Vec3 n1 = box.getPbcCorrectedDirection(n, d.getLine()[i-1]);
+					Vec3 n2 = box.getPbcCorrectedDirection(n, d.getLine()[i+1]);
+					
+					//Computing new position, depending on the current location and the vectors
+					//to neighboring nodes
+					pos[i-1] = n.subClone(n1.add(n2).multiply(0.25f));
 				}
-			});
-		}
-		ThreadPool.executeParallel(parallelTasks);
+				for (int i=1; i<d.getLine().length-1; i++)
+					d.getLine()[i].setTo(pos[i-1]);
+			}
+		});
 	}
 }
