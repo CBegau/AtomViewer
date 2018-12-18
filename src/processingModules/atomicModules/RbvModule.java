@@ -19,7 +19,6 @@
 package processingModules.atomicModules;
 
 import gui.JPrimitiveVariablesPropertiesDialog;
-import gui.ProgressMonitor;
 import gui.PrimitiveProperty.*;
 
 import java.util.*;
@@ -40,7 +39,6 @@ import model.AtomData;
 import model.DataColumnInfo;
 import model.Filter;
 import model.NearestNeighborBuilder;
-import model.RBVStorage;
 import model.polygrain.Grain;
 import common.*;
 import crystalStructures.CrystalStructure;
@@ -191,18 +189,14 @@ public class RbvModule extends ClonableProcessingModule{
 			}
 		}
 
-		ProgressMonitor.getProgressMonitor().start(infosList.size());
 		
-		Vector<AnalyseCallable> tasks = new Vector<AnalyseCallable>();
-		for (int i = 0; i < ThreadPool.availProcessors(); i++) {
-			int start = (int)(((long)infosList.size() * i)/ThreadPool.availProcessors());
-			int end = (int)(((long)infosList.size() * (i+1))/ThreadPool.availProcessors());
-			tasks.add(new AnalyseCallable(start, end, infosList, data.getRbvStorage()));
-		}
-		
-		ThreadPool.executeParallel(tasks);
-		
-		ProgressMonitor.getProgressMonitor().stop();
+		//Computing RBVs
+		ThreadPool.executeAsParallelStream(infosList.size(), i->{
+			RbvInfo<Atom> info = infosList.get(i); 
+			Tupel<Vec3,Vec3> rbv = info.calculateBurgersVector();
+			if (rbv != null)
+				data.getRbvStorage().addRBV(info.atom, rbv.o1, rbv.o2);
+		});
 	}
 
 	/**
@@ -618,35 +612,6 @@ public class RbvModule extends ClonableProcessingModule{
 		}
 	}
 	
-	private class AnalyseCallable implements Callable<Void> {
-		private int start, end;
-	
-		private List<RbvInfo<Atom>> infos;
-		private RBVStorage rbvStorage;
-		
-		public AnalyseCallable(int start, int end, List<RbvInfo<Atom>> atoms, RBVStorage rbvStorage) {
-			this.start = start;
-			this.end = end;
-			this.infos = atoms;
-			this.rbvStorage = rbvStorage;
-		}
-
-		public Void call() throws Exception{
-			for (int i = start; i < end; i++) {
-				if (Thread.interrupted()) return null;
-				if ((i-start)%1000 == 0)
-					ProgressMonitor.getProgressMonitor().addToCounter(1000);
-			
-				RbvInfo<Atom> info = infos.get(i); 
-				Tupel<Vec3,Vec3> rbv = info.calculateBurgersVector();
-				if (rbv != null)
-					rbvStorage.addRBV(info.atom, rbv.o1, rbv.o2);
-			}
-			
-			ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
-			return null;
-		}
-	}
 
 	@Override
 	public String getShortName() {

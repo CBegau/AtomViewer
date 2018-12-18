@@ -97,21 +97,7 @@ public class ObjectRenderData<T extends Vec3 & Pickable> {
 	}
 	
 	public void reinitUpdatedCells(){
-		Vector<Callable<Void>> tasks = new Vector<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int start = (int)(((long)allCells.size() * i)/ThreadPool.availProcessors());
-			final int end = (int)(((long)allCells.size() * (i+1))/ThreadPool.availProcessors());
-			tasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					for (int i=start; i<end; i++){
-						allCells.get(i).prepareRendering();
-					}
-					return null;
-				}
-			});
-		}
-		ThreadPool.executeParallelSecondLevel(tasks);
+		allCells.stream().parallel().forEach(c->c.prepareRendering());
 	}
 	
 	public boolean isSubdivided() {
@@ -384,38 +370,54 @@ public class ObjectRenderData<T extends Vec3 & Pickable> {
 			final float invSizeY = 1f/subBlockSize.y;
 			final float invSizeZ = 1f/subBlockSize.z;
 			final Vec3 corner = this.subClone(this.size.multiplyClone(0.5f));
-			Vector<Callable<Void>> tasks = new Vector<Callable<Void>>();
 			
-			for (int i=0; i<ThreadPool.availProcessors(); i++){
-				final int start = (int)(((long)objects.size() * i)/ThreadPool.availProcessors());
-				final int end = (int)(((long)objects.size() * (i+1))/ThreadPool.availProcessors());
-
-				tasks.add(new Callable<Void>() {
-					
-					@Override
-					public Void call() throws Exception {
-						for (int i=start; i<end; i++){
-							T ra = objects.get(i);
-							int x = (int)((ra.x-corner.x)*invSizeX);
-							int y = (int)((ra.y-corner.y)*invSizeY);
-							int z = (int)((ra.z-corner.z)*invSizeZ);
-							
-							if (x < 0) x = 0;
-							else if (x >= blocks[0]) x = blocks[0]-1;
-							if (y < 0) y = 0;
-							else if (y >= blocks[1]) y = blocks[1]-1;
-							if (z < 0) z = 0;
-							else if (z >= blocks[2]) z = blocks[2]-1;
-							
-							cells.get(x*yz + y*blocks[2] + z).addElementSynchronized(ra);
-						}
-						
-						return null;
-					}
-				});
-			}
+			objects.parallelStream().forEach(ra->{
+				int x = (int)((ra.x-corner.x)*invSizeX);
+				int y = (int)((ra.y-corner.y)*invSizeY);
+				int z = (int)((ra.z-corner.z)*invSizeZ);
+				
+				if (x < 0) x = 0;
+				else if (x >= blocks[0]) x = blocks[0]-1;
+				if (y < 0) y = 0;
+				else if (y >= blocks[1]) y = blocks[1]-1;
+				if (z < 0) z = 0;
+				else if (z >= blocks[2]) z = blocks[2]-1;
+				
+				cells.get(x*yz + y*blocks[2] + z).addElementSynchronized(ra);
+			});
 			
-			ThreadPool.executeParallelSecondLevel(tasks);
+//			Vector<Callable<Void>> tasks = new Vector<Callable<Void>>();
+//			
+//			for (int i=0; i<ThreadPool.availProcessors(); i++){
+//				final int start = (int)(((long)objects.size() * i)/ThreadPool.availProcessors());
+//				final int end = (int)(((long)objects.size() * (i+1))/ThreadPool.availProcessors());
+//
+//				tasks.add(new Callable<Void>() {
+//					
+//					@Override
+//					public Void call() throws Exception {
+//						for (int i=start; i<end; i++){
+//							T ra = objects.get(i);
+//							int x = (int)((ra.x-corner.x)*invSizeX);
+//							int y = (int)((ra.y-corner.y)*invSizeY);
+//							int z = (int)((ra.z-corner.z)*invSizeZ);
+//							
+//							if (x < 0) x = 0;
+//							else if (x >= blocks[0]) x = blocks[0]-1;
+//							if (y < 0) y = 0;
+//							else if (y >= blocks[1]) y = blocks[1]-1;
+//							if (z < 0) z = 0;
+//							else if (z >= blocks[2]) z = blocks[2]-1;
+//							
+//							cells.get(x*yz + y*blocks[2] + z).addElementSynchronized(ra);
+//						}
+//						
+//						return null;
+//					}
+//				});
+//			}
+//			
+//			ThreadPool.executeParallelSecondLevel(tasks);
 			
 			this.objects = null;
 			

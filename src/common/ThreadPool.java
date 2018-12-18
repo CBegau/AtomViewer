@@ -35,7 +35,7 @@ import gui.ProgressMonitor;
  */
 public class ThreadPool {
 
-	private static ScheduledThreadPoolExecutor threadPool, secondLevelThreadPool;
+	private static ScheduledThreadPoolExecutor threadPool;
 	private static int processors = Runtime.getRuntime().availableProcessors();
 	
 	static {
@@ -48,16 +48,6 @@ public class ThreadPool {
 			}
 		};
 		threadPool = new ScheduledThreadPoolExecutor(processors, tf);
-		
-		ThreadFactory tf2 = new ThreadFactory() {
-			@Override
-			public Thread newThread(Runnable r) {
-				Thread t = new Thread(r);
-				t.setPriority(Thread.MIN_PRIORITY);
-				return t;
-			}
-		};
-		secondLevelThreadPool = new ScheduledThreadPoolExecutor(processors, tf2);
 	}
 	
 	/**
@@ -90,46 +80,8 @@ public class ThreadPool {
 	 * @param c
 	 * @return
 	 */
-	@Deprecated
 	public static <V> Future<V> submit(Callable<V> c){
 		return threadPool.submit(c);
-	}
-	
-	/**
-	 * Runs a batch of Callables instances in parallel.
-	 * The method returns once all callables have been executed
-	 * The Callables are exectuted with lower priority than the primary ThreadPool.
-	 * It should be used to improve the level of parallelism within threads that run in parallel themself
-	 * @param <V> The returned type of each Callable instance. If no return is required use Void 
-	 * @param c List of callables
-	 * @return List of Future objects, holding the returned values
-	 */
-	@Deprecated
-	public static <V> List<Future<V>> executeParallelSecondLevel(List<? extends Callable<V>> c){
-		try {
-			List<Future<V>> futures = secondLevelThreadPool.invokeAll(c);
-			for (Future<V> f : futures){
-				try {
-					f.get();
-				} catch (ExecutionException e) {
-					e.printStackTrace();
-				}
-			}
-			return futures;
-		} catch (InterruptedException e) {
-			return null;
-		}
-	}
-	
-	/**
-	 * Submit a single callable that is executed asynchronously,
-	 * whenever the second level ThreadPool has free resources 
-	 * @param c
-	 * @return
-	 */
-	@Deprecated
-	public static <V> Future<V> submitSecondLevel(Callable<V> c){
-		return secondLevelThreadPool.submit(c);
 	}
 	
 	/**

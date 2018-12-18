@@ -2,12 +2,9 @@ package processingModules.atomicModules;
 
 import gui.JLogPanel;
 import gui.JPrimitiveVariablesPropertiesDialog;
-import gui.ProgressMonitor;
 import gui.PrimitiveProperty.*;
 
 import java.util.ArrayList;
-import java.util.Vector;
-import java.util.concurrent.Callable;
 
 import javax.swing.JFrame;
 import javax.swing.JSeparator;
@@ -149,56 +146,33 @@ public class SlipVectorModule extends ClonableProcessingModule{
 		final float[] sz = data.getDataArray(data.getDataColumnIndex(cci[2])).getData();
 		final float[] sa = data.getDataArray(data.getDataColumnIndex(cci[3])).getData();
 		
-		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
-		
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int j = i;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					
-					final int start = (int)(((long)referenceAtomData.getAtoms().size() * j)/ThreadPool.availProcessors());
-					final int end = (int)(((long)referenceAtomData.getAtoms().size() * (j+1))/ThreadPool.availProcessors());
-					
-					for (int i=start; i<end; i++){
-						Vec3 sum = new Vec3();
-						int slipped = 0;
-						if ((i-start)%1000 == 0)
-							ProgressMonitor.getProgressMonitor().addToCounter(1000);
-						
-						Atom a = referenceAtomData.getAtoms().get(i);
-						Atom a_current = atomsMap.get(a.getNumber());
+		ThreadPool.executeAsParallelStream(referenceAtomData.getAtoms().size(), i->{
+			Vec3 sum = new Vec3();
+			int slipped = 0;
 
-						ArrayList<Tupel<Atom, Vec3>> neigh = nnb.getNeighAndNeighVec(a);
-						if (neigh.size()!=0){
-							for (Tupel<Atom,Vec3> t : neigh){
-								Atom n_current = atomsMap.get(t.o1.getNumber());
-								//Subtract current distance of the atoms (t.o2) from reference distance and add to sum
-								Vec3 slip = t.o2.sub(data.getBox().getPbcCorrectedDirection(n_current, a_current));
-								if (slip.getLengthSqr() > slipThreshold*slipThreshold){
-									sum.add(slip);
-									slipped++;
-								}
-							}
-							if (slipped>0)
-								sum.divide(slipped);
-						}
-						int id = a_current.getID();
-						sx[id] = -sum.x;
-						sy[id] = -sum.y;
-						sz[id] = -sum.z;
-						sa[id] = sum.getLength();
+			Atom a = referenceAtomData.getAtoms().get(i);
+			Atom a_current = atomsMap.get(a.getNumber());
+
+			ArrayList<Tupel<Atom, Vec3>> neigh = nnb.getNeighAndNeighVec(a);
+			if (neigh.size()!=0){
+				for (Tupel<Atom,Vec3> t : neigh){
+					Atom n_current = atomsMap.get(t.o1.getNumber());
+					//Subtract current distance of the atoms (t.o2) from reference distance and add to sum
+					Vec3 slip = t.o2.sub(data.getBox().getPbcCorrectedDirection(n_current, a_current));
+					if (slip.getLengthSqr() > slipThreshold*slipThreshold){
+						sum.add(slip);
+						slipped++;
 					}
-					
-					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
-					return null;
 				}
-			});
-		}
-		ThreadPool.executeParallel(parallelTasks);	
-		
-		ProgressMonitor.getProgressMonitor().stop();
+				if (slipped>0)
+					sum.divide(slipped);
+			}
+			int id = a_current.getID();
+			sx[id] = -sum.x;
+			sy[id] = -sum.y;
+			sz[id] = -sum.z;
+			sa[id] = sum.getLength();
+		});
 		
 		return null;
 	}

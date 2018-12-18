@@ -21,9 +21,9 @@ package model.mesh;
 import java.awt.event.InputEvent;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.IntStream;
 
 import common.CommonUtils;
-import common.ThreadPool;
 import common.Tupel;
 import common.Vec3;
 import model.*;
@@ -105,31 +105,13 @@ public class Mesh implements Callable<Void>, Pickable{
 		gridZ = (int)(((upperBounds.z-lowerBounds.z)*invCellSize)+1)+2;
 		
 		final byte[][][] grid = new byte[gridX][gridY][gridZ];
-		
 		//Mark all cells containing a atom
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int j = i;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					int start = (int)(((long)atomsInGrain.size() * j)/ThreadPool.availProcessors());
-					int end = (int)(((long)atomsInGrain.size() * (j+1))/ThreadPool.availProcessors());
-
-					for (int i=start; i<end; i++){
-						Vec3 a = atomsInGrain.get(i);
-						
-						int x = (int)((a.x-lowerBounds.x)*invCellSize)+1;
-						int y = (int)((a.y-lowerBounds.y)*invCellSize)+1;
-						int z = (int)((a.z-lowerBounds.z)*invCellSize)+1;
-						grid[x][y][z] = (byte)1;
-					}
-					
-					return null;
-				}
-			});
-		}
-		ThreadPool.executeParallelSecondLevel(parallelTasks);
+		atomsInGrain.parallelStream().forEach(a->{
+			int x = (int)((a.x-lowerBounds.x)*invCellSize)+1;
+			int y = (int)((a.y-lowerBounds.y)*invCellSize)+1;
+			int z = (int)((a.z-lowerBounds.z)*invCellSize)+1;
+			grid[x][y][z] = (byte)1;
+		});
 				
 		//Identify cells inside the grid which are completely surrounded with other filled cells
 		//Mark these cells, because the atoms stored there can be ignored during mesh refinement
@@ -497,48 +479,56 @@ public class Mesh implements Callable<Void>, Pickable{
 	
 	public void shrink(final float offset){
 		if (finalMesh != null) return;
+		
+		vertices.parallelStream().forEach(v->v.shrink(nearestVertex, offset));
 
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int j = i;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					int start = (int)((long)(vertices.size() * j)/ThreadPool.availProcessors());
-					int end = (int)((long)(vertices.size() * (j+1))/ThreadPool.availProcessors());
-
-					for (int i=start; i<end; i++)
-						vertices.get(i).shrink(nearestVertex, offset);
-					
-					return null;
-				}
-			});
-		}
-		ThreadPool.executeParallelSecondLevel(parallelTasks);
+//		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
+//		for (int i=0; i<ThreadPool.availProcessors(); i++){
+//			final int j = i;
+//			parallelTasks.add(new Callable<Void>() {
+//				@Override
+//				public Void call() throws Exception {
+//					int start = (int)((long)(vertices.size() * j)/ThreadPool.availProcessors());
+//					int end = (int)((long)(vertices.size() * (j+1))/ThreadPool.availProcessors());
+//
+//					for (int i=start; i<end; i++)
+//						vertices.get(i).shrink(nearestVertex, offset);
+//					
+//					return null;
+//				}
+//			});
+//		}
+//		ThreadPool.executeParallelSecondLevel(parallelTasks);
 	}
 	
 	public void cornerPreservingSmooth(){
 		if (finalMesh != null) return;
 		
 		final Vec3[] smooth = new Vec3[vertices.size()];
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int j = i;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					int start = (int)((long)(vertices.size() * j)/ThreadPool.availProcessors());
-					int end = (int)((long)(vertices.size() * (j+1))/ThreadPool.availProcessors());
-
-					for (int i=start; i<end; i++){
-						smooth[i] = vertices.get(i).getCurvatureDependentLaplacianSmoother();
-						smooth[i].multiply(0.5f);
-					}
-					return null;
-				}
-			});
-		}
-		ThreadPool.executeParallelSecondLevel(parallelTasks);
+		
+		IntStream.range(0, vertices.size()).parallel().forEach(i-> {
+			smooth[i] = vertices.get(i).getCurvatureDependentLaplacianSmoother();
+			smooth[i].multiply(0.5f);
+		});
+		
+//		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
+//		for (int i=0; i<ThreadPool.availProcessors(); i++){
+//			final int j = i;
+//			parallelTasks.add(new Callable<Void>() {
+//				@Override
+//				public Void call() throws Exception {
+//					int start = (int)((long)(vertices.size() * j)/ThreadPool.availProcessors());
+//					int end = (int)((long)(vertices.size() * (j+1))/ThreadPool.availProcessors());
+//
+//					for (int i=start; i<end; i++){
+//						smooth[i] = vertices.get(i).getCurvatureDependentLaplacianSmoother();
+//						smooth[i].multiply(0.5f);
+//					}
+//					return null;
+//				}
+//			});
+//		}
+//		ThreadPool.executeParallelSecondLevel(parallelTasks);
 		
 		for (int i=0; i<vertices.size(); i++)
 			vertices.get(i).add(smooth[i]); 
@@ -548,24 +538,29 @@ public class Mesh implements Callable<Void>, Pickable{
 		if (finalMesh != null) return;
 		
 		final Vec3[] smooth = new Vec3[vertices.size()];
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int j = i;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					int start = (int)((long)(vertices.size() * j)/ThreadPool.availProcessors());
-					int end = (int)((long)(vertices.size() * (j+1))/ThreadPool.availProcessors());
-
-					for (int i=start; i<end; i++){
-						smooth[i] = vertices.get(i).getLaplacianSmoother();
-						smooth[i].multiply(0.5f);
-					}
-					return null;
-				}
-			});
-		}
-		ThreadPool.executeParallelSecondLevel(parallelTasks);
+//		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
+//		for (int i=0; i<ThreadPool.availProcessors(); i++){
+//			final int j = i;
+//			parallelTasks.add(new Callable<Void>() {
+//				@Override
+//				public Void call() throws Exception {
+//					int start = (int)((long)(vertices.size() * j)/ThreadPool.availProcessors());
+//					int end = (int)((long)(vertices.size() * (j+1))/ThreadPool.availProcessors());
+//
+//					for (int i=start; i<end; i++){
+//						smooth[i] = vertices.get(i).getLaplacianSmoother();
+//						smooth[i].multiply(0.5f);
+//					}
+//					return null;
+//				}
+//			});
+//		}
+//		ThreadPool.executeParallelSecondLevel(parallelTasks);
+		
+		IntStream.range(0, vertices.size()).parallel().forEach(i-> {
+			smooth[i] = vertices.get(i).getLaplacianSmoother();
+			smooth[i].multiply(0.5f);
+		});
 		
 		for (int i=0; i<vertices.size(); i++)
 			vertices.get(i).add(smooth[i]); 
@@ -577,41 +572,62 @@ public class Mesh implements Callable<Void>, Pickable{
 		
 		final SortedMap<Vertex,float[]> vertexQs = Collections.synchronizedSortedMap(new TreeMap<Vertex, float[]>());
 		
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int j = i;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					int start = (int)((long)(vertices.size() * j)/ThreadPool.availProcessors());
-					int end = (int)((long)(vertices.size() * (j+1))/ThreadPool.availProcessors());
-
-					for (int i=start; i<end; i++){
-						Vertex v = vertices.get(i);
-						float[] q = new float[10];
-						ArrayList<Triangle> t = v.getAdjacentFaces();
-						for (int j=0; j<t.size(); j++){
-							Vec3 n = t.get(j).getUnitNormalVector();
-							float d = -n.dot(v);
-							
-							q[0] += n.x*n.x;	//a²
-							q[1] += n.x*n.y;	//ab
-							q[2] += n.x*n.z;	//ac
-							q[3] += n.x*d;		//ad
-							q[4] += n.y*n.y;	//b²
-							q[5] += n.y*n.z;	//bc
-							q[6] += n.y*d;		//bd
-							q[7] += n.z*n.z;	//c²
-							q[8] += n.z*d;		//cd
-							q[9] += d*d;		//d²
-						}
-						vertexQs.put(v, q);
-					}
-					return null;
-				}
-			});
-		}
-		ThreadPool.executeParallelSecondLevel(parallelTasks);
+		vertices.parallelStream().forEach(v->{
+			float[] q = new float[10];
+			ArrayList<Triangle> t = v.getAdjacentFaces();
+			for (int j=0; j<t.size(); j++){
+				Vec3 n = t.get(j).getUnitNormalVector();
+				float d = -n.dot(v);
+				
+				q[0] += n.x*n.x;	//a²
+				q[1] += n.x*n.y;	//ab
+				q[2] += n.x*n.z;	//ac
+				q[3] += n.x*d;		//ad
+				q[4] += n.y*n.y;	//b²
+				q[5] += n.y*n.z;	//bc
+				q[6] += n.y*d;		//bd
+				q[7] += n.z*n.z;	//c²
+				q[8] += n.z*d;		//cd
+				q[9] += d*d;		//d²
+			}
+			vertexQs.put(v, q);
+		});
+		
+//		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
+//		for (int i=0; i<ThreadPool.availProcessors(); i++){
+//			final int j = i;
+//			parallelTasks.add(new Callable<Void>() {
+//				@Override
+//				public Void call() throws Exception {
+//					int start = (int)((long)(vertices.size() * j)/ThreadPool.availProcessors());
+//					int end = (int)((long)(vertices.size() * (j+1))/ThreadPool.availProcessors());
+//
+//					for (int i=start; i<end; i++){
+//						Vertex v = vertices.get(i);
+//						float[] q = new float[10];
+//						ArrayList<Triangle> t = v.getAdjacentFaces();
+//						for (int j=0; j<t.size(); j++){
+//							Vec3 n = t.get(j).getUnitNormalVector();
+//							float d = -n.dot(v);
+//							
+//							q[0] += n.x*n.x;	//a²
+//							q[1] += n.x*n.y;	//ab
+//							q[2] += n.x*n.z;	//ac
+//							q[3] += n.x*d;		//ad
+//							q[4] += n.y*n.y;	//b²
+//							q[5] += n.y*n.z;	//bc
+//							q[6] += n.y*d;		//bd
+//							q[7] += n.z*n.z;	//c²
+//							q[8] += n.z*d;		//cd
+//							q[9] += d*d;		//d²
+//						}
+//						vertexQs.put(v, q);
+//					}
+//					return null;
+//				}
+//			});
+//		}
+//		ThreadPool.executeParallelSecondLevel(parallelTasks);
 		
 		TreeSet<HalfEdgePair> sortedCosts = new TreeSet<HalfEdgePair>();
 		

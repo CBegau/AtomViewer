@@ -20,14 +20,10 @@ package processingModules.atomicModules;
 
 import gui.JLogPanel;
 import gui.JPrimitiveVariablesPropertiesDialog;
-import gui.ProgressMonitor;
 import gui.PrimitiveProperty.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Vector;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CyclicBarrier;
 
 import javax.swing.ButtonGroup;
 import javax.swing.JCheckBox;
@@ -157,11 +153,7 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 					String.format("Weightened averages for %s selected, but mass column is missing in %s", toAverageColumn.getName(),
 							data.getName()));
 		
-		ProgressMonitor.getProgressMonitor().start(2*data.getAtoms().size());
-		
 		nnb.addAll(data.getAtoms());
-		
-		final CyclicBarrier barrier = new CyclicBarrier(ThreadPool.availProcessors());
 		
 		final float[] vxArray = data.getDataArray(vx).getData();
 		final float[] vyArray = data.getDataArray(vy).getData();
@@ -172,107 +164,74 @@ public class SpatialAveragingVectorModule extends ClonableProcessingModule imple
 		final float[] avnArray = data.getDataArray(avn).getData();
 		final float[] massArray = scaleMass ? data.getDataArray(massColumn).getData() : null;
 		
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int j = i;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					
-					final float halfR = averageRadius*0.5f;
-					final Vec3 temp = new Vec3();
-					final int start = (int)(((long)data.getAtoms().size() * j)/ThreadPool.availProcessors());
-					final int end = (int)(((long)data.getAtoms().size() * (j+1))/ThreadPool.availProcessors());
-					
-					if (!useSmoothingKernel){
-						for (int i=start; i<end; i++){
-							if ((i-start)%1000 == 0) ProgressMonitor.getProgressMonitor().addToCounter(2000);
-					
-							Atom a = data.getAtoms().get(i);
-							temp.x = vxArray[i]; temp.y = vyArray[i]; temp.z = vzArray[i];
-							ArrayList<Atom> neigh = nnb.getNeigh(a);
-							
-							for (Atom n : neigh){
-								int id = n.getID();
-								temp.x += vxArray[id];
-								temp.y += vyArray[id];
-								temp.z += vzArray[id];
-							}
-							temp.divide(neigh.size()+1);
-							
-							avxArray[i] = temp.x; avyArray[i] = temp.y; avzArray[i] = temp.z;
-							avnArray[i] = temp.getLength(); 
-						}
-						ProgressMonitor.getProgressMonitor().addToCounter( 2*(end-start%1000));
-					} else {
-						//Compute density of all particles and store in the data column
-						for (int i=start; i<end; i++){
-							if ((i-start)%1000 == 0)
-								ProgressMonitor.getProgressMonitor().addToCounter(1000);
-							Atom a = data.getAtoms().get(i);
-							ArrayList<Tupel<Atom,Vec3>> neigh = nnb.getNeighAndNeighVec(a);
-							float mass = scaleMass ? massArray[i] : 1f;
-							
-							//Include central particle a with d = 0
-							float density = mass*CommonUtils.getM4SmoothingKernelWeight(0f, halfR);
-							//Estimate local density based on distance to other particles
-							for (int k=0, len = neigh.size(); k<len; k++){
-								Tupel<Atom,Vec3> n = neigh.get(k);
-								mass = scaleMass ? massArray[n.o1.getID()] : 1f;
-								density += mass * CommonUtils.getM4SmoothingKernelWeight(n.o2.getLength(), halfR);
-							}
-							//Temporarily store the density of the particle 
-							avnArray[i] = density;
-						}
-						ProgressMonitor.getProgressMonitor().addToCounter((end-start)%1000);
-						barrier.await();
-						
-						//Compute the averages 
-						for (int i=start; i<end; i++){
-							if ((i-start)%1000 == 0)
-								ProgressMonitor.getProgressMonitor().addToCounter(1000);
-
-							//Start with central particle with d = 0
-							Atom a = data.getAtoms().get(i);
-							temp.x = vxArray[i]; temp.y = vyArray[i]; temp.z = vzArray[i];
-							float mass = scaleMass ? massArray[i] : 1f;
-							temp.multiply(mass * CommonUtils.getM4SmoothingKernelWeight(0f, halfR) / avnArray[i]);
-							
-							ArrayList<Tupel<Atom,Vec3>> neigh = nnb.getNeighAndNeighVec(a);
-							for (Tupel<Atom,Vec3> n : neigh){
-								int id = n.o1.getID();
-								mass = scaleMass ? massArray[id] : 1f;
-								//Weighting based on distance and density
-								float w = mass * CommonUtils.getM4SmoothingKernelWeight(n.getO2().getLength(), halfR);
-								w /= avnArray[id]; //Divide by local density
-								temp.x += vxArray[id] * w;
-								temp.y += vyArray[id] * w;
-								temp.z += vzArray[id] * w;
-
-							}
-							avxArray[i] = temp.x; avyArray[i] = temp.y; avzArray[i] = temp.z;
-						}
-						
-						barrier.await();
-						
-						//Compute length of vector and overwrite the density with this value
-						for (int i=start; i<end; i++){
-							Vec3 v = new Vec3(avxArray[i], avyArray[i], avzArray[i]);
-							avnArray[i] = v.getLength(); 
-						}
-						
-						ProgressMonitor.getProgressMonitor().addToCounter((end-start)%1000);
-					
-					} // End of smoothing kernel
-					return null;
-					
+		if (!useSmoothingKernel) {
+			ThreadPool.executeAsParallelStream(data.getAtoms().size(), i->{
+				Vec3 temp = new Vec3();
+				Atom a = data.getAtoms().get(i);
+				temp.x = vxArray[i]; temp.y = vyArray[i]; temp.z = vzArray[i];
+				ArrayList<Atom> neigh = nnb.getNeigh(a);
+				
+				for (Atom n : neigh){
+					int id = n.getID();
+					temp.x += vxArray[id];
+					temp.y += vyArray[id];
+					temp.z += vzArray[id];
 				}
+				temp.divide(neigh.size()+1);
+				
+				avxArray[i] = temp.x; avyArray[i] = temp.y; avzArray[i] = temp.z;
+				avnArray[i] = temp.getLength();
 			});
+		} else {
+			final float halfR = averageRadius*0.5f;
+			//Compute mass density of all particles and store in the data column
+			ThreadPool.executeAsParallelStream(data.getAtoms().size(), i->{
+				Atom a = data.getAtoms().get(i);
+				ArrayList<Tupel<Atom,Vec3>> neigh = nnb.getNeighAndNeighVec(a);
+				float mass = scaleMass ? massArray[i] : 1f;
+				
+				//Include central particle a with d = 0
+				float density = mass*CommonUtils.getM4SmoothingKernelWeight(0f, halfR);
+				//Estimate local density based on distance to other particles
+				for (int k=0, len = neigh.size(); k<len; k++){
+					Tupel<Atom,Vec3> n = neigh.get(k);
+					mass = scaleMass ? massArray[n.o1.getID()] : 1f;
+					density += mass * CommonUtils.getM4SmoothingKernelWeight(n.o2.getLength(), halfR);
+				}
+				//Temporarily store the density of the particle 
+				avnArray[i] = density;
+			});
+				
+			//Compute the averages vectors 
+			ThreadPool.executeAsParallelStream(data.getAtoms().size(), i->{
+				//Start with central particle with d = 0
+				Atom a = data.getAtoms().get(i);
+				Vec3  temp = new Vec3();
+				temp.x = vxArray[i]; temp.y = vyArray[i]; temp.z = vzArray[i];
+				float mass = scaleMass ? massArray[i] : 1f;
+				temp.multiply(mass * CommonUtils.getM4SmoothingKernelWeight(0f, halfR) / avnArray[i]);
+				
+				ArrayList<Tupel<Atom,Vec3>> neigh = nnb.getNeighAndNeighVec(a);
+				for (Tupel<Atom,Vec3> n : neigh){
+					int id = n.o1.getID();
+					mass = scaleMass ? massArray[id] : 1f;
+					//Weighting based on distance and density
+					float w = mass * CommonUtils.getM4SmoothingKernelWeight(n.getO2().getLength(), halfR);
+					w /= avnArray[id]; //Divide by local density
+					temp.x += vxArray[id] * w;
+					temp.y += vyArray[id] * w;
+					temp.z += vzArray[id] * w;
+				}
+				avxArray[i] = temp.x; avyArray[i] = temp.y; avzArray[i] = temp.z;
+			});
+			
+			//Compute length of vector and overwrite the density with this value
+			for (int i=0; i<avnArray.length; i++){
+				Vec3 v = new Vec3(avxArray[i], avyArray[i], avzArray[i]);
+				avnArray[i] = v.getLength(); 
+			}
 		}
-		ThreadPool.executeParallel(parallelTasks);	
-		
-		ProgressMonitor.getProgressMonitor().stop();
-		
+	
 		return null;
 	};
 	

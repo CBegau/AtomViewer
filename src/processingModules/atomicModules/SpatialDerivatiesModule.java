@@ -20,13 +20,10 @@ package processingModules.atomicModules;
 
 import gui.JLogPanel;
 import gui.JPrimitiveVariablesPropertiesDialog;
-import gui.ProgressMonitor;
 import gui.PrimitiveProperty.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Vector;
-import java.util.concurrent.Callable;
 
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -126,8 +123,6 @@ public class SpatialDerivatiesModule extends ClonableProcessingModule implements
 
 	@Override
 	public ProcessingResult process(final AtomData data) throws Exception {
-		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
-		
 		final int v = data.getDataColumnIndex(toDeriveColumn);
 		
 		final int gx = data.getDataColumnIndex(gradientColumn.getVectorComponents()[0]);
@@ -153,57 +148,38 @@ public class SpatialDerivatiesModule extends ClonableProcessingModule implements
 		final float[] vArray = data.getDataArray(v).getData();
 		final float[] massArray = scaleMass ? data.getDataArray(massColumn).getData() : null;
 		
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int j = i;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					final int start = (int)(((long)data.getAtoms().size() * j)/ThreadPool.availProcessors());
-					final int end = (int)(((long)data.getAtoms().size() * (j+1))/ThreadPool.availProcessors());
-					
-					//Compute density of all particles and store in the data column
-					for (int i=start; i<end; i++){
-						if ((i-start)%1000 == 0)
-							ProgressMonitor.getProgressMonitor().addToCounter(1000);
-						Atom a = data.getAtoms().get(i);
-						
-						ArrayList<Tupel<Atom,Vec3>> neigh = nnb.getNeighAndNeighVec(a);
+		ThreadPool.executeAsParallelStream(data.getAtoms().size(), i->{
+			Atom a = data.getAtoms().get(i);
+			
+			ArrayList<Tupel<Atom,Vec3>> neigh = nnb.getNeighAndNeighVec(a);
 
-						//Estimate local density
-						float mass = scaleMass ? massArray[i] : 1f;
-						float density = mass * CommonUtils.getM4SmoothingKernelWeight(0f, halfR);
-						
-						for (int k=0, len = neigh.size(); k<len; k++){
-							mass = scaleMass ? massArray[neigh.get(k).o1.getID()] : 1f;
-							density += mass * CommonUtils.getM4SmoothingKernelWeight(neigh.get(k).o2.getLength(), halfR);
-						}
-						 
-						Vec3 grad = new Vec3();
-						
-						float valueA = vArray[i];
-						
-						for (Tupel<Atom,Vec3> n : neigh){
-							float valueB = vArray[n.o1.getID()];
-							mass = scaleMass ? massArray[n.o1.getID()] : 1f;
-							grad.add(CommonUtils.getM4SmoothingKernelDerivative(n.o2, halfR).multiply(mass*(valueB-valueA)));
-						}
-						
-						grad.divide(density);
-						
-						gxArray[i] = -grad.x;
-						gyArray[i] = -grad.y;
-						gzArray[i] = -grad.z;
-						gnArray[i] = grad.getLength();
-					}
-					ProgressMonitor.getProgressMonitor().addToCounter((end-start)%1000);
-					return null;
-				}
-			});
-		}
-		ThreadPool.executeParallel(parallelTasks);	
+			//Estimate local density
+			float mass = scaleMass ? massArray[i] : 1f;
+			float density = mass * CommonUtils.getM4SmoothingKernelWeight(0f, halfR);
+			
+			for (int k=0, len = neigh.size(); k<len; k++){
+				mass = scaleMass ? massArray[neigh.get(k).o1.getID()] : 1f;
+				density += mass * CommonUtils.getM4SmoothingKernelWeight(neigh.get(k).o2.getLength(), halfR);
+			}
+			 
+			Vec3 grad = new Vec3();
+			
+			float valueA = vArray[i];
+			
+			for (Tupel<Atom,Vec3> n : neigh){
+				float valueB = vArray[n.o1.getID()];
+				mass = scaleMass ? massArray[n.o1.getID()] : 1f;
+				grad.add(CommonUtils.getM4SmoothingKernelDerivative(n.o2, halfR).multiply(mass*(valueB-valueA)));
+			}
+			
+			grad.divide(density);
+			
+			gxArray[i] = -grad.x;
+			gyArray[i] = -grad.y;
+			gzArray[i] = -grad.z;
+			gnArray[i] = grad.getLength();
+		});
 		
-		ProgressMonitor.getProgressMonitor().stop();
 		return null;
 	}
 

@@ -18,10 +18,7 @@
 
 package processingModules.atomicModules;
 
-import gui.ProgressMonitor;
-
 import java.util.*;
-import java.util.concurrent.Callable;
 
 import javax.swing.JFrame;
 
@@ -113,112 +110,83 @@ public class LatticeRotationModule extends ClonableProcessingModule {
 			}
 		}
 		
-		ProgressMonitor.getProgressMonitor().start(data.getAtoms().size());
-		
 		final NearestNeighborBuilder<Atom> nnb = new NearestNeighborBuilder<Atom>(data.getBox(), 
 				cs.getNearestNeighborSearchRadius(), true);
 		nnb.addAll(data.getAtoms());
+		final List<Atom> atoms = data.getAtoms();
 		
-		Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-		for (int k=0; k<ThreadPool.availProcessors(); k++){
-			final int l = k;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					List<Atom> atoms = data.getAtoms();
-					int start = (int)(((long)atoms.size() * l)/ThreadPool.availProcessors());
-					int end = (int)(((long)atoms.size() * (l+1))/ThreadPool.availProcessors());
-
-					double[][] lcm = new double[3][3];
-					double[] a = new double[9];
-					double[] b = new double[9];
-					Matrix lcmMatrix = new Matrix(lcm);
-					
-					for (int k=start; k<end; k++){
-						if ((k-start)%1000 == 0)
-							ProgressMonitor.getProgressMonitor().addToCounter(1000);
-						
-						xArray[k] = 0f; yArray[k] = 0f; zArray[k] = 0f; nArray[k] = 0f;
-						
-						if (Thread.interrupted()) return null;
-						
-						for (int i=0;i<9;i++){
-							a[i] = 0f; b[i] = 0f;
-						}
-						
-						Atom atom = atoms.get(k);
-						int grain = atom.getGrain();
-						if (grain == Atom.IGNORED_GRAIN) continue;
-						
-						//Pick the current grain data
-						Vec3[] p_0 = p.get(grain);
-						float[] p_l_0 = p_l.get(grain);
-						
-						ArrayList<Vec3> neighVecList = nnb.getNeighVec(atom,numPerf);
-						
-						for (int i=0; i<neighVecList.size(); i++){
-							float bestAngle = -1;
-							int best = 0;
-							Vec3 n = neighVecList.get(i);
-							float l = n.getLength();
-							for (int j=0; j<p_0.length; j++){
-								float angle = n.dot(p_0[j]) / (l* p_l_0[j]);
-								if (angle>bestAngle){
-									best = j;
-									bestAngle = angle;
-								}
-							}
-							//if (bestAngle>PHI_MAX){
-								a[0] += n.x * p_0[best].x; a[1] += n.x * p_0[best].y; a[2] += n.x * p_0[best].z;
-								a[3] += n.y * p_0[best].x; a[4] += n.y * p_0[best].y; a[5] += n.y * p_0[best].z;
-								a[6] += n.z * p_0[best].x; a[7] += n.z * p_0[best].y; a[8] += n.z * p_0[best].z;
-								
-								b[0] += n.x * n.x; b[1] += n.x * n.y; b[2] += n.x * n.z;
-								b[3] += n.y * n.x; b[4] += n.y * n.y; b[5] += n.y * n.z;
-								b[6] += n.z * n.x; b[7] += n.z * n.y; b[8] += n.z * n.z;
-//							}
-						}
-						
-						if (MatrixOps.invert3x3matrix(a, 0.00001)){
-							lcm[0][0] = a[0] * b[0] + a[1] * b[3] +a[2] * b[6];
-							lcm[1][0] = a[0] * b[1] + a[1] * b[4] +a[2] * b[7];
-							lcm[2][0] = a[0] * b[2] + a[1] * b[5] +a[2] * b[8];
-							         
-							lcm[0][1] = a[3] * b[0] + a[4] * b[3] +a[5] * b[6];
-							lcm[1][1] = a[3] * b[1] + a[4] * b[4] +a[5] * b[7];
-							lcm[2][1] = a[3] * b[2] + a[4] * b[5] +a[5] * b[8];
-							         
-							lcm[0][2] = a[6] * b[0] + a[7] * b[3] +a[8] * b[6];
-							lcm[1][2] = a[6] * b[1] + a[7] * b[4] +a[8] * b[7];
-							lcm[2][2] = a[6] * b[2] + a[7] * b[5] +a[8] * b[8];
-						}
-						else continue;
-						
-						SingularValueDecomposition svd = new SingularValueDecomposition(lcmMatrix);
-						Matrix r = svd.getU().times(svd.getV().transpose());
-						if (r!=null){
-							float[][] foo = new float[3][3];
-							foo[0][0] = (float)r.get(0, 0); foo[0][1] = (float)r.get(0, 1); foo[0][2] = (float)r.get(0, 2);
-							foo[1][0] = (float)r.get(1, 0); foo[1][1] = (float)r.get(1, 1); foo[1][2] = (float)r.get(1, 2);
-							foo[2][0] = (float)r.get(2, 0); foo[2][1] = (float)r.get(2, 1); foo[2][2] = (float)r.get(2, 2);
+		ThreadPool.executeAsParallelStream(atoms.size(), k->{
+			double[][] lcm = new double[3][3];
+			double[] a = new double[9];
+			double[] b = new double[9];
+			
+			xArray[k] = 0f; yArray[k] = 0f; zArray[k] = 0f; nArray[k] = 0f;
 							
-							float[] angles = getAxisRotationAndTilt(getEulerAngles(foo));
-							
-							xArray[k] = angles[0];
-							yArray[k] = angles[1];
-							zArray[k] = angles[2];
-							nArray[k] = angles[3];
-						}
+			Atom atom = atoms.get(k);
+			int grain = atom.getGrain();
+			if (grain == Atom.IGNORED_GRAIN) return;
+				
+			//Pick the current grain data
+			Vec3[] p_0_local = p.get(grain);
+			float[] p_l_0_local = p_l.get(grain);
+			
+			ArrayList<Vec3> neighVecList = nnb.getNeighVec(atom,numPerf);
+			
+			for (int i=0; i<neighVecList.size(); i++){
+				float bestAngle = -1;
+				int best = 0;
+				Vec3 n = neighVecList.get(i);
+				float l = n.getLength();
+				for (int j=0; j<p_0_local.length; j++){
+					float angle = n.dot(p_0_local[j]) / (l* p_l_0_local[j]);
+					if (angle>bestAngle){
+						best = j;
+						bestAngle = angle;
 					}
-					
-					ProgressMonitor.getProgressMonitor().addToCounter(end-start%1000);
-					return null;
 				}
-			});
-		}
-		ThreadPool.executeParallel(parallelTasks);
+				//if (bestAngle>PHI_MAX){
+				a[0] += n.x * p_0_local[best].x; a[1] += n.x * p_0_local[best].y; a[2] += n.x * p_0_local[best].z;
+				a[3] += n.y * p_0_local[best].x; a[4] += n.y * p_0_local[best].y; a[5] += n.y * p_0_local[best].z;
+				a[6] += n.z * p_0_local[best].x; a[7] += n.z * p_0_local[best].y; a[8] += n.z * p_0_local[best].z;
+				
+				b[0] += n.x * n.x; b[1] += n.x * n.y; b[2] += n.x * n.z;
+				b[3] += n.y * n.x; b[4] += n.y * n.y; b[5] += n.y * n.z;
+				b[6] += n.z * n.x; b[7] += n.z * n.y; b[8] += n.z * n.z;
+				//}
+			}
+			
+			if (MatrixOps.invert3x3matrix(a, 0.00001)){
+				lcm[0][0] = a[0] * b[0] + a[1] * b[3] +a[2] * b[6];
+				lcm[1][0] = a[0] * b[1] + a[1] * b[4] +a[2] * b[7];
+				lcm[2][0] = a[0] * b[2] + a[1] * b[5] +a[2] * b[8];
+				         
+				lcm[0][1] = a[3] * b[0] + a[4] * b[3] +a[5] * b[6];
+				lcm[1][1] = a[3] * b[1] + a[4] * b[4] +a[5] * b[7];
+				lcm[2][1] = a[3] * b[2] + a[4] * b[5] +a[5] * b[8];
+				         
+				lcm[0][2] = a[6] * b[0] + a[7] * b[3] +a[8] * b[6];
+				lcm[1][2] = a[6] * b[1] + a[7] * b[4] +a[8] * b[7];
+				lcm[2][2] = a[6] * b[2] + a[7] * b[5] +a[8] * b[8];
+			}
+			else return;
+			
+			SingularValueDecomposition svd = new SingularValueDecomposition(new Matrix(lcm));
+			Matrix r = svd.getU().times(svd.getV().transpose());
+			if (r!=null){
+				float[][] foo = new float[3][3];
+				foo[0][0] = (float)r.get(0, 0); foo[0][1] = (float)r.get(0, 1); foo[0][2] = (float)r.get(0, 2);
+				foo[1][0] = (float)r.get(1, 0); foo[1][1] = (float)r.get(1, 1); foo[1][2] = (float)r.get(1, 2);
+				foo[2][0] = (float)r.get(2, 0); foo[2][1] = (float)r.get(2, 1); foo[2][2] = (float)r.get(2, 2);
+				
+				float[] angles = getAxisRotationAndTilt(getEulerAngles(foo));
+				
+				xArray[k] = angles[0];
+				yArray[k] = angles[1];
+				zArray[k] = angles[2];
+				nArray[k] = angles[3];
+			}
+		});
 		
-		ProgressMonitor.getProgressMonitor().stop();
 		return null;
 	}
 	

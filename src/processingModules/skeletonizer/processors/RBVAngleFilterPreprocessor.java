@@ -21,9 +21,7 @@ package processingModules.skeletonizer.processors;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
-import java.util.concurrent.Callable;
 
-import common.ThreadPool;
 import common.Tupel;
 import model.RBV;
 import model.RBVStorage;
@@ -51,45 +49,27 @@ public class RBVAngleFilterPreprocessor implements SkeletonPreprocessor {
 		
 		final Vector<Tupel<SkeletonNode, SkeletonNode>> toDelete = new Vector<Tupel<SkeletonNode,SkeletonNode>>();
 		
-		Vector<Callable<Void>> tasks = new Vector<Callable<Void>>();
-
-		//Evaluate all new positions (in parallel)
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int start = (int)(((long)skel.getNodes().size() * i)/ThreadPool.availProcessors());
-			final int end = (int)(((long)skel.getNodes().size() * (i+1))/ThreadPool.availProcessors());
-			tasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					RBVStorage storage = skel.getAtomData().getRbvStorage();
-					for (int j=start; j<end; j++){
-						SkeletonNode sn = skel.getNodes().get(j);
-						if (sn.getNeigh().size()<=2) continue;
-						RBV v = storage.getRBV(sn.getMappedAtoms().get(0));
-						float l_v = v.bv.getLength();
-						
-						ArrayList<SkeletonNode> nei = sn.getNeigh();
-						
-						for (int i=0; i<nei.size();i++){
-							SkeletonNode n = nei.get(i);
-							//Avoid performing the test twice for both atoms
-							if (n.getID() < sn.getID()){
-								RBV u = storage.getRBV(n.getMappedAtoms().get(0));
-								float l_u =  u.bv.getLength();
-								float angle = v.bv.dot(u.bv) / (l_u * l_v);
-								
-								if (angle < PHI_MAX && angle > PHI_MIN){
-									toDelete.add(new Tupel<SkeletonNode,SkeletonNode>(n,sn));
-								}
-							}
-						}
+		RBVStorage storage = skel.getAtomData().getRbvStorage();
+		skel.getNodes().stream().parallel().filter(sn -> sn.getNeigh().size()>2).forEach(sn -> {
+			RBV v = storage.getRBV(sn.getMappedAtoms().get(0));
+			float l_v = v.bv.getLength();
+			
+			ArrayList<SkeletonNode> nei = sn.getNeigh();
+			
+			for (int i=0; i<nei.size();i++){
+				SkeletonNode n = nei.get(i);
+				//Avoid performing the test twice for both atoms
+				if (n.getID() < sn.getID()){
+					RBV u = storage.getRBV(n.getMappedAtoms().get(0));
+					float l_u =  u.bv.getLength();
+					float angle = v.bv.dot(u.bv) / (l_u * l_v);
+					
+					if (angle < PHI_MAX && angle > PHI_MIN){
+						toDelete.add(new Tupel<SkeletonNode,SkeletonNode>(n,sn));
 					}
-					
-					
-					return null;
 				}
-			});
-		}
-		ThreadPool.executeParallel(tasks);
+			}
+		});
 		
 		//Delete Tupel
 		for (Tupel<SkeletonNode,SkeletonNode> t : toDelete){
