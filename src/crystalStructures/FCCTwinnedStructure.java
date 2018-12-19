@@ -21,7 +21,6 @@ package crystalStructures;
 import gui.ProgressMonitor;
 
 import java.util.*;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CyclicBarrier;
 
 import common.*;
@@ -176,66 +175,48 @@ public class FCCTwinnedStructure extends FCCStructure {
 				}
 			}
 			
+			List<Tupel<Atom,Integer>> assigns = Collections.synchronizedList(new ArrayList<>());
+			
 			//Second step, find the most frequent grain assignment of neighbors, 
 			//then assign this type to the previously unassigned atom
-			Vector<Callable<Void>> parallelTasks = new Vector<Callable<Void>>();
-			final CyclicBarrier cb = new CyclicBarrier(ThreadPool.availProcessors());
-			for (int i=0; i<ThreadPool.availProcessors(); i++){
-				final int start = (int)(((long)data.getAtoms().size() * i)/ThreadPool.availProcessors());
-				final int end = (int)(((long)data.getAtoms().size() * (i+1))/ThreadPool.availProcessors());
-				
-				parallelTasks.add(new Callable<Void>() {
-					@Override
-					public Void call() throws Exception {
-						ArrayList<Tupel<Atom,Integer>> assigns = new ArrayList<Tupel<Atom, Integer>>();
-						for (int j=start; j<end; j++){
-							Atom a = data.getAtoms().get(j);
-							if (a.getGrain() == Atom.DEFAULT_GRAIN && a.getType() != surfaceType){
-								ArrayList<Atom> nei = nnb.getNeigh(a);
-								if (nei.size() != 0){
-									int[] ng = new int[nei.size()];
-									for (int i=0; i<nei.size();i++){
-										ng[i] = nei.get(i).getGrain();
-									}
-									Arrays.sort(ng);
-									int maxElement = 1; int maxIndex = ng[0];
-									int currentElement = 1; int currentIndex = ng[0];
-									
-									for (int i=1; i<ng.length; i++){
-										if (ng[i] == currentIndex){
-											currentElement++;
-										} else {
-											if (currentElement > maxElement && currentIndex < Atom.DEFAULT_GRAIN) {
-												maxElement = currentElement;
-												maxIndex = currentIndex;
-											}
-											currentElement = 1;
-											currentIndex = ng[i];
-										}
-									}
-									
-									if (maxIndex < Atom.DEFAULT_GRAIN){
-										assigns.add(new Tupel<Atom, Integer>(a, maxIndex));
-									}
+			ThreadPool.executeAsParallelStream(data.getAtoms().size(), j->{
+				Atom a = data.getAtoms().get(j);
+				if (a.getGrain() == Atom.DEFAULT_GRAIN && a.getType() != surfaceType){
+					ArrayList<Atom> nei = nnb.getNeigh(a);
+					if (nei.size() != 0){
+						int[] ng = new int[nei.size()];
+						for (int i=0; i<nei.size();i++){
+							ng[i] = nei.get(i).getGrain();
+						}
+						Arrays.sort(ng);
+						int maxElement = 1; int maxIndex = ng[0];
+						int currentElement = 1; int currentIndex = ng[0];
+						
+						for (int i=1; i<ng.length; i++){
+							if (ng[i] == currentIndex){
+								currentElement++;
+							} else {
+								if (currentElement > maxElement && currentIndex < Atom.DEFAULT_GRAIN) {
+									maxElement = currentElement;
+									maxIndex = currentIndex;
 								}
+								currentElement = 1;
+								currentIndex = ng[i];
 							}
 						}
 						
-						cb.await();
-						
-						synchronized(grainSets){
-							for (Tupel<Atom, Integer> a : assigns){
-								a.o1.setGrain(a.o2);
-								grainSets.get(a.o2).add(a.o1);
-							}
+						if (maxIndex < Atom.DEFAULT_GRAIN){
+							assigns.add(new Tupel<Atom, Integer>(a, maxIndex));
 						}
-						
-						return null;
 					}
-				});
-			};
-			ThreadPool.executeParallel(parallelTasks);
+				}
+			});
 			
+			
+			for (Tupel<Atom, Integer> a : assigns){
+				a.o1.setGrain(a.o2);
+				grainSets.get(a.o2).add(a.o1);
+			}
 			
 			CrystalStructure cs = this.getCrystalStructureOfDetectedGrains();
 			int grainIndex = 0;

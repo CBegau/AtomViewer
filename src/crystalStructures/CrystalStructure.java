@@ -585,6 +585,7 @@ public abstract class CrystalStructure{
 	 * @param barrier If the analysis consists of several phases, this barrier can be used to synchronize the threads
 	 * @param end see start
 	 */
+	@Deprecated
 	public void identifyDefectAtoms(List<Atom> atoms, NearestNeighborBuilder<Atom> nnb, int start, int end, CyclicBarrier barrier) {
 		for (int i=start; i<end; i++){
 			if (Thread.interrupted()) return;
