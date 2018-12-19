@@ -18,10 +18,8 @@
 
 package crystalStructures;
 
-import gui.ProgressMonitor;
-
 import java.util.*;
-import java.util.concurrent.CyclicBarrier;
+import java.util.stream.Collectors;
 
 import common.*;
 import model.*;
@@ -87,41 +85,28 @@ public class FCCTwinnedStructure extends FCCStructure {
 	}
 	
 	@Override
-	public void identifyDefectAtoms(List<Atom> atoms, NearestNeighborBuilder<Atom> nnb, 
-			int start, int end, CyclicBarrier barrier) {
-		for (int i=start; i<end; i++){
-			if (Thread.interrupted()) return;
-			
-			if ((i-start)%10000 == 0)
-				ProgressMonitor.getProgressMonitor().addToCounter(10000);
-			
-			Atom a = atoms.get(i);
-			int type = identifyAtomType(a, nnb); 
-			//Relabel
-			if (type == 3 || type == 7) type = 5;
-			a.setType(type);
-		}
-		
-		ProgressMonitor.getProgressMonitor().addToCounter((end-start)%10000);
-		try {
-			barrier.await();
-		} catch (Exception e) {
-			if (Thread.interrupted()) return;
-		}
-		
-		Vec3 v1 = null;
-		Vec3 normal = null;
-		
-		for (int i=start; i<end; i++){
-			if (Thread.interrupted()) return;
-			Atom a = atoms.get(i);
-			
+	public int identifyAtomType(Atom atom, NearestNeighborBuilder<Atom> nnb) {
+		int type =  super.identifyAtomType(atom, nnb);
+		if (type == 3 || type == 7) type = 5;
+		return type;
+	}
+	
+	@Override
+	public void identifyDefectAtomsPostProcessing(AtomData data, NearestNeighborBuilder<Atom> nnb) {
+		final List<Atom> atoms = data.getAtoms();
+		//Identify which atoms need to be retagged as twins
+		List<Atom> atomstoRetag = atoms.parallelStream().filter(a->{
+			Vec3 v1 = null;
+			Vec3 normal = null;
 			if (a.getType() == 2){
 				int countHCP = 0;
 				boolean twin = true;
 				ArrayList<Tupel<Atom, Vec3>> neiAndVec = nnb.getNeighAndNeighVec(a);
+				//Sort the array to have an deterministic behavior in creating the normal from the first
+				//HCP atom. Otherwise rounding errors produce non-deterministic results
+				neiAndVec.sort( (n1, n2) -> Float.compare(n2.o2.getLengthSqr(),n1.o2.getLengthSqr()));
 				for (Tupel<Atom, Vec3> n : neiAndVec){
-					if (n.o1.getType() == 2 || n.o1.getType() == 3){
+					if (n.o1.getType() == 2){
 						if (countHCP == 0) {
 							countHCP++;
 							v1 = n.o2;
@@ -131,7 +116,7 @@ public class FCCTwinnedStructure extends FCCStructure {
 						} else {
 							Vec3 d = n.o2;
 							float dev = normal.dot(d);
-							if (Math.abs(dev)>0.2) {
+							if (Math.abs(dev)>0.25) {
 								twin = false;
 								break;
 							}
@@ -141,10 +126,15 @@ public class FCCTwinnedStructure extends FCCStructure {
 					}
 				}
 				
-				if (twin && countHCP >= 3) a.setType(3);
-			}
-		}
+				return twin && countHCP >= 3; 
+			} return false;
+		}).collect(Collectors.toList());
+		
+		//Change tags
+		for (Atom a : atomstoRetag)
+			a.setType(3);
 	}
+	
 	
 	@Override
 	public List<Grain> identifyGrains(final AtomData data, float meshSize) {

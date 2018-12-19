@@ -18,7 +18,6 @@
 
 package common;
 
-import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.IntConsumer;
 import java.util.stream.IntStream;
@@ -51,30 +50,6 @@ public class ThreadPool {
 	}
 	
 	/**
-	 * Runs a batch of Callables instances in parallel.
-	 * The method returns once all callables have been executed
-	 * @param <V> The returned type of each Callable instance. If no return is required use Void 
-	 * @param c List of callables
-	 * @return List of Future objects, holding the returned values
-	 * @deprecated
-	 */
-	public static <V> List<Future<V>> executeParallel(List<? extends Callable<V>> c){
-		try {
-			List<Future<V>> futures = threadPool.invokeAll(c);
-			for (Future<V> f : futures){
-				try {
-					f.get();
-				} catch (ExecutionException e) {
-					e.printStackTrace();
-				}
-			}
-			return futures;
-		} catch (InterruptedException e) {
-			return null;
-		}
-	}
-	
-	/**
 	 * Submit a single callable that is executed asynchronously,
 	 * whenever the ThreadPool has free resources 
 	 * @param c
@@ -104,9 +79,5 @@ public class ThreadPool {
 		IntStream.range(0, size).parallel().forEach(actionWithProgressBarUpdate);
 		
 		ProgressMonitor.getProgressMonitor().stop();
-	}
-	
-	public static int availProcessors(){
-		return processors;
 	}
 }

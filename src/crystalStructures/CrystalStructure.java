@@ -20,7 +20,6 @@ package crystalStructures;
 
 import gui.JLogPanel;
 import gui.PrimitiveProperty;
-import gui.ProgressMonitor;
 
 import java.awt.Color;
 import java.io.*;
@@ -29,7 +28,6 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
-import java.util.concurrent.CyclicBarrier;
 
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
@@ -577,27 +575,13 @@ public abstract class CrystalStructure{
 	}
 	
 	/**
-	 * Perform an identification of the atom types (Bond angle analysis, Common neighbor analysis, whatever...)
-	 * @param atoms A list of all atoms
-	 * @param nnb The nearest neighbor graph for this task
-	 * @param start Perform the identification for all atom within the range of start and end
-	 * The calculation has to be able to performed in parallel
-	 * @param barrier If the analysis consists of several phases, this barrier can be used to synchronize the threads
-	 * @param end see start
+	 * This is a fully customizable routine that is called after the initial structural analysis.
+	 * It can be used for the purpose of additional analysis, e.g. the defect classification
+	 * requires multiple iterations
+	 * @param data The complete AtomData object
+	 * @param nnb The nearest neighbor graph as already used in the identifyDefectAtoms method (can be reused free of costs)
 	 */
-	@Deprecated
-	public void identifyDefectAtoms(List<Atom> atoms, NearestNeighborBuilder<Atom> nnb, int start, int end, CyclicBarrier barrier) {
-		for (int i=start; i<end; i++){
-			if (Thread.interrupted()) return;
-			if ((i-start)%10000 == 0)
-				ProgressMonitor.getProgressMonitor().addToCounter(10000);
-			
-			Atom a = atoms.get(i);
-			a.setType(identifyAtomType(a, nnb));
-		}
-		
-		ProgressMonitor.getProgressMonitor().addToCounter((end-start)%10000);
-	}
+	public void identifyDefectAtomsPostProcessing(AtomData data, NearestNeighborBuilder<Atom> nnb) {}
 	
 	/**
 	 * If it is not needed for some atoms to check the neighbor configuration,

@@ -104,7 +104,7 @@ public class RbvModule extends ClonableProcessingModule{
 	private float perfectBurgersVectorLength, rbvCorrectionFactor;
 	private float nnbDist;
 	
-	private ConcurrentHashMap<Vec3,RbvInfo<?>> atomToRbvInfoMap = new ConcurrentHashMap<Vec3, RbvInfo<?>>(16, 0.75f, ThreadPool.availProcessors());
+	private ConcurrentHashMap<Vec3,RbvInfo<?>> atomToRbvInfoMap = new ConcurrentHashMap<Vec3, RbvInfo<?>>(16, 0.75f, Runtime.getRuntime().availableProcessors());
 	
 	private NearestNeighborBuilder<Vec3> nnb;
 	

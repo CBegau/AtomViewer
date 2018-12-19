@@ -19,7 +19,7 @@
 package crystalStructures;
 
 import java.util.*;
-import java.util.concurrent.CyclicBarrier;
+import java.util.stream.Collectors;
 
 import common.Tupel;
 import common.Vec3;
@@ -85,26 +85,12 @@ public class L12_Ni3AlStructure extends FCCStructure{
 	}
 	
 	@Override
-	public void identifyDefectAtoms(List<Atom> atoms, NearestNeighborBuilder<Atom> nnb, 
-			int start, int end, CyclicBarrier barrier) {
+	public void identifyDefectAtomsPostProcessing(AtomData data, NearestNeighborBuilder<Atom> nnb) {
+		final float tol = (float)(Math.cos(167)*Math.PI/180.);
+		final List<Atom> atoms = data.getAtoms();
 		
-		for (int i=start; i<end; i++){
-			if (Thread.interrupted()) return;
-			Atom a = atoms.get(i);
-			a.setType(identifyAtomType(a, nnb));
-		}
-		try {
-			barrier.await();
-		} catch (Exception e) {
-			if (Thread.interrupted()) return;
-		}
-			
-		float tol = (float)(Math.cos(167)*Math.PI/180.);	
-		
-		for (int i=start; i<end; i++){
-			if (Thread.interrupted()) return;
-			Atom a = atoms.get(i);
-			
+		//Identify which atoms need to be retagged as twins
+		List<Atom> atomstoRetag = atoms.parallelStream().filter(a->{
 			if (a.getType() == 0){
 				int countPseudoTwin = 0;
 				int pairs = 0;
@@ -127,9 +113,13 @@ public class L12_Ni3AlStructure extends FCCStructure{
 					}
 				}
 				
-				if (pairs>=2 && countPseudoTwin >= 4) a.setType(8);
-			}
-		}
+				return (pairs>=2 && countPseudoTwin >= 4);
+			} return false;
+		}).collect(Collectors.toList());
+		
+		//Change tags
+		for (Atom a : atomstoRetag)
+			a.setType(8);
 	}
 	
 	@Override
