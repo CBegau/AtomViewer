@@ -26,7 +26,7 @@ import gui.glUtils.Shader.BuiltInShader;
 
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import com.jogamp.opengl.GL;
@@ -34,7 +34,7 @@ import com.jogamp.opengl.GL3;
 
 import common.CommonUtils;
 import common.FastDeletableArrayList;
-import common.ThreadPool;
+import common.Tupel;
 import common.UniqueIDCounter;
 import common.Vec3;
 import model.*;
@@ -258,34 +258,55 @@ public class Skeletonizer extends DataContainer {
 	}
 	
 	private boolean contractMesh() {
-		CyclicBarrier syncBarrier = new CyclicBarrier(ThreadPool.availProcessors());
-		Vector<ContractionCallable> tasks = new Vector<ContractionCallable>();
-		//Evaluate all new positions (in parallel)
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			int start = (int)((long)nodes.size() * i)/ThreadPool.availProcessors();
-			int end = (int)((long)nodes.size() * (i+1))/ThreadPool.availProcessors();
+		List<Tupel<SkeletonNode, Vec3>> nodesToMove = nodes.parallelStream()
+				.filter(a -> !a.isCriticalNode())	//Only non-critical nodes may be moved
+				.map(a -> {
+			// Calculate the new position with an inverse distance weighting scheme
+			// Do not contract towards critical nodes where the mesh is thined
+			// out to prevent singularities
+			int dirsSize = 0;
+			float sumLength = 0f;
+			Vec3[] dirs = new Vec3[2 * SkeletonNode.MAX_MERGED_ATOMS];
+			float[] dirsLenght = new float[2 * SkeletonNode.MAX_MERGED_ATOMS];
 
-			tasks.add(this.new ContractionCallable(start, end, nodes, syncBarrier));
-		}
-		
-		List<Future<Integer>> results = ThreadPool.executeParallel(tasks);
-
-		int nodesToMove = 0;
-		//Retrieve sum of all moved nodes
-		for (Future<Integer> c : results){
-			try {
-				nodesToMove += c.get();
-			} catch (CancellationException ce){
-				//do nothing, jobs have been stopped by interrupt
-				return false;
-			} catch (Exception e) {
-				e.printStackTrace();
-				System.exit(1);
+			for (SkeletonNode n : a.getNeigh()) {
+				if (!n.isCriticalNode()) {
+					Vec3 dir = data.getBox().getPbcCorrectedDirection(n, a);
+					float l = 1f / dir.getLengthSqr();
+					dirsLenght[dirsSize] = l;
+					dirs[dirsSize++] = dir;
+					sumLength += l;
+				}
 			}
-		}
-		
-		//If less than 0.5% of all remaining nodes have moved, the mesh is considered as converged  
-		return nodesToMove*200 > nodes.size();
+			sumLength = 0.33f / sumLength;
+
+			Vec3 move = new Vec3();
+			for (int i = 0; i < dirsSize; i++) {
+				Vec3 dir = dirs[i];
+				float l = dirsLenght[i] * sumLength;
+				move.add(dir.multiply(l));
+			}
+
+			// Store new coordinate if it differs significantly from the current
+			if (move.getLengthSqr() > 1e-6f) {
+				return new Tupel<>(a, move);
+			}
+			return null;
+		})
+				//Remove null values and turn into a collection
+				//Before any node is moved, the whole stream must have been
+				//processed, thus this acts a barrier for the parallel section
+				.filter(node -> node != null).collect(Collectors.toList());
+
+		//Now update the position of each node
+		nodesToMove.parallelStream().forEach(node -> {
+			node.o1.add(node.o2);
+			data.getBox().backInBox(node.o1);
+		});
+
+		// If less than 0.5% of all remaining nodes have moved, the mesh is
+		// considered as converged
+		return nodesToMove.size() * 200 > nodes.size();
 	}
 	
 	private boolean mergeNodes(float mergeTol){
@@ -506,77 +527,6 @@ public class Skeletonizer extends DataContainer {
 		}
 	}
 	
-	private class ContractionCallable implements Callable<Integer> {
-		private int start, end;
-		private List<SkeletonNode> nodes;
-		private CyclicBarrier syncBarrier;
-		
-		
-		public ContractionCallable(int start, int end, List<SkeletonNode> nodes, CyclicBarrier barrier) {
-			this.start = start;
-			this.end = end;
-			this.nodes = nodes;
-			this.syncBarrier = barrier;
-		}
-
-		@Override
-		public Integer call() throws Exception {
-			List<SkeletonNode> nodesMoved = new ArrayList<SkeletonNode>();
-			List<Vec3> nodesMovedTo = new ArrayList<Vec3>();
-			
-			Vec3[] dirs = new Vec3[2 * SkeletonNode.MAX_MERGED_ATOMS];
-			float[] dirsLenght = new float[2 * SkeletonNode.MAX_MERGED_ATOMS];
-			
-			for (int j=start; j<end; j++){
-				if (Thread.interrupted()) return null;
-				SkeletonNode a = nodes.get(j);
-				if (!a.isCriticalNode()) {
-					//Calculate the new position with an inverse distance weighting scheme
-					//Do not contract towards critical nodes where the mesh is thinned out
-					//to prevent singularities
-					
-					int dirsSize = 0;
-					float sumLength = 0f;
-					
-					for (SkeletonNode n : a.getNeigh()) {
-						if (!n.isCriticalNode()){
-							Vec3 dir = data.getBox().getPbcCorrectedDirection(n, a);
-							float l = 1f / dir.getLengthSqr();
-							dirsLenght[dirsSize] = l;
-							dirs[dirsSize++] = dir;
-							sumLength += l;
-						}
-					}
-					sumLength = 0.33f / sumLength;
-					
-					Vec3 move = new Vec3();
-					for (int i = 0; i < dirsSize; i++) {
-						Vec3 dir = dirs[i];
-						float l = dirsLenght[i] * sumLength;
-						move.add(dir.multiply(l));
-					}
-
-					//Store new coordinate if it differs significantly from the current  
-					if (move.getLengthSqr()> 1e-6f) {
-						nodesMoved.add(a);
-						nodesMovedTo.add(move);
-					}
-				}
-			}
-		
-			syncBarrier.await();
-			
-			for (int i=0; i<nodesMoved.size(); i++){
-				SkeletonNode n = nodesMoved.get(i);
-				//Move node
-				n.add(nodesMovedTo.get(i));
-				data.getBox().backInBox(n);
-			}
-			
-			return nodesMoved.size();
-		}
-	}
-
 	@Override
 	public boolean isTransparenceRenderingRequired() {
 		return Option.STACKING_FAULT.isEnabled();

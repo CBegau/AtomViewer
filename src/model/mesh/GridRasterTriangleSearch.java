@@ -20,14 +20,11 @@ package model.mesh;
 
 import model.BoxParameter;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.TreeSet;
-import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 
-import common.ThreadPool;
 import common.Vec3;
 import model.NearestNeighborBuilder;
 
@@ -99,38 +96,10 @@ public class GridRasterTriangleSearch<T extends Vec3> extends ClosestTriangleSea
 	}
 
 	@Override
-	public List<T> getElementsWithinThreshold(final List<T> sites) {
-		ArrayList<T> elementsWithin = new ArrayList<T>();
-		final List<T> syncList = Collections.synchronizedList(elementsWithin);
-		
-		ArrayList<Callable<Void>> parallelTasks = new ArrayList<Callable<Void>>();
-		for (int i=0; i<ThreadPool.availProcessors(); i++){
-			final int j = i;
-			parallelTasks.add(new Callable<Void>() {
-				@Override
-				public Void call() throws Exception {
-					int start = (int)(((long)sites.size() * j)/ThreadPool.availProcessors());
-					int end = (int)(((long)sites.size() * (j+1))/ThreadPool.availProcessors());
-					
-					//Each element is associated with an upper bound distance to the mesh, which is 
-					//initially infinite. The true distance can never be larger than the estimated value
-					//However, the estimated value can greatly underestimate the true one.
-					for (int i=start; i<end; i++){
-						if (Thread.interrupted()) return null;
-						
-						T a = sites.get(i);
-						
-						Vec3 v = triangleSurfacePoints.getVectorToNearest(a);
-						if (v != null && v.getLength() < threshold)
-							syncList.add(a);
-					}
-					
-					return null;
-				}
-			});
-		};
-		ThreadPool.executeParallel(parallelTasks);
-		
-		return elementsWithin;
+	public List<T> getElementsWithinThreshold(final List<T> sites) {		
+		return sites.stream().parallel().filter(a->{
+			Vec3 v = triangleSurfacePoints.getVectorToNearest(a);
+			return (v != null && v.getLength() < threshold);
+		}).collect(Collectors.toList());
 	}
 }

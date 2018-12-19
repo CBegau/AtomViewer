@@ -18,7 +18,6 @@
 package processingModules.skeletonizer.processors;
 
 import java.util.ArrayList;
-import java.util.stream.IntStream;
 
 import common.Vec3;
 import model.BoxParameter;
@@ -35,8 +34,7 @@ public class DislocationSmootherPostprocessor implements SkeletonDislocationPost
 		final ArrayList<Dislocation> dis = skel.getDislocations();
 		final BoxParameter box = skel.getAtomData().getBox();
 		
-		IntStream.range(0, dis.size()).parallel().forEach(j->{
-			Dislocation d = dis.get(j);
+		dis.parallelStream().forEach(d->{
 			if (d.getLine().length>2){
 				Vec3[] pos = new Vec3[d.getLine().length-2];
 				//Ignore first and last node. Junctions are not moved 
