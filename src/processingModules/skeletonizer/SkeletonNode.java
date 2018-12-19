@@ -237,7 +237,7 @@ public class SkeletonNode extends Vec3 implements Comparable<SkeletonNode>{
 	 * Here it is by definition a critical node if any node two hops away is to be reached by a unique path.
 	 * @return
 	 */
-	public boolean isCriticalNode(){
+	public synchronized boolean isCriticalNode(){
 //		if (isCriticalNode) return true; //Once a critical node, forever a critical node
 		
 		if (mappedAtoms.size()>MAX_MERGED_ATOMS)
