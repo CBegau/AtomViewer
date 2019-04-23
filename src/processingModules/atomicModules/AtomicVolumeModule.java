@@ -1,7 +1,7 @@
 // Part of AtomViewer: AtomViewer is a tool to display and analyse
 // atomistic simulations
 //
-// Copyright (C) 2015  ICAMS, Ruhr-Universität Bochum
+// Copyright (C) 2015  ICAMS, Ruhr-UniversitÃ€t Bochum
 //
 // AtomViewer is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -116,12 +116,12 @@ public class AtomicVolumeModule extends ClonableProcessingModule {
 	public boolean showConfigurationDialog(JFrame frame, AtomData data) {
 		JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(frame, "Compute atomic volume/density");
 		dialog.addLabel(getFunctionDescription());
-		dialog.addLabel("The result of the volume has the unit of '(length unit)�', the density '1/(length unit)�'");
+		dialog.addLabel("The result of the volume has the unit of '(length unit)³', the density '1/(length unit)³'");
 		dialog.add(new JSeparator());
 		FloatProperty avRadius = dialog.addFloat("avRadius", "Radius of a sphere to find neighbors for a voronoi cell construction."
 				, "", radius, 0f, 1000f);
 		BooleanProperty density = dialog.addBoolean("compDensity", "Compute density instead of volume", "", computeDensity);
-		FloatProperty scaling = dialog.addFloat("scalingFactor", "Scaling factor for the result (e.g. to nm�)", "", scalingFactor, 0f, 1e20f);
+		FloatProperty scaling = dialog.addFloat("scalingFactor", "Scaling factor for the result (e.g. to nm³)", "", scalingFactor, 0f, 1e20f);
 		boolean ok = dialog.showDialog();
 		if (ok){
 			this.computeDensity = density.getValue();
