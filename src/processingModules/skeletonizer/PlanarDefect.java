@@ -110,7 +110,7 @@ public class PlanarDefect implements Pickable{
 			ArrayList<PlanarDefect> def = new ArrayList<>();
 			
 			for (Entry<Integer, TreeSet<PlanarDefectAtom>> e : sfPerGrain.entrySet()){
-				sfPerGrain.remove(e.getKey());	//reference in the map is not needed anymore
+				//sfPerGrain.remove(e.getKey());	//reference in the map is not needed anymore
 				if (e.getKey() != Atom.DEFAULT_GRAIN  && e.getKey() != Atom.IGNORED_GRAIN){
 					Grain g = data.getGrains(e.getKey()); 
 					
