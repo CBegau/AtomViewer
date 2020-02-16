@@ -277,6 +277,9 @@ public class JMDFileChooser extends JFileChooser{
 				if (ccd.isSavedSuccessfully()) {
 					confFileFound = true;
 					importConfig.readConfigurationFile(new File(getCurrentDirectory(),CONF_FILE));
+				} else if (!ccd.isCancelled()) {
+					confFileFound = true;
+					importConfig.setCrystalConfContent(ccd.getCrystalConfigContent());
 				}
 			});
 			
