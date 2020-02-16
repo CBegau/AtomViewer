@@ -541,7 +541,9 @@ public class JCrystalConfigurationDialog extends JDialog{
 			boolean created = f.createNewFile();
 			if (!created) return;
 		}
-		if (!f.canWrite()) return;
+		if (!f.canWrite()) 
+			throw new IOException("crystal.conf could not be written");
+		
 		PrintWriter pw = new PrintWriter(f);
 		
 		Vec3 l = new Vec3();
