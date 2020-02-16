@@ -36,7 +36,9 @@ import javax.swing.border.TitledBorder;
 
 import model.Configuration;
 import model.DataColumnInfo;
+import model.ImportConfiguration;
 import model.DataColumnInfo.Component;
+import model.ImportConfiguration.CrystalConfContent;
 import common.CommonUtils;
 import common.Vec3;
 import crystalStructures.*;
@@ -53,7 +55,7 @@ public class JCrystalConfigurationDialog extends JDialog{
 	private JButton cancelButton = new JButton("cancel");
 	private Container tableContainer = new Container();
 	private Container crystalPropertiesContainer = new Container();
-	private CrystalConfContent t;
+	private CrystalConfContent crystalConfigContent;
 	
 	private JTextField[] nameTextFields, idTextFields, unitTextFields;
 	private JFormattedTextField[] scalingFactorFields;
@@ -61,6 +63,7 @@ public class JCrystalConfigurationDialog extends JDialog{
 	private JComponentComboBox[] componentComboBoxes;
 	
 	private boolean isSavedSuccessfully = false;
+	private boolean isCancelled = false;
 	
 	public JCrystalConfigurationDialog(final File folder, final File selectedFile, boolean showCancelButton){
 		createDialog(folder, selectedFile, showCancelButton);
@@ -139,7 +142,7 @@ public class JCrystalConfigurationDialog extends JDialog{
 					writeConfigurationFile(folder);
 					isSavedSuccessfully = true;
 				} catch (IOException e1) {
-					JOptionPane.showMessageDialog(null, "Error updating crystal.conf", "Error", JOptionPane.ERROR_MESSAGE);
+					JOptionPane.showMessageDialog(null, "crystal.conf could not been written", "Info", JOptionPane.INFORMATION_MESSAGE);
 				} finally {
 					dispose();
 				}
@@ -149,7 +152,7 @@ public class JCrystalConfigurationDialog extends JDialog{
 		cancelButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				isSavedSuccessfully = false;
+				isCancelled = true;
 				dispose();
 			}
 		});
@@ -158,10 +161,10 @@ public class JCrystalConfigurationDialog extends JDialog{
 		try {
 			File conf = new File(folder, "crystal.conf");
 			if (conf.exists()){
-				t = readConfigurationFile(conf);
-				if (t != null) {
-					CrystalStructure cs = t.cs;
-					Vec3[] o = t.orientation;
+				crystalConfigContent = ImportConfiguration.readCrystalConfFile(conf);
+				if (crystalConfigContent != null) {
+					CrystalStructure cs = crystalConfigContent.getCrystalStructure();
+					Vec3[] o = crystalConfigContent.getOrientation();
 					
 					crystalStructureComboBox.setSelectedIndex(0);
 					for (int i = 0; i<crystalStructureComboBox.getItemCount(); i++){
@@ -185,9 +188,9 @@ public class JCrystalConfigurationDialog extends JDialog{
 					
 					latticeConstTextField.setValue(cs.getLatticeConstant());
 				}
-				crystalStructure = t.cs;
+				crystalStructure = crystalConfigContent.getCrystalStructure();
 			}
-			if (t == null) t = new CrystalConfContent(new Vec3[]{new Vec3(1f,0f,0f),new Vec3(1f,1f,0f),new Vec3(0f,0f,1f)}, 
+			if (crystalConfigContent == null) crystalConfigContent = new CrystalConfContent(new Vec3[]{new Vec3(1f,0f,0f),new Vec3(1f,1f,0f),new Vec3(0f,0f,1f)}, 
 					new FCCStructure(), new ArrayList<DataColumnInfo>());
 		} catch (IOException ex){
 			
@@ -299,27 +302,29 @@ public class JCrystalConfigurationDialog extends JDialog{
 		
 		Map<String, Component> nameToComponentMap = Configuration.getCurrentFileLoader().getDefaultNamesForComponents();
 		
-		for (int i=0; i<t.dataColumns.size(); i++){
-			int index = values.indexOf(t.dataColumns.get(i).getId());
+		ArrayList<DataColumnInfo> dc = crystalConfigContent.getRawColumns();
+		
+		for (int i=0; i<dc.size(); i++){
+			int index = values.indexOf(dc.get(i).getId());
 			if (index != -1)
 				inHeader[index] = true;
 			
-			nameTextFieldsList.add(new JTextField(t.dataColumns.get(i).getName()));
-			JTextField id = new JTextField(t.dataColumns.get(i).getId());
+			nameTextFieldsList.add(new JTextField(dc.get(i).getName()));
+			JTextField id = new JTextField(dc.get(i).getId());
 			id.setEditable(false);
 			idTextFieldsList.add(id);
-			unitTextFieldsList.add(new JTextField(t.dataColumns.get(i).getUnit()));
+			unitTextFieldsList.add(new JTextField(dc.get(i).getUnit()));
 			
 			JFormattedTextField ftf = new JFormattedTextField("#.########");
-			ftf.setValue(t.dataColumns.get(i).getScalingFactor());
+			ftf.setValue(dc.get(i).getScalingFactor());
 			scalingFactorFieldsList.add(ftf);
 			activeCheckBoxesList.add(new JCheckBox("", true));
 
 			JComponentComboBox box = new JComponentComboBox();
-			Component selectedComponent = t.dataColumns.get(i).getComponent(); 
+			Component selectedComponent = dc.get(i).getComponent(); 
 			if (selectedComponent == Component.OTHER){
-				if (nameToComponentMap.containsKey(t.dataColumns.get(i).getId()))
-					selectedComponent = nameToComponentMap.get(t.dataColumns.get(i).getId());
+				if (nameToComponentMap.containsKey(dc.get(i).getId()))
+					selectedComponent = nameToComponentMap.get(dc.get(i).getId());
 			}
 			box.setSelectedItem(selectedComponent);
 			
@@ -384,7 +389,7 @@ public class JCrystalConfigurationDialog extends JDialog{
 	}
 	
 	private void readDataValueTable(){
-		t.dataColumns.clear();
+		crystalConfigContent.getRawColumns().clear();
 		
 		for (int i=0; i<nameTextFields.length; i++){
 			if (activeCheckBoxes[i].isSelected()){
@@ -396,100 +401,22 @@ public class JCrystalConfigurationDialog extends JDialog{
 				DataColumnInfo cci = new DataColumnInfo(name, id, unit);
 				cci.setScalingFactor(scaling);
 				cci.setComponent((DataColumnInfo.Component)componentComboBoxes[i].getSelectedItem());
-				t.dataColumns.add(cci);
+				crystalConfigContent.getRawColumns().add(cci);
 			}
 		}
 	}
 	
 	
-	public static CrystalConfContent readConfigurationFile(File confFile) throws IOException{
-		CrystalStructure cs;
-		Vec3[] crystalOrientation = new Vec3[3];
-		ArrayList<DataColumnInfo> dataColumns = new ArrayList<DataColumnInfo>(); 
-		
-		LineNumberReader lnr = new LineNumberReader(new FileReader(confFile));
-		
-		float lattice = 0f;
-		float nnd = 0f;
-		String struct = "fcc";
-		
-		boolean structureFound = false, latticeConstFound = false;
-		boolean orientationXfound = false, orientationYfound = false, orientationZfound = false;
-		
-		Pattern p = Pattern.compile("[ \t]+");
-		String line = lnr.readLine();
-		while (line!=null && !line.startsWith("#CrystalStructureOptions")){
-			line = line.trim();
-			if (!line.isEmpty() && !line.startsWith("#")){
-				String[] parts = p.split(line);
-				
-				if (parts[0].toLowerCase().equals("structure")){
-					struct = parts[1].toLowerCase();
-					structureFound = true;
-				} else if (parts[0].toLowerCase().equals("latticeconst")){
-					if (parts.length != 1){
-						lattice = Float.parseFloat(parts[1]);
-						latticeConstFound = true;
-					}
-				} else if (parts[0].toLowerCase().equals("nearestneighcutoff")){
-					if (parts.length != 1) nnd = Float.parseFloat(parts[1]);
-				} else if (parts[0].toLowerCase().equals("orientation_x")){
-					if (parts.length>=4){
-						crystalOrientation[0] = new Vec3(Float.parseFloat(parts[1]), 
-								Float.parseFloat(parts[2]), 
-								Float.parseFloat(parts[3]));
-						orientationXfound = true;
-					}
-				} else if (parts[0].toLowerCase().equals("orientation_y")){
-					if (parts.length>=4){
-						crystalOrientation[1] = new Vec3(Float.parseFloat(parts[1]), 
-								Float.parseFloat(parts[2]), 
-								Float.parseFloat(parts[3]));
-						orientationYfound = true;
-					}
-				} else if (parts[0].toLowerCase().equals("orientation_z")){
-					if (parts.length>=4){
-						crystalOrientation[2] = new Vec3(Float.parseFloat(parts[1]), 
-								Float.parseFloat(parts[2]), 
-								Float.parseFloat(parts[3]));
-						orientationZfound = true;
-						
-						
-					}
-				} else if (parts[0].toLowerCase().equals("import_column")){
-					if (parts.length>=6){
-						DataColumnInfo cci = new DataColumnInfo(parts[1], parts[2], parts[3]);
-						
-						for (DataColumnInfo.Component c : DataColumnInfo.Component.values()){
-							if (c.name().equals(parts[5]))
-								cci.setComponent(c);
-						}
-						cci.setScalingFactor(Float.parseFloat(parts[4]));
-						dataColumns.add(cci);
-					}
-				}
-			}			
-			
-			line = lnr.readLine();
-		}
-			
-		if (structureFound != true || latticeConstFound != true || 
-				orientationXfound != true || orientationYfound != true || orientationZfound != true){
-			lnr.close();
-			return null;
-		}
-			
-		
-		cs = CrystalStructure.createCrystalStructure(struct, lattice, nnd);
-		
-		CrystalStructureProperties.readProperties(cs.getCrystalProperties(), lnr);
-		
-		lnr.close();
-		return new CrystalConfContent(crystalOrientation, cs, dataColumns);
-	}
-	
 	public boolean isSavedSuccessfully() {
 		return isSavedSuccessfully;
+	}
+	
+	public boolean isCancelled() {
+		return isCancelled;
+	}
+	
+	public CrystalConfContent getCrystalConfigContent() {
+		return crystalConfigContent;
 	}
 	
 	private class CrystalOrientationListener implements ActionListener, PropertyChangeListener{
@@ -584,8 +511,8 @@ public class JCrystalConfigurationDialog extends JDialog{
 		pw.println(String.format("# Modify slighty if needed"));
 		pw.println(String.format("nearestneighcutoff %.4f", nnbDist));
 		
-		for (int i=0; i<t.dataColumns.size(); i++){
-			DataColumnInfo c = t.dataColumns.get(i);
+		for (int i=0; i<crystalConfigContent.getRawColumns().size(); i++){
+			DataColumnInfo c = crystalConfigContent.getRawColumns().get(i);
 			pw.println(String.format("import_column %s %s %s %e %s", c.getName(), c.getId(), c.getUnit().isEmpty()?"-":c.getUnit(),
 					c.getScalingFactor(), c.getComponent().name()));
 		}
@@ -593,29 +520,6 @@ public class JCrystalConfigurationDialog extends JDialog{
 		CrystalStructureProperties.storeProperties(crystalStructure.getCrystalProperties(), pw);
 		
 		pw.close();	
-	}
-	
-	public static class CrystalConfContent{
-		Vec3[] orientation;
-		CrystalStructure cs;
-		ArrayList<DataColumnInfo> dataColumns;
-		public CrystalConfContent(Vec3[] orientation, CrystalStructure cs, ArrayList<DataColumnInfo> rawColumns) {
-			this.orientation = orientation;
-			this.cs = cs;
-			this.dataColumns = rawColumns;
-		}
-		
-		public CrystalStructure getCrystalStructure() {
-			return cs;
-		}
-		
-		public Vec3[] getOrientation() {
-			return orientation;
-		}
-		
-		public ArrayList<DataColumnInfo> getRawColumns() {
-			return dataColumns;
-		}
 	}
 	
 	private static class JComponentComboBox extends JComboBox{
