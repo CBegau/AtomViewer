@@ -28,6 +28,7 @@ import javax.swing.*;
 
 import model.io.CfgFileLoader;
 import model.io.ImdFileLoader;
+import model.io.KeyenceFileLoader;
 import model.io.LammpsAsciiDumpLoader;
 import model.io.MDFileLoader;
 import model.io.XYZFileLoader;
@@ -57,6 +58,7 @@ public class JMDFileChooser extends JFileChooser{
 		fileLoader.add(new LammpsAsciiDumpLoader());
 		fileLoader.add(new XYZFileLoader());
 		fileLoader.add(new CfgFileLoader());
+		fileLoader.add(new KeyenceFileLoader());
 	}
 	
 	public JMDFileChooser(){
