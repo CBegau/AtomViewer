@@ -124,17 +124,19 @@ public class KeyenceFileLoader extends MDFileLoader {
 			//Uncompressed full res bmp
 			for (int x = 0; x<width;x++) {
 				for (int y = 0; y<height;y++) {
-					int r = im3d.getRaster().getSample(x, y, 0);
-					int g = im3d.getRaster().getSample(x, y, 1);
-					int b = im3d.getRaster().getSample(x, y, 2);
+					int r = im3d.getRaster().getSample(x, y, 0);	// only 3 bits used
+					int g = im3d.getRaster().getSample(x, y, 1);	// all 8 bits used
+					int b = im3d.getRaster().getSample(x, y, 2);	// only 4 bits used
 					
-					int z = g<<4 | (r & 0x03)<<2 | (b & 0x03);
+					int z = (g & 0xff)<<7 | (r & 0xff)<<4 | (b & 0xff);
+					
+					//int z = g<<7 | r<<3 | b;
 					
 					if (z>0) {
 						Vec3 pos = new Vec3();
 						pos.x = x;
 						pos.y = y;
-						pos.z = z*zScaling.getValue()/16;
+						pos.z = z*zScaling.getValue()/128;
 						//pos.z = g;
 	
 						Atom a = new Atom(pos, x*height+y, (byte)0);
@@ -150,6 +152,7 @@ public class KeyenceFileLoader extends MDFileLoader {
 					}
 				}
 			}
+		
 		}
 		
 		//Add the names of the elements to the input
