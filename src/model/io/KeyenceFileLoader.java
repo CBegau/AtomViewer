@@ -63,7 +63,12 @@ public class KeyenceFileLoader extends MDFileLoader {
 
 			
 		BufferedImage im3d = ImageIO.read(f);
-		BufferedImage im2d = ImageIO.read(new File(f.getAbsolutePath().replace("_3D", "_2D")));
+		
+		File file2D = new File(f.getAbsolutePath().replace("_3D", "_2D"));
+		if (!file2D.exists())
+			file2D = new File(f.getAbsolutePath().replace("_3D", "_2D").replace(".bmp", ".jpg"));
+		
+		BufferedImage im2d = ImageIO.read(file2D);
 		
 		boolean compressed = f.getName().endsWith(".jpg");
 		
