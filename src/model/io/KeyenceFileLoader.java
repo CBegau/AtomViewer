@@ -64,17 +64,33 @@ public class KeyenceFileLoader extends MDFileLoader {
 			
 		BufferedImage im3d = ImageIO.read(f);
 		
-		File file2D = new File(f.getAbsolutePath().replace("_3D", "_2D"));
-		if (!file2D.exists())
-			file2D = new File(f.getAbsolutePath().replace("_3D", "_2D").replace(".bmp", ".jpg"));
+		File file2D;
+		
+		if (f.getName().endsWith("D1.jpg") || f.getName().endsWith("D1.bmp")) {
+			file2D = new File(f.getAbsolutePath().replace("D1", "B1"));
+			if (!file2D.exists())
+				file2D = new File(f.getAbsolutePath().replace("D1", "B1").replace(".bmp", ".jpg"));
+		} else { 
+			file2D = new File(f.getAbsolutePath().replace("_3D", "_2D"));
+			if (!file2D.exists())
+				file2D = new File(f.getAbsolutePath().replace("_3D", "_2D").replace(".bmp", ".jpg"));
+		}
 		
 		BufferedImage im2d = ImageIO.read(file2D);
 		
 		boolean compressed = f.getName().endsWith(".jpg");
 		
+		boolean mixedResolution = im3d.getWidth() != im2d.getWidth();
 			
-		idc.boxSizeX.setTo(new Vec3(im3d.getWidth()*(compressed?2:1), 0, 0));
-		idc.boxSizeY.setTo(new Vec3(0, im3d.getHeight()*(compressed?2:1), 0));
+			
+		int width3D = im3d.getWidth();
+		int height3D = im3d.getHeight();
+		
+		int width2D = im2d.getWidth();
+		int height2D = im2d.getHeight();
+		
+		idc.boxSizeX.setTo(new Vec3(width3D*(compressed?2:1), 0, 0));
+		idc.boxSizeY.setTo(new Vec3(0, height3D*(compressed?2:1), 0));
 		idc.boxSizeZ.setTo(new Vec3(0, 0, 256));
 		
 		idc.pbc[0] = false;
@@ -97,22 +113,21 @@ public class KeyenceFileLoader extends MDFileLoader {
 		}
 		
 		
-		int width = im3d.getWidth();
-		int height = im3d.getHeight();
-		
-		if (compressed) {
-			//reduced quality and resolution
-			for (int x = 0; x<width;x++) {
-				for (int y = 0; y<height;y++) {
-					int z = im3d.getRaster().getSample(x, y, 0);
+		if (mixedResolution) {
+			//Uncompressed full res bmp
+			for (int x = 0; x<width2D;x++) {
+				for (int y = 0; y<height2D;y++) {
+					
+					int z = im3d.getRaster().getSample(x/2, y/2, 0);
 					
 					if (z>0) {
 						Vec3 pos = new Vec3();
-						pos.x = x*2f;
-						pos.y = y*2f;
+						pos.x = x;
+						pos.y = y;
 						pos.z = z*zScaling.getValue();
-
-						Atom a = new Atom(pos, x*2*height*2+y*2, (byte)0);
+						//pos.z = g;
+	
+						Atom a = new Atom(pos, x*height3D+y, (byte)0);
 						
 						idc.atoms.add(a);
 					
@@ -126,38 +141,65 @@ public class KeyenceFileLoader extends MDFileLoader {
 				}
 			}
 		} else {
-			//Uncompressed full res bmp
-			for (int x = 0; x<width;x++) {
-				for (int y = 0; y<height;y++) {
-					int r = im3d.getRaster().getSample(x, y, 0);	// only 3 bits used
-					int g = im3d.getRaster().getSample(x, y, 1);	// all 8 bits used
-					int b = im3d.getRaster().getSample(x, y, 2);	// only 4 bits used
-					
-					int z = (g & 0xff)<<7 | (r & 0xff)<<4 | (b & 0xff);
-					
-					//int z = g<<7 | r<<3 | b;
-					
-					if (z>0) {
-						Vec3 pos = new Vec3();
-						pos.x = x;
-						pos.y = y;
-						pos.z = z*zScaling.getValue()/128;
-						//pos.z = g;
+			if (compressed) {
+				//reduced quality and resolution
+				for (int x = 0; x<width3D;x++) {
+					for (int y = 0; y<height3D;y++) {
+						int z = im3d.getRaster().getSample(x, y, 0);
+						
+						if (z>0) {
+							Vec3 pos = new Vec3();
+							pos.x = x*2f;
+							pos.y = y*2f;
+							pos.z = z*zScaling.getValue();
 	
-						Atom a = new Atom(pos, x*height+y, (byte)0);
+							Atom a = new Atom(pos, x*2*height3D*2+y*2, (byte)0);
+							
+							idc.atoms.add(a);
 						
-						idc.atoms.add(a);
-					
-						
-						if (imageCol != -1)
-							idc.dataArrays.get(imageCol).add(im2d.getRaster().getSample(x, y, 0)/255f);
-						if (depthCol != -1)
-							idc.dataArrays.get(depthCol).add(pos.z/255f);
-						
+							
+							if (imageCol != -1)
+								idc.dataArrays.get(imageCol).add(im2d.getRaster().getSample(x, y, 0)/255f);
+							if (depthCol != -1)
+								idc.dataArrays.get(depthCol).add(pos.z/255f);
+							
+						}
 					}
 				}
-			}
+			} else {
+				//Uncompressed full res bmp
+				for (int x = 0; x<width3D;x++) {
+					for (int y = 0; y<height3D;y++) {
+						int r = im3d.getRaster().getSample(x, y, 0);	// only 3 bits used
+						int g = im3d.getRaster().getSample(x, y, 1);	// all 8 bits used
+						int b = im3d.getRaster().getSample(x, y, 2);	// only 4 bits used
+						
+						int z = (g & 0xff)<<7 | (r & 0xff)<<4 | (b & 0xff);
+						
+						//int z = g<<7 | r<<3 | b;
+						
+						if (z>0) {
+							Vec3 pos = new Vec3();
+							pos.x = x;
+							pos.y = y;
+							pos.z = z*zScaling.getValue()/128;
+							//pos.z = g;
 		
+							Atom a = new Atom(pos, x*height3D+y, (byte)0);
+							
+							idc.atoms.add(a);
+						
+							
+							if (imageCol != -1)
+								idc.dataArrays.get(imageCol).add(im2d.getRaster().getSample(x, y, 0)/255f);
+							if (depthCol != -1)
+								idc.dataArrays.get(depthCol).add(pos.z/255f);
+							
+						}
+					}
+				}
+			
+			}
 		}
 		
 		//Add the names of the elements to the input
@@ -182,7 +224,7 @@ public class KeyenceFileLoader extends MDFileLoader {
 			public boolean accept(File f) {
 				if (f.isDirectory()) return true;
 				String name = f.getName();
-				if (name.endsWith("_3D.bmp") || name.endsWith("_3D.jpg")){
+				if (name.endsWith("_3D.bmp") || name.endsWith("_3D.jpg") || name.endsWith("D1.bmp") || name.endsWith("D1.jpg")){
 					return true;
 				}
 				return false;
