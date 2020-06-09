@@ -37,6 +37,7 @@ public class FinalMesh {
 	private int[] triangles;
 	private int[] renderIndices;
 	private float[] vertices;
+	private float[] vertexColors;
 	private double volume = -1.;
 	private double area = -1.;
 	private float[] normals;
@@ -84,6 +85,17 @@ public class FinalMesh {
 		makeNormals();
 	}
 	
+	/**
+	 * Optional Vertex color as 4f
+	 * @param triangles
+	 * @param vertices
+	 * @param vertexColors
+	 */
+	public FinalMesh(int[] triangles, float[] vertices, float[] vertexColors){
+		this(triangles, vertices);
+		this.vertexColors = vertexColors;
+	}
+	
 	private void makeNormals(){
 		this.normals = new float[vertices.length];
 		
@@ -107,10 +119,12 @@ public class FinalMesh {
 	}
 	
 	public void renderMesh(GL3 gl){
-		VertexDataStorageLocalArrays vdsa = new VertexDataStorageLocalArrays(gl, 3, 3, 0, 0, 0, 0, 0, 0);
+		VertexDataStorageLocalArrays vdsa = new VertexDataStorageLocalArrays(gl, 3, 3, 0, vertexColors==null?0:4, 0, 0, 0, 0);
 		vdsa.beginFillBuffer(gl);
 		vdsa.setNormal(normals);
 		vdsa.setVertex(vertices);
+		if (vertexColors!=null)
+			vdsa.setColor(vertexColors);
 		vdsa.endFillBuffer(gl);
 		vdsa.setIndices(gl, renderIndices);
 		vdsa.draw(gl, GL.GL_TRIANGLES);
