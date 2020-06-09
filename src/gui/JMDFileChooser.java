@@ -252,7 +252,7 @@ public class JMDFileChooser extends JFileChooser{
 //			gbc.gridwidth = 3;
 			p.add(new JSeparator(), gbc); gbc.gridy++;
 			
-			p.add(disposeDefaultAtomsCheckBox, gbc); gbc.gridy++;
+//			p.add(disposeDefaultAtomsCheckBox, gbc); gbc.gridy++;
 			p.add(optionsPanel, gbc); gbc.gridy++;
 			
 			ActionListener simpleCheckBoxListener = e -> {

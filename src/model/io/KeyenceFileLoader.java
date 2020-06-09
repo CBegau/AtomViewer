@@ -43,6 +43,7 @@ import com.jogamp.opengl.GL3;
 import common.Vec3;
 import gui.JColorSelectPanel;
 import gui.PrimitiveProperty;
+import gui.PrimitiveProperty.BooleanProperty;
 import gui.PrimitiveProperty.FloatProperty;
 import gui.glUtils.Shader;
 import gui.glUtils.Shader.BuiltInShader;
@@ -59,18 +60,21 @@ import processingModules.JDataPanel;
 import processingModules.ProcessingResult;
 import model.DataColumnInfo.Component;
 import model.mesh.FinalMesh;
-import model.mesh.Mesh;
 import model.Filter;
 
 public class KeyenceFileLoader extends MDFileLoader {
 
 	private FloatProperty zScaling = new FloatProperty("zScaling", "Z-Scaling",
 			"Multiplier for the z-axiz", 1f, 0f, 1000f);
+	private BooleanProperty createMesh = new BooleanProperty("meshing", "Create surface as mesh", "Creates a 3D-mesh representing the Keyence information", false);
+	private BooleanProperty ignoreZeros = new BooleanProperty("ignoreZeros", "Discard values at z=0", "Discards data points at z=0", true);
 
 	@Override
 	public List<PrimitiveProperty<?>> getOptions(){
 		ArrayList<PrimitiveProperty<?>> list = new ArrayList<PrimitiveProperty<?>>();
 		list.add(zScaling);
+		list.add(createMesh);
+		list.add(ignoreZeros);
 		return list;
 	}
 		
@@ -83,7 +87,7 @@ public class KeyenceFileLoader extends MDFileLoader {
 	
 	@Override
 	public AtomData readInputData(File f, AtomData previous, Filter<Atom> atomFilter) throws Exception {
-		ImportDataContainer idc = new ImportDataContainer();
+	ImportDataContainer idc = new ImportDataContainer();
 		
 		idc.name = f.getName();
 
@@ -145,14 +149,14 @@ public class KeyenceFileLoader extends MDFileLoader {
 					
 					int z = im3d.getRaster().getSample(x/2, y/2, 0);
 					
-					if (z>-10) {
+					if (z>0 || !ignoreZeros.getValue()) {
 						Vec3 pos = new Vec3();
 						pos.x = x;
 						pos.y = y;
 						pos.z = z*zScaling.getValue();
 						//pos.z = g;
 	
-						Atom a = new Atom(pos, x*width2D+y, (byte)0);
+						Atom a = new Atom(pos, x*height2D+y, (byte)0);
 						
 						idc.atoms.add(a);
 					
@@ -172,14 +176,14 @@ public class KeyenceFileLoader extends MDFileLoader {
 					for (int y = 0; y<height3D;y++) {
 						int z = im3d.getRaster().getSample(x, y, 0);
 						
-						if (z>-10) {
+						if (z>0 || !ignoreZeros.getValue()) {
 							Vec3 pos = new Vec3();
 							pos.x = x*2f;
 							pos.y = y*2f;
 							pos.z = z*zScaling.getValue();
 	
 //							Atom a = new Atom(pos, x*2*width3D*2+y*2, (byte)0);
-							Atom a = new Atom(pos, x*width3D+y, (byte)0);
+							Atom a = new Atom(pos, x*height3D+y, (byte)0);
 							
 							idc.atoms.add(a);
 						
@@ -204,14 +208,14 @@ public class KeyenceFileLoader extends MDFileLoader {
 						
 						//int z = g<<7 | r<<3 | b;
 						
-						if (z>-10) {
+						if (z>0 || !ignoreZeros.getValue()) {
 							Vec3 pos = new Vec3();
 							pos.x = x;
 							pos.y = y;
 							pos.z = z*zScaling.getValue()/128;
 							//pos.z = g;
 		
-							Atom a = new Atom(pos, x*width3D+y, (byte)0);
+							Atom a = new Atom(pos, x*height3D+y, (byte)0);
 							
 							idc.atoms.add(a);
 						
@@ -234,7 +238,8 @@ public class KeyenceFileLoader extends MDFileLoader {
 		idc.maxElementNumber = (byte)1;
 		
 		AtomData data = new AtomData(previous, idc);
-		data.applyProcessingModule(new KeyenceMeshModule(compressed));
+		if (createMesh.getValue())
+			data.applyProcessingModule(new KeyenceMeshModule(compressed));
 		return data;
 	}
 
@@ -411,33 +416,33 @@ public class KeyenceFileLoader extends MDFileLoader {
 			
 			Atom[] orderedPixels = new Atom[width*height];
 			int[] pixelIndex = new int[width*height];
-			
-//			TreeMap<Integer, Integer> mm = new TreeMap<>();
+			Arrays.fill(pixelIndex, -1);
 			
 			for (Atom a : data.getAtoms()) {
-				orderedPixels[a.getID()] = a;
+				orderedPixels[a.getNumber()] = a;
 				
-//				mm.put(a.getID(), pixelCount);
-				
-				pixelIndex[pixelCount++] = a.getID();
-				
+				pixelIndex[a.getNumber()] = pixelCount++;
 			}
 			
 			//Build vertex array and color array
 			float[] vertexArray = new float[pixelCount*3];
 			float[] colorArray = new float[pixelCount*4];
-			for (int i=0; i<pixelCount; i++) {
-				Vec3 v = orderedPixels[pixelIndex[i]];
-				vertexArray[i*3+0] = v.x;
-				vertexArray[i*3+1] = v.y;
-				vertexArray[i*3+2] = v.z;
-				
-				//gray scale, all color channels are equals
-				float c = orderedPixels[pixelIndex[i]].getData(imageCol, data);
-				colorArray[i*4+0] = c;
-				colorArray[i*4+1] = c;
-				colorArray[i*4+2] = c;
-				colorArray[i*4+3] = 1;
+			
+			for (int i=0; i<pixelIndex.length; i++) {
+				int idx = pixelIndex[i];
+				if (idx!=-1) {
+					vertexArray[idx*3+0] = orderedPixels[i].x;
+					vertexArray[idx*3+1] = orderedPixels[i].y;
+					vertexArray[idx*3+2] = orderedPixels[i].z;
+					
+					//gray scale, all color channels are equals
+//					float c = orderedPixels[pixelIndex[i]].getData(imageCol, data);
+					float c = orderedPixels[i].getData(imageCol, data);
+					colorArray[idx*4+0] = c;
+					colorArray[idx*4+1] = c;
+					colorArray[idx*4+2] = c;
+					colorArray[idx*4+3] = 1;
+				}
 			}
 				
 			ArrayList<Integer> triangleIndices = new ArrayList<Integer>(); 
@@ -455,14 +460,6 @@ public class KeyenceFileLoader extends MDFileLoader {
 						triangleIndices.add(pixelIndex[(x+1)*height+(y+1)]*3);
 						triangleIndices.add(pixelIndex[x*height+(y+1)]*3);
 						triangleIndices.add(pixelIndex[x*height+y]*3);
-					
-//					triangleIndices.add(mm.get(x*height+y)*3);
-//					triangleIndices.add(mm.get((x+1)*height+y)*3);
-//					triangleIndices.add(mm.get((x+1)*height+(y+1))*3);
-//					
-//					triangleIndices.add(mm.get((x+1)*height+(y+1))*3);
-//					triangleIndices.add(mm.get(x*height+(y+1))*3);
-//					triangleIndices.add(mm.get(x*height+y)*3);
 					}
 					
 				}
