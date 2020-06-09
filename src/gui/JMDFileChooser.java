@@ -26,6 +26,8 @@ import java.util.List;
 
 import javax.swing.*;
 
+import crystalStructures.CrystalStructure;
+import crystalStructures.UndefinedCrystalStructure;
 import model.io.CfgFileLoader;
 import model.io.ImdFileLoader;
 import model.io.KeyenceFileLoader;
@@ -33,8 +35,10 @@ import model.io.LammpsAsciiDumpLoader;
 import model.io.MDFileLoader;
 import model.io.XYZFileLoader;
 import model.Configuration;
+import model.DataColumnInfo;
 import model.ImportConfiguration;
 import model.RenderingConfiguration;
+import model.ImportConfiguration.CrystalConfContent;
 import model.ImportConfiguration.ImportStates;
 
 public class JMDFileChooser extends JFileChooser{
@@ -54,10 +58,10 @@ public class JMDFileChooser extends JFileChooser{
 	private boolean confFileFound = false;
 	
 	static {
-		fileLoader.add(new ImdFileLoader());
-		fileLoader.add(new LammpsAsciiDumpLoader());
-		fileLoader.add(new XYZFileLoader());
-		fileLoader.add(new CfgFileLoader());
+//		fileLoader.add(new ImdFileLoader());
+//		fileLoader.add(new LammpsAsciiDumpLoader());
+//		fileLoader.add(new XYZFileLoader());
+//		fileLoader.add(new CfgFileLoader());
 		fileLoader.add(new KeyenceFileLoader());
 	}
 	
@@ -101,8 +105,8 @@ public class JMDFileChooser extends JFileChooser{
 				confFileFound = false;
 				File confFile = new File(getCurrentDirectory(),CONF_FILE);
 				if (confFile.exists()) {
-					confFileFound = true;
-					importConfig.readConfigurationFile(confFile);
+//					confFileFound = true;
+//					importConfig.readConfigurationFile(confFile);
 				}
 				
 				components.revalidate();
@@ -115,19 +119,19 @@ public class JMDFileChooser extends JFileChooser{
 		
 		this.addActionListener(arg0 -> {
 			if (arg0.getActionCommand().equals(JFileChooser.APPROVE_SELECTION)){
-				if (!isConfFileFound()) {
-					File selectedFile = JMDFileChooser.this.getSelectedFile();
-					if (JMDFileChooser.this.getSelectedFiles().length >= 1){
-						selectedFile = JMDFileChooser.this.getSelectedFiles()[0];
-					}
-					JCrystalConfigurationDialog ccd = 
-							new JCrystalConfigurationDialog(JMDFileChooser.this.owner, 
-									getCurrentDirectory(), selectedFile, false);
-					if (ccd.isSavedSuccessfully()) {
-						confFileFound = true;
-						importConfig.readConfigurationFile(new File(getCurrentDirectory(),CONF_FILE));
-					}
-				}
+//				if (!isConfFileFound()) {
+//					File selectedFile = JMDFileChooser.this.getSelectedFile();
+//					if (JMDFileChooser.this.getSelectedFiles().length >= 1){
+//						selectedFile = JMDFileChooser.this.getSelectedFiles()[0];
+//					}
+//					JCrystalConfigurationDialog ccd = 
+//							new JCrystalConfigurationDialog(JMDFileChooser.this.owner, 
+//									getCurrentDirectory(), selectedFile, false);
+//					if (ccd.isSavedSuccessfully()) {
+//						confFileFound = true;
+//						importConfig.readConfigurationFile(new File(getCurrentDirectory(),CONF_FILE));
+//					}
+//				}
 			
 				importConfig.saveProperties(propertiesFile);
 			}
@@ -145,10 +149,21 @@ public class JMDFileChooser extends JFileChooser{
 	};
 	
 	public boolean createConfiguration(){
-		if (!this.isConfFileFound()){
-			JOptionPane.showMessageDialog(this.getParent(), "crystal.conf file not found or broken, aborting");
-			return false;
-		}
+//		if (!this.isConfFileFound()){
+//			JOptionPane.showMessageDialog(this.getParent(), "crystal.conf file not found or broken, aborting");
+//			return false;
+//		}
+		
+		//Hardcode Keyence parameters
+		importConfig = ImportConfiguration.getNewInstance();
+		
+		CrystalStructure unknownStruct = UndefinedCrystalStructure.createCrystalStructure("Keyence", 5f, 3f);
+		ArrayList<DataColumnInfo> dcia = new ArrayList<>();
+		dcia.add(new DataColumnInfo("Depth", "Depth", "-"));
+		dcia.add(new DataColumnInfo("Image", "Image", "-"));
+		
+		importConfig.setCrystalConfContent(new CrystalConfContent(importConfig.getCrystalOrientation(), unknownStruct, dcia));
+		confFileFound = true;
 		
 		return Configuration.create();
 	}
@@ -225,16 +240,16 @@ public class JMDFileChooser extends JFileChooser{
 				p.add(appendFilesCheckbox, gbc);
 				gbc.gridx = 0; gbc.gridy++;
 			}
-			p.add(editCrystalConfButton, gbc);
+//			p.add(editCrystalConfButton, gbc);
 			gbc.gridx = 0; gbc.gridy++;
-			p.add(new JLabel("Periodic boundaries"), gbc); gbc.gridy++;
-			p.add(new JLabel("<html><i>ignored if defined in file</i></html>"), gbc); gbc.gridy++;
-			gbc.gridwidth = 1;
-			p.add(xCheckBox, gbc); gbc.gridx = 1;
-			p.add(yCheckBox, gbc); gbc.gridx = 2;
-			p.add(zCheckBox, gbc); gbc.gridx = 0;
-			gbc.gridy++;
-			gbc.gridwidth = 3;
+//			p.add(new JLabel("Periodic boundaries"), gbc); gbc.gridy++;
+//			p.add(new JLabel("<html><i>ignored if defined in file</i></html>"), gbc); gbc.gridy++;
+//			gbc.gridwidth = 1;
+//			p.add(xCheckBox, gbc); gbc.gridx = 1;
+//			p.add(yCheckBox, gbc); gbc.gridx = 2;
+//			p.add(zCheckBox, gbc); gbc.gridx = 0;
+//			gbc.gridy++;
+//			gbc.gridwidth = 3;
 			p.add(new JSeparator(), gbc); gbc.gridy++;
 			
 			p.add(disposeDefaultAtomsCheckBox, gbc); gbc.gridy++;
@@ -293,7 +308,6 @@ public class JMDFileChooser extends JFileChooser{
 	            if (button.isSelected())
 	                button.doClick();
 			}
-		
 		}
 	}
 }

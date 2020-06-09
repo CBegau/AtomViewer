@@ -46,7 +46,7 @@ public class KeyenceFileLoader extends MDFileLoader {
 	@Override
 	public List<PrimitiveProperty<?>> getOptions(){
 		ArrayList<PrimitiveProperty<?>> list = new ArrayList<PrimitiveProperty<?>>();
-//		list.add(zScaling);
+		list.add(zScaling);
 		return list;
 	}
 	
@@ -91,7 +91,7 @@ public class KeyenceFileLoader extends MDFileLoader {
 		
 		idc.boxSizeX.setTo(new Vec3(width3D*(compressed?2:1), 0, 0));
 		idc.boxSizeY.setTo(new Vec3(0, height3D*(compressed?2:1), 0));
-		idc.boxSizeZ.setTo(new Vec3(0, 0, 256));
+		idc.boxSizeZ.setTo(new Vec3(0, 0, 256*zScaling.getValue()));
 		
 		idc.pbc[0] = false;
 		idc.pbc[1] = false;
@@ -127,7 +127,7 @@ public class KeyenceFileLoader extends MDFileLoader {
 						pos.z = z*zScaling.getValue();
 						//pos.z = g;
 	
-						Atom a = new Atom(pos, x*height3D+y, (byte)0);
+						Atom a = new Atom(pos, x*height2D+y, (byte)0);
 						
 						idc.atoms.add(a);
 					
