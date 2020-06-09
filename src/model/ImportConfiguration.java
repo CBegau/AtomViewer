@@ -17,20 +17,20 @@
 // with AtomViewer. If not, see <http://www.gnu.org/licenses/> 
 package model;
 
-import gui.JCrystalConfigurationDialog;
-import gui.JCrystalConfigurationDialog.CrystalConfContent;
-
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.LineNumberReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Properties;
+import java.util.regex.Pattern;
 
 import model.DataColumnInfo.Component;
 import common.Vec3;
 import crystalStructures.CrystalStructure;
+import crystalStructures.CrystalStructureProperties;
 
 public class ImportConfiguration {
 
@@ -95,17 +95,21 @@ public class ImportConfiguration {
 	
 	public boolean readConfigurationFile(File confFile){
 		try {
-			CrystalConfContent crystalData = JCrystalConfigurationDialog.readConfigurationFile(confFile);
-			if (crystalData==null) 
-				return false;
-			
-			cs = crystalData.getCrystalStructure();
-			crystalOrientation = crystalData.getOrientation();
-			dataColumns = crystalData.getRawColumns();
-			return true;
+			CrystalConfContent crystalData = ImportConfiguration.readCrystalConfFile(confFile);
+			return this.setCrystalConfContent(crystalData);
 		} catch (IOException e) {
 			return false;
 		}
+	}
+	
+	public boolean setCrystalConfContent(CrystalConfContent crystalData){
+		if (crystalData==null) 
+			return false;
+		
+		cs = crystalData.getCrystalStructure();
+		crystalOrientation = crystalData.getOrientation();
+		dataColumns = crystalData.getRawColumns();
+		return true;
 	}
 	
 	public void loadProperties(File propertiesFile) throws IOException{
@@ -157,6 +161,115 @@ public class ImportConfiguration {
 				map.get(Component.VELOCITY_X).setAsFirstVectorComponent(
 						map.get(Component.VELOCITY_Y), map.get(Component.VELOCITY_Z), v_abs, "Velocity");
 			}
+		}
+	}
+	
+	public static CrystalConfContent readCrystalConfFile(File confFile) throws IOException{
+		CrystalStructure cs;
+		Vec3[] crystalOrientation = new Vec3[3];
+		ArrayList<DataColumnInfo> dataColumns = new ArrayList<DataColumnInfo>(); 
+		
+		LineNumberReader lnr = new LineNumberReader(new FileReader(confFile));
+		
+		float lattice = 0f;
+		float nnd = 0f;
+		String struct = "fcc";
+		
+		boolean structureFound = false, latticeConstFound = false;
+		boolean orientationXfound = false, orientationYfound = false, orientationZfound = false;
+		
+		Pattern p = Pattern.compile("[ \t]+");
+		String line = lnr.readLine();
+		while (line!=null && !line.startsWith("#CrystalStructureOptions")){
+			line = line.trim();
+			if (!line.isEmpty() && !line.startsWith("#")){
+				String[] parts = p.split(line);
+				
+				if (parts[0].toLowerCase().equals("structure")){
+					struct = parts[1].toLowerCase();
+					structureFound = true;
+				} else if (parts[0].toLowerCase().equals("latticeconst")){
+					if (parts.length != 1){
+						lattice = Float.parseFloat(parts[1]);
+						latticeConstFound = true;
+					}
+				} else if (parts[0].toLowerCase().equals("nearestneighcutoff")){
+					if (parts.length != 1) nnd = Float.parseFloat(parts[1]);
+				} else if (parts[0].toLowerCase().equals("orientation_x")){
+					if (parts.length>=4){
+						crystalOrientation[0] = new Vec3(Float.parseFloat(parts[1]), 
+								Float.parseFloat(parts[2]), 
+								Float.parseFloat(parts[3]));
+						orientationXfound = true;
+					}
+				} else if (parts[0].toLowerCase().equals("orientation_y")){
+					if (parts.length>=4){
+						crystalOrientation[1] = new Vec3(Float.parseFloat(parts[1]), 
+								Float.parseFloat(parts[2]), 
+								Float.parseFloat(parts[3]));
+						orientationYfound = true;
+					}
+				} else if (parts[0].toLowerCase().equals("orientation_z")){
+					if (parts.length>=4){
+						crystalOrientation[2] = new Vec3(Float.parseFloat(parts[1]), 
+								Float.parseFloat(parts[2]), 
+								Float.parseFloat(parts[3]));
+						orientationZfound = true;
+						
+						
+					}
+				} else if (parts[0].toLowerCase().equals("import_column")){
+					if (parts.length>=6){
+						DataColumnInfo cci = new DataColumnInfo(parts[1], parts[2], parts[3]);
+						
+						for (DataColumnInfo.Component c : DataColumnInfo.Component.values()){
+							if (c.name().equals(parts[5]))
+								cci.setComponent(c);
+						}
+						cci.setScalingFactor(Float.parseFloat(parts[4]));
+						dataColumns.add(cci);
+					}
+				}
+			}			
+			
+			line = lnr.readLine();
+		}
+			
+		if (structureFound != true || latticeConstFound != true || 
+				orientationXfound != true || orientationYfound != true || orientationZfound != true){
+			lnr.close();
+			return null;
+		}
+			
+		
+		cs = CrystalStructure.createCrystalStructure(struct, lattice, nnd);
+		
+		CrystalStructureProperties.readProperties(cs.getCrystalProperties(), lnr);
+		
+		lnr.close();
+		return new CrystalConfContent(crystalOrientation, cs, dataColumns);
+	}
+	
+	public static class CrystalConfContent{
+		Vec3[] orientation;
+		CrystalStructure cs;
+		ArrayList<DataColumnInfo> dataColumns;
+		public CrystalConfContent(Vec3[] orientation, CrystalStructure cs, ArrayList<DataColumnInfo> rawColumns) {
+			this.orientation = orientation;
+			this.cs = cs;
+			this.dataColumns = rawColumns;
+		}
+		
+		public CrystalStructure getCrystalStructure() {
+			return cs;
+		}
+		
+		public Vec3[] getOrientation() {
+			return orientation;
+		}
+		
+		public ArrayList<DataColumnInfo> getRawColumns() {
+			return dataColumns;
 		}
 	}
 	
