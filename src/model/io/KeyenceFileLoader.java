@@ -239,7 +239,7 @@ public class KeyenceFileLoader extends MDFileLoader {
 		
 		AtomData data = new AtomData(previous, idc);
 		if (createMesh.getValue())
-			data.applyProcessingModule(new KeyenceMeshModule(compressed));
+			data.applyProcessingModule(new KeyenceMeshModule(compressed & !mixedResolution));
 		return data;
 	}
 
