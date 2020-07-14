@@ -204,6 +204,11 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		JMenuItem changeSphereSizeMenuItem = new JMenuItem("Change sphere size");
 		changeSphereSizeMenuItem.addActionListener(new JChangeSphereSizeActionListener());
 		
+		JMenuItem switchMarkingMode = new JMenuItem("Switch Defect Marking Mode");
+		switchMarkingMode.addActionListener(l -> viewer.switchMarkingDefectsMode());
+		JMenuItem deleteMarkingMode = new JMenuItem("Remove Defect Marking");
+		deleteMarkingMode.addActionListener(l -> viewer.switchToMarkingDefectsDeleteMode());
+		
 		JGraphicOptionCheckBoxMenuItem perspectiveCheckBoxMenu = 
 				new JGraphicOptionCheckBoxMenuItem("Perspective projection", RenderOption.PERSPECTIVE, 
 						"Enable perspective projection instead of orthogonal");
@@ -227,6 +232,8 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		
 		viewMenu.add(editRangeMenuItem);
 		viewMenu.add(changeSphereSizeMenuItem);
+		viewMenu.add(switchMarkingMode);
+		viewMenu.add(deleteMarkingMode);
 		viewMenu.add(stereoCheckBoxMenu);
 		viewMenu.add(perspectiveCheckBoxMenu);
 		viewMenu.add(whiteBackgroundCheckBoxMenu);
@@ -595,8 +602,12 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		drawCoordinateSystemBoxMenu.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, 0));
 		drawBoundingBoxCheckBoxMenu.setMnemonic(KeyEvent.VK_B);
 		drawBoundingBoxCheckBoxMenu.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_B, 0));
-		drawMarkerCheckBoxMenu.setMnemonic(KeyEvent.VK_M);
-		drawMarkerCheckBoxMenu.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_M, 0));
+		
+		switchMarkingMode.setMnemonic(KeyEvent.VK_M);
+		switchMarkingMode.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_M, 0));
+		deleteMarkingMode.setMnemonic(KeyEvent.VK_D);
+		deleteMarkingMode.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_D, 0));
+		
 		exportPOVMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F3, 0));
 		importPOVMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F4, 0));
 		openFileMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0));

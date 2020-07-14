@@ -81,6 +81,10 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		TYPE, ELEMENTS, GRAINS, DATA, VECTOR_DATA, BINS
 	};
 	
+	public enum MarkingMode {
+		ADD, DELETE, OFF
+	};
+	
 	private static final long serialVersionUID = 1L;
 	
 	private AtomData atomData;
@@ -144,6 +148,8 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	 */
 	private boolean colorShiftForVElements = true;
 	
+	private MarkingMode markingDefectsMode = MarkingMode.OFF;
+	
 	// Time it took to render the last frame in nanoseconds
 	private long timeToRenderFrame = 0l;
 	
@@ -167,7 +173,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		
 		this.setFocusable(true);
 	}
-	
+				
 	@Override
 	public void display(GLAutoDrawable arg0) {
 		boolean frameCounter = false;
@@ -492,6 +498,11 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		} else drawAtoms(gl, picking);
 		
 		
+		//Adding markings
+		if (atomData.getDefectMarking() != null)
+			atomData.getDefectMarking().render(gl, picking);
+		
+		
 		if (!picking) fboDeferredBuffer.unbind(gl);
 		
 		if (drawIntoFBO != null)
@@ -550,9 +561,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
         }
 		
 		drawIndent(gl, picking);
-		
-		//Adding markings
-		drawMarker(gl, picking);
 		
 		if (!picking) {
 			//Blend accumulated data into the framebuffer
@@ -797,39 +805,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 	}
 	
 	
-	@SuppressWarnings("unchecked")
-	private void drawMarker(GL3 gl, boolean picking){
-		if (!RenderOption.MARKER.isEnabled()) return;
-		
-		Shader s = picking?BuiltInShader.VERTEX_ARRAY_COLOR_UNIFORM.getShader()
-		        :BuiltInShader.OID_ADS_UNIFORM_COLOR.getShader();
-		s.enable(gl);
-		
-		Object o = atomData.getFileMetaData("marker");
-		List<Vec3> marker = null;
-		if (o != null) {
-			if (o instanceof List<?>) marker = (List<Vec3>)o;
-		} else marker = new ArrayList<Vec3>();
-		
-			
-		for (Vec3 m : marker) {
-			GLMatrix mvm = modelViewMatrix.clone();
-			SimplePickable mark = new SimplePickable();
-			mark.setCenter(m);
-			float[] color = new float[]{1f, 0f, 0.2f, 0.4f};;
-			if(picking)
-				color = getNextPickingColor(mark);
-			gl.glUniform4f(gl.glGetUniformLocation(s.getProgram(),"Color"), color[0], color[1], color[2], color[3]);
-			
-			mvm.translate(m.x, m.y, m.z);
-			mvm.scale(50, 50, 50);
-			updateModelViewInShader(gl, s, mvm, projectionMatrix);
-			SimpleGeometriesRenderer.drawSphere(gl);
-			
-		}
-		updateModelViewInShader(gl, s, modelViewMatrix, projectionMatrix);
-		
-	}
+	
 	
 
 	public <T extends Vec3 & Pickable> void drawSpheres(GL3 gl, ObjectRenderData<T> ard, boolean picking){
@@ -1615,11 +1591,38 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		return m;
 	}
 	
+	
+	public MarkingMode switchMarkingDefectsMode() {
+		if (atomData.getDefectMarking() != null) {
+			if (this.markingDefectsMode != MarkingMode.OFF) {
+				atomData.getDefectMarking().closeCurrentMarkedArea();
+				this.markingDefectsMode = MarkingMode.OFF;
+			} else {
+				atomData.getDefectMarking().startMarkedArea();
+				this.markingDefectsMode = MarkingMode.ADD;
+			}
+			
+			JLogPanel.getJLogPanel().addInfo("Marking", "Marking sets to "+this.markingDefectsMode.name());
+			this.reDraw();
+		}
+		
+		return this.markingDefectsMode;
+	}
+	
+	public void switchToMarkingDefectsDeleteMode() {
+		if (atomData.getDefectMarking() != null) {
+			this.markingDefectsMode = MarkingMode.DELETE;
+						
+			JLogPanel.getJLogPanel().addInfo("Marking", "Marking sets to "+this.markingDefectsMode.name());
+			this.reDraw();
+		}
+	}
+	
+	
 	/**
 	 * 
 	 * @param e 
 	 */
-	@SuppressWarnings("unchecked")
 	private void performPicking(MouseEvent e){
 		final int picksize = 3;
 		
@@ -1632,11 +1635,6 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			adjustPOVOnObject = true;
 		}
 		
-		boolean addMarker = false;
-		if ((e.getModifiersEx() & (InputEvent.SHIFT_DOWN_MASK | InputEvent.ALT_DOWN_MASK))
-				== (InputEvent.SHIFT_DOWN_MASK | InputEvent.ALT_DOWN_MASK)){
-			addMarker = true;
-		}
 		
 		GL3 gl = this.getGLFromContext();
 		updateIntInAllShader(gl, "noShading", 1);
@@ -1699,22 +1697,15 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			}
 			
 			//Dirty hack for adding markers
-			if (addMarker) {
+			if (markingDefectsMode == MarkingMode.ADD) {
+				DefectMarking.MarkedArea ma = atomData.getDefectMarking().getCurrentMarkedArea();
+				ma.addPoint(picked.getCenterOfObject());
 				repaintRequired = true;
-				Object o = atomData.getFileMetaData("marker");
-				List<Vec3> marker = null;
-				if (o != null) {
-					if (o instanceof List<?>) marker = (List<Vec3>)o;
-				} else {
-					marker = new ArrayList<Vec3>();
-					atomData.addFileMetaData("marker", marker);
-				}
-				
-				Vec3 pos = picked.getCenterOfObject();
-				if (marker.contains(pos))
-					marker.remove(pos);
-				else 
-					marker.add(pos);
+				break;
+			} else if (markingDefectsMode == MarkingMode.DELETE) {
+				atomData.getDefectMarking().removeMarkedArea(picked);
+				this.markingDefectsMode = MarkingMode.OFF;
+				repaintRequired = true;
 				break;
 			}
 			

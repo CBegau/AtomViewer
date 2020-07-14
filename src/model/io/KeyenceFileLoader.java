@@ -58,6 +58,7 @@ import processingModules.DataContainer;
 import processingModules.JDataPanel;
 import processingModules.ProcessingResult;
 import model.DataColumnInfo.Component;
+import model.DefectMarking;
 import model.mesh.FinalMesh;
 import model.Filter;
 
@@ -236,9 +237,13 @@ public class KeyenceFileLoader extends MDFileLoader {
 		
 		idc.maxElementNumber = (byte)1;
 		
+		idc.fileMetaData = new HashMap<>();
+		idc.fileMetaData.put("marks", new DefectMarking());
+		
 		AtomData data = new AtomData(previous, idc);
 		if (createMesh.getValue())
 			data.applyProcessingModule(new KeyenceMeshModule(compressed & !mixedResolution));
+		
 		return data;
 	}
 
