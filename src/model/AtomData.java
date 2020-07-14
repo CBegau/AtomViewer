@@ -508,6 +508,12 @@ public class AtomData {
 		if (fileMetaData == null) return null;
 		return fileMetaData.get(s);
 	}
+	
+	public void addFileMetaData(String s, Object o) {
+		if (fileMetaData == null) 
+			fileMetaData = new HashMap<String, Object>();
+		this.fileMetaData.put(s, o);
+	}
 
 	public void removeAtoms(Filter<Atom> filter){
 		atomicData.removeAtoms(filter);

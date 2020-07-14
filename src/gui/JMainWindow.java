@@ -222,6 +222,8 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 				new JGraphicOptionCheckBoxMenuItem("Indenter (if available)", RenderOption.INDENTER, "");
 		JGraphicOptionCheckBoxMenuItem drawCoordinateSystemBoxMenu = 
 				new JGraphicOptionCheckBoxMenuItem("Coordinate System", RenderOption.COORDINATE_SYSTEM, "");
+		JGraphicOptionCheckBoxMenuItem drawMarkerCheckBoxMenu = 
+				new JGraphicOptionCheckBoxMenuItem("Show markers", RenderOption.MARKER, "");
 		
 		viewMenu.add(editRangeMenuItem);
 		viewMenu.add(changeSphereSizeMenuItem);
@@ -234,6 +236,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		viewMenu.add(drawTetraederCheckBoxMenu);
 		viewMenu.add(drawIndentBoxMenu);
 		viewMenu.add(drawLegendMenuItem);
+		viewMenu.add(drawMarkerCheckBoxMenu);
 		
 		JMenu legendStyleMenu = new JMenu("Legend style");
 		final JCheckBoxMenuItem swapLegend = new JCheckBoxMenuItem("Swap colors");
@@ -592,6 +595,8 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		drawCoordinateSystemBoxMenu.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, 0));
 		drawBoundingBoxCheckBoxMenu.setMnemonic(KeyEvent.VK_B);
 		drawBoundingBoxCheckBoxMenu.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_B, 0));
+		drawMarkerCheckBoxMenu.setMnemonic(KeyEvent.VK_M);
+		drawMarkerCheckBoxMenu.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_M, 0));
 		exportPOVMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F3, 0));
 		importPOVMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F4, 0));
 		openFileMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0));
