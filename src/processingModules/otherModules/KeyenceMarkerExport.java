@@ -1,33 +1,81 @@
 package processingModules.otherModules;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.HashSet;
+import java.io.OutputStreamWriter;
 
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
 
 import common.Vec3;
 import gui.JPrimitiveVariablesPropertiesDialog;
 import gui.PrimitiveProperty.StringProperty;
 import model.*;
-import model.BurgersVector.BurgersVectorType;
+import model.DefectMarking.MarkedArea;
 import processingModules.ClonableProcessingModule;
 import processingModules.ProcessingResult;
-import processingModules.skeletonizer.Dislocation;
-import processingModules.skeletonizer.SkeletonNode;
-import processingModules.skeletonizer.Skeletonizer;
 
 public class KeyenceMarkerExport extends ClonableProcessingModule {
 	
-	String filename;
+	File file;
 	
 	@Override
-	public ProcessingResult process(AtomData atomData) throws IOException {	
+	public ProcessingResult process(AtomData atomData) throws IOException {
+		if (atomData.getPrevious() != null)
+			return null;
 		
-		
+		AtomData ad = atomData;
+		try {
+			XMLStreamWriter xmlout = XMLOutputFactory.newInstance().createXMLStreamWriter(new OutputStreamWriter(new FileOutputStream(file), "utf-8"));
+			
+			xmlout.writeStartDocument();
+			xmlout.writeStartElement("KeyenceDefects");
+			
+			while (ad!=null) {
+				DefectMarking df = ad.getDefectMarking();
+				if (df != null) {
+					df.closeCurrentMarkedArea();
+					
+					if (df.getMarks().size()>0) {
+						xmlout.writeStartElement("File");
+						xmlout.writeStartElement("Name");
+						xmlout.writeCharacters(ad.getName());
+						xmlout.writeEndElement();
+						
+						for (MarkedArea ma : df.getMarks()) {
+							xmlout.writeStartElement("Defect");
+							
+							for (Vec3 v : ma.getPath()) {
+								xmlout.writeStartElement("Path");
+								xmlout.writeStartElement("X");
+								xmlout.writeCharacters(Float.toString(v.x/ad.getBox().getHeight().x));
+								xmlout.writeEndElement();
+								xmlout.writeStartElement("Y");
+								xmlout.writeCharacters(Float.toString(v.y/ad.getBox().getHeight().y));
+								xmlout.writeEndElement();
+								xmlout.writeEndElement();
+							}
+							xmlout.writeEndElement();
+						}
+					}
+						
+				}	
+						
+				
+				ad = ad.getNext();
+			}
+			
+			xmlout.writeEndElement();
+			xmlout.writeEndDocument();
+			xmlout.close();
+		} catch (XMLStreamException e) {
+			throw new IOException(e.toString());
+		}
 		return null;
 	}
 
@@ -75,9 +123,13 @@ public class KeyenceMarkerExport extends ClonableProcessingModule {
 				sp.setValue(chooser.getSelectedFile().getAbsolutePath());
 			}
 		});
-		dialog.add(selectFileButton);
+		dialog.addComponent(selectFileButton);
 		
-		return true;
+		boolean ok = dialog.showDialog();
+		if (ok){
+			this.file = new File(sp.getValue());
+		}
+		return ok;
 	}
 
 	@Override

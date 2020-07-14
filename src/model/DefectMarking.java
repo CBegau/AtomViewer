@@ -116,6 +116,10 @@ public class DefectMarking {
 			return path.size();
 		}
 		
+		public ArrayList<Vec3> getPath() {
+			return path;
+		}
+		
 		protected void close() {
 			if (isClosed)
 				return;

@@ -508,12 +508,6 @@ public class AtomData {
 		if (fileMetaData == null) return null;
 		return fileMetaData.get(s);
 	}
-	
-	public void addFileMetaData(String s, Object o) {
-		if (fileMetaData == null) 
-			fileMetaData = new HashMap<String, Object>();
-		this.fileMetaData.put(s, o);
-	}
 
 	public void removeAtoms(Filter<Atom> filter){
 		atomicData.removeAtoms(filter);
@@ -569,6 +563,20 @@ public class AtomData {
 	@Override
 	public String toString() {
 		return getName();
+	}
+	
+	
+	/**
+	 * This is a ugly dirty workaround to access the defect marking used for labeling
+	 * @return
+	 */
+	public DefectMarking getDefectMarking() {
+		Object o = this.getFileMetaData("marks");
+		if (o == null)
+			return null;
+		
+		DefectMarking marks = (DefectMarking)o;
+		return marks;
 	}
 	
 	/**

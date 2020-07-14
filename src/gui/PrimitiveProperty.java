@@ -101,7 +101,7 @@ public abstract class PrimitiveProperty<T> extends JPanel{
 	
 	public static class StringProperty extends PrimitiveProperty<String>{
 		private static final long serialVersionUID = 1L;
-		JTextField textField;
+		JTextField textField = new JTextField();
 		String defaultText;
 		
 		public StringProperty(String id, String label, String tooltip, String defaultString){
