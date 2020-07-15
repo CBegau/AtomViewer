@@ -21,6 +21,7 @@ import com.jogamp.opengl.GL3;
 
 import common.Tupel;
 import common.Vec3;
+import gui.JLogPanel;
 import gui.ViewerGLJPanel;
 import gui.ViewerGLJPanel.RenderOption;
 import gui.glUtils.GLMatrix;
@@ -70,9 +71,7 @@ public class DefectMarking {
 		if (marks.size()==0) 
 			return;
 		
-		
 		ViewerGLJPanel viewer = RenderingConfiguration.getViewer();
-		
 		
 		gl.glEnable(GL3.GL_POLYGON_OFFSET_FILL);
 		gl.glPolygonOffset(0f, -20000f);
@@ -210,10 +209,39 @@ public class DefectMarking {
 		
 		public void addPoint(Vec3 v) {
 			assert(!isClosed);
-			if (!isClosed)
-				//TODO test for intersection
-				path.add(v);
+			if (!isClosed) {
+				//Test if the new segment would intersect with an existing one
+				
+				if (!testNewSegementIntersects(v, 0))
+					path.add(v);
+			}
 		}
+		
+		private boolean testNewSegementIntersects(Vec3 v, int startIndex) {
+			if (path.size()>=3) {
+				for (int i=startIndex; i<path.size()-2; i++) {
+					if (testIntersectionOnProjection(path.get(i), path.get(i+1), path.get(path.size()-1), v)) {
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+		
+		private boolean testIntersectionOnProjection(Vec3 a0, Vec3 a1, Vec3 b0, Vec3 b1) {
+			Vec3 s1 = a1.subClone(a0);
+			Vec3 s2 = b1.subClone(b0);
+			
+		    float s = (-s1.y * (a0.x - b0.x) + s1.x * (a0.y - b0.y)) / (-s2.x * s1.y + s1.x * s2.y);
+		    float t = ( s2.x * (a0.y - b0.y) - s2.y * (a0.x - b0.x)) / (-s2.x * s1.y + s1.x * s2.y);
+
+		    if (s >= 0 && s <= 1 && t >= 0 && t <= 1){
+		        // Collision detected
+		        return true;
+		    }
+		    return false; // No collision
+		}
+		
 
 		public int numPoints() {
 			return path.size();
@@ -229,8 +257,15 @@ public class DefectMarking {
 			if (path.size()<=2)
 				path.clear();
 			else {
+				//Closing the loop would cause a self-intersection
+				//Cause the mark to collapse by removing the path
+				if (testNewSegementIntersects(path.get(0), 1)) {
+					path.clear();
+					JLogPanel.getJLogPanel().addWarning("Illegal geometry", "Closing the loop caused an self-intersecting polygon");
+				}
+				else 
 				//Close the loop
-				path.add(path.get(0));
+					path.add(path.get(0));
 				isClosed = true;
 			}
 		}
