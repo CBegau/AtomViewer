@@ -155,28 +155,52 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		exportAsciiFile.addActionListener(new ExportFileActionListener());
 		fileMenu.add(exportAsciiFile);
 		
-		final JMenuItem exportSkeletonFileMenuItem = new JMenuItem("Export dislocation network");
-		exportSkeletonFileMenuItem.addActionListener(l -> {
+//		final JMenuItem exportSkeletonFileMenuItem = new JMenuItem("Export dislocation network");
+//		exportSkeletonFileMenuItem.addActionListener(l -> {
+//			if (Configuration.getCurrentAtomData() == null)
+//				return;
+//			DataContainer dc = Configuration.getCurrentAtomData().getDataContainer(Skeletonizer.class);
+//			Skeletonizer skel = (dc != null)? (Skeletonizer)dc: null;
+//			if (skel == null) {
+//				JOptionPane.showMessageDialog(JMainWindow.this, "Dislocation network not available");
+//				return;
+//			}
+//			
+//			JFileChooser chooser = new JFileChooser();
+//			int result = chooser.showSaveDialog(JMainWindow.this);
+//			if (result == JFileChooser.APPROVE_OPTION){
+//				try {
+//					skel.writeDislocationSkeleton(chooser.getSelectedFile());
+//				} catch (IOException e1) {
+//					e1.printStackTrace();
+//				}
+//			}
+//		});
+//		fileMenu.add(exportSkeletonFileMenuItem);
+		
+		
+		final JMenuItem exportMarksFileMenuItem = new JMenuItem("Export defect marking");
+		exportMarksFileMenuItem.addActionListener(l -> {
 			if (Configuration.getCurrentAtomData() == null)
 				return;
-			DataContainer dc = Configuration.getCurrentAtomData().getDataContainer(Skeletonizer.class);
-			Skeletonizer skel = (dc != null)? (Skeletonizer)dc: null;
-			if (skel == null) {
-				JOptionPane.showMessageDialog(JMainWindow.this, "Dislocation network not available");
-				return;
-			}
 			
-			JFileChooser chooser = new JFileChooser();
-			int result = chooser.showSaveDialog(JMainWindow.this);
-			if (result == JFileChooser.APPROVE_OPTION){
+			AtomData ad = Configuration.getCurrentAtomData();
+			while (ad.getPrevious()!=null)
+				ad = ad.getPrevious();
+		
+			while (ad != null) {
 				try {
-					skel.writeDislocationSkeleton(chooser.getSelectedFile());
-				} catch (IOException e1) {
+					String name =ad.getName().replace(".bmp", ".xml").replace(".jpg", ".xml");
+					File exportTo = new File(Configuration.getLastOpenedFolder(), name);
+					DefectMarking.export(ad, exportTo);
+					ad = ad.getNext();
+				} catch (Exception e1) {
 					e1.printStackTrace();
 				}
 			}
+			JOptionPane.showMessageDialog(JMainWindow.this, "Export successful");
 		});
-		fileMenu.add(exportSkeletonFileMenuItem);
+		fileMenu.add(exportMarksFileMenuItem);
 		
 		
 		fileMenu.add(new JSeparator());

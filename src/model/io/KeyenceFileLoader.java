@@ -59,6 +59,7 @@ import processingModules.JDataPanel;
 import processingModules.ProcessingResult;
 import model.DataColumnInfo.Component;
 import model.DefectMarking;
+import model.DefectMarking.MarkedArea;
 import model.mesh.FinalMesh;
 import model.Filter;
 
@@ -238,7 +239,24 @@ public class KeyenceFileLoader extends MDFileLoader {
 		idc.maxElementNumber = (byte)1;
 		
 		idc.fileMetaData = new HashMap<>();
-		idc.fileMetaData.put("marks", new DefectMarking());
+		
+		String markingDefectFilename = f.getAbsolutePath().replace(".bmp", ".xml").replace(".jpg", ".xml");
+		File markingDefectFile = new File(markingDefectFilename);
+		
+		DefectMarking dm;
+		if (markingDefectFile.exists()) {
+			Vec3 scaling = new Vec3(idc.boxSizeX.x, idc.boxSizeY.y, idc.boxSizeZ.z * zScaling.getValue());
+			
+			dm = DefectMarking.importFile(markingDefectFile);
+			//Scale the coordinates
+			for (MarkedArea ma : dm.getMarks())
+				for (Vec3 v : ma.getPath())
+					v.multiply(scaling);
+		}
+		else
+			dm = new DefectMarking();
+		
+		idc.fileMetaData.put("marks", dm);
 		
 		AtomData data = new AtomData(previous, idc);
 		if (createMesh.getValue())

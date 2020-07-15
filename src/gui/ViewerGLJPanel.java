@@ -1597,12 +1597,14 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 			if (this.markingDefectsMode != MarkingMode.OFF) {
 				atomData.getDefectMarking().closeCurrentMarkedArea();
 				this.markingDefectsMode = MarkingMode.OFF;
+				JLogPanel.getJLogPanel().addInfo("Finished defect marking", "Defect marking finished");
 			} else {
 				atomData.getDefectMarking().startMarkedArea();
 				this.markingDefectsMode = MarkingMode.ADD;
+				JLogPanel.getJLogPanel().addInfo("Started defect marking", "Click to draw defect area");
 			}
 			
-			JLogPanel.getJLogPanel().addInfo("Marking", "Marking sets to "+this.markingDefectsMode.name());
+			
 			this.reDraw();
 		}
 		
@@ -1613,7 +1615,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 		if (atomData.getDefectMarking() != null) {
 			this.markingDefectsMode = MarkingMode.DELETE;
 						
-			JLogPanel.getJLogPanel().addInfo("Marking", "Marking sets to "+this.markingDefectsMode.name());
+			JLogPanel.getJLogPanel().addInfo("Delete defect mark enabled", "Click on defect mark to delete");
 			this.reDraw();
 		}
 	}

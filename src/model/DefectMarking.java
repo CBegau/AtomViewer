@@ -1,10 +1,21 @@
 package model;
 
 import java.awt.event.InputEvent;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
+import javax.xml.stream.XMLStreamWriter;
 
 import com.jogamp.opengl.GL3;
 
@@ -94,11 +105,103 @@ public class DefectMarking {
 		
 		gl.glPolygonOffset(0f, 0f);
 		gl.glDisable(GL3.GL_POLYGON_OFFSET_FILL);
+	}
 
-				
-			
+	
+	public static void export(AtomData atomData, File f) throws IOException,XMLStreamException {
+		AtomData ad = atomData;
+
+		XMLStreamWriter xmlout = XMLOutputFactory.newInstance()
+				.createXMLStreamWriter(new OutputStreamWriter(new FileOutputStream(f), "utf-8"));
+
+		xmlout.writeStartDocument();
+		xmlout.writeStartElement("File");
+
+		xmlout.writeStartElement("Name");
+		xmlout.writeCharacters(ad.getName());
+		xmlout.writeEndElement();
+		
+		DefectMarking df = ad.getDefectMarking();
+		if (df != null) {
+			df.closeCurrentMarkedArea();
+			if (df.getMarks().size() > 0) {
+				for (MarkedArea ma : df.getMarks()) {
+					xmlout.writeStartElement("DefectPath");
+
+					for (Vec3 v : ma.getPath()) {
+						xmlout.writeStartElement("Vertex");
+						{
+							xmlout.writeStartElement("X");
+							xmlout.writeCharacters(Float.toString(v.x / ad.getBox().getHeight().x));
+							xmlout.writeEndElement();
+							xmlout.writeStartElement("Y");
+							xmlout.writeCharacters(Float.toString(v.y / ad.getBox().getHeight().y));
+							xmlout.writeEndElement();
+							xmlout.writeStartElement("Z");
+							xmlout.writeCharacters(Float.toString(v.z / ad.getBox().getHeight().z));
+							xmlout.writeEndElement();
+						}
+						xmlout.writeEndElement();
+					}
+					xmlout.writeEndElement();
+				}
+			}
+		}
+
+		xmlout.writeEndElement();
+		xmlout.writeEndDocument();
+		xmlout.close();
 	}
 	
+	public static DefectMarking importFile (File f) throws IOException,XMLStreamException {
+		
+		XMLStreamReader reader = XMLInputFactory.newInstance().createXMLStreamReader(new FileInputStream(f));
+		
+		DefectMarking dm = null;
+//		String name = null;
+		Vec3 point = null;
+		
+		try{
+			while (reader.hasNext()){
+				reader.next();
+				switch (reader.getEventType()){
+	
+					case XMLStreamReader.START_ELEMENT:{
+						if (reader.getLocalName().equals("File")) 
+							dm = new DefectMarking();
+//						if (reader.getLocalName().equals("Name")) 
+//							name = reader.getElementText();
+						if (reader.getLocalName().equals("DefectPath")) 
+							dm.startMarkedArea();
+						if (reader.getLocalName().equals("Vertex")) 
+							point = new Vec3();
+						if (reader.getLocalName().equals("X"))
+							point.x = Float.parseFloat(reader.getElementText());
+						if (reader.getLocalName().equals("Y"))
+							point.y = Float.parseFloat(reader.getElementText());
+						if (reader.getLocalName().equals("Z"))
+							point.z = Float.parseFloat(reader.getElementText());
+						break;
+					}
+					
+					case XMLStreamReader.END_ELEMENT:{
+						if (reader.getLocalName().equals("DefectPath")) 
+							dm.getCurrentMarkedArea().isClosed = true;
+						if (reader.getLocalName().equals("Vertex"))
+							dm.getCurrentMarkedArea().path.add(point);
+						break;
+					}
+						
+					default: break;
+				}
+			}
+		} catch (Exception e){
+			throw e;
+		} finally {
+			reader.close();
+		}
+		return dm;
+	}
 	
 	
 	public class MarkedArea implements Pickable{
@@ -153,5 +256,4 @@ public class DefectMarking {
 			return new Vec3();
 		}
 	}
-	
 }

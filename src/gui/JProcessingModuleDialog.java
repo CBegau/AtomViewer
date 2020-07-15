@@ -71,7 +71,6 @@ public class JProcessingModuleDialog extends JDialog {
 		DefaultMutableTreeNode atomicSpecial = new DefaultMutableTreeNode("Special");
 		atomic.add(atomicSpecial);
 		atomicSpecial.insert(new ModuleTreeWrapper(new MonoclinicNiTi()), 0);
-		atomicSpecial.insert(new ModuleTreeWrapper(new KeyenceMarkerExport()), 1);
 		
 		DefaultMutableTreeNode defect = new DefaultMutableTreeNode("Defect analysis");
 		root.add(defect);
