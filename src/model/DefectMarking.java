@@ -228,6 +228,21 @@ public class DefectMarking {
 			return false;
 		}
 		
+		private boolean isCounterClockwise() {
+			float sum = 0f;
+			
+			for (int i=0; i<path.size()-1; i++) {
+				Vec3 v1 = path.get(i);
+				Vec3 v2 = path.get(i+1);
+				sum += (v2.x - v1.x) * (v2.y + v1.y);
+			}
+			Vec3 v1 = path.get(path.size()-1);
+			Vec3 v2 = path.get(0);
+			sum += (v2.x - v1.x) * (v2.y + v1.y);
+			
+			return sum<0;
+		}
+		
 		private boolean testIntersectionOnProjection(Vec3 a0, Vec3 a1, Vec3 b0, Vec3 b1) {
 			Vec3 s1 = a1.subClone(a0);
 			Vec3 s2 = b1.subClone(b0);
@@ -263,9 +278,14 @@ public class DefectMarking {
 					path.clear();
 					JLogPanel.getJLogPanel().addWarning("Illegal geometry", "Closing the loop caused an self-intersecting polygon");
 				}
-				else 
-				//Close the loop
+				else {
+					//Close the loop
 					path.add(path.get(0));
+					//Ensure loop is in counterclockwise order
+					if (!isCounterClockwise()) {
+						Collections.reverse(path);
+					}
+				}
 				isClosed = true;
 			}
 		}
