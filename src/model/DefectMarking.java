@@ -152,6 +152,83 @@ public class DefectMarking {
 		xmlout.close();
 	}
 	
+	
+	public static void exportSvg(AtomData atomData, File f, boolean link2DImage) throws IOException,XMLStreamException {
+		AtomData ad = atomData;
+
+		XMLStreamWriter xmlout = XMLOutputFactory.newInstance()
+				.createXMLStreamWriter(new OutputStreamWriter(new FileOutputStream(f), "utf-8"));
+
+		float boxx = ad.getBox().getHeight().x;
+		float boxy = ad.getBox().getHeight().y;
+		
+		int x = (Integer)ad.getFileMetaData("width2D");
+		int y = (Integer)ad.getFileMetaData("height2D");
+		
+		xmlout.writeStartDocument();
+		xmlout.writeStartElement("svg");
+
+		xmlout.writeAttribute("xmlns", "http://www.w3.org/2000/svg");
+		xmlout.writeAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
+		xmlout.writeAttribute("version", "1.1");
+		xmlout.writeAttribute("baseProfile", "full");
+		
+		xmlout.writeAttribute("width", Float.toString(x));
+		xmlout.writeAttribute("height", Float.toString(y));
+		xmlout.writeAttribute("viewBox", String.format("0. 0. %d %d", x,y));
+		
+		xmlout.writeAttribute("style", "background: white");
+		
+		xmlout.writeStartElement("title");
+		xmlout.writeCharacters(ad.getName());
+		xmlout.writeEndElement();
+		xmlout.writeStartElement("desc");
+		xmlout.writeEndElement();
+		
+		if(link2DImage) {
+			xmlout.writeStartElement("image");
+			xmlout.writeAttribute("x", "0");
+			xmlout.writeAttribute("y", "0");
+			xmlout.writeAttribute("width", Float.toString(x));
+			xmlout.writeAttribute("height", Float.toString(y));
+			
+			String filename2D = (String)ad.getFileMetaData("File2D"); 
+			xmlout.writeAttribute("xlink:href", filename2D);
+			xmlout.writeEndElement();
+		}
+		
+		DefectMarking df = ad.getDefectMarking();
+		if (df != null) {
+			df.closeCurrentMarkedArea();
+			if (df.getMarks().size() > 0) {
+				for (MarkedArea ma : df.getMarks()) {
+					xmlout.writeStartElement("polygon");
+
+					StringBuilder sb = new StringBuilder();
+					for (int i=0; i<ma.getPath().size()-1; i++) {
+						Vec3 v = ma.getPath().get(i);
+						sb.append(String.format("%f,%f ",(v.x/boxx)*x, (v.y/boxy)*y));		
+					}
+					
+
+					xmlout.writeAttribute("points", sb.toString());
+					if(link2DImage) {
+						xmlout.writeAttribute("fill", "red");
+						xmlout.writeAttribute("fill-opacity", "0.4");
+					} else {
+						xmlout.writeAttribute("fill", "black");
+					}
+					
+					xmlout.writeEndElement();
+				}
+			}
+		}
+	
+		xmlout.writeEndElement();
+		xmlout.writeEndDocument();
+		xmlout.close();
+	}
+	
 	public static DefectMarking importFile (File f) throws IOException,XMLStreamException {
 		
 		XMLStreamReader reader = XMLInputFactory.newInstance().createXMLStreamReader(new FileInputStream(f));

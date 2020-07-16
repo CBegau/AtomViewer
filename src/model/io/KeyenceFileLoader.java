@@ -257,6 +257,10 @@ public class KeyenceFileLoader extends MDFileLoader {
 			dm = new DefectMarking();
 		
 		idc.fileMetaData.put("marks", dm);
+		idc.fileMetaData.put("File2D", file2D.getName());
+		idc.fileMetaData.put("File3D", f.getName());
+		idc.fileMetaData.put("width2D", width2D);
+		idc.fileMetaData.put("height2D", height2D);
 		
 		AtomData data = new AtomData(previous, idc);
 		if (createMesh.getValue())
