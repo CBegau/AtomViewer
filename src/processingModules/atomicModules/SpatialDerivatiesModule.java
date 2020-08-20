@@ -65,6 +65,12 @@ public class SpatialDerivatiesModule extends ClonableProcessingModule implements
 	//the file is referring to might not exist at that moment 
 	private String toDeriveID;
 	
+	public SpatialDerivatiesModule() {}
+	
+	public SpatialDerivatiesModule(DataColumnInfo toDeriveColumn, float radius) {
+		this.radius = radius;
+		this.toDeriveColumn = toDeriveColumn;
+	}
 	
 	@Override
 	public DataColumnInfo[] getDataColumnsInfo() {

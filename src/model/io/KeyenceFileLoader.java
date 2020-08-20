@@ -57,6 +57,7 @@ import processingModules.ClonableProcessingModule;
 import processingModules.DataContainer;
 import processingModules.JDataPanel;
 import processingModules.ProcessingResult;
+import processingModules.atomicModules.SpatialDerivatiesModule;
 import model.DataColumnInfo.Component;
 import model.DefectMarking;
 import model.DefectMarking.MarkedArea;
@@ -69,13 +70,17 @@ public class KeyenceFileLoader extends MDFileLoader {
 			"Multiplier for the z-axiz", 1f, 0f, 1000f);
 	private BooleanProperty createMesh = new BooleanProperty("meshing", "Create surface as mesh", "Creates a 3D-mesh representing the Keyence information", false);
 	private BooleanProperty ignoreZeros = new BooleanProperty("ignoreZeros", "Discard values at z=0", "Discards data points at z=0", true);
+	private BooleanProperty normalizeCurvature = new BooleanProperty("normCurvature", "Normalize curvature for calotte", "Normalize curvature for calotte", true);
+	private BooleanProperty computeGradients = new BooleanProperty("compGradients", "Compute gradients", "Compute gradients for the image and depth", true);
 
 	@Override
 	public List<PrimitiveProperty<?>> getOptions(){
 		ArrayList<PrimitiveProperty<?>> list = new ArrayList<PrimitiveProperty<?>>();
+		list.add(normalizeCurvature);
+		list.add(computeGradients);
+		list.add(ignoreZeros);
 		list.add(zScaling);
 		list.add(createMesh);
-		list.add(ignoreZeros);
 		return list;
 	}
 		
@@ -144,61 +149,98 @@ public class KeyenceFileLoader extends MDFileLoader {
 		
 		
 		if (mixedResolution) {
+			
+			float[][] arr = new float[width2D][height2D];
+			if (normalizeCurvature.getValue())
+				for (int x = 0; x<width2D;x++) {
+					for (int y = 0; y<height2D;y++) {
+						arr[x][y] = im3d.getRaster().getSample(x/2, y/2, 0);
+					}
+					Arrays.sort(arr[x]);	//Middle element is the median in each line
+				}
+			
 			//Uncompressed full res bmp
 			for (int x = 0; x<width2D;x++) {
 				for (int y = 0; y<height2D;y++) {
+					int z = im3d.getRaster().getSample(x, y, 0);
 					
-					int z = im3d.getRaster().getSample(x/2, y/2, 0);
+					float zf = z;
+					if (normalizeCurvature.getValue()) {
+						zf = zf + 127f - arr[x][height3D/2];
+						zf = Math.min(255f, Math.max(0f, zf));
+					}
 					
 					if (z>0 || !ignoreZeros.getValue()) {
 						Vec3 pos = new Vec3();
 						pos.x = x;
 						pos.y = y;
-						pos.z = z*zScaling.getValue();
-						//pos.z = g;
+						//pos.z = z*zScaling.getValue();
+						pos.z = 0f;	//assign later, 0 needed for computing gradients
 	
 						Atom a = new Atom(pos, x*height2D+y, (byte)0);
 						
 						idc.atoms.add(a);
 					
-						
-						if (imageCol != -1)
-							idc.dataArrays.get(imageCol).add(im2d.getRaster().getSample(x, y, 0)/255f);
-						if (depthCol != -1)
-							idc.dataArrays.get(depthCol).add(pos.z/255f);
-						
+						//store 2d image and depth as data column
+						idc.dataArrays.get(imageCol).add(im2d.getRaster().getSample(x, y, 0)/255f);
+						idc.dataArrays.get(depthCol).add(zf);
 					}
 				}
 			}
 		} else {
 			if (compressed) {
+				
+				float[][] arr = new float[width3D][height3D];
+				if (normalizeCurvature.getValue())
+					for (int x = 0; x<width3D;x++) {
+						for (int y = 0; y<height3D;y++) {
+							arr[x][y] = im3d.getRaster().getSample(x, y, 0);
+						}
+						Arrays.sort(arr[x]);	//Middle element is the median in each line
+					}
+				
 				//reduced quality and resolution
 				for (int x = 0; x<width3D;x++) {
 					for (int y = 0; y<height3D;y++) {
 						int z = im3d.getRaster().getSample(x, y, 0);
 						
+						float zf = z; 
+						if (normalizeCurvature.getValue()) {
+							zf = zf + 127f - arr[x][height3D/2];
+							zf = Math.min(255f, Math.max(0f, zf));
+						}
+						
 						if (z>0 || !ignoreZeros.getValue()) {
 							Vec3 pos = new Vec3();
 							pos.x = x*2f;
 							pos.y = y*2f;
-							pos.z = z*zScaling.getValue();
+							pos.z = 0f;//z*zScaling.getValue();
 	
-//							Atom a = new Atom(pos, x*2*width3D*2+y*2, (byte)0);
 							Atom a = new Atom(pos, x*height3D+y, (byte)0);
 							
 							idc.atoms.add(a);
 						
-							
-							if (imageCol != -1)
-								idc.dataArrays.get(imageCol).add(im2d.getRaster().getSample(x, y, 0)/255f);
-							if (depthCol != -1)
-								idc.dataArrays.get(depthCol).add(pos.z/255f);
-							
+							idc.dataArrays.get(imageCol).add(im2d.getRaster().getSample(x, y, 0)/255f);
+							idc.dataArrays.get(depthCol).add(zf);
 						}
 					}
 				}
 			} else {
 				//Uncompressed full res bmp
+				float[][] arr = new float[width3D][height3D];
+				if (normalizeCurvature.getValue())
+					for (int x = 0; x<width3D;x++) {
+						for (int y = 0; y<height3D;y++) {
+							int r = im3d.getRaster().getSample(x, y, 0);	// only 3 bits used
+							int g = im3d.getRaster().getSample(x, y, 1);	// all 8 bits used
+							int b = im3d.getRaster().getSample(x, y, 2);	// only 4 bits used
+							
+							int z = (g & 0xff)<<7 | (r & 0xff)<<4 | (b & 0xff);
+							arr[x][y] = z;
+						}
+						Arrays.sort(arr[x]);	//Middle element is the median in each line
+					}
+						
 				for (int x = 0; x<width3D;x++) {
 					for (int y = 0; y<height3D;y++) {
 						int r = im3d.getRaster().getSample(x, y, 0);	// only 3 bits used
@@ -207,25 +249,24 @@ public class KeyenceFileLoader extends MDFileLoader {
 						
 						int z = (g & 0xff)<<7 | (r & 0xff)<<4 | (b & 0xff);
 						
-						//int z = g<<7 | r<<3 | b;
+						float zf = z/128f;
+						if (normalizeCurvature.getValue()) {
+							zf = zf + 127f - arr[x][height3D/2]/128f;
+							zf = Math.min(255f, Math.max(0f, zf));
+						}
 						
 						if (z>0 || !ignoreZeros.getValue()) {
 							Vec3 pos = new Vec3();
 							pos.x = x;
 							pos.y = y;
-							pos.z = z*zScaling.getValue()/128;
-							//pos.z = g;
+							pos.z = 0f;//z*zScaling.getValue()/128;
 		
 							Atom a = new Atom(pos, x*height3D+y, (byte)0);
 							
 							idc.atoms.add(a);
-						
 							
-							if (imageCol != -1)
-								idc.dataArrays.get(imageCol).add(im2d.getRaster().getSample(x, y, 0)/255f);
-							if (depthCol != -1)
-								idc.dataArrays.get(depthCol).add(pos.z/255f);
-							
+							idc.dataArrays.get(imageCol).add(im2d.getRaster().getSample(x, y, 0)/255f);
+							idc.dataArrays.get(depthCol).add(zf);
 						}
 					}
 				}
@@ -265,6 +306,19 @@ public class KeyenceFileLoader extends MDFileLoader {
 		AtomData data = new AtomData(previous, idc);
 		if (createMesh.getValue())
 			data.applyProcessingModule(new KeyenceMeshModule(compressed & !mixedResolution));
+		
+	
+		if (computeGradients.getValue()) {
+			SpatialDerivatiesModule sdm = new SpatialDerivatiesModule(data.getDataColumnInfos().get(depthCol), 7f); 		
+			data.applyProcessingModule(sdm);
+			sdm = new SpatialDerivatiesModule(data.getDataColumnInfos().get(imageCol), 7f); 	
+			data.applyProcessingModule(sdm);
+		}
+		
+		//Assign the correct z-coordinate to the atoms
+		for (int i = 0; i<idc.atoms.size(); i++)
+			idc.atoms.get(i).z = idc.dataArrays.get(depthCol).get(i);
+		
 		
 		return data;
 	}
