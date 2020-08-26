@@ -273,6 +273,10 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 				e.printStackTrace();
 			}
 		}
+		
+		//Default orientation for calotte
+		this.setPOV(new float[] {0.0f,1.0f,0.0f,0.0f,-1.0f,0.0f,0.0f,0.0f,0.0f,0.0f,1.0f,0.0f,0.0f,0.0f,0.0f,1.0f,1f,0.0f,0.0f,0.0f,0.0f,0.0f});
+		
 	}
 	
 	private GL3 getGLFromContext(){
@@ -1695,6 +1699,7 @@ public class ViewerGLJPanel extends GLJPanel implements MouseMotionListener, Mou
 					coordinateCenterOffset.setTo(pov);
 					moveX = 0f; moveY = 0f;
 					repaintRequired = true;
+					break;
 				}
 			}
 			
