@@ -148,6 +148,8 @@ public class KeyenceFileLoader extends MDFileLoader {
 		}
 		
 		
+		ArrayList<Float> trueZ = new ArrayList<>();
+		
 		if (mixedResolution) {
 			
 			float[][] arr = new float[width2D][height2D];
@@ -180,6 +182,7 @@ public class KeyenceFileLoader extends MDFileLoader {
 						Atom a = new Atom(pos, x*height2D+y, (byte)0);
 						
 						idc.atoms.add(a);
+						trueZ.add(z*zScaling.getValue());
 					
 						//store 2d image and depth as data column
 						idc.dataArrays.get(imageCol).add(im2d.getRaster().getSample(x, y, 0)/255f);
@@ -219,6 +222,7 @@ public class KeyenceFileLoader extends MDFileLoader {
 							Atom a = new Atom(pos, x*height3D+y, (byte)0);
 							
 							idc.atoms.add(a);
+							trueZ.add(z*zScaling.getValue());
 						
 							idc.dataArrays.get(imageCol).add(im2d.getRaster().getSample(x, y, 0)/255f);
 							idc.dataArrays.get(depthCol).add(zf);
@@ -264,6 +268,7 @@ public class KeyenceFileLoader extends MDFileLoader {
 							Atom a = new Atom(pos, x*height3D+y, (byte)0);
 							
 							idc.atoms.add(a);
+							trueZ.add(z*zScaling.getValue()/128);
 							
 							idc.dataArrays.get(imageCol).add(im2d.getRaster().getSample(x, y, 0)/255f);
 							idc.dataArrays.get(depthCol).add(zf);
@@ -317,7 +322,8 @@ public class KeyenceFileLoader extends MDFileLoader {
 		
 		//Assign the correct z-coordinate to the atoms
 		for (int i = 0; i<idc.atoms.size(); i++)
-			idc.atoms.get(i).z = idc.dataArrays.get(depthCol).get(i);
+			//idc.atoms.get(i).z = idc.dataArrays.get(depthCol).get(i);
+			idc.atoms.get(i).z = trueZ.get(i);
 		
 		
 		return data;
