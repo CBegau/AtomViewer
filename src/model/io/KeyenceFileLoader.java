@@ -70,17 +70,17 @@ public class KeyenceFileLoader extends MDFileLoader {
 			"Multiplier for the z-axiz", 1f, 0f, 1000f);
 	private BooleanProperty createMesh = new BooleanProperty("meshing", "Create surface as mesh", "Creates a 3D-mesh representing the Keyence information", false);
 	private BooleanProperty ignoreZeros = new BooleanProperty("ignoreZeros", "Discard values at z=0", "Discards data points at z=0", true);
-	private BooleanProperty normalizeCurvature = new BooleanProperty("normCurvature", "Normalize curvature for calotte", "Normalize curvature for calotte", true);
-	private BooleanProperty computeGradients = new BooleanProperty("compGradients", "Compute gradients", "Compute gradients for the image and depth", true);
+	private BooleanProperty normalizeCurvature = new BooleanProperty("normCurvature", "Normalize curvature for calotte", "Normalize curvature for calotte", false);
+	private BooleanProperty computeGradients = new BooleanProperty("compGradients", "Compute gradients", "Compute gradients for the image and depth", false);
 
 	@Override
 	public List<PrimitiveProperty<?>> getOptions(){
 		ArrayList<PrimitiveProperty<?>> list = new ArrayList<PrimitiveProperty<?>>();
-		list.add(normalizeCurvature);
-		list.add(computeGradients);
 		list.add(ignoreZeros);
 		list.add(zScaling);
 		list.add(createMesh);
+		list.add(normalizeCurvature);
+		list.add(computeGradients);
 		return list;
 	}
 		
