@@ -23,11 +23,9 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Function;
+import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
 import javax.swing.JCheckBox;
@@ -36,9 +34,9 @@ import javax.swing.JLabel;
 import javax.swing.JSlider;
 import javax.swing.filechooser.FileFilter;
 
-import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL3;
 
+import common.FastTFloatArrayList;
 import common.Vec3;
 import gui.JColorSelectPanel;
 import gui.PrimitiveProperty;
@@ -93,31 +91,76 @@ public class KeyenceFileLoader extends MDFileLoader {
 	
 	@Override
 	public AtomData readInputData(File f, AtomData previous, Filter<Atom> atomFilter) throws Exception {
-	ImportDataContainer idc = new ImportDataContainer();
+		ImportDataContainer idc = new ImportDataContainer();
 		
 		idc.name = f.getName();
-
 			
 		BufferedImage im3d = ImageIO.read(f);
 		
-		File file2D;
+		File file2D = null;
+		String[] possibleExtensions = {"bmp", "png", "jpg"};
 		
-		if (f.getName().endsWith("D1.jpg") || f.getName().endsWith("D1.bmp")) {
-			file2D = new File(f.getAbsolutePath().replace("D1", "B1"));
-			if (!file2D.exists())
-				file2D = new File(f.getAbsolutePath().replace("D1", "B1").replace(".bmp", ".jpg"));
-		} else { 
-			file2D = new File(f.getAbsolutePath().replace("_3D", "_2D"));
-			if (!file2D.exists())
-				file2D = new File(f.getAbsolutePath().replace("_3D", "_2D").replace(".bmp", ".jpg"));
-		}
+		File file2Dbase;
+		if (Pattern.matches(".*_D1\\....$", f.getName()))
+			file2Dbase = new File(f.getAbsolutePath().replace("_D1", "_B1"));
+		else 
+			file2Dbase = new File(f.getAbsolutePath().replace("_3D", "_2D"));
+	        
+			
+		int index = file2Dbase.getName().lastIndexOf(".");
+        String ext = file2Dbase.getName().substring(index+1);
 		
+        for (String newext : possibleExtensions) {
+        	File testfile = new File(file2Dbase.getAbsolutePath().replace(ext, newext));
+        	if (testfile.exists()) {
+        		file2D = testfile;
+        		break;
+        	}
+        }
+        if (file2D == null)
+        	throw new FileNotFoundException("2D file could not be found");
+		
+        
 		BufferedImage im2d = ImageIO.read(file2D);
 		
-		boolean compressed = f.getName().endsWith(".jpg");
+		//Add the BCAI-format
+		boolean bcaiDataAvailable = false;
+		FastTFloatArrayList bcaiDataArray = new FastTFloatArrayList();
+		BufferedImage bcaiData = null;
+		
+		File bcaifile = new File(f.getAbsolutePath().replaceAll("_(3D|D1)", "_bcai").replaceAll("\\.(bmp|jpg)", ".png"));
+		if (bcaifile.exists()) {
+			bcaiDataAvailable = true;
+			bcaiData = ImageIO.read(bcaifile);
+		}
+			
+		boolean compressed = im3d.getSampleModel().getNumBands()==1 && im3d.getSampleModel().getSampleSize(0) == 8;
 		
 		boolean mixedResolution = im3d.getWidth() != im2d.getWidth();
-			
+		
+		Function<int[], Float> access3D;
+		Function<int[], Float> access2D;
+		
+		if (compressed) {
+			access3D = pos -> im3d.getRaster().getSample(pos[0], pos[1], 0) + 0f;
+		} else {
+			if (im3d.getSampleModel().getSampleSize(0) > 8)
+				access3D = pos -> im3d.getRaster().getSample(pos[0], pos[1], 0) * 0.007874f;
+			else 
+				access3D = pos -> {
+					int r = im3d.getRaster().getSample(pos[0], pos[1], 0);	// only 3 bits used
+					int g = im3d.getRaster().getSample(pos[0], pos[1], 1);	// all 8 bits used
+					int b = im3d.getRaster().getSample(pos[0], pos[1], 2);	// only 4 bits used
+				
+					return ((g & 0xff)<<7 | (r & 0xff)<<4 | (b & 0xff)) * 0.007874f;
+				};
+		}
+		
+		if (mixedResolution)
+			access2D = pos -> im2d.getRaster().getSample(pos[0]<<1, pos[1]<<1, 0) + 0f;
+		else 
+			access2D = pos -> im2d.getRaster().getSample(pos[0], pos[1], 0) + 0f;
+		
 			
 		int width3D = im3d.getWidth();
 		int height3D = im3d.getHeight();
@@ -150,134 +193,49 @@ public class KeyenceFileLoader extends MDFileLoader {
 		
 		ArrayList<Float> trueZ = new ArrayList<>();
 		
-		if (mixedResolution) {
-			
-			float[][] arr = new float[width2D][height2D];
-			if (normalizeCurvature.getValue())
-				for (int x = 0; x<width2D;x++) {
-					for (int y = 0; y<height2D;y++) {
-						arr[x][y] = im3d.getRaster().getSample(x/2, y/2, 0);
-					}
-					Arrays.sort(arr[x]);	//Middle element is the median in each line
-				}
-			
-			//Uncompressed full res bmp
-			for (int x = 0; x<width2D;x++) {
-				for (int y = 0; y<height2D;y++) {
-					int z = im3d.getRaster().getSample(x, y, 0);
-					
-					float zf = z;
-					if (normalizeCurvature.getValue()) {
-						zf = zf + 127f - arr[x][height3D/2];
-						zf = Math.min(255f, Math.max(0f, zf));
-					}
-					
-					if (z>0 || !ignoreZeros.getValue()) {
-						Vec3 pos = new Vec3();
-						pos.x = x;
-						pos.y = y;
-						//pos.z = z*zScaling.getValue();
-						pos.z = 0f;	//assign later, 0 needed for computing gradients
-	
-						Atom a = new Atom(pos, x*height2D+y, (byte)0);
-						
-						idc.atoms.add(a);
-						trueZ.add(z*zScaling.getValue());
-					
-						//store 2d image and depth as data column
-						idc.dataArrays.get(imageCol).add(im2d.getRaster().getSample(x, y, 0)/255f);
-						idc.dataArrays.get(depthCol).add(zf);
-					}
-				}
-			}
-		} else {
-			if (compressed) {
-				
-				float[][] arr = new float[width3D][height3D];
-				if (normalizeCurvature.getValue())
-					for (int x = 0; x<width3D;x++) {
-						for (int y = 0; y<height3D;y++) {
-							arr[x][y] = im3d.getRaster().getSample(x, y, 0);
-						}
-						Arrays.sort(arr[x]);	//Middle element is the median in each line
-					}
-				
-				//reduced quality and resolution
-				for (int x = 0; x<width3D;x++) {
-					for (int y = 0; y<height3D;y++) {
-						int z = im3d.getRaster().getSample(x, y, 0);
-						
-						float zf = z; 
-						if (normalizeCurvature.getValue()) {
-							zf = zf + 127f - arr[x][height3D/2];
-							zf = Math.min(255f, Math.max(0f, zf));
-						}
-						
-						if (z>0 || !ignoreZeros.getValue()) {
-							Vec3 pos = new Vec3();
-							pos.x = x*2f;
-							pos.y = y*2f;
-							pos.z = 0f;//z*zScaling.getValue();
-	
-							Atom a = new Atom(pos, x*height3D+y, (byte)0);
-							
-							idc.atoms.add(a);
-							trueZ.add(z*zScaling.getValue());
-						
-							idc.dataArrays.get(imageCol).add(im2d.getRaster().getSample(x, y, 0)/255f);
-							idc.dataArrays.get(depthCol).add(zf);
-						}
-					}
-				}
-			} else {
-				//Uncompressed full res bmp
-				float[][] arr = new float[width3D][height3D];
-				if (normalizeCurvature.getValue())
-					for (int x = 0; x<width3D;x++) {
-						for (int y = 0; y<height3D;y++) {
-							int r = im3d.getRaster().getSample(x, y, 0);	// only 3 bits used
-							int g = im3d.getRaster().getSample(x, y, 1);	// all 8 bits used
-							int b = im3d.getRaster().getSample(x, y, 2);	// only 4 bits used
-							
-							int z = (g & 0xff)<<7 | (r & 0xff)<<4 | (b & 0xff);
-							arr[x][y] = z;
-						}
-						Arrays.sort(arr[x]);	//Middle element is the median in each line
-					}
-						
-				for (int x = 0; x<width3D;x++) {
-					for (int y = 0; y<height3D;y++) {
-						int r = im3d.getRaster().getSample(x, y, 0);	// only 3 bits used
-						int g = im3d.getRaster().getSample(x, y, 1);	// all 8 bits used
-						int b = im3d.getRaster().getSample(x, y, 2);	// only 4 bits used
-						
-						int z = (g & 0xff)<<7 | (r & 0xff)<<4 | (b & 0xff);
-						
-						float zf = z/128f;
-						if (normalizeCurvature.getValue()) {
-							zf = zf + 127f - arr[x][height3D/2]/128f;
-							zf = Math.min(255f, Math.max(0f, zf));
-						}
-						
-						if (z>0 || !ignoreZeros.getValue()) {
-							Vec3 pos = new Vec3();
-							pos.x = x;
-							pos.y = y;
-							pos.z = 0f;//z*zScaling.getValue()/128;
 		
-							Atom a = new Atom(pos, x*height3D+y, (byte)0);
-							
-							idc.atoms.add(a);
-							trueZ.add(z*zScaling.getValue()/128);
-							
-							idc.dataArrays.get(imageCol).add(im2d.getRaster().getSample(x, y, 0)/255f);
-							idc.dataArrays.get(depthCol).add(zf);
-						}
-					}
-				}
-			
+		//Uncompressed full res bmp
+		float[][] arr = new float[width3D][height3D];
+		if (normalizeCurvature.getValue()) {
+			for (int x = 0; x<width3D;x++) {
+				for (int y = 0; y<height3D;y++)
+					arr[x][y] = access3D.apply(new int[] {x,y});
+				
+				Arrays.sort(arr[x]);	//Middle element is the median in each line
 			}
 		}
+						
+		for (int x = 0; x<width3D;x++) {
+			for (int y = 0; y<height3D;y++) {
+				int[] xypos = new int[] {x,y};
+				float zf = access3D.apply(xypos);
+				float zfs = zf;
+				if (normalizeCurvature.getValue()) {
+					zfs = zfs + 127f - arr[x][height3D>>1];
+					zfs = Math.min(255f, Math.max(0f, zfs));
+				}
+				
+				if (zf>0 || !ignoreZeros.getValue()) {
+					Vec3 pos = new Vec3();
+					pos.x = x*(compressed?2:1);
+					pos.y = y*(compressed?2:1);
+					pos.z = 0f;
+
+					Atom a = new Atom(pos, x*height3D+y, (byte)0);
+					
+					idc.atoms.add(a);
+					trueZ.add(zf*zScaling.getValue());
+					
+					idc.dataArrays.get(imageCol).add(access2D.apply(xypos));
+					idc.dataArrays.get(depthCol).add(zfs);
+					
+					if (bcaiDataAvailable) {
+						bcaiDataArray.add(bcaiData.getRaster().getSample(x, y, 0)/255f);
+					}
+				}
+			}
+		}
+		
 		
 		//Add the names of the elements to the input
 		idc.elementNames.put(1, "Pixel");
@@ -286,7 +244,7 @@ public class KeyenceFileLoader extends MDFileLoader {
 		
 		idc.fileMetaData = new HashMap<>();
 		
-		String markingDefectFilename = f.getAbsolutePath().replace(".bmp", ".xml").replace(".jpg", ".xml");
+		String markingDefectFilename = f.getAbsolutePath().replaceAll(".(bmp|jpg|png)", ".xml");
 		File markingDefectFile = new File(markingDefectFilename);
 		
 		DefectMarking dm;
@@ -309,22 +267,25 @@ public class KeyenceFileLoader extends MDFileLoader {
 		idc.fileMetaData.put("height2D", height2D);
 		
 		AtomData data = new AtomData(previous, idc);
-		if (createMesh.getValue())
-			data.applyProcessingModule(new KeyenceMeshModule(compressed & !mixedResolution));
 		
+		if (bcaiDataAvailable)
+			data.applyProcessingModule(new AddExtraDataModule("bcai", bcaiDataArray));
 	
 		if (computeGradients.getValue()) {
 			SpatialDerivatiesModule sdm = new SpatialDerivatiesModule(data.getDataColumnInfos().get(depthCol), 7f); 		
 			data.applyProcessingModule(sdm);
-			sdm = new SpatialDerivatiesModule(data.getDataColumnInfos().get(imageCol), 7f); 	
-			data.applyProcessingModule(sdm);
+			
+//			sdm = new SpatialDerivatiesModule(data.getDataColumnInfos().get(imageCol), 7f); 	
+//			data.applyProcessingModule(sdm);
 		}
 		
 		//Assign the correct z-coordinate to the atoms
 		for (int i = 0; i<idc.atoms.size(); i++)
-			//idc.atoms.get(i).z = idc.dataArrays.get(depthCol).get(i);
+//			idc.atoms.get(i).z = idc.dataArrays.get(depthCol).get(i);
 			idc.atoms.get(i).z = trueZ.get(i);
 		
+		if (createMesh.getValue())
+			data.applyProcessingModule(new KeyenceMeshModule(compressed & !mixedResolution));
 		
 		return data;
 	}
@@ -336,17 +297,15 @@ public class KeyenceFileLoader extends MDFileLoader {
 		FileFilter keyenceFileFilterBasic = new FileFilter() {
 			@Override
 			public String getDescription() {
-				return "(ext)keyence file (*_3D.bmp | *_3D.jpg)";
+				return "(ext)keyence file (*_3D.bmp|jpg|png, *_D1.bmp|jpg|png)";
 			}
 			
 			@Override
 			public boolean accept(File f) {
 				if (f.isDirectory()) return true;
 				String name = f.getName();
-				if (name.endsWith("_3D.bmp") || name.endsWith("_3D.jpg") || name.endsWith("D1.bmp") || name.endsWith("D1.jpg")){
-					return true;
-				}
-				return false;
+				
+				return Pattern.matches(".*_(3D|D1)\\.(bmp|png|jpg)$", name);
 			}
 		};
 		return keyenceFileFilterBasic;
@@ -432,6 +391,69 @@ public class KeyenceFileLoader extends MDFileLoader {
 		public boolean isDataVisible() {
 			return showSurfaceCheckbox.isSelected();
 		}
+	}
+	
+	private class AddExtraDataModule extends ClonableProcessingModule{
+		
+		private String id;
+		private DataColumnInfo dci;
+		private FastTFloatArrayList dataArray;
+		
+		public AddExtraDataModule(String id, FastTFloatArrayList data) {
+			this.id = id;
+			this.dci = new DataColumnInfo(this.id, this.id, "-");
+			this.dataArray = data;
+		}
+		
+		@Override
+		public DataColumnInfo[] getDataColumnsInfo() {
+			return new DataColumnInfo[]{this.dci};
+		}
+
+		@Override
+		public String getShortName() {
+			return "";
+		}
+
+		@Override
+		public String getFunctionDescription() {
+			return "";
+		}
+
+		@Override
+		public String getRequirementDescription() {
+			return "";
+		}
+
+		@Override
+		public boolean isApplicable(AtomData data) {
+			return true;
+		}
+
+		@Override
+		public boolean canBeAppliedToMultipleFilesAtOnce() {
+			return false;
+		}
+
+		@Override
+		public boolean showConfigurationDialog(JFrame frame, AtomData data) {
+			return false;
+		}
+
+		@Override
+		public ProcessingResult process(AtomData data) throws Exception {
+			final int v = data.getDataColumnIndex(dci);
+			final float[] vArray = data.getDataArray(v).getData();
+			
+			for (int i=0; i<this.dataArray.size(); i++) {
+				vArray[i] = this.dataArray.get(i);
+			}
+			
+			return null;
+		}
+		
+
+		
 	}
 	
 	private class KeyenceMeshModule extends ClonableProcessingModule{
@@ -607,9 +629,9 @@ public class KeyenceFileLoader extends MDFileLoader {
 				if (picking){
 					gl.glUniform4f(colorUniform, 0, 0, 0, 0);
 				}
-				gl.glDisable(GL.GL_CULL_FACE);
+				gl.glDisable(GL3.GL_CULL_FACE);
 				mesh.renderMesh(gl);
-				gl.glEnable(GL.GL_CULL_FACE);
+				gl.glEnable(GL3.GL_CULL_FACE);
 				
 				Shader.popAndEnableShader(gl);
 				
