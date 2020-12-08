@@ -74,10 +74,7 @@ public class JColorShiftDialog extends JDialog {
 		this.add(new JLabel("<html>Shade atoms differently in color depending on their type and element<html>"), BorderLayout.NORTH);
 
 		this.pack();
-		
-		GraphicsDevice gd = this.getOwner().getGraphicsConfiguration().getDevice();
-		this.setLocation( (gd.getDisplayMode().getWidth()-this.getWidth())>>1, 
-				(gd.getDisplayMode().getHeight()-this.getHeight())>>1);
+		this.setLocationRelativeTo(this.getOwner());
 		this.setVisible(true);
 	}
 	

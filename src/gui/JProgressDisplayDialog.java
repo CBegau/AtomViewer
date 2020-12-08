@@ -59,10 +59,7 @@ public class JProgressDisplayDialog extends JDialog implements PropertyChangeLis
 		this.setSize(new Dimension((int)(factor*400),(int)(factor*100)));
 		this.setResizable(false);
 		this.setModalityType(ModalityType.TOOLKIT_MODAL);
-		
-		GraphicsDevice gd = this.getGraphicsConfiguration().getDevice();
-		this.setLocation( (gd.getDisplayMode().getWidth()-this.getWidth())>>1, 
-				(gd.getDisplayMode().getHeight()-this.getHeight())>>1);
+		this.setLocationRelativeTo(this.getOwner());
 	}
 	
 	@Override

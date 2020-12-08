@@ -25,7 +25,6 @@ public class JPrimitiveVariablesPropertiesDialog extends JDialog {
 	}
 	
 	public boolean showDialog(){
-		GraphicsDevice gd = this.getOwner().getGraphicsConfiguration().getDevice();
 		JPanel propertyPanel = new JPanel(new GridBagLayout());
 		GridBagConstraints gbc = CommonUtils.getBasicGridBagConstraint();
 		
@@ -55,9 +54,7 @@ public class JPrimitiveVariablesPropertiesDialog extends JDialog {
 		this.add(scrollPane);
 		this.pack();
 		
-		this.setLocation( (gd.getDisplayMode().getWidth()-this.getWidth())>>1, 
-				(gd.getDisplayMode().getHeight()-this.getHeight())>>1);
-		
+		this.setLocationRelativeTo(this.getOwner());
 		this.setVisible(true);
 		
 		return ok;
