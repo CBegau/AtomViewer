@@ -101,8 +101,8 @@ public class KeyenceFileLoader extends MDFileLoader {
 		String[] possibleExtensions = {"bmp", "png", "jpg"};
 		
 		File file2Dbase;
-		if (Pattern.matches(".*_D1\\....$", f.getName()))
-			file2Dbase = new File(f.getAbsolutePath().replace("_D1", "_B1"));
+		if (Pattern.matches(".*D1\\....$", f.getName()))
+			file2Dbase = new File(f.getAbsolutePath().replace("D1", "B1"));
 		else 
 			file2Dbase = new File(f.getAbsolutePath().replace("_3D", "_2D"));
 	        
@@ -297,7 +297,7 @@ public class KeyenceFileLoader extends MDFileLoader {
 		FileFilter keyenceFileFilterBasic = new FileFilter() {
 			@Override
 			public String getDescription() {
-				return "(ext)keyence file (*_3D.bmp|jpg|png, *_D1.bmp|jpg|png)";
+				return "(ext)keyence file (*_3D.bmp|jpg|png, *D1.bmp|jpg|png)";
 			}
 			
 			@Override
@@ -305,7 +305,7 @@ public class KeyenceFileLoader extends MDFileLoader {
 				if (f.isDirectory()) return true;
 				String name = f.getName();
 				
-				return Pattern.matches(".*_(3D|D1)\\.(bmp|png|jpg)$", name);
+				return Pattern.matches(".*(_3D|D1)\\.(bmp|png|jpg)$", name);
 			}
 		};
 		return keyenceFileFilterBasic;
