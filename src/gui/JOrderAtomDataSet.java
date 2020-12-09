@@ -21,7 +21,6 @@ import java.awt.BorderLayout;
 import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.Frame;
-import java.awt.GraphicsDevice;
 import java.awt.GridLayout;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
@@ -148,9 +147,7 @@ public class JOrderAtomDataSet extends JDialog {
 		
 		this.setModalityType(Dialog.DEFAULT_MODALITY_TYPE);
 		this.pack();
-		GraphicsDevice gd = owner.getGraphicsConfiguration().getDevice();
-		this.setLocation( (gd.getDisplayMode().getWidth()-this.getWidth())>>1, 
-				(gd.getDisplayMode().getHeight()-this.getHeight())>>1);
+		this.setLocationRelativeTo(this.getOwner());
 		this.setVisible(true);
 	}
 	

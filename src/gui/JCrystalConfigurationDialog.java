@@ -241,10 +241,8 @@ public class JCrystalConfigurationDialog extends JDialog{
 		}
 		
 		this.pack();
+		this.setLocationRelativeTo(this.getOwner());
 		
-		GraphicsDevice gd = this.getOwner().getGraphicsConfiguration().getDevice();
-		this.setLocation( (gd.getDisplayMode().getWidth()-this.getWidth())>>1, 
-				(gd.getDisplayMode().getHeight()-this.getHeight())>>1);
 		this.setVisible(true);
 	}
 	

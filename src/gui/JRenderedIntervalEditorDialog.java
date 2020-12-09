@@ -20,7 +20,6 @@ package gui;
 
 import java.awt.Dialog;
 import java.awt.Frame;
-import java.awt.GraphicsDevice;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.event.ActionEvent;
@@ -231,9 +230,7 @@ public class JRenderedIntervalEditorDialog extends JDialog{
 		
 		this.setModalityType(Dialog.DEFAULT_MODALITY_TYPE);
 		this.pack();
-		GraphicsDevice gd = owner.getGraphicsConfiguration().getDevice();
-		this.setLocation( (gd.getDisplayMode().getWidth()-this.getWidth())>>1, 
-				(gd.getDisplayMode().getHeight()-this.getHeight())>>1);
+		this.setLocationRelativeTo(this.getOwner());
 		this.setVisible(true);
 	}
 	
