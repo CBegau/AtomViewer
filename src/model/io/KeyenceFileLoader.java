@@ -92,7 +92,6 @@ public class KeyenceFileLoader extends MDFileLoader {
 	@Override
 	public AtomData readInputData(File f, AtomData previous, Filter<Atom> atomFilter) throws Exception {
 		ImportDataContainer idc = new ImportDataContainer();
-		
 		idc.name = f.getName();
 			
 		BufferedImage im3d = ImageIO.read(f);
@@ -120,7 +119,6 @@ public class KeyenceFileLoader extends MDFileLoader {
         if (file2D == null)
         	throw new FileNotFoundException("2D file could not be found");
 		
-        
 		BufferedImage im2d = ImageIO.read(file2D);
 		
 		//Add the BCAI-format
@@ -262,7 +260,9 @@ public class KeyenceFileLoader extends MDFileLoader {
 		
 		idc.fileMetaData.put("marks", dm);
 		idc.fileMetaData.put("File2D", file2D.getName());
+		idc.fileMetaData.put("File2D_abs_path", file2D.getAbsolutePath());
 		idc.fileMetaData.put("File3D", f.getName());
+		idc.fileMetaData.put("File3D_abs_path", f.getAbsolutePath());
 		idc.fileMetaData.put("width2D", width2D);
 		idc.fileMetaData.put("height2D", height2D);
 		

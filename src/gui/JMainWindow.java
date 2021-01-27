@@ -201,7 +201,12 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 					String xmlnameOverlay ="overlay_"+svgname;
 					exportTo = new File(Configuration.getLastOpenedFolder(), xmlnameOverlay);
 					DefectMarking.exportSvg(ad, exportTo, true);
-							
+					
+					
+					String csvname =ad.getName().replace(".bmp", ".csv").replace(".jpg", ".csv");
+					exportTo = new File(Configuration.getLastOpenedFolder(), csvname);
+					DefectMarking.exportCsv(ad, exportTo);
+					
 					ad = ad.getNext();
 				} catch (Exception e1) {
 					e1.printStackTrace();
