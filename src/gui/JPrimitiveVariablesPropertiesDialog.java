@@ -86,9 +86,13 @@ public class JPrimitiveVariablesPropertiesDialog extends JDialog {
 	}
 
 	public BooleanProperty addBoolean(String id, String label, String tooltip, boolean defaultValue){
+		return addBoolean(id, label, tooltip, defaultValue, true);
+	}
+	
+	public BooleanProperty addBoolean(String id, String label, String tooltip, boolean defaultValue, boolean showDefault){
 		String wrappedLabel = CommonUtils.getWordWrappedString(label, new JCheckBox());
 		
-		BooleanProperty bp = new BooleanProperty(id, wrappedLabel, tooltip, defaultValue, true);
+		BooleanProperty bp = new BooleanProperty(id, wrappedLabel, tooltip, defaultValue, showDefault);
 		this.addComponent(bp);
 		return bp;
 	}
