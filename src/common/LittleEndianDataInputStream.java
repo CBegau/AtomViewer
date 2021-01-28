@@ -19,6 +19,7 @@
 package common;
 
 import java.io.*;
+import java.nio.ByteBuffer;
 
 /**
  * Implementation of DataInputStream to read float, int, long and double from a little endian source 
@@ -35,25 +36,19 @@ public class LittleEndianDataInputStream extends DataInputStream{
 	
 	public final int readLittleEndianInt() throws IOException {
 		super.readFully(buf, 0, 4);
-		return (buf[3]) << 24 | (buf[2]&0xff) << 16 | (buf[1]&0xff) << 8 | (buf[0]&0xff);
+		return Integer.reverseBytes(ByteBuffer.wrap(buf).getInt());
 	}
 	
 	public final float readLittleEndianFloat() throws IOException {
-		super.readFully(buf, 0, 4);
-		int i = (buf[3]) << 24 | (buf[2]&0xff) << 16 | (buf[1]&0xff) << 8 | (buf[0]&0xff);
-		return Float.intBitsToFloat(i);
+		return Float.intBitsToFloat(readLittleEndianInt());
 	}
 	
 	public final double readLittleEndianDouble() throws IOException {
-		super.readFully(buf, 0, 8);
-		long l = ( (long)buf[7] << 56 | (long)(buf[6]&0xff) << 48 | (long)(buf[5]&0xff) << 40 | (long)(buf[4]&0xff) << 32 
-				| (long)(buf[3]&0xff) << 24 | (long)(buf[2]&0xff) << 16 | (long)(buf[1]&0xff) << 8 | (long)buf[0]&0xff );
-		return Double.longBitsToDouble(l);
+		return Double.longBitsToDouble(readLittleEndianLong());
 	}
 	
 	public final long readLittleEndianLong() throws IOException {
 		super.readFully(buf, 0, 8);
-		return ( (long)buf[7] << 56 | (long)(buf[6]&0xff) << 48 | (long)(buf[5]&0xff) << 40 | (long)(buf[4]&0xff) << 32 
-				| (long)(buf[3]&0xff) << 24 | (long)(buf[2]&0xff) << 16 | (long)(buf[1]&0xff) << 8 | (long)buf[0]&0xff );
+		return Long.reverseBytes(ByteBuffer.wrap(buf).getLong());
 	}
 }

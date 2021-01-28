@@ -19,6 +19,7 @@
 package common;
 
 import java.io.FileNotFoundException;
+import java.nio.ByteBuffer;
 
 public abstract class ByteArrayReader {
     
@@ -44,107 +45,68 @@ public abstract class ByteArrayReader {
 	private static final class LittleEndianSinglePrecisionWrapper extends ByteArrayReader{
         @Override
         public float readFloat(byte[] b, int offset) {
-            return ByteToPrimitives.toFloatLittleEndian(b, offset);
+            return Float.intBitsToFloat(Integer.reverseBytes(ByteBuffer.wrap(b, offset, 4).getInt()));
         }
 
         @Override
         public int readInt(byte[] b, int offset) {
-            return ByteToPrimitives.toIntLittleEndian(b, offset);
+            return Integer.reverseBytes(ByteBuffer.wrap(b, offset, 4).getInt());
         }
 
         @Override
         public int readIntSingle(byte[] b, int offset) {
-            return ByteToPrimitives.toIntLittleEndian(b, offset);
+            return Integer.reverseBytes(ByteBuffer.wrap(b, offset, 4).getInt());
         }
 	}
 	
 	private static final class BigEndianSinglePrecisionWrapper extends ByteArrayReader{
         @Override
         public float readFloat(byte[] b, int offset) {
-            return ByteToPrimitives.toFloatBigEndian(b, offset);
+            return ByteBuffer.wrap(b, offset, 4).getFloat();
         }
 
         @Override
         public int readInt(byte[] b, int offset) {
-            return ByteToPrimitives.toIntBigEndian(b, offset);
+            return ByteBuffer.wrap(b, offset, 4).getInt();
         }
 
         @Override
         public int readIntSingle(byte[] b, int offset) {
-            return ByteToPrimitives.toIntBigEndian(b, offset);
+            return ByteBuffer.wrap(b, offset, 4).getInt();
         }
     }
 	
 	private static final class LittleEndianDoublePrecisionWrapper extends ByteArrayReader{
         @Override
         public float readFloat(byte[] b, int offset) {
-            return (float)ByteToPrimitives.toDoubleLittleEndian(b, offset);
+            return (float)Double.longBitsToDouble(Long.reverseBytes(ByteBuffer.wrap(b, offset, 8).getLong()));
         }
 
         @Override
         public int readInt(byte[] b, int offset) {
-            return (int)ByteToPrimitives.toLongLittleEndian(b, offset);
+            return (int)Long.reverseBytes(ByteBuffer.wrap(b, offset, 8).getLong());
         }
 
         @Override
         public int readIntSingle(byte[] b, int offset) {
-            return ByteToPrimitives.toIntLittleEndian(b, offset);
+            return Integer.reverseBytes(ByteBuffer.wrap(b, offset, 4).getInt());
         }
 	}
 	
 	private static final class BigEndianDoublePresicionWrapper extends ByteArrayReader{
 	    @Override
         public float readFloat(byte[] b, int offset) {
-            return (float)ByteToPrimitives.toDoubleBigEndian(b, offset);
+            return (float)ByteBuffer.wrap(b, offset, 8).getDouble();
         }
 
         @Override
         public int readInt(byte[] b, int offset) {
-            return (int)ByteToPrimitives.toLongBigEndian(b, offset);
+            return (int)ByteBuffer.wrap(b, offset, 8).getLong();
         }
 
         @Override
         public int readIntSingle(byte[] b, int offset) {
-            return ByteToPrimitives.toIntBigEndian(b, offset);
+            return ByteBuffer.wrap(b, offset, 4).getInt();
         }
-	}
-	
-	private static class ByteToPrimitives{
-	    public static int toIntBigEndian(byte[] b, int offset){
-	        return (b[offset+0]) << 24 | (b[offset+1]&0xff) << 16 | (b[offset+2]&0xff) << 8 | (b[offset+3]&0xff);
-	    }
-	    public static long toLongBigEndian(byte[] b, int offset){
-	        return ( (long)(b[offset+0])      << 56 | (long)(b[offset+1]&0xff) << 48 | 
-	                 (long)(b[offset+2]&0xff) << 40 | (long)(b[offset+3]&0xff) << 32 |
-	                 (long)(b[offset+4]&0xff) << 24 | (long)(b[offset+5]&0xff) << 16 |
-	                 (long)(b[offset+6]&0xff) << 8  | (long)(b[offset+7]&0xff)       );
-	    }
-	    
-	    public static double toDoubleBigEndian(byte[] b, int offset){
-	        return Double.longBitsToDouble(toLongBigEndian(b, offset));
-	    }
-	    
-	    public static float toFloatBigEndian(byte[] b, int offset){
-	        return Float.intBitsToFloat(toIntBigEndian(b, offset));
-	    }
-	    
-	    public static int toIntLittleEndian(byte[] b, int offset){
-	        return (b[offset+3]) << 24 | (b[offset+2]&0xff) << 16 | (b[offset+1]&0xff) << 8 | (b[offset+0]&0xff);
-	    }
-	    
-	    public static long toLongLittleEndian(byte[] b, int offset){
-	        return ( (long)(b[offset+7])      << 56 | (long)(b[offset+6]&0xff) << 48 | 
-	                 (long)(b[offset+5]&0xff) << 40 | (long)(b[offset+4]&0xff) << 32 |
-	                 (long)(b[offset+3]&0xff) << 24 | (long)(b[offset+2]&0xff) << 16 |
-	                 (long)(b[offset+1]&0xff) << 8  | (long)(b[offset+0]&0xff)       );
-	    }
-	    
-	    public static double toDoubleLittleEndian(byte[] b, int offset){
-	        return Double.longBitsToDouble(toLongLittleEndian(b, offset));
-	    }
-	    
-	    public static float toFloatLittleEndian(byte[] b, int offset){
-	        return Float.intBitsToFloat(toIntLittleEndian(b, offset));
-	    }
 	}
 }
