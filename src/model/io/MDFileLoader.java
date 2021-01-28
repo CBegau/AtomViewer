@@ -46,7 +46,7 @@ public abstract class MDFileLoader{
 		return new Worker();
 	}
 	
-	private class Worker extends  SwingWorker<AtomData, String>{
+	private class Worker extends SwingWorker<AtomData, String>{
 		@Override
 		protected final AtomData doInBackground() throws Exception{
 			ProgressMonitor progressMonitor = ProgressMonitor.createNewProgressMonitor(this);
@@ -80,7 +80,10 @@ public abstract class MDFileLoader{
 		}
 	}
 	
-	
+	/**
+	 * To be called once before readInputData
+	 */
+	public void initFileReader(){}
 	
 	public void setFilesToRead(File[] files){
 		this.filesToRead = files;

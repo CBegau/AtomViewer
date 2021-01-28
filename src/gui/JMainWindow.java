@@ -747,6 +747,7 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 				typeColorMenu.setEnabled(true);
 
 				fileLoader.setFilesToRead(chooser.getSelectedFiles());
+				fileLoader.initFileReader();
 				final SwingWorker<AtomData, String> worker = fileLoader.getNewSwingWorker();
 				
 				final JProgressDisplayDialog progressDisplay = new JProgressDisplayDialog(worker, JMainWindow.this);

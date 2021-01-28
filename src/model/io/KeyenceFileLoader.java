@@ -29,6 +29,7 @@ import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
 import javax.swing.JCheckBox;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JSlider;
@@ -39,6 +40,7 @@ import com.jogamp.opengl.GL3;
 import common.FastTFloatArrayList;
 import common.Vec3;
 import gui.JColorSelectPanel;
+import gui.JMainWindow;
 import gui.PrimitiveProperty;
 import gui.PrimitiveProperty.BooleanProperty;
 import gui.PrimitiveProperty.FloatProperty;
@@ -48,6 +50,7 @@ import gui.RenderRange;
 import gui.ViewerGLJPanel;
 import model.Atom;
 import model.AtomData;
+import model.Configuration;
 import model.DataColumnInfo;
 import model.ImportConfiguration;
 import model.RenderingConfiguration;
@@ -70,11 +73,16 @@ public class KeyenceFileLoader extends MDFileLoader {
 	private BooleanProperty ignoreZeros = new BooleanProperty("ignoreZeros", "Discard values at z=0", "Discards data points at z=0", true);
 	private BooleanProperty normalizeCurvature = new BooleanProperty("normCurvature", "Normalize curvature for calotte", "Normalize curvature for calotte", false);
 	private BooleanProperty computeGradients = new BooleanProperty("compGradients", "Compute gradients", "Compute gradients for the image and depth", false);
+	
+	private BooleanProperty defectsFromFolder = new BooleanProperty("defectFolder", "Defects from different folder", "Load defects definitions from a different folder", false);
 
+	private File defectfolder = null;
+	
 	@Override
 	public List<PrimitiveProperty<?>> getOptions(){
 		ArrayList<PrimitiveProperty<?>> list = new ArrayList<PrimitiveProperty<?>>();
 		list.add(ignoreZeros);
+		list.add(defectsFromFolder);
 		list.add(zScaling);
 		list.add(createMesh);
 		list.add(normalizeCurvature);
@@ -87,6 +95,24 @@ public class KeyenceFileLoader extends MDFileLoader {
 	@Override
 	public String getName() {
 		return "Keyence 3D-Image";
+	}
+	
+	@Override
+	public void initFileReader() {
+		super.initFileReader();
+		if (defectsFromFolder.getValue()) {
+			JFileChooser chooser = new JFileChooser(Configuration.getLastOpenedFolder());
+			chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+			chooser.setDialogTitle("Select folder containing defect definitions");
+            int option = chooser.showOpenDialog(null);
+            if(option == JFileChooser.APPROVE_OPTION){
+            	defectfolder = chooser.getSelectedFile();
+            }else{
+            	defectfolder = null;
+            }
+		} else {
+			defectfolder = null;
+		}
 	}
 	
 	@Override
@@ -242,8 +268,14 @@ public class KeyenceFileLoader extends MDFileLoader {
 		
 		idc.fileMetaData = new HashMap<>();
 		
-		String markingDefectFilename = f.getAbsolutePath().replaceAll(".(bmp|jpg|png)", ".xml");
-		File markingDefectFile = new File(markingDefectFilename);
+		File markingDefectFile;
+		if (defectfolder == null) {
+			String markingDefectFilename = f.getAbsolutePath().replaceAll(".(bmp|jpg|png)", ".xml");
+			markingDefectFile = new File(markingDefectFilename);
+		} else { 
+			String markingDefectFilename = f.getName().replaceAll(".(bmp|jpg|png)", ".xml");
+			markingDefectFile = new File(defectfolder, markingDefectFilename);
+		}
 		
 		DefectMarking dm;
 		if (markingDefectFile.exists()) {

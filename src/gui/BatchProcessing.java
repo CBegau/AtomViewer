@@ -71,6 +71,7 @@ public class BatchProcessing {
 			
 			
 			Configuration.setCurrentFileLoader(fileLoader);
+			fileLoader.initFileReader();
 			final SwingWorker<AtomData, String> worker = fileLoader.getNewSwingWorker();
 			
 			worker.addPropertyChangeListener(new PropertyChangeListener() {
