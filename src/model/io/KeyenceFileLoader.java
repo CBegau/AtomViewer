@@ -260,9 +260,9 @@ public class KeyenceFileLoader extends MDFileLoader {
 		
 		idc.fileMetaData.put("marks", dm);
 		idc.fileMetaData.put("File2D", file2D.getName());
-		idc.fileMetaData.put("File2D_abs_path", file2D.getAbsolutePath());
+		idc.fileMetaData.put("File2D_file", file2D.getAbsoluteFile());
 		idc.fileMetaData.put("File3D", f.getName());
-		idc.fileMetaData.put("File3D_abs_path", f.getAbsolutePath());
+		idc.fileMetaData.put("File3D_file", f.getAbsoluteFile());
 		idc.fileMetaData.put("width2D", width2D);
 		idc.fileMetaData.put("height2D", height2D);
 		

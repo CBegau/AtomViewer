@@ -173,7 +173,7 @@ public class DefectMarking {
 			pw.println("filename,file_size,file_attributes,region_count,region_id,region_shape_attributes,region_attributes");
 			DefectMarking df = atomData.getDefectMarking();
 			
-			String filename = atomData.getFileMetaData("File2D_abs_path").toString();
+			String filename = ((File)atomData.getFileMetaData("File2D_file")).getName();
 			int filesize = -1;
 			int maxSeverity = df.marks.stream().mapToInt(m->m.severity).max().orElse(0);
 			
@@ -242,7 +242,18 @@ public class DefectMarking {
 				xmlout.writeAttribute("width", Float.toString(x));
 				xmlout.writeAttribute("height", Float.toString(y));
 
-				String filename2D = (String) ad.getFileMetaData("File2D");
+				//String filename2D = (String) ad.getFileMetaData("File2D");
+				File file2D = (File)ad.getFileMetaData("File2D_file");
+				//Check if same of different path
+				//and either store relative or absolute paths
+				String filename2D;
+				if (file2D.getParent().equals(f.getParent())) {
+					filename2D = file2D.getName();
+				} else {
+					filename2D = "file://"+file2D.getAbsolutePath().replace("\\", "/");
+					
+				}
+				
 				xmlout.writeAttribute("xlink:href", filename2D);
 				xmlout.writeEndElement();
 			}

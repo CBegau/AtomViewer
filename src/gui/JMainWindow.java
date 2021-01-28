@@ -35,14 +35,10 @@ import java.util.Map;
 
 import javax.imageio.ImageIO;
 import com.jogamp.opengl.GLCapabilities;
-//import com.jogamp.opengl.GLDrawableFactory;
-//import com.jogamp.opengl.GLOffscreenAutoDrawable;
 import com.jogamp.opengl.GLProfile;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
-import processingModules.DataContainer;
-import processingModules.skeletonizer.Skeletonizer;
 import processingModules.ProcessingModule;
 import processingModules.toolchain.Toolchain;
 
@@ -153,67 +149,10 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 		
 		JMenuItem exportAsciiFile = new JMenuItem("Export as IMD-Checkpoint");
 		exportAsciiFile.addActionListener(new ExportFileActionListener());
-		fileMenu.add(exportAsciiFile);
-		
-//		final JMenuItem exportSkeletonFileMenuItem = new JMenuItem("Export dislocation network");
-//		exportSkeletonFileMenuItem.addActionListener(l -> {
-//			if (Configuration.getCurrentAtomData() == null)
-//				return;
-//			DataContainer dc = Configuration.getCurrentAtomData().getDataContainer(Skeletonizer.class);
-//			Skeletonizer skel = (dc != null)? (Skeletonizer)dc: null;
-//			if (skel == null) {
-//				JOptionPane.showMessageDialog(JMainWindow.this, "Dislocation network not available");
-//				return;
-//			}
-//			
-//			JFileChooser chooser = new JFileChooser();
-//			int result = chooser.showSaveDialog(JMainWindow.this);
-//			if (result == JFileChooser.APPROVE_OPTION){
-//				try {
-//					skel.writeDislocationSkeleton(chooser.getSelectedFile());
-//				} catch (IOException e1) {
-//					e1.printStackTrace();
-//				}
-//			}
-//		});
-//		fileMenu.add(exportSkeletonFileMenuItem);
-		
+		fileMenu.add(exportAsciiFile);	
 		
 		final JMenuItem exportMarksFileMenuItem = new JMenuItem("Export defect marking");
-		exportMarksFileMenuItem.addActionListener(l -> {
-			if (Configuration.getCurrentAtomData() == null)
-				return;
-			
-			AtomData ad = Configuration.getCurrentAtomData();
-			while (ad.getPrevious()!=null)
-				ad = ad.getPrevious();
-		
-			while (ad != null) {
-				try {
-					String name =ad.getName().replace(".bmp", ".xml").replace(".jpg", ".xml");
-					File exportTo = new File(Configuration.getLastOpenedFolder(), name);
-					DefectMarking.export(ad, exportTo);
-					
-					String svgname =ad.getName().replace(".bmp", ".svg").replace(".jpg", ".svg");
-					exportTo = new File(Configuration.getLastOpenedFolder(), svgname);
-					DefectMarking.exportSvg(ad, exportTo, false);
-					
-					String xmlnameOverlay ="overlay_"+svgname;
-					exportTo = new File(Configuration.getLastOpenedFolder(), xmlnameOverlay);
-					DefectMarking.exportSvg(ad, exportTo, true);
-					
-					
-					String csvname =ad.getName().replace(".bmp", ".csv").replace(".jpg", ".csv");
-					exportTo = new File(Configuration.getLastOpenedFolder(), csvname);
-					DefectMarking.exportCsv(ad, exportTo);
-					
-					ad = ad.getNext();
-				} catch (Exception e1) {
-					e1.printStackTrace();
-				}
-			}
-			JOptionPane.showMessageDialog(JMainWindow.this, "Export successful");
-		});
+		exportMarksFileMenuItem.addActionListener(new ExportMarkersActionListener());
 		fileMenu.add(exportMarksFileMenuItem);
 		
 		
@@ -1008,6 +947,98 @@ public class JMainWindow extends JFrame implements WindowListener, AtomDataChang
 				worker.execute();
 				progressDisplay.setVisible(true);
 			}
+		}
+	}
+	
+	private class ExportMarkersActionListener implements ActionListener{
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			
+			JPrimitiveVariablesPropertiesDialog dialog = new JPrimitiveVariablesPropertiesDialog(JMainWindow.this, "Export defects");
+			
+			dialog.addLabel("Export defect markings to file");
+			dialog.add(new JSeparator());
+			
+			dialog.startGroup("Options");
+			BooleanProperty allFilesExport = dialog.addBoolean("allFiles", "Export all files",
+					"Exports all opened files", false, false);
+			BooleanProperty fixedFolderExport = dialog.addBoolean("fixedFolder", "Save marks in different folder?",
+					"Exported files are stored in a selected folder", false, false);
+			dialog.endGroup();
+			
+			dialog.add(new JSeparator());
+			BooleanProperty atomViewerFormat = dialog.addBoolean("AtomViewer", "AtomViewer fomat (recommended)",
+					"Save defects in the AtomViewer format. Required to reload marks.", true, false);
+			BooleanProperty csvFormat = dialog.addBoolean("CSV", "VGG Image Annotator format (csv)",
+					"Save defect marks in the VGG Image Annotator format. Can be imported in VIA.", false, false);
+			BooleanProperty svgFormat = dialog.addBoolean("SVG", "SVG format (b/w)",
+					"Export defect marks as a flat black/white svg file", false, false);
+			BooleanProperty svgOverlayFormat = dialog.addBoolean("SVG overlay", "SVG format (overlay)",
+					"Export defect marks as a svg file where defects are visible as overlays on the 2D image", false, false);
+			
+			
+			boolean ok = dialog.showDialog();
+			if (ok){
+				//Show folder selector if selected
+				File fixedExportFolder = null;
+				if (fixedFolderExport.getValue()) {
+					JFileChooser chooser = new JFileChooser(Configuration.getLastOpenedFolder());
+					chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+		            int option = chooser.showOpenDialog(JMainWindow.this);
+		            if(option == JFileChooser.APPROVE_OPTION){
+		            	fixedExportFolder = chooser.getSelectedFile();
+		            }else{
+		               return;
+		            }
+				}
+				
+				List<AtomData> filesToProcess = new ArrayList<>();
+				if (allFilesExport.getValue()) {
+					for (AtomData ad : Configuration.getAtomDataIterable())
+						filesToProcess.add(ad);
+				} else {
+					filesToProcess.add(Configuration.getCurrentAtomData());
+				}
+				
+				for (AtomData ad : filesToProcess) {
+					try {
+						File base;
+						if (fixedFolderExport.getValue()){
+							base = fixedExportFolder;
+						} else {
+							base = ((File)ad.getFileMetaData("File3D_file")).getParentFile();
+						}
+						
+						if (atomViewerFormat.getValue()) {
+							String name =ad.getName().replace(".bmp", ".xml").replace(".jpg", ".xml");
+							File exportTo = new File(base, name);
+							DefectMarking.export(ad, exportTo);
+						}
+						
+						if (svgFormat.getValue()) {
+							String svgname =ad.getName().replace(".bmp", ".svg").replace(".jpg", ".svg");
+							File exportTo = new File(base, svgname);
+							DefectMarking.exportSvg(ad, exportTo, false);
+						}
+						
+						if (svgOverlayFormat.getValue()) {
+							String svgname =ad.getName().replace(".bmp", ".svg").replace(".jpg", ".svg");
+							String xmlnameOverlay ="overlay_"+svgname;
+							File exportTo = new File(base, xmlnameOverlay);
+							DefectMarking.exportSvg(ad, exportTo, true);
+						}
+						
+						if (csvFormat.value) {
+							String csvname =ad.getName().replace(".bmp", ".csv").replace(".jpg", ".csv");
+							File exportTo = new File(base, csvname);
+							DefectMarking.exportCsv(ad, exportTo);
+						}
+					} catch (Exception e1) {
+						e1.printStackTrace();
+					}
+				}
+			}
+			//JOptionPane.showMessageDialog(JMainWindow.this, "Export successful");			
 		}
 	}
 	
